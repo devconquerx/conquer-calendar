@@ -1,0 +1,24 @@
+<!--begin::Toolbar-->
+<div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
+	<!--begin::Toolbar container-->
+	<div id="kt_app_toolbar_container" class="app-container container-fluid d-flex flex-stack">
+
+		{% include './_page-title.html' %}
+
+		<!--begin::Actions-->
+    {% if actions %}
+      <div class="d-flex align-items-center gap-2 gap-lg-3">
+        {% for action in actions %}
+          <a href="{{ action.url }}" class="btn btn-sm fw-bold {% if action.primary %}btn-primary{% else %}bg-body btn-color-gray-700 btn-active-color-primary{% endif %}">
+          {% if action.icon %}
+            {{ action.icon|safe }}
+          {% endif %}
+          {{ action.title }}</a>
+        {% endfor %}
+      </div>
+    {% endif %}
+		<!--end::Actions-->
+	</div>
+	<!--end::Toolbar container-->
+</div>
+<!--end::Toolbar-->

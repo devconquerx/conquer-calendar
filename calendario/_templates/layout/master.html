@@ -1,0 +1,250 @@
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+
+<!DOCTYPE html>
+
+<html lang="{{ LANGUAGE_CODE }}" {% printHtmlAttributes 'html' %}>
+    <!--begin::Head-->
+    <head>
+        <!-- Sentry Session Replay -->
+        {% if SENTRY_SESION_REPLAY %}
+        <script
+          src="{{ SENTRY_SESION_REPLAY }}"
+          crossorigin="anonymous"
+        ></script>
+        {% endif %}
+
+        <title>{% block title %}{% endblock title %}{{ CONFIGURATION.app_name }}</title>
+        <meta charset="utf-8"/>
+        <meta name="description" content=""/>
+        <meta name="keywords" content=""/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content="" />
+        <link rel="canonical" href=""/>
+
+        {% block css %}
+        <!--begin::Fonts-->
+        {% includeFonts %}
+        <!--end::Fonts-->
+
+        <!--begin::Vendor Stylesheets(optional)-->
+        {% getVendors 'css' as vendors_css %}
+        {% for file in vendors_css %}
+        <link href="{{ file }}" rel="stylesheet" type="text/css" />
+        {% endfor %}
+        <!--end::Vendor Stylesheets-->
+
+        <!--begin::Custom Stylesheets(optional)-->
+        {% getCustomCss as css %}
+        {% for file in css %}
+        <link href="{% static file %}" rel="stylesheet" type="text/css" />
+        {% endfor %}
+        <!--end::Custom Stylesheets-->
+
+        <!--begin::Global Stylesheets(mandatory)-->
+        {% getGlobalAssets 'css' as assets_css %}
+        {% for file in assets_css %}
+        <link href="{% static file %}" rel="stylesheet" type="text/css" />
+        {% endfor %}
+        <!--end::Global Stylesheets-->
+        <style>
+
+          form .form-group label {
+            color: red;
+            --bs-badge-padding-x: 0.5rem;
+            --bs-badge-padding-y: 0.325rem;
+            --bs-badge-font-size: 0.85rem;
+            --bs-badge-font-weight: 600;
+            --bs-badge-color: #ffffff;
+            --bs-badge-border-radius: 0.425rem;
+            --bs-badge-color: var(--kt-badge-color);
+            display: inline-flex;
+            align-items: center;
+            padding: var(--bs-badge-padding-y) var(--bs-badge-padding-x);
+            font-size: var(--bs-badge-font-size);
+            font-weight: var(--bs-badge-font-weight);
+            line-height: 1;
+            color: var(--bs-badge-color);
+            text-align: center;
+            vertical-align: baseline;
+            border-radius: var(--bs-badge-border-radius, 0);
+            white-space: normal !important;
+            color: var(--kt-secondary-inverse);
+            background-color: var(--kt-secondary);
+            margin-bottom: 10px;
+          }
+          .table {
+            font-size: 12px;
+          }
+          .table th{
+            font-size: 13px;
+          }
+          .badge-sol{
+            background-color: #ffc700;
+          }
+          .badge-apr{
+            background-color: #5bc0eb;
+          }
+          .badge-pre{
+            background-color: #50cd89;
+          }
+          .badge-csi{
+            background-color: #50cd89;
+          }
+          .badge-cci{
+            background-color: #f5b027;
+          }
+          .badge-sus{
+            background-color: #f1416c;
+          }
+          .badge-rec{
+            background-color: #f1416c;
+          }
+          .django-ckeditor-widget {
+            width: 100%;
+          }
+          .tooltip-inner {
+            text-align: left;
+            max-width: 450px;
+          }
+          #box-container{
+            display: none;
+            flex-direction: column;
+            flex-wrap: wrap;
+            padding: 5px;
+            height: 100%;
+            resize: vertical;
+            gap: 5px;
+          }
+          #box-child{
+            display: grid;
+            margin: 3px;
+          }
+
+          .card {
+            margin-top: 10px;
+            margin-bottom: 10px;
+          }
+
+
+          .form-table-header{
+            background-color: var(--kt-input-solid-bg) !important;
+            font-size:0.8rem !important;
+          }
+
+          /* FAKEBOARD */
+          span.select2-selection__choice__display {
+            font-size:11px !important;
+           }
+           span.select2-selection__rendered {
+            font-size:11px !important;
+           }
+           /* FAKEBOARD */
+
+        </style>
+        {% endblock css %}
+
+        <!--begin::Tracking-->
+        <!--end::Tracking-->
+    </head>
+    <!--end::Head-->
+
+    <!--begin::Body-->
+    <body {% printHtmlClasses 'body' %} {% printHtmlAttributes 'body' %}>
+
+        {% include 'partials/theme-mode/_init.html' %}
+
+        {% block layout %}
+        {% endblock layout %}
+
+        {% block javascript %}
+        <!--begin::Global Javascript(mandatory)-->
+        {% getGlobalAssets 'js' as assets_js %}
+        {% for file in assets_js %}
+            <script src="{% static file %}"></script>
+        {% endfor %}
+        <!--end::Global Javascript-->
+
+        <!--begin::Vendors Javascript(optional)-->
+        {% getVendors 'js' as vendors_js %}
+        {% for file in vendors_js %}
+        <script src="{{ file }}"></script>
+        {% endfor %}
+        <!--end::Vendors Javascript-->
+
+        <!--begin::Custom Javascript(optional)-->
+        {% getCustomJs as js %}
+        {% for file in js %}
+        <script src="{% static file %}"></script>
+        {% endfor %}
+        <!--end::Custom Javascript-->
+
+        {% block pageCss %}
+
+        {% endblock pageCss %}
+
+        <!--begin::Custom Javascript(optional)-->
+        {% for file in js_template %}
+        <script src="{% static file %}"></script>
+        {% endfor %}
+        <!--end::Custom Javascript-->
+        {% endblock javascript %}
+
+        {% block js_footer %}
+
+        {% endblock js_footer %}
+
+        {% if request.user.is_authenticated %}
+        <script src="{% static 'js/novedades-polling.js' %}"></script>
+        {% endif %}
+
+        <script>
+          jQuery(document).ready(function() {
+            $('.backHistory').on('click', function(e){
+              e.preventDefault();
+              window.history.go(-1);
+              return false;
+            });
+          });
+
+          function toggle_item(clicked) {
+            $(clicked).siblings().fadeToggle().css('margin-bottom:5px;');
+          }
+
+
+
+          // FAKEBOARD
+          // Format options
+          var optionFormat = function(item) {
+              if ( !item.id ) {
+                  return item.text;
+              }
+
+              var span = document.createElement('span');
+              var imgUrl = item.element.getAttribute('data-kt-select2-country');
+              var template = '';
+
+              template += '<img src="' + imgUrl + '" class="rounded-circle h-20px me-2" alt="image"/>';
+              template += item.text;
+
+              span.innerHTML = template;
+
+              return $(span);
+          }
+
+          // Init Select2 --- more info: https://select2.org/
+          $('#kt_docs_select2_country').select2({
+              templateSelection: optionFormat,
+              templateResult: optionFormat
+          });
+
+
+        </script>
+
+
+    <div id="pk" data-pk="{{ request.user.pk }}" style="display: none;"></div>
+    </body>
+    <!--end::Body-->
+</html>

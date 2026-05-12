@@ -1,0 +1,25 @@
+{% load i18n %}
+<div class="panel panel-primary filterable">
+  <table class="table table-striped table-row-bordered gy-5 gs-7 customDatatable">
+    <thead>
+      <tr class="filters">
+        <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'HubSpot ID' %}" placeholder="{% trans 'HubSpot ID' %}"></th>
+        <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'CUPS' %}" placeholder="{% trans 'CUPS' %}"></th>
+        <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Provincia' %}" placeholder="{% trans 'Provincia' %}"></th>
+        <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Fecha de Instalación' %}" placeholder="{% trans 'Fecha de Instalación' %}"></th>
+        <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Status' %}" placeholder="{% trans 'Status' %}"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for installation in installations %}
+      <tr>
+        <td class="text-center align-middle"><a href="{% url 'installations:ga_installation_detail' installation.pk %}">{{ installation.hubspot_id }}</a></td>
+        <td class="align-middle">{{ installation.cups }}</td>
+        <td class="align-middle">{{ installation.get_province_display }}</td>
+        <td class="text-center align-middle"><p hidden="True">{{ installation.installation_date|date:'Y/m/d' }}</p><p>{{ installation.installation_date|date:'d/m/Y' }}</p></td>
+        <td class="align-middle">{{ installation.get_status_display }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

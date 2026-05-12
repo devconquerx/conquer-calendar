@@ -1,0 +1,18 @@
+{% load i18n schedule_tags %}
+{% set_nav_counts as nav_counts %}
+<div class="card-toolbar">
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'schedules:schedule_set_list' %}" class="btn btn-sm {% if active_nav == 'llamadas' %}btn-primary{% else %}btn-light-primary{% endif %}">
+      <i class="bi bi-telephone me-1"></i> {% trans 'Llamadas' %}
+      {% if nav_counts.llamadas %}<span class="badge badge-light ms-1">{{ nav_counts.llamadas }}</span>{% endif %}
+    </a>
+    <a href="{% url 'schedules:set_preschedule_list' %}" class="btn btn-sm {% if active_nav == 'prellamadas' %}btn-primary{% else %}btn-light-primary{% endif %}">
+      <i class="bi bi-telephone-forward me-1"></i> {% trans 'Prellamadas' %}
+      {% if nav_counts.prellamadas %}<span class="badge badge-light ms-1">{{ nav_counts.prellamadas }}</span>{% endif %}
+    </a>
+    <a href="{% url 'schedules:set_leadregister_list' %}" class="btn btn-sm {% if active_nav == 'registros' %}btn-primary{% else %}btn-light-primary{% endif %}">
+      <i class="bi bi-journal-text me-1"></i> {% trans 'Registro formularios' %}
+      {% if nav_counts.registros %}<span class="badge badge-light ms-1">{{ nav_counts.registros }}</span>{% endif %}
+    </a>
+  </div>
+</div>

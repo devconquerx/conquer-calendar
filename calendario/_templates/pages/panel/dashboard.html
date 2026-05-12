@@ -1,0 +1,128 @@
+{% extends 'layout/panel.html' %}
+{% load i18n %}
+
+{% block title %}Dashboard · {% endblock %}
+
+{% block content %}
+
+<!--begin::Stats-->
+<div class="row g-5 mb-8">
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body d-flex flex-column justify-content-between p-6">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <span class="text-muted fw-semibold fs-7 text-uppercase">Reservas hoy</span>
+                    <span class="bg-light-primary rounded p-2">
+                        <i class="bi bi-calendar-check text-primary fs-3"></i>
+                    </span>
+                </div>
+                <div class="fs-2hx fw-bold text-dark">{{ reservas_hoy }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body d-flex flex-column justify-content-between p-6">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <span class="text-muted fw-semibold fs-7 text-uppercase">Esta semana</span>
+                    <span class="bg-light-success rounded p-2">
+                        <i class="bi bi-calendar-week text-success fs-3"></i>
+                    </span>
+                </div>
+                <div class="fs-2hx fw-bold text-dark">{{ reservas_semana }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body d-flex flex-column justify-content-between p-6">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <span class="text-muted fw-semibold fs-7 text-uppercase">Tipos de evento</span>
+                    <span class="bg-light-info rounded p-2">
+                        <i class="bi bi-calendar2-event text-info fs-3"></i>
+                    </span>
+                </div>
+                <div class="fs-2hx fw-bold text-dark">{{ event_types_activos }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body d-flex flex-column justify-content-between p-6">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <span class="text-muted fw-semibold fs-7 text-uppercase">Hosts activos</span>
+                    <span class="bg-light-warning rounded p-2">
+                        <i class="bi bi-people text-warning fs-3"></i>
+                    </span>
+                </div>
+                <div class="fs-2hx fw-bold text-dark">{{ hosts_activos }}</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<!--end::Stats-->
+
+<!--begin::Próximas reservas-->
+<div class="card border-0 shadow-sm">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title fw-bold text-dark">Próximas reservas</h3>
+        {% if 'reservas.ver_propias' in PERMISOS_USUARIO %}
+        <div class="card-toolbar">
+            <a href="{% url 'panel_reservas:reserva_list' %}" class="btn btn-sm btn-light-primary fw-semibold">
+                Ver todas
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% if proximas_reservas %}
+        <div class="table-responsive">
+            <table class="table table-row-dashed table-row-gray-300 align-middle gs-7 gy-4 mb-0">
+                <thead>
+                    <tr class="fw-bold text-muted fs-7 text-uppercase">
+                        <th class="min-w-150px">Inicio</th>
+                        <th class="min-w-150px">Tipo de evento</th>
+                        <th class="min-w-180px">Invitado</th>
+                        <th class="min-w-120px">Host</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in proximas_reservas %}
+                    <tr>
+                        <td>
+                            <span class="fw-semibold text-dark d-block">{{ r.inicio_utc|date:"d/m/Y" }}</span>
+                            <span class="text-muted fs-7">{{ r.inicio_utc|date:"H:i" }} UTC</span>
+                        </td>
+                        <td>
+                            <span class="fw-semibold text-dark">{{ r.event_type.nombre }}</span>
+                        </td>
+                        <td>
+                            <span class="fw-semibold text-dark d-block">{{ r.nombre_invitado }}</span>
+                            <span class="text-muted fs-7">{{ r.email_invitado }}</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-light-primary fw-semibold px-3 py-2">
+                                {{ r.host.get_full_name|default:r.host.username }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12 text-muted">
+            <i class="bi bi-calendar-x d-block mb-3" style="font-size:2.5rem;"></i>
+            <span class="fw-semibold fs-6">No hay próximas reservas confirmadas</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+<!--end::Próximas reservas-->
+
+{% endblock content %}

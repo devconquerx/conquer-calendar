@@ -1,0 +1,84 @@
+{% extends 'layout/panel.html' %}
+
+{% block title %}{% if object %}Editar rol{% else %}Nuevo rol{% endif %} · {% endblock %}
+
+{% block content %}
+<div class="card shadow-sm" style="max-width: 760px;">
+    <div class="card-header border-0 pt-6">
+        <div class="card-title">
+            <h3 class="fw-bold mb-0">
+                {% if object %}Editar: {{ object.nombre }}{% else %}Nuevo rol{% endif %}
+            </h3>
+        </div>
+    </div>
+    <div class="card-body pt-4">
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger d-flex align-items-center p-5 mb-6">
+            <i class="bi bi-exclamation-triangle-fill fs-3 text-danger me-4"></i>
+            <div class="d-flex flex-column">
+                {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <!--begin::Nombre-->
+            <div class="fv-row mb-7">
+                <label class="form-label fw-semibold required">Nombre</label>
+                <input type="text" name="nombre"
+                       class="form-control form-control-lg{% if form.nombre.errors %} is-invalid{% endif %}"
+                       value="{{ form.nombre.value|default:'' }}" />
+                {% if form.nombre.errors %}
+                <div class="invalid-feedback">{{ form.nombre.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <!--end::Nombre-->
+
+            <!--begin::Descripcion-->
+            <div class="fv-row mb-7">
+                <label class="form-label fw-semibold">Descripción</label>
+                <textarea name="descripcion" rows="3"
+                          class="form-control form-control-lg{% if form.descripcion.errors %} is-invalid{% endif %}">{{ form.descripcion.value|default:'' }}</textarea>
+                {% if form.descripcion.errors %}
+                <div class="invalid-feedback">{{ form.descripcion.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <!--end::Descripcion-->
+
+            <!--begin::Permisos-->
+            <div class="fv-row mb-9">
+                <label class="form-label fw-semibold">Permisos</label>
+                {% if form.permisos.errors %}
+                <div class="text-danger small mb-3">{{ form.permisos.errors|join:", " }}</div>
+                {% endif %}
+                <div class="row g-3 mt-1">
+                    {% for choice in form.permisos %}
+                    <div class="col-md-4">
+                        <div class="form-check form-check-custom form-check-solid">
+                            {{ choice.tag }}
+                            <label class="form-check-label fw-semibold ms-2" for="{{ choice.id_for_label }}">
+                                {{ choice.choice_label }}
+                            </label>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-muted fs-7">No hay permisos disponibles.</div>
+                    {% endfor %}
+                </div>
+            </div>
+            <!--end::Permisos-->
+
+            <!--begin::Acciones-->
+            <div class="d-flex gap-3 pt-4 border-top">
+                <button type="submit" class="btn btn-primary btn-lg">Guardar</button>
+                <a href="{% url 'panel_permisos:rol_list' %}" class="btn btn-light btn-lg">Cancelar</a>
+            </div>
+            <!--end::Acciones-->
+
+        </form>
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,899 @@
+{% load i18n %}
+
+{% url 'users:dashboard' as ga_dashboard %}
+{% url 'configuration:configuration_detail' as configuration_detail %}
+{% url 'interactions:ru_installation_list' as ru_installation_list %}
+{% url 'interactions:ru_installation_create' as ru_installation_create%}
+{% url 'interactions:ga_installation_create' as ga_installation_create%}
+
+{% url 'users:it_dashboard' as it_dashboard %}
+{% url 'configuration:configuration_detail' as configuration_detail %}
+{% url 'interactions:it_installation_list' as it_installation_list %}
+
+<div class="app-sidebar-menu overflow-hidden flex-column-fluid">
+  
+  <div id="kt_app_sidebar_menu_wrapper" class="app-sidebar-wrapper hover-scroll-overlay-y my-5" data-kt-scroll="true"
+    data-kt-scroll-activate="true" data-kt-scroll-height="auto"
+    data-kt-scroll-dependencies="#kt_app_sidebar_logo, #kt_app_sidebar_footer"
+    data-kt-scroll-wrappers="#kt_app_sidebar_menu" data-kt-scroll-offset="5px">
+    
+    <div class="menu menu-column menu-rounded menu-sub-indention px-0" id="#kt_app_sidebar_menu" data-kt-menu="true"
+      data-kt-menu-expand="false">
+
+
+      {% if request.user.is_google_agency %}
+
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Marketing Externo' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'mkt:ads_account_list' %}">
+              <span class="menu-icon"><i class="bi bi-cash-stack"></i>
+              </span>
+              <span class="menu-title">{% trans 'Cuentas publicitarias' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'HELP DESK' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'help_desk:ticket_list' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/general/gen019.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">Tickets Pendientes</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'help_desk:ticket_completed_list' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/general/gen019.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">Tickets Completados</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'help_desk:ticket_create' %}">
+              <span class="menu-icon"><i class="fa-solid fa-plus"></i></span>
+              <span class="menu-title">Nuevo Ticket</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Administración' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'suppliers:my_supplier_detail' %}">
+              <span class="menu-icon"><i class="fa-solid fa-user-tie"></i></span>
+              <span class="menu-title">{% trans 'Mi proveedor' %}</span>
+            </a>
+          </div>
+          {% if CONFIGURATION.upload_expense_invoice %}
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'suppliers:supplier_expense_invoice_create' %}">
+              <span class="menu-icon"><i class="fa-solid fa-receipt"></i></span>
+              <span class="menu-title">{% trans 'Sube tu factura' %}</span>
+            </a>
+          </div>
+          {% endif %}
+          {% if request.user.supplier %}
+            <div class="menu-item">
+              <a class="menu-link" href="{% url 'suppliers:supplier_expense_invoice_list' %}">
+                <span class="menu-icon"><i class="fa-solid fa-receipt"></i></span>
+                <span class="menu-title">{% trans 'Facturas enviadas' %}</span>
+              </a>
+            </div>
+          {% endif %}
+
+      {% else %}
+
+        {% if not request.user.is_collector %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'General' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'users:directory' %}">
+              <span class="menu-icon"><i class="bi bi-people"></i></span>
+              <span class="menu-title">{% trans 'Directorio' %}</span>
+            </a>
+          </div>
+        {% endif %}
+
+        {% if not request.user.is_collector %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'HELP DESK' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'help_desk:ticket_list' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/general/gen019.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">Tickets Pendientes</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'help_desk:ticket_completed_list' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/general/gen019.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">Tickets Completados</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'help_desk:ticket_create' %}">
+              <span class="menu-icon"><i class="fa-solid fa-plus"></i></span>
+              <span class="menu-title">Nuevo Ticket</span>
+            </a>
+          </div>
+
+
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'CONQUER PASS' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'configuration:conquerpass' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/general/gen019.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">Constructor</span>
+            </a>
+          </div>
+
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'configuration:conquerpass_finder' %}">
+              <span class="menu-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+              <span class="menu-title">Buscador</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'configuration:conquerpass_contracts' %}">
+              <span class="menu-icon"><i class="fa-solid fa-file-contract"></i></span>
+              <span class="menu-title">Contratos</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'configuration:affiliate_link' %}">
+              <span class="menu-icon"><i class="fa-solid fa-link"></i></span>
+              <span class="menu-title">{% trans 'Enlace de Afiliado' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'configuration:launch_links' %}">
+              <span class="menu-icon"><i class="fa-solid fa-arrow-up-right-from-square"></i></span>
+              <span class="menu-title">{% trans 'Enlace de Lanzamiento' %}</span>
+            </a>
+          </div>
+
+        {% endif %}
+
+        {% if request.user.is_group_leader %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Líder' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link"
+              href="{% url 'users:group_leader_team' %}">
+              <span class="menu-icon"><i class="fas fa-coins"></i>
+              </span>
+              <span class="menu-title">{% trans 'Mi equipo' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'vacations:pending_vacations' %}">
+              <span class="menu-icon"><i class="bi bi-calendar-check"></i></span>
+              <span class="menu-title">{% trans 'Días no disponibles' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link"
+              href="{% url 'schedules:group_leader_schedule_list' %}">
+              <span class="menu-icon"><i class="bi bi-telephone"></i>
+              </span>
+              <span class="menu-title">{% trans 'Llamadas de mi equipo' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:group_leader_sale_list' %}">
+              <span class="menu-icon"><i class="fas fa-coins"></i>
+              </span>
+              <span class="menu-title">{% trans 'Ventas de mi equipo' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:conquerpass_renovations_cl' %}">
+              <span class="menu-icon"><i class="bi bi-arrow-repeat"></i></span>
+              <span class="menu-title">{% trans 'Renovaciones CL' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:conquerpass_renovations_cf' %}">
+              <span class="menu-icon"><i class="bi bi-arrow-repeat"></i></span>
+              <span class="menu-title">{% trans 'Renovaciones CF' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:ga_sale_totals_by_closer_list' %}">
+              <span class="menu-icon"><i class="fas fa-chart-bar"></i></span>
+              <span class="menu-title">{% trans 'Totales por equipo' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link"
+              href="{% url 'mkt:group_leader_team_form' %}">
+              <span class="menu-icon"><i class="fa-solid fa-filter-circle-dollar"></i></span>
+              <span class="menu-title">{% trans 'Gestión de embudos' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:group_leader_schedule_create' %}">
+              <span class="menu-icon"><i class="bi bi-telephone-plus"></i></span>
+              <span class="menu-title">{% trans 'Nueva llamada' %}</span>
+            </a>
+          </div>
+
+          {% comment %}
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:group_leader_sale_transfer' %}">
+              <span class="menu-icon"><i class="bi bi-arrow-left-right"></i></span>
+              <span class="menu-title">{% trans 'Transferir ventas' %}</span>
+            </a>
+          </div>
+          {% endcomment %}
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:conquerpass_ga_sales_with_schedule' %}">
+              <span class="menu-icon"><i class="bi bi-table"></i></span>
+              <span class="menu-title">{% trans 'Ventas y llamadas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link {% if request.path == ga_dashboard %}active{% endif %}"
+              href="{% url 'expenses:group_leader_invoice_list' %}">
+              <span class="menu-icon"><i class="fas fa-coins"></i>
+              </span>
+              <span class="menu-title">{% trans 'Revisión de Facturas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link {% if request.path == leads_finder %}active{% endif %}"
+              href="{% url 'configuration:conquerpass_finder' %}">
+              <span class="menu-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+              <span class="menu-title">{% trans 'Buscador' %}</span>
+            </a>
+          </div>
+
+          {% comment %} <div class="menu-item">
+            <a class="menu-link" href="{% url 'suppliers:supplier_list_latam' %}">
+              <span class="menu-icon"><i class="fa-solid fa-user-tie"></i></span>
+              <span class="menu-title">{% trans 'Proveedores latam' %}</span>
+            </a>
+          </div> {% endcomment %}
+        {% endif %}
+
+        {% if request.user.is_mkt %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Marketing' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'mkt:call_target_list' %}">
+              <span class="menu-icon"><i class="bi bi-telephone"></i>
+              </span>
+              <span class="menu-title">{% trans 'Objetivos de llamadas' %}</span>
+            </a>
+          </div>
+
+          {% comment %} <div class="menu-item">
+            <a class="menu-link" href="{% url 'mkt:paid_budget_list' %}">
+              <span class="menu-icon"><i class="bi bi-cash-stack"></i>
+              </span>
+              <span class="menu-title">{% trans 'Presupuestos Paid' %}</span>
+            </a>
+          </div> {% endcomment %}
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'mkt:form_funnel_list' %}">
+                <span class="menu-icon"><i class="fa-solid fa-filter-circle-dollar"></i></span>
+              <span class="menu-title">{% trans 'Gestión de Embudos' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'mkt:ads_account_list' %}">
+              <span class="menu-icon"><i class="bi bi-cash-stack"></i>
+              </span>
+              <span class="menu-title">{% trans 'Cuentas publicitarias' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'mkt:mkt_expense_invoice_list' %}">
+              <span class="menu-icon"><i class="fa-solid fa-receipt"></i>
+              </span>
+              <span class="menu-title">{% trans 'Facturas publicitarias' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:experimentos_form_variant' %}">
+              <span class="menu-icon"><i class="fa-solid fa-flask"></i></span>
+              <span class="menu-title">{% trans 'Experimentos' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'leads:lead_finder' %}">
+              <span class="menu-icon"><i class="fa-solid fa-bullhorn"></i></span>
+              <span class="menu-title">{% trans 'Buscador de Leads' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:ga_email_verification' %}">
+              <span class="menu-icon"><i class="bi bi-envelope-check"></i></span>
+              <span class="menu-title">{% trans 'Verificación emails' %}</span>
+            </a>
+          </div>
+        {% endif %}
+
+        {% if request.user.is_superuser %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'ADMIN' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:sale_ga_list' %}">
+              <span class="menu-icon"><i class="fas fa-coins"></i>
+              </span>
+              <span class="menu-title">{% trans 'Ventas fallidas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:conquerpass_ga_sales_with_schedule' %}">
+              <span class="menu-icon"><i class="bi bi-table"></i></span>
+              <span class="menu-title">{% trans 'Ventas y llamadas' %}</span>
+            </a>
+          </div>        
+          
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:conquerpass_ga_reserve_not_enter' %}">
+              <span class="menu-icon"><i class="fas fa-coins"></i>
+              </span>
+              <span class="menu-title">{% trans 'Reservas fallidas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:ga_sale_totals_by_closer_list' %}">
+              <span class="menu-icon"><i class="fas fa-chart-bar"></i></span>
+              <span class="menu-title">{% trans 'Totales por equipo' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:ga_conquerpass_inconsistent_amounts' %}">
+              <span class="menu-icon"><i class="bi bi-exclamation-triangle"></i></span>
+              <span class="menu-title">{% trans 'Importes inconsistentes' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:ga_conquerpass_order_review' %}">
+              <span class="menu-icon"><i class="bi bi-search"></i></span>
+              <span class="menu-title">{% trans 'Revision pedidos' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'users:ga_user_list' %}">
+              <span class="menu-icon"><i class="fa-regular fa-address-card"></i></span>
+              <span class="menu-title">{% trans 'Usuarios globales' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link"
+              href="{% url 'mkt:admin_team_form' %}">
+              <span class="menu-icon"><i class="fa-solid fa-filter-circle-dollar"></i></span>
+              <span class="menu-title">{% trans 'Gestión de embudos' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link {% if request.path == configuration_detail %}active{% endif %}"
+              href="{% url 'configuration:configuration_detail' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/general/gen019.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">{% trans 'Configuración' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'audit_dashboard' %}">
+              <span class="menu-icon"><i class="bi bi-shield-check"></i></span>
+              <span class="menu-title">{% trans 'Auditoría de datos' %}</span>
+            </a>
+          </div>
+        {% endif %}
+
+        {% if request.user.is_refound %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Devoluciones' %}</span>
+            </div>
+          </div>
+          
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'support:su_refound_list' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/arrows/arr074.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">{% trans 'Devoluciones' %}</span>
+            </a>
+          </div>
+
+        {% endif %}
+
+        {% if request.user.is_support %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Soporte' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'support:su_dashboard' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/art/art005.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">{% trans 'Dashboard' %}</span>
+            </a>
+          </div>
+
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'support:su_list' %}">
+              <span class="menu-icon"><i class="bi bi-clipboard2-pulse"></i>
+              </span>
+              <span class="menu-title">{% trans 'Onboarding' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link {% if request.path == leads_finder %}active{% endif %}"
+              href="{% url 'configuration:conquerpass_finder' %}">
+              <span class="menu-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+              <span class="menu-title">{% trans 'Buscador' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'support:su_renovations' %}">
+              <span class="menu-icon"><i class="bi bi-arrow-repeat"></i></span>
+              <span class="menu-title">{% trans 'Renovaciones' %}</span>
+            </a>
+          </div>
+
+        {% endif %}
+
+        {% if request.user.is_chema %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Ciber Seguridad' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'chema:che_list' %}">
+              <span class="menu-icon"><i class="bi bi-clipboard2-pulse"></i>
+              </span>
+              <span class="menu-title">{% trans 'Listado de ventas' %}</span>
+            </a>
+          </div>
+        {% endif %}
+
+        {% if request.user.is_collector %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Recóbrame' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'collector:co_sale_list' %}">
+              <span class="menu-icon"><i class="bi bi-clipboard2-pulse"></i>
+              </span>
+              <span class="menu-title">{% trans 'Listado de ventas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'collector:co_unpaid_management' %}">
+              <span class="menu-icon"><i class="bi bi-exclamation-triangle"></i>
+              </span>
+              <span class="menu-title">{% trans 'Gestión de impagos' %}</span>
+            </a>
+          </div>
+        {% endif %}
+
+        {% if request.user.is_collector_house %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Recobros' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'collector:co_home_sale_list' %}">
+              <span class="menu-icon"><i class="bi bi-clipboard2-pulse"></i>
+              </span>
+              <span class="menu-title">{% trans 'Listado de ventas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'collector:co_home_sale_prev_sale_list' %}">
+              <span class="menu-icon"><i class="bi bi-clock-history"></i>
+              </span>
+              <span class="menu-title">{% trans 'Listado de ventas antiguas' %}</span>
+            </a>
+          </div>
+        {% endif %}
+
+        {% if request.user.is_billing %}
+          <div class="menu-item">
+            
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Facturación' %}</span>
+            </div>
+            
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'billing:bi_dashboard' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/art/art005.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">{% trans 'Dashboard' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'expenses:expensesinvoice_list' %}">
+              <span class="menu-icon"><i class="fa-solid fa-receipt"></i></span>
+              <span class="menu-title">{% trans 'Facturas recibidas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'expenses:expensesinvoice_aprobacion_pago' %}">
+              <span class="menu-icon"><i class="fa-solid fa-check-double"></i></span>
+              <span class="menu-title">{% trans 'Aprobación de pago' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'expenses:expensesinvoice_user_list' %}">
+              <span class="menu-icon"><i class="fa-solid fa-receipt"></i></span>
+              <span class="menu-title">{% trans 'Facturas de sus departamentos' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'suppliers:supplier_list' %}">
+              <span class="menu-icon"><i class="fa-solid fa-user-tie"></i></span>
+              <span class="menu-title">{% trans 'Proveedores' %}</span>
+            </a>
+          </div>
+
+          {% comment %} <div class="menu-item">
+            <a class="menu-link" href="{% url 'suppliers:supplier_list_latam' %}">
+              <span class="menu-icon"><i class="fa-solid fa-user-tie"></i></span>
+              <span class="menu-title">{% trans 'Proveedores latam' %}</span>
+            </a>
+          </div> {% endcomment %}
+
+          {% comment %} <div class="menu-item">
+            <a class="menu-link" href="{% url 'billing:bi_list_pending' %}">
+              <span class="menu-icon"><i class="fa-solid fa-receipt"></i>
+              </span>
+              <span class="menu-title">{% trans 'Sin facturar' %}</span>
+            </a>
+          </div>
+          {% endcomment %}
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'billing:bi_list_done' %}">
+              <span class="menu-icon"><i class="fas fa-coins"></i>
+              </span>
+              <span class="menu-title">{% trans 'Ya facturado' %}</span>
+            </a>
+          </div>
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'billing:bi_transfer_review' %}">
+              <span class="menu-icon"><i class="bi bi-bank"></i></span>
+              <span class="menu-title">{% trans 'Transferencias pendientes' %}</span>
+            </a>
+          </div>
+        {% endif %}
+
+        {% if request.user.is_closer or request.user.is_sales_leader %}
+        
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Closer' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link {% if request.path == ga_dashboard %}active{% endif %}"
+              href="{% url 'users:cl_dashboard' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/art/art005.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">{% trans 'Dashboard' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:schedule_cl_list' %}">
+              <span class="menu-icon"><i class="bi bi-telephone"></i>
+              </span>
+              <span class="menu-title">{% trans 'Llamadas' %}</span>
+            </a>
+          </div>
+
+          {% comment %} <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:schedule_cl_yes_without_sale_list' %}">
+              <span class="menu-icon"><i class="bi bi-telephone"></i>
+              </span>
+              <span class="menu-title">{% trans 'Llamadas sin venta' %}</span>
+            </a>
+          </div> {% endcomment %}
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:cl_schedule_next_contact' %}">
+              <span class="menu-icon"><i class="bi bi-telephone"></i>
+              </span>
+              <span class="menu-title">{% trans 'Próximos contactos' %}</span>
+            </a>
+          </div>
+
+          {% comment %} <div class="menu-item">
+            <a class="menu-link {% if request.path == leads_finder %}active{% endif %}"
+              href="{% url 'schedules:schedule_set_list_not_sale' %}">
+              <span class="menu-icon"><i class="fa-solid fa-bullhorn"></i></span>
+              <span class="menu-title">{% trans 'Leads para eventos' %}</span>
+            </a>
+          </div> {% endcomment %}
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:sale_cl_list' %}">
+              <span class="menu-icon"><i class="fas fa-coins"></i>
+              </span>
+              <span class="menu-title">{% trans 'Ventas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:sale_cl_list_non_payment' %}">
+              <span class="menu-icon"><i class="fas fa-cancel"></i>
+              </span>
+              <span class="menu-title">{% trans 'Ventas impagadas' %}</span>
+            </a>
+          </div>
+
+          {% if 'conquerlanguages' in request.user.email %}
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:conquerpass_renovations_cl' %}">
+              <span class="menu-icon"><i class="bi bi-arrow-repeat"></i></span>
+              <span class="menu-title">{% trans 'Renovaciones CL' %}</span>
+            </a>
+          </div>
+          {% endif %}
+
+          {% if 'conquerfinance' in request.user.email %}
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:conquerpass_renovations_cf' %}">
+              <span class="menu-icon"><i class="bi bi-arrow-repeat"></i></span>
+              <span class="menu-title">{% trans 'Renovaciones CF' %}</span>
+            </a>
+          </div>
+          {% endif %}
+
+          {% comment %} <div class="menu-item">
+            <a class="menu-link" target="_blank" href="{% url 'sales:sale_cl_create' %}">
+              <span class="menu-icon"><i class="fa-solid fa-plus"></i>
+              </span>
+              <span class="menu-title">{% trans 'Nueva venta tradicional' %}</span>
+            </a>
+          </div> {% endcomment %}
+
+
+
+          {% comment %} <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:fractioned_cl_list' %}">
+              <span class="menu-icon"><i class="fa-solid fa-repeat"></i>
+              </span>
+              <span class="menu-title">{% trans 'Fraccionados' %}</span>
+            </a>
+          </div>
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:fractioned_cl_table' %}">
+              <span class="menu-icon"><i class="fa-solid fa-table"></i>
+              </span>
+              <span class="menu-title">{% trans 'Fraccionados Tabla' %}</span>
+            </a>
+          </div> {% endcomment %}
+        {% endif %}
+
+        {% if request.user.is_setter %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Setter' %}</span>
+            </div>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link {% if request.path == ga_dashboard %}active{% endif %}"
+              href="{% url 'users:set_dashboard' %}">
+              <span class="menu-icon">{% getSvgIcon 'duotune/art/art005.svg' 'svg-icon svg-icon-2' %}</span>
+              <span class="menu-title">{% trans 'Dashboard' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:schedule_set_list' %}">
+              <span class="menu-icon"><i class="bi bi-telephone"></i>
+              </span>
+              <span class="menu-title">{% trans 'Llamadas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:set_preschedule_list' %}">
+              <span class="menu-icon"><i class="bi bi-telephone-forward"></i></span>
+              <span class="menu-title">{% trans 'Prellamadas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:set_leadregister_list' %}">
+              <span class="menu-icon"><i class="bi bi-journal-text"></i></span>
+              <span class="menu-title">{% trans 'Registro formularios' %}</span>
+            </a>
+          </div>
+
+          {% if request.user.is_sales_leader or request.user.is_staff %}
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:schedule_set_activity' %}">
+              <span class="menu-icon"><i class="bi bi-activity"></i></span>
+              <span class="menu-title">{% trans 'Actividad de llamadas' %}</span>
+            </a>
+          </div>
+          {% endif %}
+
+          {% comment %} <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:schedule_set_list_not_showed' %}">
+              <span class="menu-icon"><i class="bi bi-telephone"></i></span>
+              <span class="menu-title">{% trans 'Llamadas no asistidas' %}</span>
+            </a>
+          </div> {% endcomment %}
+
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:schedule_set_list_historic' %}">
+              <span class="menu-icon"><i class="bi bi-telephone"></i>
+              </span>
+              <span class="menu-title">{% trans 'Histórico de llamadas' %}</span>
+            </a>
+          </div>
+
+          <div class="menu-item">
+            <a class="menu-link {% if request.path == leads_finder %}active{% endif %}"
+              href="{% url 'configuration:conquerpass_finder' %}">
+              <span class="menu-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+              <span class="menu-title">{% trans 'Buscador' %}</span>
+            </a>
+          </div>
+
+          {% comment %} <div class="menu-item">
+            <a class="menu-link {% if request.path == leads_finder %}active{% endif %}"
+              href="{% url 'schedules:schedule_set_list_not_sale' %}">
+              <span class="menu-icon"><i class="fa-solid fa-bullhorn"></i></span>
+              <span class="menu-title">{% trans 'Leads para eventos' %}</span>
+            </a>
+          </div> {% endcomment %}
+
+        {% endif %}
+
+
+        {% if not request.user.is_collector %}
+          <div class="menu-item">
+            <div class="menu-content">
+              <span class="menu-heading fw-semibold text-uppercase fs-7">{% trans 'Administración' %}</span>
+            </div>
+          </div>
+          {% if request.user.is_staff and not request.user.is_setter %}
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'schedules:schedule_set_activity' %}">
+              <span class="menu-icon"><i class="bi bi-activity"></i></span>
+              <span class="menu-title">{% trans 'Actividad de llamadas' %}</span>
+            </a>
+          </div>
+          {% endif %}
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'vacations:my_vacations' %}">
+              <span class="menu-icon"><i class="bi bi-calendar-heart"></i></span>
+              <span class="menu-title">{% trans 'Días no disponibles' %}</span>
+            </a>
+          </div>
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'suppliers:my_supplier_detail' %}">
+              <span class="menu-icon"><i class="fa-solid fa-user-tie"></i></span>
+              <span class="menu-title">{% trans 'Mi proveedor' %}</span>
+            </a>
+          </div>
+          {% if CONFIGURATION.upload_expense_invoice %}
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'suppliers:supplier_expense_invoice_create' %}">
+              <span class="menu-icon"><i class="fa-solid fa-receipt"></i></span>
+              <span class="menu-title">{% trans 'Sube tu factura' %}</span>
+            </a>
+          </div>
+          {% endif %}
+          {% if request.user.supplier %}
+            <div class="menu-item">
+              <a class="menu-link" href="{% url 'suppliers:supplier_expense_invoice_list' %}">
+                <span class="menu-icon"><i class="fa-solid fa-receipt"></i></span>
+                <span class="menu-title">{% trans 'Facturas enviadas' %}</span>
+              </a>
+            </div>
+          {% endif %}
+        {% endif %}
+
+        {% if request.user.is_backoffice %}
+          <div class="menu-item">
+            <a class="menu-link" href="{% url 'sales:ga_sale_return_list' %}">
+              <span class="menu-icon"><i class="fa-solid fa-rotate-left"></i></span>
+              <span class="menu-title">{% trans 'Devoluciones' %}</span>
+            </a>
+          </div>
+        {% endif %}
+
+      {% endif %}
+
+      <div class="menu-item">
+        <a class="menu-link" href="{% url 'auth:logout' %}">
+          <span class="menu-icon">{% getSvgIcon 'duotune/abstract/abs012.svg' 'svg-icon svg-icon-2' %}</span>
+          <span class="menu-title">{% trans 'Cerrar Sesión' %}</span>
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,7 @@
+-r ./base.txt
+
+django_debug_toolbar==3.5.0
+ipdb==0.13.9
+
+gunicorn==21.2.0
+whitenoise==5.0.1

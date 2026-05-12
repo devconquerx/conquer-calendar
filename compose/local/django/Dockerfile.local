@@ -1,0 +1,29 @@
+FROM python:3.10-slim
+
+ENV PYTHONUNBUFFERED 1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    curl \
+    git \
+    locales \
+    libffi-dev \
+    && sed -i '/es_ES.UTF-8/s/^# //g' /etc/locale.gen \
+    && locale-gen \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY ./requirements /requirements
+RUN pip install --upgrade pip \
+    && pip install django-environ psycopg2-binary \
+    && pip install -r /requirements/local.txt
+
+COPY ./compose/local/django/entrypoint /entrypoint
+RUN sed -i 's/\r//' /entrypoint && chmod +x /entrypoint
+
+COPY ./compose/local/django/start /start
+RUN sed -i 's/\r//' /start && chmod +x /start
+
+WORKDIR /app
+
+ENTRYPOINT ["/entrypoint"]

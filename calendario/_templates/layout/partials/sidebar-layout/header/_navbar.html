@@ -1,0 +1,118 @@
+{% load i18n %}
+<!--begin::Novedades badge animation-->
+<style>
+@keyframes novedades-ring {
+  0%   { transform: rotate(0deg) scale(1); }
+  5%   { transform: rotate(30deg) scale(1.15); }
+  10%  { transform: rotate(-28deg) scale(1.15); }
+  15%  { transform: rotate(25deg) scale(1.1); }
+  20%  { transform: rotate(-22deg) scale(1.1); }
+  25%  { transform: rotate(18deg) scale(1.05); }
+  30%  { transform: rotate(-15deg) scale(1.05); }
+  35%  { transform: rotate(10deg) scale(1); }
+  40%  { transform: rotate(-6deg); }
+  45%  { transform: rotate(3deg); }
+  50%  { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes novedades-pulse {
+  0%, 100% { transform: scale(1); }
+  25%      { transform: scale(1.6); }
+  50%      { transform: scale(1); }
+  75%      { transform: scale(1.4); }
+}
+@keyframes novedades-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+  25%      { box-shadow: 0 0 10px 6px rgba(220, 53, 69, 0.5); }
+  50%      { box-shadow: 0 0 2px 1px rgba(220, 53, 69, 0.15); }
+  75%      { box-shadow: 0 0 8px 5px rgba(220, 53, 69, 0.4); }
+}
+@keyframes novedades-bounce {
+  0%, 100% { transform: translateY(0); }
+  20%      { transform: translateY(-6px); }
+  40%      { transform: translateY(0); }
+  60%      { transform: translateY(-3px); }
+  80%      { transform: translateY(0); }
+}
+#novedades-bell-btn.has-novedades .bi-bell {
+  animation: novedades-ring 0.8s cubic-bezier(.36,.07,.19,.97) 3;
+  animation-delay: .3s;
+  transform-origin: 50% 0;
+  display: inline-block;
+}
+#novedades-bell-btn.has-novedades {
+  animation: novedades-bounce 0.8s ease-in-out 3;
+  animation-delay: .3s;
+}
+#novedades-badge.has-novedades {
+  animation: novedades-pulse 0.7s ease-in-out 4, novedades-glow 0.7s ease-in-out 4;
+  animation-delay: .3s;
+}
+</style>
+<!--end::Novedades badge animation-->
+<!--begin::Navbar-->
+<div class="app-navbar flex-shrink-0">
+    <!--begin::Novedades bell-->
+    {% if request.user.is_authenticated %}
+    <div class="app-navbar-item ms-1 ms-lg-3 position-relative">
+      <button type="button"
+              class="btn btn-sm btn-icon btn-light position-relative {% if novedades_pending_count > 0 %}has-novedades{% endif %}"
+              id="novedades-bell-btn"
+              data-kt-menu-trigger="click"
+              data-kt-menu-attach="parent"
+              data-kt-menu-placement="bottom-end"
+              data-count-url="{% url 'novedades:novedad_count_api' %}"
+              data-recent-url="{% url 'novedades:novedad_recent_api' %}">
+        <i class="bi bi-bell fs-3"></i>
+        <span class="badge badge-circle badge-sm badge-danger position-absolute top-0 end-0 {% if novedades_pending_count > 0 %}has-novedades{% endif %}"
+              id="novedades-badge"
+              {% if novedades_pending_count == 0 %}style="display:none"{% endif %}>{{ novedades_pending_count }}</span>
+      </button>
+      <!--begin::Novedades dropdown menu-->
+      <div class="menu menu-sub menu-sub-dropdown menu-column w-350px" data-kt-menu="true">
+        <div class="d-flex align-items-center justify-content-between px-4 py-3 border-bottom border-gray-200">
+          <span class="fw-bold fs-6">{% trans 'Novedades' %}</span>
+          <a href="{% url 'novedades:novedad_list' %}" class="btn btn-sm btn-light-primary">{% trans 'Ver todas' %}</a>
+        </div>
+        <div id="novedades-dropdown-list" style="max-height: 320px; overflow-y: auto;">
+          {% if novedades_pending_count == 0 %}
+            <div class="text-center py-5 text-gray-500">{% trans 'Sin novedades pendientes' %}</div>
+          {% else %}
+            <div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span></div>
+          {% endif %}
+        </div>
+      </div>
+      <!--end::Novedades dropdown menu-->
+    </div>
+    {% endif %}
+    <!--end::Novedades bell-->
+    <!--begin::Buscador-->
+    {% if request.user.is_authenticated %}
+    <div class="app-navbar-item ms-1 ms-lg-3">
+      <a href="{% url 'configuration:conquerpass_finder' %}"
+         class="btn btn-sm btn-icon btn-light"
+         title="Buscador">
+        <i class="bi bi-search fs-3"></i>
+      </a>
+    </div>
+    {% endif %}
+    <!--end::Buscador-->
+	<!--begin::User menu-->
+    <div class="app-navbar-item ms-1 ms-lg-3">
+      <!--begin::Menu item-->
+      <a href="{% url 'users:profile_edit' %}" class="btn btn-sm btn-light-primary px-4 pt-2 pb-2">
+        <i class="bi bi-person-circle me-2"></i>{% trans 'Mi Perfil' %}
+      </a>
+    </div>
+	<div class="app-navbar-item ms-1 ms-lg-3" id="kt_header_user_menu_toggle">
+    <a href="{% url 'auth:logout' %}" class="btn btn-sm fw-bold btn-danger px-4 pt-2 pb-2">{% trans 'Salir' %}</a>
+		{% include 'partials/menus/_user-account-menu.html' %}
+	</div>
+	<!--end::User menu-->
+	<!--begin::Header menu toggle-->
+	<div class="app-navbar-item d-lg-none ms-2 me-n3" title="Show header menu">
+		<div class="btn btn-icon btn-active-color-primary w-35px h-35px" id="kt_app_header_menu_toggle">{% getSvgIcon 'duotune/text/txt001.svg' 'svg-icon svg-icon-1' %}</div>
+	</div>
+	<!--end::Header menu toggle-->
+</div>
+<!--end::Navbar-->

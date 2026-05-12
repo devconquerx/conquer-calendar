@@ -1,0 +1,257 @@
+{% extends 'layout/master.html' %}
+{% load static %}
+{% block title %}Reserva confirmada — {% endblock %}
+
+{% block layout %}
+<style>
+:root {
+  --bk-blue:  #0069ff;
+  --bk-text:  #1a1a2e;
+  --bk-muted: #6b7280;
+  --bk-border:#e2e5e9;
+  --bk-bg:    #f0f2f5;
+}
+body { background: var(--bk-bg) !important; }
+
+.cf-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+.cf-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 12px rgba(0,0,0,.10);
+  width: 100%;
+  max-width: 460px;
+  padding: 40px 36px 32px;
+  text-align: center;
+}
+
+/* Logo */
+.cf-logo {
+  display: block;
+  margin: 0 auto 24px;
+  height: 64px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Heading */
+.cf-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--bk-text);
+  margin: 0 0 10px;
+}
+.cf-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #16a34a;
+  flex-shrink: 0;
+}
+.cf-check svg { display: block; }
+
+.cf-subtitle {
+  color: var(--bk-muted);
+  font-size: 14px;
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+
+/* Open invitation button */
+.cf-btn-invite {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 14px;
+  color: var(--bk-text);
+  text-decoration: none;
+  margin-bottom: 28px;
+  transition: border-color .15s, background .15s;
+}
+.cf-btn-invite:hover {
+  border-color: var(--bk-blue);
+  color: var(--bk-blue);
+  background: #f5f8ff;
+}
+
+/* Details card */
+.cf-details {
+  border: 1px solid var(--bk-border);
+  border-radius: 10px;
+  padding: 20px 22px;
+  text-align: left;
+  margin-bottom: 24px;
+}
+.cf-event-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--bk-text);
+  margin: 0 0 16px;
+}
+.cf-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  color: var(--bk-text);
+  line-height: 1.4;
+}
+.cf-row:last-child { margin-bottom: 0; }
+.cf-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--bk-muted);
+}
+.cf-row a {
+  color: var(--bk-blue);
+  text-decoration: none;
+  word-break: break-word;
+}
+.cf-row a:hover { text-decoration: underline; }
+
+/* Footer links */
+.cf-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  padding-top: 4px;
+}
+.cf-footer a, .cf-footer button {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13.5px;
+  color: var(--bk-blue);
+  text-decoration: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cf-footer a:hover, .cf-footer button:hover { text-decoration: underline; }
+.cf-footer .cf-cancel-btn { color: #dc2626; }
+</style>
+
+<div class="cf-wrapper">
+  <div class="cf-card">
+
+    <!-- Logo -->
+    <img src="{% static 'media/logos/conquer-calendario.png' %}" alt="Conquer Calendario" class="cf-logo">
+
+    <!-- Heading -->
+    <h1 class="cf-heading">
+      <span class="cf-check">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2.5 7L5.5 10L11.5 4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      Estás agendado
+    </h1>
+
+    <p class="cf-subtitle">Se ha enviado una invitación de calendario a tu dirección de email.</p>
+
+    <!-- Open invitation button -->
+    {% if reserva.google_meet_url %}
+    <a href="{{ reserva.google_meet_url }}" target="_blank" rel="noopener" class="cf-btn-invite">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Abrir invitación
+    </a>
+    {% endif %}
+
+    <!-- Event details card -->
+    <div class="cf-details">
+      <p class="cf-event-name">{{ reserva.event_type.nombre }}</p>
+
+      <!-- Host -->
+      <div class="cf-row">
+        <span class="cf-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </span>
+        <span>{{ reserva.host.get_full_name|default:reserva.host.username }}</span>
+      </div>
+
+      <!-- Date / time -->
+      <div class="cf-row">
+        <span class="cf-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </span>
+        <span>
+          {{ inicio_local|date:"G:i" }} – {{ fin_local|date:"G:i" }},
+          {{ inicio_local|date:"l, j \d\e F \d\e Y" }}
+        </span>
+      </div>
+
+      <!-- Timezone -->
+      <div class="cf-row">
+        <span class="cf-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </span>
+        <span>{{ tz_host }}</span>
+      </div>
+
+      <!-- Meet link or placeholder -->
+      <div class="cf-row">
+        <span class="cf-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        </span>
+        {% if reserva.google_meet_url %}
+        <a href="{{ reserva.google_meet_url }}" target="_blank" rel="noopener">{{ reserva.google_meet_url }}</a>
+        {% else %}
+        <span style="color:var(--bk-muted)">Detalles de conferencia disponibles próximamente.</span>
+        {% endif %}
+      </div>
+
+      <!-- Guest name / email -->
+      <div class="cf-row">
+        <span class="cf-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </span>
+        <span>{{ reserva.nombre_invitado }} &langle;{{ reserva.email_invitado }}&rangle;</span>
+      </div>
+
+      {% if reserva.notas %}
+      <div class="cf-row">
+        <span class="cf-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </span>
+        <span>{{ reserva.notas }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Footer actions -->
+    <div class="cf-footer">
+      <a href="{% url 'public_booking:booking_page' user_slug=reserva.host.slug event_type_slug=reserva.event_type.slug %}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        Agendar otro evento
+      </a>
+      <form method="post" action="{% url 'public_token:cancelar_publica' token=reserva.confirmacion_token %}" style="margin:0">
+        {% csrf_token %}
+        <button type="submit" class="cf-cancel-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Cancelar esta reserva
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

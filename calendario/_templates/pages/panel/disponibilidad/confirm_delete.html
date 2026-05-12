@@ -1,0 +1,22 @@
+{% extends 'layout/panel.html' %}
+
+{% block title %}Eliminar bloque horario · {% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title mb-0">Eliminar bloque horario</h3>
+    </div>
+    <div class="card-body">
+        <p>¿Eliminar el bloque <strong>{{ object }}</strong>?</p>
+        <p class="text-danger">Esta acción no se puede deshacer.</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+                <a href="{% url 'panel_disponibilidad:bloque_list' %}" class="btn btn-light">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

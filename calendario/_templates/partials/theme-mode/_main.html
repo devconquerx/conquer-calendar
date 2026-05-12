@@ -1,0 +1,15 @@
+{% firstof toggle_btn_class as btnClass %}
+{% firstof toggle_btn_icon_class 'svg-icon svg-icon-2' as iconClass %}
+{% firstof menu_placement 'bottom-end' as menuPlacement %}
+{% firstof menu_trigger '{default:\'click\', lg: \'hover\'}' as trigger %}
+
+{% with dark='theme-dark-show '|add:iconClass light='theme-light-show '|add:iconClass %}
+<!--begin::Menu toggle-->
+<a href="#" class="{{ btnClass }}" data-kt-menu-trigger="{{ trigger }}" data-kt-menu-attach="parent" data-kt-menu-placement="{{ menuPlacement }}">
+	{% getSvgIcon 'duotune/general/gen060.svg' light %}
+	{% getSvgIcon 'duotune/general/gen061.svg' dark %}
+</a>
+<!--begin::Menu toggle-->
+{% endwith %}
+
+{% include 'partials/theme-mode/__menu.html' %}

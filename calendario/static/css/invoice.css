@@ -1,0 +1,110 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: .2cm;
+  color: #333;
+}
+
+.invoice-header {
+  margin-bottom: 2em;
+}
+
+h1 {
+  color: #2c3e50;
+  font-size: 24px;
+  margin-bottom: 3rem;
+}
+
+h2 {
+  color: #2c3e50;
+  font-size: 18px;
+  margin-top: 0;
+}
+
+.date {
+  color: #666;
+}
+
+.invoice-data {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3em;
+}
+
+.invoice-number {
+  margin-bottom: 3rem;
+}
+
+.company-info,
+.client-info {
+  font-size: 12px;
+  width: 45%;
+}
+
+.company-info p,
+.client-info p {
+  margin-bottom: 5px;
+  margin-top: 5px;
+}
+
+
+
+.total {
+  margin-top: 3em;
+  text-align: right;
+}
+
+.amount {
+  font-size: 20px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+table.table-invoice-number {
+  border-collapse: collapse;
+  width: 25%;
+}
+
+table.table-invoice-number td,
+table.table-invoice-number th {
+  padding: 5px;
+  font-size: 12px;
+}
+
+table.table-description {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+table.table-description th {
+  font-size: 12px;
+}
+
+table.table-description td,
+table.table-description th {
+  padding: 10px;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.total {
+  margin-top: 5em;
+}
+
+.logo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+}
+
+.bottom-notes {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+}

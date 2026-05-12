@@ -1,0 +1,30 @@
+{% extends 'layout/panel.html' %}
+
+{% block title %}Cancelar reserva · {% endblock %}
+
+{% block content %}
+<div class="card shadow-sm" style="max-width: 480px;">
+    <div class="card-body p-10 text-center">
+
+        <i class="bi bi-exclamation-triangle text-warning mb-4 d-block" style="font-size: 3rem;"></i>
+
+        <h3 class="fw-bold mb-3">¿Cancelar esta reserva?</h3>
+        <p class="text-gray-600 mb-1">
+            Reserva de <strong>{{ object.nombre_invitado }}</strong>
+        </p>
+        <p class="text-gray-600 mb-6">
+            {{ object.inicio_utc|date:"d/m/Y H:i" }} UTC
+        </p>
+        <p class="text-danger fw-semibold mb-8">Esta acción no se puede deshacer.</p>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-center gap-3">
+                <button type="submit" class="btn btn-danger btn-lg">Sí, cancelar</button>
+                <a href="{% url 'panel_reservas:reserva_list' %}" class="btn btn-light btn-lg">Volver</a>
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock content %}

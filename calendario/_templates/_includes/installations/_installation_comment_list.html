@@ -1,0 +1,169 @@
+{% load i18n %}
+
+{% if not comments %}
+
+
+</style>
+
+  <div class="card mb-8">
+    <div class="card-header">
+      <div class="card-title fs-3 fw-bold">
+        {% trans 'Observaciones de la instalación' %}
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row mt-2 mb-2">
+        <div class="col-sm">
+          <div class="alert alert-primary">
+            {% trans 'No existen observaciones para esta instalación' %}.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% else %}
+
+  <div class="card mb-0">
+    <div class="card-header">
+      <div class="card-title fs-3 fw-bold">
+        {% trans 'Observaciones de la instalación' %}
+      </div>
+    </div>
+  </div>
+
+  {% for comment in comments %}
+
+    {% if not comment.kpmg_user and not comment.agent_user and comment.phase == 'pre' %}
+
+      <div class="card mb-4 border border-success" style="color:#50cd89;background-color:#e8fff3;">
+        <div class="card-header">
+          <div>
+            <div class="card-title fs-6 fw-bold mt-4" style = "color:#50cd89;">
+              {% trans 'Aprobación' %}
+            </div>
+            <div class="fs-7 mb-4">
+              {{ comment.created }}
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row mt-2 mb-2">
+            <div class="col-sm">
+              {{ comment.description }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    {% elif not comment.kpmg_user and not comment.agent_user and comment.phase == 'sus' or comment.phase == 'rec' %}
+
+      <div class="card mb-4 border border-danger" style="color:#f1416c;background-color:#fff5f8;">
+        <div class="card-header">
+          <div>
+            <div class="card-title fs-6 fw-bold mt-4" style = "color:#f1416c;">
+              {% trans 'No aprobada' %}
+            </div>
+            <div class="fs-7 mb-4">
+              {{ comment.created }}
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row mt-2 mb-2">
+            <div class="col-sm">
+              {{ comment.description }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    {% else %}
+
+    {% if request.user.is_superuser %}
+      <div class="card mb-4">
+        <div class="card-header">
+        {% if comment.kpmg_user %}
+          <div>
+            <div class="card-title fs-6 fw-bold mt-4">
+              <span class="badge badge-primary" style="background-color: #003584;border-radius: 100%;">K</span><span>&emsp;KPMG</span>
+            </div>
+            <div class="fs-7 mb-4">
+              {{ comment.kpmg_user }} - {{ comment.created }}
+            </div>
+          </div>
+          <div>
+            <div>
+              <div class="fs-3 mt-4"><span class="badge badge-{{ comment.get_phase_color }}">{{ comment.get_phase_display }}</span></div>
+            </div>
+          </div>
+        {% elif comment.agent_user %}
+          <div>
+            <div class="card-title fs-6 fw-bold mt-4">
+              <span class="badge badge-danger" style="border-radius:100%;">A</span><span>&emsp;{{ installation.company.name }}</span>
+            </div>
+            <div class="fs-7 mb-4">
+              {{ comment.agent_user }} - {{ comment.created }}
+            </div>
+          </div>
+          <div>
+            <div>
+              <div class="fs-3 mt-4"><span class="badge badge-{{ comment.get_phase_color }}">{{ comment.get_phase_display }}</span></div>
+            </div>
+          </div>
+        {% endif %}
+        </div>
+        <div class="card-body">
+          <div class="row mt-2 mb-2">
+            <div class="col-sm">
+              {{ comment.description }}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="card mb-4">
+        <div class="card-header">
+        {% if comment.kpmg_user %}
+          <div>
+            <div class="card-title fs-6 fw-bold mt-4">
+              <span class="badge badge-primary" style="background-color: #003584;border-radius: 100%;">K</span><span>&emsp;KPMG</span>
+            </div>
+            <div class="fs-7 mb-4">
+            {{ comment.created }}
+            </div>
+          </div>
+          <div>
+            <div>
+              <div class="fs-3 mt-4"><span class="badge badge-{{ comment.get_phase_color }}">{{ comment.get_phase_display }}</span></div>
+            </div>
+          </div>
+        {% elif comment.agent_user %}
+          <div>
+            <div class="card-title fs-6 fw-bold mt-4">
+              <span class="badge badge-danger" style="border-radius:100%;">A</span><span>&emsp;{{ installation.company.name }}</span>
+            </div>
+            <div class="fs-7 mb-4">
+              {{ comment.agent_user }} - {{ comment.created }}
+            </div>
+          </div>
+          <div>
+            <div>
+              <div class="fs-3 mt-4"><span class="badge badge-{{ comment.get_phase_color }}">{{ comment.get_phase_display }}</span></div>
+            </div>
+          </div>
+        {% endif %}
+        </div>
+        <div class="card-body">
+          <div class="row mt-2 mb-2">
+            <div class="col-sm">
+              {{ comment.description }}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+
+{% endif %}

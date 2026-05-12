@@ -1,0 +1,37 @@
+{% extends 'layout/default.html' %}
+
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<!--begin::Container-->
+<div class="card">
+  <!--begin::Card header-->
+  <div class="card-header">
+    <!--begin::Card header-->
+    <div class="card-title fs-3 fw-bold">{{ page_title }}</div>
+    <!--end::Card header-->
+  </div>
+  <!--end::Card header-->
+
+  <form method="post" class="kt-form kt-form--label-right" novalidate>
+    {% csrf_token %}
+    <div class="card-body">
+      <div class="row">
+        <div class="col-12">
+          <p>{{ view.get_confirm_text_message|safe }}</p>
+        </div>
+      </div>
+    </div>
+    <!--end::Body-->
+
+    <div class="card-footer py-6">
+      <button class="btn btn-sm btn-danger"><i class="bi bi-trash"></i> {% trans 'Eliminar' %}</button>
+      <button class="btn btn-sm btn-secondary ms-2 backHistory"><i
+          class="bi bi-arrow-bar-left"></i>{% trans 'Cancelar' %}</button>
+    </div>
+  </form>
+
+</div>
+<!--end::Container-->
+{% endblock content %}

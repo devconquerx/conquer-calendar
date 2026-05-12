@@ -1,0 +1,553 @@
+{% extends 'layout/panel.html' %}
+
+{% block title %}Mi disponibilidad · {% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+/* ── Availability panel – Calendly-inspired ── */
+
+.avail-outer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.avail-card {
+  background: #fff;
+  border: 1px solid #e1e4e8;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.avail-card-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.avail-card-header h5 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 2px;
+}
+
+.avail-card-header .avail-tz {
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* ── Toggle switch ── */
+.avail-toggle {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.avail-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: #d1d5db;
+  border-radius: 18px;
+  transition: background .18s;
+}
+
+.toggle-track::before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .18s;
+}
+
+.avail-toggle input:checked + .toggle-track {
+  background: #0069ff;
+}
+
+.avail-toggle input:checked + .toggle-track::before {
+  transform: translateX(16px);
+}
+
+/* ── Day row ── */
+.avail-day-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 0;
+}
+
+.avail-day-row:last-child {
+  border-bottom: none;
+}
+
+/* ── 2-column days grid ── */
+.days-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.days-grid .avail-day-row:nth-child(odd):not(:last-child) {
+  border-right: 1px solid #f3f4f6;
+}
+
+.avail-day-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 110px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.avail-day-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  user-select: none;
+}
+
+/* ── Right slot area ── */
+.avail-day-right {
+  flex: 1;
+  min-width: 0;
+}
+
+.avail-unavailable {
+  font-size: 13px;
+  color: #9ca3af;
+  padding-top: 1px;
+}
+
+/* ── Time range row ── */
+.avail-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.avail-time-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.avail-time-input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 13px;
+  color: #374151;
+  width: 90px;
+  line-height: 1.4;
+  outline: none;
+  background: #fff;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.avail-time-input:focus {
+  border-color: #0069ff;
+  box-shadow: 0 0 0 3px rgba(0, 105, 255, .12);
+}
+
+.avail-sep {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.avail-btn-del {
+  background: none;
+  border: none;
+  padding: 3px 5px;
+  color: #c1c7d0;
+  border-radius: 5px;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  transition: color .15s;
+  margin-left: 2px;
+}
+
+.avail-btn-del:hover {
+  color: #ef4444;
+}
+
+/* ── Add-time button ── */
+.avail-btn-add {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0069ff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1.4;
+  transition: color .15s;
+}
+
+.avail-btn-add:hover {
+  color: #0051cc;
+}
+
+/* ── Inline add form ── */
+.avail-add-form-wrap {
+  display: none;
+  margin-top: 8px;
+}
+
+.avail-add-form-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.avail-btn-save {
+  background: #0069ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.avail-btn-save:hover {
+  background: #0051cc;
+}
+
+/* ── Timezone card ── */
+.tz-card {
+  background: #fff;
+  border: 1px solid #e1e4e8;
+  border-radius: 10px;
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.tz-card-header {
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.tz-card-header h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.tz-card-body {
+  padding: 16px 20px 20px;
+}
+
+.tz-card-body p {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.tz-select {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: #374151;
+  background: #fff;
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.tz-select:focus {
+  border-color: #0069ff;
+  box-shadow: 0 0 0 3px rgba(0, 105, 255, .12);
+}
+
+.tz-btn-save {
+  width: 100%;
+  background: #0069ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.tz-btn-save:hover {
+  background: #0051cc;
+}
+
+.avail-btn-cancel {
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+
+.avail-btn-cancel:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+</style>
+{% endblock css %}
+
+{% block content %}
+<div class="avail-outer">
+
+  <!-- ── Weekly hours card ── -->
+  <div class="avail-card" style="flex: 1; min-width: 360px;">
+
+    <!-- Header -->
+    <div class="avail-card-header">
+      <h5>Horas semanales</h5>
+      <div class="avail-tz">
+        <i class="bi bi-globe2"></i>
+        {{ request.user.timezone|default:"UTC" }}
+      </div>
+    </div>
+
+    <!-- Days -->
+    <div class="days-grid">
+    {% for grupo in dias_agrupados %}
+    {% with tiene=grupo.bloques|length %}
+    <div class="avail-day-row">
+
+      <!-- Toggle + day name -->
+      <div class="avail-day-left">
+        {% if 'availability.editar' in PERMISOS_USUARIO %}
+        <label class="avail-toggle" title="Activar/desactivar {{ grupo.dia_etiqueta }}">
+          <input
+            type="checkbox"
+            class="day-toggle"
+            data-dia="{{ grupo.dia_valor }}"
+            data-tiene="{{ tiene }}"
+            {% if tiene %}checked{% endif %}>
+          <span class="toggle-track"></span>
+        </label>
+        {% else %}
+          <span class="toggle-track" style="position:relative;display:inline-block;width:34px;height:18px;background:{% if tiene %}#0069ff{% else %}#d1d5db{% endif %};border-radius:18px;flex-shrink:0;">
+            <span style="position:absolute;width:12px;height:12px;left:{% if tiene %}19px{% else %}3px{% endif %};top:3px;background:#fff;border-radius:50%;"></span>
+          </span>
+        {% endif %}
+        <span class="avail-day-name">{{ grupo.dia_etiqueta }}</span>
+      </div>
+
+      <!-- Slots area -->
+      <div class="avail-day-right">
+
+        {% if not tiene %}
+          <!-- No blocks: show unavailable + hidden init form -->
+          <span class="avail-unavailable" id="unavail-{{ grupo.dia_valor }}">No disponible</span>
+
+          {% if 'availability.editar' in PERMISOS_USUARIO %}
+          <div class="avail-add-form-wrap" id="initform-{{ grupo.dia_valor }}">
+            <form method="post" action="{% url 'panel_disponibilidad:bloque_create' %}" class="avail-add-form-inner">
+              {% csrf_token %}
+              <input type="hidden" name="dia_semana" value="{{ grupo.dia_valor }}" />
+              <input type="time" name="hora_inicio" class="avail-time-input" value="09:00" required />
+              <span class="avail-sep">–</span>
+              <input type="time" name="hora_fin" class="avail-time-input" value="17:00" required />
+              <button type="submit" class="avail-btn-save">Guardar</button>
+              <button type="button" class="avail-btn-cancel cancel-init-btn" data-dia="{{ grupo.dia_valor }}">Cancelar</button>
+            </form>
+          </div>
+          {% endif %}
+
+        {% else %}
+          <!-- Existing blocks -->
+          {% for b in grupo.bloques %}
+          <div class="avail-time-row">
+            <input type="time" value="{{ b.hora_inicio|time:'H:i' }}"
+                   class="avail-time-input"
+                   readonly
+                   style="pointer-events:none; background:#f9fafb; color:#374151;" />
+            <span class="avail-sep">–</span>
+            <input type="time" value="{{ b.hora_fin|time:'H:i' }}"
+                   class="avail-time-input"
+                   readonly
+                   style="pointer-events:none; background:#f9fafb; color:#374151;" />
+            {% if 'availability.editar' in PERMISOS_USUARIO %}
+            <form method="post"
+                  action="{% url 'panel_disponibilidad:bloque_delete' b.pk %}"
+                  class="d-inline mb-0"
+                  onsubmit="return confirm('¿Eliminar este bloque?')">
+              {% csrf_token %}
+              <button type="submit" class="avail-btn-del" title="Eliminar">
+                <i class="bi bi-trash3" style="font-size:14px;"></i>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+          {% endfor %}
+
+          <!-- Add another time range -->
+          {% if 'availability.editar' in PERMISOS_USUARIO %}
+          <div>
+            <button type="button"
+                    class="avail-btn-add toggle-add-btn"
+                    data-target="addform-{{ grupo.dia_valor }}">
+              <i class="bi bi-plus-lg" style="font-size:11px;"></i>Añadir horario
+            </button>
+            <div class="avail-add-form-wrap" id="addform-{{ grupo.dia_valor }}">
+              <form method="post"
+                    action="{% url 'panel_disponibilidad:bloque_create' %}"
+                    class="avail-add-form-inner">
+                {% csrf_token %}
+                <input type="hidden" name="dia_semana" value="{{ grupo.dia_valor }}" />
+                <input type="time" name="hora_inicio" class="avail-time-input" value="09:00" required />
+                <span class="avail-sep">–</span>
+                <input type="time" name="hora_fin" class="avail-time-input" value="17:00" required />
+                <button type="submit" class="avail-btn-save">Guardar</button>
+                <button type="button"
+                        class="avail-btn-cancel cancel-add-btn"
+                        data-target="addform-{{ grupo.dia_valor }}">Cancelar</button>
+              </form>
+            </div>
+
+            <!-- Hidden form to clear all blocks when toggling off -->
+            <form id="limpiarform-{{ grupo.dia_valor }}"
+                  method="post"
+                  action="{% url 'panel_disponibilidad:dia_limpiar' grupo.dia_valor %}"
+                  style="display:none;">
+              {% csrf_token %}
+            </form>
+          </div>
+          {% endif %}
+
+        {% endif %}
+      </div>
+      <!-- /slots area -->
+
+    </div>
+    {% endwith %}
+    {% endfor %}
+    </div>
+
+  </div>
+  <!-- ── /Weekly hours card ── -->
+
+  <!-- ── Timezone card ── -->
+  <div class="tz-card">
+    <div class="tz-card-header">
+      <h5><i class="bi bi-globe2 me-2"></i>Zona horaria</h5>
+    </div>
+    <div class="tz-card-body">
+      <p>Tu disponibilidad se calcula en esta zona. Cámbiala si estás en otro lugar.</p>
+      <form method="post" action="{% url 'panel_usuarios:actualizar_timezone' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}" />
+        <select name="timezone" class="tz-select">
+          {% for value, label in timezone_choices %}
+          <option value="{{ value }}"{% if value == request.user.timezone %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="tz-btn-save">Guardar</button>
+      </form>
+    </div>
+  </div>
+  <!-- ── /Timezone card ── -->
+
+</div>
+{% endblock content %}
+
+{% block js_footer %}
+<script>
+(function () {
+  // Show inline add-time form
+  document.querySelectorAll('.toggle-add-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var wrap = document.getElementById(this.dataset.target);
+      if (wrap) wrap.style.display = 'block';
+    });
+  });
+
+  document.querySelectorAll('.cancel-add-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var wrap = document.getElementById(this.dataset.target);
+      if (wrap) wrap.style.display = 'none';
+    });
+  });
+
+  // Cancel init form (toggle OFF→ON then cancel)
+  document.querySelectorAll('.cancel-init-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var dia = this.dataset.dia;
+      var toggle = document.querySelector('.day-toggle[data-dia="' + dia + '"]');
+      if (toggle) toggle.checked = false;
+      var unavail = document.getElementById('unavail-' + dia);
+      if (unavail) unavail.style.display = '';
+      var initForm = document.getElementById('initform-' + dia);
+      if (initForm) initForm.style.display = 'none';
+    });
+  });
+
+  // Day toggle behaviour
+  document.querySelectorAll('.day-toggle').forEach(function (toggle) {
+    toggle.addEventListener('change', function () {
+      var dia = this.dataset.dia;
+      var tiene = parseInt(this.dataset.tiene, 10);
+
+      if (this.checked) {
+        // OFF → ON: show init add form (only for days that had no blocks)
+        var unavail = document.getElementById('unavail-' + dia);
+        var initForm = document.getElementById('initform-' + dia);
+        if (unavail) unavail.style.display = 'none';
+        if (initForm) initForm.style.display = 'block';
+      } else {
+        // ON → OFF
+        if (tiene > 0) {
+          // Day has blocks: confirm then submit limpiar form
+          if (!confirm('¿Desactivar este día? Se eliminarán todos sus horarios.')) {
+            this.checked = true; // revert
+            return;
+          }
+          var limpiarForm = document.getElementById('limpiarform-' + dia);
+          if (limpiarForm) limpiarForm.submit();
+        } else {
+          // Day had no blocks: just hide init form and show unavailable
+          var unavail2 = document.getElementById('unavail-' + dia);
+          var initForm2 = document.getElementById('initform-' + dia);
+          if (unavail2) unavail2.style.display = '';
+          if (initForm2) initForm2.style.display = 'none';
+        }
+      }
+    });
+  });
+}());
+</script>
+{% endblock js_footer %}

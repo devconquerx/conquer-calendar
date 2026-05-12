@@ -1,0 +1,460 @@
+{% extends 'layout/master.html' %}
+{% block title %}{{ event_type.nombre }} — {% endblock %}
+
+{% block layout %}
+<style>
+:root {
+  --bk-blue:       #0069ff;
+  --bk-blue-hover: #0052cc;
+  --bk-blue-light: #e8f0fe;
+  --bk-text:       #1a1a2e;
+  --bk-muted:      #8a8a8a;
+  --bk-border:     #e2e5e9;
+  --bk-bg:         #f0f2f5;
+}
+
+body { background: var(--bk-bg) !important; }
+
+.bk-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+.bk-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 12px rgba(0,0,0,.10);
+  display: flex;
+  width: 100%;
+  max-width: 800px;
+  overflow: hidden;
+}
+
+/* ── LEFT PANEL ── */
+.bk-left {
+  flex: 1;
+  border-right: 1px solid var(--bk-border);
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+}
+.bk-host    { color: var(--bk-muted); font-size: 13px; margin: 0 0 6px; }
+.bk-title   { font-size: 22px; font-weight: 700; color: var(--bk-text); margin: 0 0 14px; line-height: 1.3; }
+.bk-meta    { display: flex; align-items: center; gap: 7px; color: var(--bk-muted); font-size: 14px; margin-bottom: 6px; }
+.bk-meta svg{ flex-shrink: 0; }
+.bk-desc    { color: #444; font-size: 14px; line-height: 1.7; margin-top: 18px; flex: 1; }
+.bk-desc strong { color: var(--bk-text); font-size: 16px; }
+.bk-footer  { margin-top: 24px; display: flex; gap: 16px; }
+.bk-footer a{ color: var(--bk-blue); font-size: 12px; text-decoration: none; }
+.bk-footer a:hover { text-decoration: underline; }
+
+/* ── RIGHT PANEL ── */
+.bk-right { flex: 1; padding: 36px 28px; min-width: 0; display: flex; flex-direction: column; }
+
+.bk-error {
+  background: #fff5f5; border: 1px solid #fcc; border-radius: 8px;
+  padding: 12px 16px; color: #c00; font-size: 14px; margin-bottom: 18px;
+}
+
+/* ── Calendar + slots inner layout ── */
+.bk-date-inner   { display: flex; gap: 0; flex: 1; }
+.bk-cal-col      { flex: 1; min-width: 0; padding-right: 20px; }
+.bk-step-title   { font-size: 16px; font-weight: 700; color: var(--bk-text); margin: 0 0 22px; }
+
+/* Month nav */
+.bk-month-nav {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+}
+.bk-month-label { font-weight: 600; font-size: 14px; text-transform: capitalize; color: var(--bk-text); }
+.bk-nav-btn {
+  width: 30px; height: 30px; border-radius: 50%; border: none; background: none;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  color: var(--bk-text); font-size: 18px; line-height: 1; text-decoration: none;
+  transition: background .12s;
+}
+.bk-nav-btn:hover { background: #f0f0f0; color: var(--bk-text); }
+.bk-nav-btn.off  { opacity: .2; pointer-events: none; }
+
+/* Grid */
+.bk-grid { width: 100%; border-collapse: collapse; }
+.bk-grid th {
+  text-align: center; font-size: 11px; font-weight: 600; letter-spacing: .04em;
+  color: var(--bk-muted); padding: 2px 0 8px; text-transform: uppercase;
+}
+.bk-grid td { text-align: center; padding: 2px 0; }
+
+.bk-day {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 500; position: relative;
+  text-decoration: none; color: #bbb; cursor: default;
+  transition: background .12s, color .12s;
+}
+/* Available day: outlined circle */
+.bk-day.avail {
+  color: var(--bk-blue);
+  font-weight: 700;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+.bk-day.avail:hover {
+  background: var(--bk-blue-light);
+}
+/* Selected day: filled */
+.bk-day.sel {
+  background: var(--bk-blue) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+/* Today dot */
+.bk-day.today::after {
+  content: '';
+  position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+  width: 3px; height: 3px; border-radius: 50%; background: var(--bk-blue);
+}
+.bk-day.sel.today::after { background: rgba(255,255,255,.6); }
+.bk-day.out { visibility: hidden; }
+
+/* Timezone section */
+.bk-tz-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--bk-border);
+}
+.bk-tz-label {
+  font-size: 12px; font-weight: 700; color: var(--bk-text);
+  margin: 0 0 8px; text-transform: none; letter-spacing: 0;
+}
+.bk-tz-row {
+  display: flex; align-items: center; gap: 7px; position: relative; cursor: pointer;
+}
+.bk-tz-row svg { flex-shrink: 0; color: var(--bk-text); }
+.bk-tz-display {
+  font-size: 13px; font-weight: 500; color: var(--bk-text);
+  display: flex; align-items: center; gap: 4px;
+}
+.bk-tz-chevron { font-size: 10px; color: var(--bk-muted); }
+/* Real select overlaid invisibly so clicking opens the native dropdown */
+.bk-tz-select-real {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  width: 100%; height: 100%; font-size: 16px; /* prevents iOS zoom */
+}
+
+/* ── Slots column ── */
+.bk-slots-col {
+  flex: 1; min-width: 0;
+  border-left: 1px solid var(--bk-border);
+  padding-left: 20px;
+}
+.bk-slots-title  { font-size: 14px; font-weight: 600; color: var(--bk-text); margin-bottom: 14px; }
+.bk-slots-scroll { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 360px; }
+.bk-slot {
+  width: 100%; border: 2px solid var(--bk-blue); border-radius: 8px;
+  padding: 10px 8px; background: none; color: var(--bk-blue);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all .14s; text-align: center;
+}
+.bk-slot:hover { background: var(--bk-blue); color: #fff; }
+.bk-empty { color: var(--bk-muted); font-size: 13px; }
+
+/* ── Form step ── */
+#step-form { display: none; flex-direction: column; }
+.bk-back {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: none; color: var(--bk-blue); font-size: 14px;
+  cursor: pointer; padding: 0; margin-bottom: 18px;
+}
+.bk-back:hover { text-decoration: underline; }
+.bk-slot-badge {
+  background: var(--bk-blue-light); border-radius: 8px;
+  padding: 12px 16px; margin-bottom: 22px;
+  font-size: 14px; color: var(--bk-text); line-height: 1.5;
+}
+.bk-fields { display: flex; flex-direction: column; gap: 14px; }
+.bk-label  { font-size: 13px; font-weight: 600; color: var(--bk-text); display: block; margin-bottom: 4px; }
+.bk-input  {
+  width: 100%; border: 1px solid var(--bk-border); border-radius: 8px;
+  padding: 10px 13px; font-size: 14px; outline: none; transition: border .12s;
+  font-family: inherit; box-sizing: border-box;
+}
+.bk-input:focus { border-color: var(--bk-blue); }
+.bk-submit {
+  background: var(--bk-blue); color: #fff; border: none; border-radius: 8px;
+  padding: 13px 24px; font-size: 15px; font-weight: 600; cursor: pointer;
+  width: 100%; transition: background .14s; margin-top: 4px;
+}
+.bk-submit:hover { background: var(--bk-blue-hover); }
+
+/* ── Responsive ── */
+@media (max-width: 680px) {
+  .bk-card  { flex-direction: column; }
+  .bk-left  { border-right: none; border-bottom: 1px solid var(--bk-border); padding: 24px 20px; }
+  .bk-right { padding: 24px 20px; }
+  .bk-date-inner { flex-direction: column; gap: 18px; }
+  .bk-cal-col    { padding-right: 0; }
+  .bk-slots-col  { border-left: none; border-top: 1px solid var(--bk-border); padding-left: 0; padding-top: 16px; }
+  .bk-slots-scroll { flex-direction: row; flex-wrap: wrap; max-height: none; }
+  .bk-slot { width: auto; padding: 8px 18px; }
+}
+</style>
+
+<div class="bk-wrapper">
+  <div class="bk-card">
+
+    {# ── LEFT PANEL ── #}
+    <div class="bk-left">
+      <p class="bk-host">{{ host.get_full_name|default:host.username }}</p>
+      <h1 class="bk-title">{{ event_type.nombre }}</h1>
+      <div class="bk-meta">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        {{ event_type.duracion_minutos }} min
+      </div>
+      {% if event_type.precio %}
+      <div class="bk-meta">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+        {{ event_type.precio }} EUR
+      </div>
+      {% endif %}
+      {% if event_type.descripcion %}
+      <div class="bk-desc">{{ event_type.descripcion|safe }}</div>
+      {% endif %}
+      <div class="bk-footer">
+        <a href="#">Política de privacidad</a>
+        <a href="#">Configuración de cookies</a>
+      </div>
+    </div>
+
+    {# ── RIGHT PANEL ── #}
+    <div class="bk-right">
+
+      {% if form_errors %}
+      <div class="bk-error">
+        {% for errors in form_errors.values %}{% for msg in errors %}<p style="margin:0">{{ msg }}</p>{% endfor %}{% endfor %}
+      </div>
+      {% endif %}
+
+      {# STEP 1+2: Calendar + slots #}
+      <div id="step-date" style="display:flex; flex-direction:column; flex:1;">
+        <div class="bk-date-inner">
+
+          {# Calendar column #}
+          <div class="bk-cal-col">
+            <p class="bk-step-title">Selecciona una fecha y hora</p>
+
+            <div class="bk-month-nav">
+              {% if mes_anterior %}
+              <a href="?mes={{ mes_anterior|date:'Y-m-d' }}{% if fecha_iso %}&fecha={{ fecha_iso }}{% endif %}" class="bk-nav-btn">‹</a>
+              {% else %}
+              <span class="bk-nav-btn off">‹</span>
+              {% endif %}
+
+              <span class="bk-month-label">{{ mes_base|date:"F Y" }}</span>
+
+              {% if mes_siguiente %}
+              <a href="?mes={{ mes_siguiente|date:'Y-m-d' }}{% if fecha_iso %}&fecha={{ fecha_iso }}{% endif %}" class="bk-nav-btn">›</a>
+              {% else %}
+              <span class="bk-nav-btn off">›</span>
+              {% endif %}
+            </div>
+
+            <table class="bk-grid">
+              <thead>
+                <tr>
+                  <th>DOM</th><th>LUN</th><th>MAR</th><th>MIÉ</th><th>JUE</th><th>VIE</th><th>SÁB</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for semana in cal_semanas %}
+                <tr>
+                  {% for dia in semana %}
+                  <td>
+                    {% if not dia.en_mes %}
+                      <span class="bk-day out">{{ dia.fecha.day }}</span>
+                    {% elif dia.clickable %}
+                      <a href="?fecha={{ dia.fecha|date:'Y-m-d' }}&mes={{ mes_base|date:'Y-m-d' }}"
+                         class="bk-day avail{% if dia.es_seleccionada %} sel{% endif %}{% if dia.es_hoy %} today{% endif %}">
+                        {{ dia.fecha.day }}
+                      </a>
+                    {% else %}
+                      <span class="bk-day{% if dia.es_hoy %} today{% endif %}">{{ dia.fecha.day }}</span>
+                    {% endif %}
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            {# Timezone #}
+            <div class="bk-tz-section">
+              <p class="bk-tz-label">Zona horaria</p>
+              <div class="bk-tz-row">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+                <span class="bk-tz-display">
+                  <span id="tz-display-text">cargando…</span>
+                  <span class="bk-tz-chevron">▼</span>
+                </span>
+                <select id="tz-select" class="bk-tz-select-real" aria-label="Zona horaria"></select>
+              </div>
+            </div>
+          </div>
+
+          {# Slots column — only when date is selected #}
+          {% if fecha %}
+          <div class="bk-slots-col">
+            <p class="bk-slots-title">{{ fecha|date:"j \d\e F" }}</p>
+            {% if slots_local %}
+            <div class="bk-slots-scroll">
+              {% for slot_utc, slot_local in slots_local %}
+              <button type="button" class="bk-slot"
+                      data-utc="{{ slot_utc|date:'c' }}"
+                      data-label="{{ slot_local|date:'H:i' }} h"
+                      onclick="pickSlot(this)">
+                {{ slot_local|date:"H:i" }} h
+              </button>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="bk-empty">Sin horarios para este día.</p>
+            {% endif %}
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+      {# STEP 3: Form #}
+      <div id="step-form">
+        <form method="post" action="{% url 'public_booking:booking_submit' user_slug=host.slug event_type_slug=event_type.slug %}">
+          {% csrf_token %}
+          <input type="hidden" id="inicio_utc" name="inicio_utc" value="{{ inicio_utc_str|default:'' }}">
+
+          <button type="button" class="bk-back" onclick="goBack()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Atrás
+          </button>
+
+          <div class="bk-slot-badge" id="slot-badge">
+            {% if slot_label %}
+            🕐 <strong>{{ slot_label }}</strong> &mdash; {{ fecha|date:"j \d\e F" }} &middot; {{ event_type.duracion_minutos }} min
+            {% endif %}
+          </div>
+
+          <div class="bk-fields">
+            <div>
+              <label class="bk-label" for="nombre_invitado">Nombre *</label>
+              <input type="text" id="nombre_invitado" name="nombre_invitado" class="bk-input"
+                     required minlength="2" value="{{ nombre_invitado|default:'' }}" autocomplete="name">
+            </div>
+            <div>
+              <label class="bk-label" for="email_invitado">Email *</label>
+              <input type="email" id="email_invitado" name="email_invitado" class="bk-input"
+                     required value="{{ email_invitado|default:'' }}" autocomplete="email">
+            </div>
+            <div>
+              <label class="bk-label" for="notas">Notas (opcional)</label>
+              <textarea id="notas" name="notas" class="bk-input" rows="3"
+                        style="resize:vertical;">{{ notas|default:'' }}</textarea>
+            </div>
+            <button type="submit" class="bk-submit">Confirmar reserva</button>
+          </div>
+        </form>
+      </div>
+
+    </div>{# /bk-right #}
+  </div>{# /bk-card #}
+</div>
+
+<script>
+(function () {
+  var params    = new URLSearchParams(window.location.search);
+  var urlTz     = params.get('tz') || '';
+  var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  var activeTz  = urlTz || browserTz;
+
+  var sel     = document.getElementById('tz-select');
+  var display = document.getElementById('tz-display-text');
+  var now     = new Date();
+
+  function tzLabel(tz) {
+    var city = tz.split('/').pop().replace(/_/g, ' ');
+    var time = now.toLocaleTimeString('es-ES', {
+      hour: '2-digit', minute: '2-digit', timeZone: tz, hour12: false,
+    });
+    return city + ' (' + time + ')';
+  }
+
+  function fmtSlot(utcStr, tz) {
+    try {
+      return new Date(utcStr).toLocaleTimeString('es-ES', {
+        hour: '2-digit', minute: '2-digit', timeZone: tz, hour12: false,
+      }) + ' h';
+    } catch (e) { return utcStr; }
+  }
+
+  function refreshSlots(tz) {
+    document.querySelectorAll('.bk-slot').forEach(function (btn) {
+      var label = fmtSlot(btn.dataset.utc, tz);
+      btn.textContent = label;
+      btn.dataset.label = label;
+    });
+  }
+
+  /* Populate select */
+  var zones = [];
+  try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { zones = [browserTz]; }
+  zones.forEach(function (tz) {
+    var o = document.createElement('option');
+    o.value = tz;
+    o.textContent = tz;
+    if (tz === activeTz) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  /* Update display text */
+  function updateDisplay() {
+    var tz = sel.value;
+    display.textContent = tzLabel(tz);
+    refreshSlots(tz);
+  }
+
+  sel.addEventListener('change', updateDisplay);
+  updateDisplay();
+
+  /* Update time every minute */
+  setInterval(function () { now = new Date(); updateDisplay(); }, 60000);
+})();
+
+function pickSlot(el) {
+  document.getElementById('inicio_utc').value = el.dataset.utc;
+  document.getElementById('slot-badge').innerHTML =
+    '🕐 <strong>' + el.dataset.label + '</strong>'
+    + ' &mdash; {{ fecha|date:"j \\d\\e F" }}'
+    + ' &middot; {{ event_type.duracion_minutos }} min';
+  document.getElementById('step-date').style.display = 'none';
+  document.getElementById('step-form').style.display = 'flex';
+}
+
+function goBack() {
+  document.getElementById('step-form').style.display = 'none';
+  document.getElementById('step-date').style.display = 'flex';
+}
+
+{% if form_errors and inicio_utc_str %}
+document.getElementById('step-date').style.display = 'none';
+document.getElementById('step-form').style.display  = 'flex';
+{% endif %}
+</script>
+{% endblock %}

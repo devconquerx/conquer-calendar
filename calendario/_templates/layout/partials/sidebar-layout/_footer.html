@@ -1,0 +1,19 @@
+{% load i18n %}
+
+
+<div id="kt_app_footer" class="app-footer">
+  <div class="app-container container-fluid d-flex flex-column flex-md-row flex-center flex-md-stack py-3">
+    <div id="contacto" class="menu menu-gray-600 menu-hover-primary fw-semibold order-1">
+      <div class="text-muted fw-bold me-1" style="vertical-align: middle;"></div>
+    </div>
+    <div>
+      <span class="text-muted fw-semibold me-1" style="font-size: 10px;">2026 ©</span>
+      <a href="#" target="_blank" class="text-gray-800 text-hover-primary" style="font-size: 10px;">{{ request.user.email }}</a>
+    </div>
+    <ul class="menu menu-gray-600 menu-hover-primary fw-semibold order-1">
+      <li class="menu-item">
+        <a href="#" target="_blank" class="menu-link px-2">{% trans 'Aviso legal' %}</a>
+      </li>
+    </ul>
+  </div>
+</div>

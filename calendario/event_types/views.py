@@ -1,0 +1,112 @@
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.db.models import Count
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
+from django.views import View
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+
+from calendario.permisos.mixins import RequierePermisoMixin
+from .forms import EventTypeForm, _hosts_queryset
+from .models import EventType, EventTypeXHost
+
+
+class EventTypeListView(RequierePermisoMixin, ListView):
+    permiso_requerido = 'event_types.ver'
+    model = EventType
+    template_name = 'pages/panel/event_types/list.html'
+    context_object_name = 'event_types'
+    paginate_by = 25
+
+    def get_queryset(self):
+        return (EventType.objects
+                .filter(host=self.request.user)
+                .annotate(num_hosts=Count('hosts_pool'))
+                .order_by('nombre'))
+
+
+class EventTypeCreateView(RequierePermisoMixin, CreateView):
+    permiso_requerido = 'event_types.crear'
+    model = EventType
+    form_class = EventTypeForm
+    template_name = 'pages/panel/event_types/form.html'
+    success_url = reverse_lazy('panel_event_types:event_type_list')
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.host = self.request.user
+        try:
+            obj.full_clean(exclude=['slug'])
+        except ValidationError as e:
+            for field, errs in e.message_dict.items():
+                for err in errs:
+                    field_name = field if (field != '__all__' and field in form.fields) else None
+                    form.add_error(field_name, err)
+            return self.form_invalid(form)
+        with transaction.atomic():
+            obj.save()
+            EventTypeXHost.objects.bulk_create([
+                EventTypeXHost(event_type=obj, host=h) for h in _hosts_queryset()
+            ])
+        self.object = obj
+        messages.success(self.request, f"Tipo de evento '{obj.nombre}' creado.")
+        return redirect(self.get_success_url())
+
+
+class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
+    permiso_requerido = 'event_types.editar'
+    model = EventType
+    form_class = EventTypeForm
+    template_name = 'pages/panel/event_types/form.html'
+    success_url = reverse_lazy('panel_event_types:event_type_list')
+
+    def get_queryset(self):
+        return EventType.objects.filter(host=self.request.user)
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        try:
+            obj.full_clean(exclude=['slug'])
+        except ValidationError as e:
+            for field, errs in e.message_dict.items():
+                for err in errs:
+                    field_name = field if (field != '__all__' and field in form.fields) else None
+                    form.add_error(field_name, err)
+            return self.form_invalid(form)
+        with transaction.atomic():
+            obj.save()
+            EventTypeXHost.objects.filter(event_type=obj).delete()
+            EventTypeXHost.objects.bulk_create([
+                EventTypeXHost(event_type=obj, host=h) for h in _hosts_queryset()
+            ])
+        self.object = obj
+        messages.success(self.request, f"Tipo de evento '{obj.nombre}' actualizado.")
+        return redirect(self.get_success_url())
+
+
+class EventTypeDeleteView(RequierePermisoMixin, DeleteView):
+    permiso_requerido = 'event_types.eliminar'
+    model = EventType
+    template_name = 'pages/panel/event_types/confirm_delete.html'
+    success_url = reverse_lazy('panel_event_types:event_type_list')
+
+    def get_queryset(self):
+        return EventType.objects.filter(host=self.request.user)
+
+    def post(self, request, *args, **kwargs):
+        obj = self.get_object()
+        messages.success(request, f"Tipo de evento '{obj.nombre}' eliminado.")
+        return super().post(request, *args, **kwargs)
+
+
+class EventTypeToggleActivoView(RequierePermisoMixin, View):
+    permiso_requerido = 'event_types.editar'
+
+    def post(self, request, pk):
+        obj = get_object_or_404(EventType, pk=pk, host=request.user)
+        obj.activo = not obj.activo
+        obj.save(update_fields=['activo', 'fecha_actualizacion'])
+        estado = 'activado' if obj.activo else 'desactivado'
+        messages.success(request, f"Tipo de evento '{obj.nombre}' {estado}.")
+        return redirect('panel_event_types:event_type_list')

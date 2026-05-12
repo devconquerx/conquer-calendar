@@ -1,0 +1,15 @@
+{% load i18n %}
+
+
+<div class="col-sm">
+    <div class="alert alert-primary">
+    <p class="fs-6 fw-bold">
+        {% trans 'Información' %}
+    </p>
+    <p class="fs-7">
+        {% trans 'Recordarle que para que la interacción continúe con el proceso de aprobación las preguntas formuladas a continuación <strong>deberán ser contestadas preferiblemente con un "Sí", o en su caso "No Aplica"</strong>, o aportar las justificaciones necesarias en caso contrario. Dispone de las plantillas de referencia para la documentación requerida '%}
+    <strong><a href="{% url 'users:ru_dashboard' %}">aquí.</a></strong>
+    </p>
+    </div>
+</div>
+        

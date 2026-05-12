@@ -1,0 +1,214 @@
+from collections import defaultdict
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+from django.db import transaction
+from django.db.models import Count
+from django.utils import timezone
+
+from calendario.availability.models import BloqueHorarioSemanal
+from calendario.event_types.models import EventType, EventTypeXHost
+from calendario.google_calendar.services import (
+    consultar_freebusy, crear_evento_google, eliminar_evento_google,
+)
+from .exceptions import SlotNoDisponibleError
+from .models import Reserva
+
+
+MAX_VENTANA_DIAS = 60
+UTC = ZoneInfo('UTC')
+
+
+def _intervals_overlap(a_inicio, a_fin, b_inicio, b_fin):
+    return a_inicio < b_fin and b_inicio < a_fin
+
+
+def _obtener_hosts_pool(event_type):
+    """
+    Hosts activos del pool del event_type, ordenados por pivot.id ASC.
+    Si pool vacío, devuelve [].
+    """
+    pivots = (EventTypeXHost.objects
+              .filter(event_type=event_type, host__is_active=True)
+              .select_related('host')
+              .order_by('id'))
+    return [p.host for p in pivots]
+
+
+def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
+    """
+    Devuelve lista de inicio_utc aware-UTC disponibles para un host concreto.
+    fecha_desde / fecha_hasta: date naive (interpretadas en TZ del host).
+    Clamp servidor: fecha_hasta = min(fecha_hasta, fecha_desde + MAX_VENTANA_DIAS).
+    """
+    tz_host = ZoneInfo(host.timezone)
+    duracion = event_type.duracion_minutos
+    buffer_antes = event_type.buffer_antes_minutos
+    buffer_despues = event_type.buffer_despues_minutos
+    aviso = event_type.aviso_minimo_horas
+
+    fecha_hasta = min(fecha_hasta, fecha_desde + timedelta(days=MAX_VENTANA_DIAS))
+    if fecha_hasta < fecha_desde:
+        return []
+
+    ahora_utc = timezone.now()
+    minimo = ahora_utc + timedelta(hours=aviso)
+
+    bloques_por_dia = defaultdict(list)
+    for b in BloqueHorarioSemanal.objects.filter(host=host):
+        bloques_por_dia[b.dia_semana].append(b)
+
+    desde_utc = datetime.combine(fecha_desde, datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
+    hasta_utc = datetime.combine(fecha_hasta + timedelta(days=1), datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
+
+    reservas = list(
+        Reserva.objects.filter(
+            host=host, estado=Reserva.Estado.CONFIRMADA,
+            inicio_utc__lt=hasta_utc + timedelta(hours=24),
+            fin_utc__gt=desde_utc - timedelta(hours=24),
+        ).select_related('event_type').order_by('inicio_utc')
+    )
+
+    slots = []
+    step = timedelta(minutes=duracion + buffer_despues)
+    fecha_actual = fecha_desde
+    while fecha_actual <= fecha_hasta:
+        dia_semana = fecha_actual.weekday()
+        for bloque in bloques_por_dia[dia_semana]:
+            cursor_local = datetime.combine(fecha_actual, bloque.hora_inicio).replace(tzinfo=tz_host)
+            fin_local = datetime.combine(fecha_actual, bloque.hora_fin).replace(tzinfo=tz_host)
+            while cursor_local + timedelta(minutes=duracion) <= fin_local:
+                slot_utc = cursor_local.astimezone(UTC)
+                slot_fin_utc = slot_utc + timedelta(minutes=duracion)
+                # Filtro DST: si el offset cambia dentro del slot, descartar.
+                if slot_utc.utcoffset() != slot_fin_utc.utcoffset():
+                    cursor_local += step
+                    continue
+                if slot_utc < minimo:
+                    cursor_local += step
+                    continue
+                new_blocked_inicio = slot_utc - timedelta(minutes=buffer_antes)
+                new_blocked_fin = slot_fin_utc + timedelta(minutes=buffer_despues)
+                conflict = False
+                for r in reservas:
+                    r_blocked_inicio = r.inicio_utc - timedelta(minutes=r.event_type.buffer_antes_minutos)
+                    r_blocked_fin = r.fin_utc + timedelta(minutes=r.event_type.buffer_despues_minutos)
+                    if r_blocked_inicio >= new_blocked_fin:
+                        break  # reservas ordenadas; las siguientes son aún más tardías.
+                    if _intervals_overlap(new_blocked_inicio, new_blocked_fin, r_blocked_inicio, r_blocked_fin):
+                        conflict = True
+                        break
+                if not conflict:
+                    slots.append(slot_utc)
+                cursor_local += step
+        fecha_actual += timedelta(days=1)
+
+    return slots
+
+
+def calcular_slots(event_type, fecha_desde, fecha_hasta):
+    """
+    Devuelve la unión de slots disponibles entre todos los hosts del pool del event_type.
+    """
+    hosts = _obtener_hosts_pool(event_type)
+    if not hosts:
+        return []
+    slots_set = set()
+    for host in hosts:
+        slots_set.update(
+            _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta)
+        )
+    return sorted(slots_set)
+
+
+def _candidatos_para_slot(event_type, inicio_utc):
+    """
+    Hosts del pool que tienen inicio_utc disponible (dentro de su disponibilidad
+    semanal y sin colisión con sus reservas, respetando buffers).
+    Orden: pivot.id ASC.
+    """
+    hosts = _obtener_hosts_pool(event_type)
+    if not hosts:
+        return []
+    fecha_local = inicio_utc.astimezone(ZoneInfo(hosts[0].timezone)).date()
+    candidatos = []
+    for host in hosts:
+        slots_host = _calcular_slots_para_host(event_type, host, fecha_local, fecha_local)
+        if inicio_utc in slots_host:
+            candidatos.append(host)
+    return candidatos
+
+
+def _seleccionar_host_round_robin(event_type, candidatos):
+    """
+    Selecciona el host con menor número de reservas confirmadas para este event_type.
+    Tiebreak: menor pivot.id (orden de añadido al pool).
+    Pre-condición: len(candidatos) >= 1.
+    """
+    if len(candidatos) == 1:
+        return candidatos[0]
+    host_ids = [h.id for h in candidatos]
+    counts_qs = (Reserva.objects
+                 .filter(event_type=event_type,
+                         estado=Reserva.Estado.CONFIRMADA,
+                         host_id__in=host_ids)
+                 .values('host_id')
+                 .annotate(c=Count('id')))
+    counts = {row['host_id']: row['c'] for row in counts_qs}
+    pivot_orden = dict(
+        EventTypeXHost.objects
+        .filter(event_type=event_type, host_id__in=host_ids)
+        .values_list('host_id', 'id')
+    )
+    return min(
+        candidatos,
+        key=lambda h: (counts.get(h.id, 0), pivot_orden[h.id]),
+    )
+
+
+def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado, notas=''):
+    """
+    Crea una reserva eligiendo automáticamente un host del pool (round-robin
+    least-loaded). Lock sobre la fila EventType para serializar concurrentes
+    del mismo event_type. Lanza SlotNoDisponibleError si no hay candidato.
+    """
+    with transaction.atomic():
+        et = EventType.objects.select_for_update().get(pk=event_type.pk)
+        if not et.activo:
+            raise SlotNoDisponibleError("El evento no está disponible.")
+
+        candidatos = _candidatos_para_slot(et, inicio_utc)
+        if not candidatos:
+            raise SlotNoDisponibleError("Ese slot ya no está disponible.")
+
+        host_elegido = _seleccionar_host_round_robin(et, candidatos)
+        fin_utc = inicio_utc + timedelta(minutes=et.duracion_minutos)
+
+        if consultar_freebusy(host_elegido.email, inicio_utc, fin_utc):
+            raise SlotNoDisponibleError("Ese slot ya no está disponible.")
+
+        reserva = Reserva.objects.create(
+            event_type=et,
+            host=host_elegido,
+            inicio_utc=inicio_utc,
+            fin_utc=fin_utc,
+            nombre_invitado=nombre_invitado.strip(),
+            email_invitado=email_invitado,
+            notas=notas.strip(),
+        )
+        transaction.on_commit(lambda: crear_evento_google(reserva.pk))
+        return reserva
+
+
+def cancelar_reserva(reserva):
+    """
+    Cancela una reserva idempotente. Si ya está cancelada, no hace nada.
+    """
+    if reserva.estado == Reserva.Estado.CANCELADA:
+        return reserva
+    with transaction.atomic():
+        reserva.estado = Reserva.Estado.CANCELADA
+        reserva.save(update_fields=['estado', 'fecha_actualizacion'])
+        if reserva.google_event_id:
+            transaction.on_commit(lambda: eliminar_evento_google(reserva.pk))
+    return reserva

@@ -1,0 +1,87 @@
+{% load i18n %}
+{% url 'panel_usuarios:dashboard' as url_dashboard %}
+{% url 'panel_usuarios:usuario_list' as url_usuarios %}
+{% url 'panel_permisos:rol_list' as url_roles %}
+{% url 'panel_permisos:permiso_list' as url_permisos %}
+{% url 'panel_event_types:event_type_list' as url_event_types %}
+{% url 'panel_disponibilidad:bloque_list' as url_disponibilidad %}
+{% url 'panel_reservas:reserva_list' as url_reservas %}
+
+<!--begin::Section principal-->
+<div class="menu-item">
+    <div class="menu-content pb-2">
+        <span class="menu-heading fw-semibold text-uppercase fs-7 text-muted">Principal</span>
+    </div>
+</div>
+
+<div class="menu-item">
+    <a class="menu-link {% if request.path == url_dashboard %}active{% endif %}" href="{{ url_dashboard }}">
+        <span class="menu-icon"><i class="bi bi-grid-1x2-fill fs-4"></i></span>
+        <span class="menu-title fw-semibold">Dashboard</span>
+    </a>
+</div>
+
+{% if 'reservas.ver_propias' in PERMISOS_USUARIO %}
+<div class="menu-item">
+    <a class="menu-link {% if url_reservas in request.path %}active{% endif %}" href="{{ url_reservas }}">
+        <span class="menu-icon"><i class="bi bi-calendar-check fs-4"></i></span>
+        <span class="menu-title fw-semibold">Reservas</span>
+    </a>
+</div>
+{% endif %}
+
+{% if 'event_types.ver' in PERMISOS_USUARIO %}
+<div class="menu-item">
+    <a class="menu-link {% if url_event_types in request.path %}active{% endif %}" href="{{ url_event_types }}">
+        <span class="menu-icon"><i class="bi bi-calendar2-event fs-4"></i></span>
+        <span class="menu-title fw-semibold">Tipos de evento</span>
+    </a>
+</div>
+{% endif %}
+
+{% if 'availability.ver' in PERMISOS_USUARIO %}
+<div class="menu-item">
+    <a class="menu-link {% if url_disponibilidad in request.path %}active{% endif %}" href="{{ url_disponibilidad }}">
+        <span class="menu-icon"><i class="bi bi-clock fs-4"></i></span>
+        <span class="menu-title fw-semibold">Disponibilidad</span>
+    </a>
+</div>
+{% endif %}
+<!--end::Section principal-->
+
+<!--begin::Section admin-->
+{% if 'usuarios.ver' in PERMISOS_USUARIO or 'roles.ver' in PERMISOS_USUARIO or 'permisos.ver' in PERMISOS_USUARIO %}
+<div class="menu-item mt-4">
+    <div class="menu-content pb-2">
+        <span class="menu-heading fw-semibold text-uppercase fs-7 text-muted">Administración</span>
+    </div>
+</div>
+
+{% if 'usuarios.ver' in PERMISOS_USUARIO %}
+<div class="menu-item">
+    <a class="menu-link {% if url_usuarios in request.path %}active{% endif %}" href="{{ url_usuarios }}">
+        <span class="menu-icon"><i class="bi bi-people fs-4"></i></span>
+        <span class="menu-title fw-semibold">Usuarios</span>
+    </a>
+</div>
+{% endif %}
+
+{% if 'roles.ver' in PERMISOS_USUARIO %}
+<div class="menu-item">
+    <a class="menu-link {% if url_roles in request.path %}active{% endif %}" href="{{ url_roles }}">
+        <span class="menu-icon"><i class="bi bi-shield-check fs-4"></i></span>
+        <span class="menu-title fw-semibold">Roles</span>
+    </a>
+</div>
+{% endif %}
+
+{% if 'permisos.ver' in PERMISOS_USUARIO %}
+<div class="menu-item">
+    <a class="menu-link {% if url_permisos in request.path %}active{% endif %}" href="{{ url_permisos }}">
+        <span class="menu-icon"><i class="bi bi-key fs-4"></i></span>
+        <span class="menu-title fw-semibold">Permisos</span>
+    </a>
+</div>
+{% endif %}
+{% endif %}
+<!--end::Section admin-->

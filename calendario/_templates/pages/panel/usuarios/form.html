@@ -1,0 +1,140 @@
+{% extends 'layout/panel.html' %}
+
+{% block title %}{% if object %}Editar usuario{% else %}Nuevo usuario{% endif %} · {% endblock %}
+
+{% block content %}
+<div class="card shadow-sm" style="max-width: 760px;">
+    <div class="card-header border-0 pt-6">
+        <div class="card-title">
+            <h3 class="fw-bold mb-0">
+                {% if object %}Editar: {{ object.username }}{% else %}Nuevo usuario{% endif %}
+            </h3>
+        </div>
+    </div>
+    <div class="card-body pt-4">
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger d-flex align-items-center p-5 mb-8">
+            <i class="bi bi-shield-exclamation fs-3 text-danger me-3"></i>
+            <div class="d-flex flex-column">
+                {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+
+            <!--begin::Nombre y Apellido-->
+            <div class="row mb-7">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Nombre</label>
+                    <input type="text" name="first_name"
+                           class="form-control form-control-lg{% if form.first_name.errors %} is-invalid{% endif %}"
+                           value="{{ form.first_name.value|default:'' }}" />
+                    {% if form.first_name.errors %}
+                    <div class="invalid-feedback">{{ form.first_name.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Apellido</label>
+                    <input type="text" name="last_name"
+                           class="form-control form-control-lg{% if form.last_name.errors %} is-invalid{% endif %}"
+                           value="{{ form.last_name.value|default:'' }}" />
+                    {% if form.last_name.errors %}
+                    <div class="invalid-feedback">{{ form.last_name.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <!--end::Nombre y Apellido-->
+
+            <!--begin::Email-->
+            <div class="fv-row mb-7">
+                <label class="form-label fw-semibold required">Email</label>
+                <input type="email" name="email"
+                       class="form-control form-control-lg{% if form.email.errors %} is-invalid{% endif %}"
+                       value="{{ form.email.value|default:'' }}"
+                       autocomplete="email" />
+                {% if form.email.errors %}
+                <div class="invalid-feedback">{{ form.email.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <!--end::Email-->
+
+            <!--begin::Timezone y Avatar-->
+            <div class="row mb-7">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Zona horaria</label>
+                    {{ form.timezone }}
+                    {% if form.timezone.errors %}
+                    <div class="text-danger small mt-1">{{ form.timezone.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">URL de avatar</label>
+                    <input type="url" name="avatar_url"
+                           class="form-control form-control-lg{% if form.avatar_url.errors %} is-invalid{% endif %}"
+                           value="{{ form.avatar_url.value|default:'' }}" />
+                    {% if form.avatar_url.errors %}
+                    <div class="invalid-feedback">{{ form.avatar_url.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <!--end::Timezone y Avatar-->
+
+            <!--begin::Contraseñas (solo creación)-->
+            {% if not object %}
+            <div class="row mb-7">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold required">Contraseña</label>
+                    <input type="password" name="password1"
+                           class="form-control form-control-lg{% if form.password1.errors %} is-invalid{% endif %}"
+                           autocomplete="new-password" />
+                    {% if form.password1.errors %}
+                    <div class="invalid-feedback">{{ form.password1.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold required">Confirmar contraseña</label>
+                    <input type="password" name="password2"
+                           class="form-control form-control-lg{% if form.password2.errors %} is-invalid{% endif %}"
+                           autocomplete="new-password" />
+                    {% if form.password2.errors %}
+                    <div class="invalid-feedback">{{ form.password2.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            <!--end::Contraseñas-->
+
+            <!--begin::Roles-->
+            <div class="fv-row mb-9">
+                <label class="form-label fw-semibold">Roles</label>
+                {% if form.roles.errors %}
+                <div class="text-danger small mb-3">{{ form.roles.errors|join:", " }}</div>
+                {% endif %}
+                <div class="d-flex flex-wrap gap-4">
+                    {% for choice in form.roles %}
+                    <div class="form-check form-check-custom form-check-solid">
+                        {{ choice.tag }}
+                        <label class="form-check-label fw-semibold ms-2" for="{{ choice.id_for_label }}">
+                            {{ choice.choice_label }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <!--end::Roles-->
+
+            <!--begin::Acciones-->
+            <div class="d-flex gap-3 pt-4 border-top">
+                <button type="submit" class="btn btn-primary btn-lg">Guardar</button>
+                <a href="{% url 'panel_usuarios:usuario_list' %}" class="btn btn-light btn-lg">Cancelar</a>
+            </div>
+            <!--end::Acciones-->
+
+        </form>
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+if [ -z "${CALENDARIO_POSTGRES_USER}" ]; then
+    base_postgres_image_default_user='postgres'
+    export POSTGRES_USER="${base_postgres_image_default_user}"
+fi
+export DATABASE_URL="postgres://${CALENDARIO_POSTGRES_USER}:${CALENDARIO_POSTGRES_PASSWORD}@${CALENDARIO_POSTGRES_HOST}:${CALENDARIO_POSTGRES_PORT}/${CALENDARIO_POSTGRES_DB}"
+
+# Esperar a que Postgres esté listo
+postgres_ready() {
+python << END
+import sys
+import psycopg2
+try:
+    psycopg2.connect(
+        dbname="${CALENDARIO_POSTGRES_DB}",
+        user="${CALENDARIO_POSTGRES_USER}",
+        password="${CALENDARIO_POSTGRES_PASSWORD}",
+        host="${CALENDARIO_POSTGRES_HOST}",
+        port="${CALENDARIO_POSTGRES_PORT}",
+    )
+except psycopg2.OperationalError:
+    sys.exit(-1)
+sys.exit(0)
+END
+}
+
+until postgres_ready; do
+  >&2 echo 'Esperando a Postgres...'
+  sleep 1
+done
+>&2 echo 'Postgres listo.'
+
+exec "$@"

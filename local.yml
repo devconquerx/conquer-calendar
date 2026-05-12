@@ -1,0 +1,41 @@
+volumes:
+  calendario_local_postgres_data: {}
+  calendario_local_postgres_data_backups: {}
+
+services:
+  django: &django
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile.local
+    image: conquer_calendario_local_django
+    volumes:
+      - .:/app
+      - ./calendario_logs:/calendario_logs
+      - ./calendario-media:/calendario-media
+      - /home/santiago19t/Escritorio/conquer/conquer-crm/conquercrm/users/scripts/google-meet-credentials.json:/opt/google-credentials/conquer-calendario.json:ro
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
+    ports:
+      - "8002:8000"
+    command: /start
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    depends_on:
+      - postgres
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/local/postgres/Dockerfile
+    image: conquer_calendario_local_postgres
+    volumes:
+      - calendario_local_postgres_data:/var/lib/postgresql/data
+      - calendario_local_postgres_data_backups:/backups
+    env_file:
+      - ./.envs/.local/.postgres
+    ports:
+      - "5434:5432"

@@ -1,0 +1,114 @@
+{% extends 'layout/panel.html' %}
+
+{% block title %}{% if object %}Editar tipo de evento{% else %}Nuevo tipo de evento{% endif %} · {% endblock %}
+
+{% block content %}
+<div class="card shadow-sm" style="max-width: 760px;">
+    <div class="card-header border-0 pt-6">
+        <div class="card-title">
+            <h3 class="fw-bold mb-0">
+                {% if object %}Editar: {{ object.nombre }}{% else %}Nuevo tipo de evento{% endif %}
+            </h3>
+        </div>
+    </div>
+    <div class="card-body pt-4">
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger d-flex align-items-center p-5 mb-8">
+            <i class="ki-outline ki-shield-cross fs-2hx text-danger me-4"></i>
+            <div class="d-flex flex-column">
+                {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <!--begin::Nombre-->
+            <div class="fv-row mb-7">
+                <label class="form-label fw-semibold required">Nombre</label>
+                <input type="text" name="nombre"
+                       class="form-control form-control-lg{% if form.nombre.errors %} is-invalid{% endif %}"
+                       value="{{ form.nombre.value|default:'' }}" />
+                {% if form.nombre.errors %}
+                <div class="invalid-feedback">{{ form.nombre.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <!--end::Nombre-->
+
+            <!--begin::Descripcion-->
+            <div class="fv-row mb-7">
+                <label class="form-label fw-semibold">Descripción</label>
+                <textarea name="descripcion" rows="3"
+                          class="form-control form-control-lg{% if form.descripcion.errors %} is-invalid{% endif %}">{{ form.descripcion.value|default:'' }}</textarea>
+                {% if form.descripcion.errors %}
+                <div class="invalid-feedback">{{ form.descripcion.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <!--end::Descripcion-->
+
+            <!--begin::Row tiempos-->
+            <div class="row mb-7">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold required">Duración (min)</label>
+                    <input type="number" name="duracion_minutos" min="1"
+                           class="form-control form-control-lg{% if form.duracion_minutos.errors %} is-invalid{% endif %}"
+                           value="{{ form.duracion_minutos.value|default_if_none:'' }}" />
+                    {% if form.duracion_minutos.errors %}
+                    <div class="invalid-feedback">{{ form.duracion_minutos.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Buffer antes (min)</label>
+                    <input type="number" name="buffer_antes_minutos" min="0"
+                           class="form-control form-control-lg{% if form.buffer_antes_minutos.errors %} is-invalid{% endif %}"
+                           value="{{ form.buffer_antes_minutos.value|default_if_none:'' }}" />
+                    {% if form.buffer_antes_minutos.errors %}
+                    <div class="invalid-feedback">{{ form.buffer_antes_minutos.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Buffer después (min)</label>
+                    <input type="number" name="buffer_despues_minutos" min="0"
+                           class="form-control form-control-lg{% if form.buffer_despues_minutos.errors %} is-invalid{% endif %}"
+                           value="{{ form.buffer_despues_minutos.value|default_if_none:'' }}" />
+                    {% if form.buffer_despues_minutos.errors %}
+                    <div class="invalid-feedback">{{ form.buffer_despues_minutos.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <!--end::Row tiempos-->
+
+            <!--begin::Row aviso + activo-->
+            <div class="row mb-7">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold required">Aviso mínimo (horas)</label>
+                    <input type="number" name="aviso_minimo_horas" min="0"
+                           class="form-control form-control-lg{% if form.aviso_minimo_horas.errors %} is-invalid{% endif %}"
+                           value="{{ form.aviso_minimo_horas.value|default_if_none:'' }}" />
+                    {% if form.aviso_minimo_horas.errors %}
+                    <div class="invalid-feedback">{{ form.aviso_minimo_horas.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 d-flex align-items-end pb-2">
+                    <div class="form-check form-check-custom form-check-solid form-check-lg">
+                        <input class="form-check-input" type="checkbox" name="activo" id="activo"
+                               {% if form.activo.value %}checked{% endif %} />
+                        <label class="form-check-label fw-semibold ms-3" for="activo">Activo</label>
+                    </div>
+                </div>
+            </div>
+            <!--end::Row aviso + activo-->
+
+<!--begin::Acciones-->
+            <div class="d-flex gap-3 pt-4 border-top">
+                <button type="submit" class="btn btn-primary btn-lg">Guardar</button>
+                <a href="{% url 'panel_event_types:event_type_list' %}" class="btn btn-light btn-lg">Cancelar</a>
+            </div>
+            <!--end::Acciones-->
+
+        </form>
+    </div>
+</div>
+{% endblock content %}

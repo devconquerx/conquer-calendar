@@ -1,0 +1,47 @@
+{% load i18n %}
+<div class="panel panel-primary filterable">
+<table class="table table-striped table-row-bordered gy-5 gs-7 customDatatable">
+  <thead>
+    <tr class="filters">
+      <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'REF' %}" placeholder="{% trans 'REF' %}"></th>
+      <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Fecha del evento' %}" placeholder="{% trans 'Agente' %}"></th>
+      <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Fecha de última respuesta' %}" placeholder="{% trans 'Fecha del evento' %}"></th>
+      <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Fecha de última respuesta' %}" placeholder="{% trans 'Fecha de última respuesta' %}"></th>
+      <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Nombre' %}" placeholder="{% trans 'Nombre' %}"></th>
+      <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Tipo' %}" placeholder="{% trans 'Tipo' %}"></th>
+      <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Fase' %}" placeholder="{% trans 'Fase' %}"></th>
+      <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Estado de la revisión' %}" placeholder="{% trans 'Estado de la revisión' %}"></th>
+      <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'División' %}" placeholder="{% trans 'División' %}"></th>
+      <th class="text-center"><input type="text" class="form-control form-table-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{% trans 'Observaciones' %}" placeholder="{% trans 'Observaciones' %}"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for interaction in interactions %}
+    <tr>
+      <td class="text-center align-middle">
+        <a href="{% url 'interactions:it_installation_detail' interaction.pk %}">{{ interaction.ref }}</a>
+      </td>
+      <td class="text-center align-middle"> <span class="badge badge-primary"> {{ interaction.company }} </span> </td>
+      <td class="text-center align-middle"><p hidden="True">{{ interaction.date|date:'Y/m/d' }}</p>{{ interaction.date|date:'d/m/Y' }}</td>
+      <td class="text-center align-middle">
+        {% if interaction.get_last_installation_comment %}
+          <p hidden="True">{{ interaction.get_last_installation_comment.created|date:'d/m/Y' }}{{ interaction.get_last_installation_comment.created|date:'H:i' }}</p><span>{{ interaction.get_last_installation_comment.created|date:'d/m/Y' }}</span><br>
+          <span>{{ interaction.get_last_installation_comment.created|date:'H:i' }}</span>
+        {% else %}
+          {% trans 'Sin respuestas' %}
+        {% endif %}
+      </td>
+      <td class="align-middle">{{ interaction.name }}</td>
+      <td class="align-middle">{{ interaction.installation_type.name }}</td>
+
+      <td class="text-center align-middle"><span class="badge badge-{{ interaction.get_phase_color }}">{{ interaction.get_phase_display }}</span></td>
+      <td class="text-center align-middle">
+        <span><i class="bi bi{% if interaction.approved == 'Aprobado'%}-check-circle-fill{% elif interaction.approved == 'No aprobado'%}-exclamation-circle-fill{% elif interaction.approved == 'En revisión' or interaction.approved == 'Pendiente completar' %}-pause-circle-fill{%endif%}" style="color:{% if interaction.approved == 'Aprobado'%}#50cd89{% elif interaction.approved == 'No aprobado'%}#f1416c{% elif interaction.approved == 'En revisión' or interaction.approved == 'Pendiente completar' %}#ffc700{%endif%};"></i></span>&nbsp;<span class="ans-evaluator">{{ interaction.approved }}</span>
+      </td>
+      <td>{{interaction.get_division_display}}</td>
+      <td class="text-center align-middle"> <i class="bi bi-card-text text-primary fa-2x" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" title="{{interaction.get_last_installation_comment.description}}"></i> </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>

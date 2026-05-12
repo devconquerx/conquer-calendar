@@ -1,0 +1,123 @@
+<div class="card mb-8">
+    <div class="card-header">
+      <div>
+        <div class="card-title fs-3 fw-bold mt-4">{{ installation.hubspot_id }}</div>
+      </div>
+      <div>
+        <div>
+          <div class="fs-7 mt-4 mb-4"><span class="badge badge-{{ installation.get_status_color }}" style="float:right;">{{ installation.get_status_display }}</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-12">
+          {% include '_includes/FormErrors.html' %}
+        </div>
+        <div class="row mb-1">
+          <div class="col col-md-6">
+            <div class="row mb-1">
+              <!--begin::Col-->
+              <div class="col-xl-5">
+                <div class="fs-6 fw-semibold"><span class="badge badge-secondary text-wrap">HubSpot ID</span>
+                </div>
+              </div>
+              <!--end::Col-->
+              <!--begin::Col-->
+              <div class="col-xl-7">
+                <div class="fs-6">
+                  <div class="row mb-8" style="display:inline;">
+                    <span>{{ installation.hubspot_id }}</span>
+                  </div>
+                </div>
+              </div>
+              <!--end::Col-->
+            </div>
+          </div>
+          <div class="col col-md-6">
+            <div class="row mb-1">
+              <!--begin::Col-->
+              <div class="col-xl-5">
+                <div class="fs-6 fw-semibold"><span class="badge badge-secondary text-wrap">CUPS</span>
+                </div>
+              </div>
+              <!--end::Col-->
+              <!--begin::Col-->
+              <div class="col-xl-7">
+                <div class="fs-6">
+                  <div class="row mb-8" style="display:inline;">
+                    <span>{{ installation.cups }}</span>
+                  </div>
+                </div>
+              </div>
+              <!--end::Col-->
+            </div>
+          </div>
+          <div class="col col-md-6">
+            <div class="row mb-1">
+              <!--begin::Col-->
+              <div class="col-xl-5">
+                <div class="fs-6 fw-semibold"><span class="badge badge-secondary text-wrap">Fecha Instalación</span></div>
+              </div>
+              <!--end::Col-->
+              <!--begin::Col-->
+              <div class="col-xl-7">
+                <div class="fs-6">
+                  <span>{{ installation.installation_date }}</span>
+                </div>
+              </div>
+              <!--end::Col-->
+            </div>
+          </div>
+          <div class="col col-md-6">
+            <div class="row mb-1">
+              <!--begin::Col-->
+              <div class="col-xl-5">
+                <div class="fs-6 fw-semibold"><span class="badge badge-secondary text-wrap">Fecha de creación</span></div>
+              </div>
+              <!--end::Col-->
+              <!--begin::Col-->
+              <div class="col-xl-7">
+                <div class="fs-6">
+                  <span>{{ installation.created|date }}</span>
+                </div>
+              </div>
+              <!--end::Col-->
+            </div>
+          </div>
+          <div class="col col-md-6">
+            <div class="row mb-1">
+              <!--begin::Col-->
+              <div class="col-xl-5">
+                <div class="fs-6 fw-semibold"><span class="badge badge-secondary text-wrap">Provincia</span></div>
+              </div>
+              <!--end::Col-->
+              <!--begin::Col-->
+              <div class="col-xl-7">
+                <div class="fs-6">
+                  <span>{{ installation.get_province_display }}</span>
+                </div>
+              </div>
+              <!--end::Col-->
+            </div>
+          </div>
+          <div class="col col-md-6">
+            <div class="row mb-1">
+              <!--begin::Col-->
+              <div class="col-xl-5">
+                <div class="fs-6 fw-semibold"><span class="badge badge-secondary text-wrap">Status</span></div>
+              </div>
+              <!--end::Col-->
+              <!--begin::Col-->
+              <div class="col-xl-7">
+                <div class="fs-6">
+                  <span>{{ installation.get_status_display }}</span>
+                </div>
+              </div>
+              <!--end::Col-->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
