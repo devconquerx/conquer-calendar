@@ -20,6 +20,7 @@ class EventType(models.Model):
     buffer_antes_minutos = models.PositiveSmallIntegerField(default=0)
     buffer_despues_minutos = models.PositiveSmallIntegerField(default=0)
     aviso_minimo_horas = models.PositiveSmallIntegerField(default=0)
+    slug_equipo = models.SlugField(max_length=120, blank=True, null=True, unique=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)

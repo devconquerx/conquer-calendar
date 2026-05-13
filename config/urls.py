@@ -21,6 +21,7 @@ urlpatterns = [
     path('panel/reservas/', include('calendario.bookings.urls_panel')),
     path('', RedirectView.as_view(url='/panel/', permanent=False)),
     path('r/', include('calendario.bookings.urls_public_token')),
+    path('e/<slug:slug_equipo>/', include('calendario.bookings.urls_public_team')),
     path('<slug:user_slug>/<slug:event_type_slug>/', include('calendario.bookings.urls_public_booking')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

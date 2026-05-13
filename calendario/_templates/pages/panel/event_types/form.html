@@ -3,6 +3,14 @@
 {% block title %}{% if object %}Editar tipo de evento{% else %}Nuevo tipo de evento{% endif %} · {% endblock %}
 
 {% block content %}
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<style>
+  .ql-editor { min-height: 140px; font-size: 14px; line-height: 1.6; }
+  .ql-toolbar.ql-snow { border-radius: 0.475rem 0.475rem 0 0; border-color: #e1e3ea; }
+  .ql-container.ql-snow { border-radius: 0 0 0.475rem 0.475rem; border-color: #e1e3ea; }
+  #descripcion-editor.is-invalid + .ql-toolbar.ql-snow,
+  #descripcion-editor.is-invalid .ql-container.ql-snow { border-color: var(--bs-danger); }
+</style>
 <div class="card shadow-sm" style="max-width: 760px;">
     <div class="card-header border-0 pt-6">
         <div class="card-title">
@@ -40,10 +48,10 @@
             <!--begin::Descripcion-->
             <div class="fv-row mb-7">
                 <label class="form-label fw-semibold">Descripción</label>
-                <textarea name="descripcion" rows="3"
-                          class="form-control form-control-lg{% if form.descripcion.errors %} is-invalid{% endif %}">{{ form.descripcion.value|default:'' }}</textarea>
+                <div id="descripcion-editor"></div>
+                <textarea name="descripcion" id="descripcion-input" hidden>{{ form.descripcion.value|default:'' }}</textarea>
                 {% if form.descripcion.errors %}
-                <div class="invalid-feedback">{{ form.descripcion.errors|join:", " }}</div>
+                <div class="invalid-feedback d-block">{{ form.descripcion.errors|join:", " }}</div>
                 {% endif %}
             </div>
             <!--end::Descripcion-->
@@ -101,6 +109,23 @@
             </div>
             <!--end::Row aviso + activo-->
 
+            <!--begin::Evento equipo-->
+            <div class="separator separator-dashed my-8"></div>
+            <div class="d-flex align-items-start gap-4 mb-8">
+                <div class="form-check form-check-custom form-check-solid form-check-lg mt-1">
+                    <input class="form-check-input" type="checkbox" name="es_equipo" id="es_equipo"
+                           {% if form.es_equipo.value %}checked{% endif %} />
+                    <label class="form-check-label fw-semibold ms-3" for="es_equipo">Evento de equipo</label>
+                </div>
+                <div class="text-muted fs-7" style="max-width: 480px;">
+                    Actívalo si varios hosts comparten este evento. Se generará un link único
+                    (<code>/e/…/</code>) y cada reserva se asignará automáticamente al host
+                    con menos carga (round-robin). Desactívalo para un evento personal con tu
+                    propio link.
+                </div>
+            </div>
+            <!--end::Evento equipo-->
+
 <!--begin::Acciones-->
             <div class="d-flex gap-3 pt-4 border-top">
                 <button type="submit" class="btn btn-primary btn-lg">Guardar</button>
@@ -111,4 +136,34 @@
         </form>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+(function () {
+  var input  = document.getElementById('descripcion-input');
+  var editor = new Quill('#descripcion-editor', {
+    theme: 'snow',
+    placeholder: 'Describe tu evento — usa negrita, cursiva, listas...',
+    modules: {
+      toolbar: [
+        [{ header: [2, 3, false] }],
+        ['bold', 'italic', 'underline'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link'],
+        ['clean'],
+      ],
+    },
+  });
+
+  var initial = input.value.trim();
+  if (initial) editor.clipboard.dangerouslyPasteHTML(initial);
+
+  var form = input.closest('form');
+  form.addEventListener('submit', function () {
+    var html = editor.root.innerHTML;
+    if (editor.getText().trim() === '') html = '';
+    input.value = html;
+  });
+})();
+</script>
 {% endblock content %}

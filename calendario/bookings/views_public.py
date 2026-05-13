@@ -154,6 +154,99 @@ class BookingFormView(View):
         return render(request, 'pages/public/booking/page.html', ctx, status=400)
 
 
+class TeamBookingPageView(View):
+
+    def get(self, request, slug_equipo):
+        event_type = get_object_or_404(EventType, slug_equipo=slug_equipo, activo=True)
+        tz_ref = ZoneInfo(event_type.host.timezone)
+        hoy_local = datetime.now(tz_ref).date()
+        max_fecha = hoy_local + timedelta(days=60)
+
+        fecha_str = request.GET.get('fecha', '')
+        try:
+            fecha = date.fromisoformat(fecha_str) if fecha_str else None
+        except ValueError:
+            fecha = None
+        if fecha and (fecha < hoy_local or fecha > max_fecha):
+            fecha = None
+
+        mes_str = request.GET.get('mes', '')
+        try:
+            mes_base = date.fromisoformat(mes_str).replace(day=1) if mes_str else None
+        except ValueError:
+            mes_base = None
+        if not mes_base:
+            mes_base = fecha.replace(day=1) if fecha else hoy_local.replace(day=1)
+
+        slots_local = []
+        if fecha:
+            slots_local = [(s, s.astimezone(tz_ref)) for s in calcular_slots(event_type, fecha, fecha)]
+
+        ctx = {
+            'event_type': event_type,
+            'fecha': fecha,
+            'fecha_iso': fecha.isoformat() if fecha else '',
+            'min_fecha_iso': hoy_local.isoformat(),
+            'max_fecha_iso': max_fecha.isoformat(),
+            'slots_local': slots_local,
+            'tz_ref': event_type.host.timezone,
+            'hoy': hoy_local,
+            'is_team': True,
+        }
+        ctx.update(_build_calendar_ctx(event_type, tz_ref, hoy_local, mes_base, max_fecha, fecha))
+        return render(request, 'pages/public/booking/page.html', ctx)
+
+
+class TeamBookingFormView(View):
+
+    def post(self, request, slug_equipo):
+        event_type = get_object_or_404(EventType, slug_equipo=slug_equipo, activo=True)
+        form = BookingForm(request.POST)
+        if not form.is_valid():
+            return self._render_with_errors(request, event_type, form)
+        try:
+            reserva = crear_reserva(
+                event_type=event_type,
+                inicio_utc=form.cleaned_data['inicio_utc'],
+                nombre_invitado=form.cleaned_data['nombre_invitado'],
+                email_invitado=form.cleaned_data['email_invitado'],
+                notas=form.cleaned_data.get('notas', ''),
+            )
+        except SlotNoDisponibleError as e:
+            form.add_error(None, str(e))
+            return self._render_with_errors(request, event_type, form)
+        return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
+
+    def _render_with_errors(self, request, event_type, form):
+        inicio = form.cleaned_data.get('inicio_utc') if form.is_bound and form.cleaned_data else None
+        tz_ref = ZoneInfo(event_type.host.timezone)
+        hoy_local = datetime.now(tz_ref).date()
+        max_fecha = hoy_local + timedelta(days=60)
+        fecha = inicio.astimezone(tz_ref).date() if inicio else hoy_local
+        mes_base = fecha.replace(day=1)
+        slots = calcular_slots(event_type, fecha, fecha)
+
+        ctx = {
+            'event_type': event_type,
+            'fecha': fecha,
+            'fecha_iso': fecha.isoformat(),
+            'min_fecha_iso': hoy_local.isoformat(),
+            'max_fecha_iso': max_fecha.isoformat(),
+            'slots_local': [(s, s.astimezone(tz_ref)) for s in slots],
+            'tz_ref': event_type.host.timezone,
+            'hoy': hoy_local,
+            'form_errors': form.errors,
+            'nombre_invitado': request.POST.get('nombre_invitado', ''),
+            'email_invitado': request.POST.get('email_invitado', ''),
+            'notas': request.POST.get('notas', ''),
+            'inicio_utc_str': request.POST.get('inicio_utc', ''),
+            'slot_label': inicio.astimezone(tz_ref).strftime('%H:%M') + ' h' if inicio else '',
+            'is_team': True,
+        }
+        ctx.update(_build_calendar_ctx(event_type, tz_ref, hoy_local, mes_base, max_fecha, fecha))
+        return render(request, 'pages/public/booking/page.html', ctx, status=400)
+
+
 class ConfirmacionView(View):
 
     def get(self, request, token):

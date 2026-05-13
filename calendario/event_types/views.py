@@ -8,7 +8,7 @@ from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 
 from calendario.permisos.mixins import RequierePermisoMixin
-from .forms import EventTypeForm, _hosts_queryset
+from .forms import EventTypeForm, _hosts_queryset, _generar_slug_equipo
 from .models import EventType, EventTypeXHost
 
 
@@ -36,6 +36,10 @@ class EventTypeCreateView(RequierePermisoMixin, CreateView):
     def form_valid(self, form):
         obj = form.save(commit=False)
         obj.host = self.request.user
+        if form.cleaned_data.get('es_equipo'):
+            obj.slug_equipo = _generar_slug_equipo(obj.nombre)
+        else:
+            obj.slug_equipo = None
         try:
             obj.full_clean(exclude=['slug'])
         except ValidationError as e:
@@ -66,6 +70,11 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
 
     def form_valid(self, form):
         obj = form.save(commit=False)
+        if form.cleaned_data.get('es_equipo'):
+            if not obj.slug_equipo:
+                obj.slug_equipo = _generar_slug_equipo(obj.nombre, exclude_pk=obj.pk)
+        else:
+            obj.slug_equipo = None
         try:
             obj.full_clean(exclude=['slug'])
         except ValidationError as e:
