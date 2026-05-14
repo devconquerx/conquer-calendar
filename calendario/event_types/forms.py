@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 
-from .models import EventType
+from .models import EventType, EventTypeXHost
 
 
 User = get_user_model()
@@ -12,7 +12,7 @@ def _hosts_queryset():
     return (User.objects
             .filter(is_active=True, roles_asignados__rol__nombre='host')
             .distinct()
-            .order_by('username'))
+            .order_by('first_name', 'username'))
 
 
 def _generar_slug_equipo(nombre, exclude_pk=None):
@@ -46,6 +46,12 @@ class EventTypeForm(forms.ModelForm):
         required=False,
         label='Evento de equipo',
     )
+    hosts = forms.ModelMultipleChoiceField(
+        queryset=_hosts_queryset(),
+        required=False,
+        widget=forms.MultipleHiddenInput,
+        label='Organizadores',
+    )
 
     class Meta:
         model = EventType
@@ -58,8 +64,15 @@ class EventTypeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['hosts'].queryset = _hosts_queryset()
         if self.instance.pk and self.instance.slug_equipo:
             self.fields['es_equipo'].initial = True
+            if not self.is_bound:
+                self.fields['hosts'].initial = list(
+                    EventTypeXHost.objects
+                    .filter(event_type=self.instance)
+                    .values_list('host_id', flat=True)
+                )
 
     def clean_buffer_antes_minutos(self):
         v = self.cleaned_data.get('buffer_antes_minutos')

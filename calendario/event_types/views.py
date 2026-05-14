@@ -26,12 +26,30 @@ class EventTypeListView(RequierePermisoMixin, ListView):
                 .order_by('nombre'))
 
 
+def _hosts_disponibles_context():
+    return [
+        {
+            'id': u.pk,
+            'nombre': (u.get_full_name() or u.username),
+            'email': u.email,
+            'avatar': u.avatar_url,
+            'iniciales': (u.first_name[:1] + u.last_name[:1]).upper() or u.username[:2].upper(),
+        }
+        for u in _hosts_queryset()
+    ]
+
+
 class EventTypeCreateView(RequierePermisoMixin, CreateView):
     permiso_requerido = 'event_types.crear'
     model = EventType
     form_class = EventTypeForm
     template_name = 'pages/panel/event_types/form.html'
     success_url = reverse_lazy('panel_event_types:event_type_list')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['hosts_disponibles'] = _hosts_disponibles_context()
+        return ctx
 
     def form_valid(self, form):
         obj = form.save(commit=False)
@@ -48,10 +66,14 @@ class EventTypeCreateView(RequierePermisoMixin, CreateView):
                     field_name = field if (field != '__all__' and field in form.fields) else None
                     form.add_error(field_name, err)
             return self.form_invalid(form)
+        hosts_seleccionados = (
+            list(form.cleaned_data.get('hosts') or [])
+            if form.cleaned_data.get('es_equipo') else []
+        )
         with transaction.atomic():
             obj.save()
             EventTypeXHost.objects.bulk_create([
-                EventTypeXHost(event_type=obj, host=h) for h in _hosts_queryset()
+                EventTypeXHost(event_type=obj, host=h) for h in hosts_seleccionados
             ])
         self.object = obj
         messages.success(self.request, f"Tipo de evento '{obj.nombre}' creado.")
@@ -68,6 +90,11 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
     def get_queryset(self):
         return EventType.objects.filter(host=self.request.user)
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['hosts_disponibles'] = _hosts_disponibles_context()
+        return ctx
+
     def form_valid(self, form):
         obj = form.save(commit=False)
         if form.cleaned_data.get('es_equipo'):
@@ -83,11 +110,15 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
                     field_name = field if (field != '__all__' and field in form.fields) else None
                     form.add_error(field_name, err)
             return self.form_invalid(form)
+        hosts_seleccionados = (
+            list(form.cleaned_data.get('hosts') or [])
+            if form.cleaned_data.get('es_equipo') else []
+        )
         with transaction.atomic():
             obj.save()
             EventTypeXHost.objects.filter(event_type=obj).delete()
             EventTypeXHost.objects.bulk_create([
-                EventTypeXHost(event_type=obj, host=h) for h in _hosts_queryset()
+                EventTypeXHost(event_type=obj, host=h) for h in hosts_seleccionados
             ])
         self.object = obj
         messages.success(self.request, f"Tipo de evento '{obj.nombre}' actualizado.")

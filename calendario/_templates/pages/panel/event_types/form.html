@@ -1,15 +1,74 @@
 {% extends 'layout/panel.html' %}
+{% load static %}
 
 {% block title %}{% if object %}Editar tipo de evento{% else %}Nuevo tipo de evento{% endif %} · {% endblock %}
 
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 <style>
+
+  /* Collapsible section animation */
+  .et-collapsible {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: max-height .35s ease, opacity .25s ease, transform .25s ease;
+  }
+  .et-collapsible.is-open {
+    max-height: 1200px;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  /* Once the open transition ends, lift the clip so the popover can overflow */
+  .et-collapsible.is-open.is-settled {
+    overflow: visible;
+  }
+
+  /* Minimal "ghost" button — Calendly-style */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: transparent;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    line-height: 1.2;
+    transition: border-color .15s, color .15s, background-color .15s;
+    cursor: pointer;
+  }
+  .btn-ghost:hover { border-color: #9ca3af; color: #374151; background-color: #fafafa; }
+  .btn-ghost:focus { outline: none; box-shadow: 0 0 0 3px rgba(156,163,175,.18); }
+  .btn-ghost .ki-outline { font-size: 14px; color: inherit; }
   .ql-editor { min-height: 140px; font-size: 14px; line-height: 1.6; }
   .ql-toolbar.ql-snow { border-radius: 0.475rem 0.475rem 0 0; border-color: #e1e3ea; }
   .ql-container.ql-snow { border-radius: 0 0 0.475rem 0.475rem; border-color: #e1e3ea; }
   #descripcion-editor.is-invalid + .ql-toolbar.ql-snow,
   #descripcion-editor.is-invalid .ql-container.ql-snow { border-color: var(--bs-danger); }
+  .hosts-row { border-radius: .425rem; transition: background-color .15s; }
+  .hosts-row:hover { background-color: #f9f9f9; }
+  .hosts-row.is-hidden { display: none !important; }
+  .hosts-avatar {
+    width: 36px; height: 36px; display: inline-flex;
+    align-items: center; justify-content: center;
+    border-radius: 50%; font-weight: 600; font-size: 13px;
+    background: #f1faff; color: #009ef7; flex-shrink: 0;
+  }
+  .hosts-avatar.sm { width: 28px; height: 28px; font-size: 11px; }
+  .hosts-chip {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: #f5f8fa; border-radius: 999px;
+    padding: .25rem .25rem .25rem .25rem;
+  }
+  .hosts-chip-remove {
+    border: none; background: transparent; padding: 0 .5rem 0 .25rem;
+    color: #7e8299; cursor: pointer; line-height: 1;
+  }
+  .hosts-chip-remove:hover { color: #f1416c; }
 </style>
 <div class="card shadow-sm" style="max-width: 760px;">
     <div class="card-header border-0 pt-6">
@@ -126,7 +185,88 @@
             </div>
             <!--end::Evento equipo-->
 
-<!--begin::Acciones-->
+            <!--begin::Organizadores-->
+            <div id="organizadores-section" class="et-collapsible">
+            <div class="separator separator-dashed mt-8 mb-4"></div>
+            <div class="mb-8">
+                <label class="form-label fw-semibold mb-5 d-flex align-items-center justify-content-between">
+                    <span>Organizadores</span>
+                    <span class="text-muted fs-7" id="hosts-counter">0 seleccionados</span>
+                </label>
+
+                <div id="hosts-selected-list" class="d-flex flex-wrap gap-2 mb-3"></div>
+                <div id="hosts-hidden-inputs"></div>
+
+                <div class="position-relative" id="hosts-picker-wrapper">
+                    <button type="button" class="btn-ghost" id="hosts-picker-trigger">
+                        <i class="ki-outline ki-plus"></i> Añadir coorganizador
+                    </button>
+
+                    <div id="hosts-picker-popover" class="card shadow-lg position-absolute d-none"
+                         style="top: 100%; left: 0; margin-top: .5rem; width: 360px; z-index: 1050;">
+                        <div class="card-body p-4">
+                            <div class="position-relative mb-3">
+                                <i class="ki-outline ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+                                <input type="text" id="hosts-search"
+                                       class="form-control form-control-solid ps-10"
+                                       placeholder="Buscar organizadores" autocomplete="off"/>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-3 fs-7">
+                                <label class="form-check form-check-custom form-check-sm m-0">
+                                    <input type="checkbox" id="hosts-select-all" class="form-check-input"/>
+                                    <span class="form-check-label ms-2 fw-semibold text-primary">Seleccionar todo</span>
+                                </label>
+                                <a href="#" id="hosts-clear-all" class="text-muted text-hover-danger">
+                                    <i class="ki-outline ki-cross-circle fs-5"></i> Borrar todo
+                                </a>
+                            </div>
+
+                            <div id="hosts-list" class="overflow-auto" style="max-height: 280px;">
+                                {% for h in hosts_disponibles %}
+                                <label class="d-flex align-items-center gap-3 py-2 px-2 cursor-pointer hosts-row"
+                                       data-host-id="{{ h.id }}"
+                                       data-search="{{ h.nombre|lower }} {{ h.email|lower }}">
+                                    <input type="checkbox" class="form-check-input hosts-cb" value="{{ h.id }}"/>
+                                    {% if h.avatar %}
+                                    <img src="{{ h.avatar }}" class="rounded-circle" width="36" height="36" alt=""/>
+                                    {% else %}
+                                    <span class="hosts-avatar">{{ h.iniciales }}</span>
+                                    {% endif %}
+                                    <span class="flex-grow-1">
+                                        <span class="d-block fw-semibold text-gray-800">{{ h.nombre }}</span>
+                                        <span class="d-block text-muted fs-7">{{ h.email }}</span>
+                                    </span>
+                                </label>
+                                {% empty %}
+                                <div class="text-muted text-center py-4">No hay organizadores disponibles.</div>
+                                {% endfor %}
+                                <div id="hosts-empty" class="text-muted text-center py-4 d-none">
+                                    Sin resultados.
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 pt-3 mt-3 border-top">
+                                <button type="button" class="btn btn-light btn-sm" id="hosts-cancel">Cancelar</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="hosts-apply">Aplicar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if form.hosts.errors %}
+                <div class="text-danger fs-7 mt-2">{{ form.hosts.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+
+            {{ hosts_disponibles|json_script:"hosts-data" }}
+            <script id="hosts-initial" type="application/json">
+              [{% for hid in form.hosts.value|default_if_none:'' %}{{ hid }}{% if not forloop.last %},{% endif %}{% endfor %}]
+            </script>
+            </div>
+            <!--end::Organizadores-->
+
+            <!--begin::Acciones-->
             <div class="d-flex gap-3 pt-4 border-top">
                 <button type="submit" class="btn btn-primary btn-lg">Guardar</button>
                 <a href="{% url 'panel_event_types:event_type_list' %}" class="btn btn-light btn-lg">Cancelar</a>
@@ -164,6 +304,194 @@
     if (editor.getText().trim() === '') html = '';
     input.value = html;
   });
+})();
+</script>
+
+<script>
+(function () {
+  var dataNode = document.getElementById('hosts-data');
+  var initNode = document.getElementById('hosts-initial');
+  if (!dataNode || !initNode) return;
+
+  var hosts = JSON.parse(dataNode.textContent);
+  var hostsById = {};
+  hosts.forEach(function (h) { hostsById[String(h.id)] = h; });
+
+  var committed = new Set(
+    JSON.parse(initNode.textContent || '[]').map(String)
+  );
+
+  var trigger = document.getElementById('hosts-picker-trigger');
+  var popover = document.getElementById('hosts-picker-popover');
+  var listEl = document.getElementById('hosts-list');
+  var searchEl = document.getElementById('hosts-search');
+  var selectAllEl = document.getElementById('hosts-select-all');
+  var clearAllEl = document.getElementById('hosts-clear-all');
+  var applyBtn = document.getElementById('hosts-apply');
+  var cancelBtn = document.getElementById('hosts-cancel');
+  var emptyEl = document.getElementById('hosts-empty');
+  var chipsEl = document.getElementById('hosts-selected-list');
+  var hiddenEl = document.getElementById('hosts-hidden-inputs');
+  var counterEl = document.getElementById('hosts-counter');
+
+  function renderChips() {
+    chipsEl.innerHTML = '';
+    hiddenEl.innerHTML = '';
+    var ids = Array.from(committed);
+    counterEl.textContent = ids.length + ' seleccionado' + (ids.length === 1 ? '' : 's');
+    ids.forEach(function (id) {
+      var h = hostsById[id];
+      if (!h) return;
+
+      var hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'hosts';
+      hidden.value = id;
+      hiddenEl.appendChild(hidden);
+
+      var chip = document.createElement('span');
+      chip.className = 'hosts-chip';
+      var avatarHTML = h.avatar
+        ? '<img src="' + h.avatar + '" class="rounded-circle" width="28" height="28" alt="">'
+        : '<span class="hosts-avatar sm">' + h.iniciales + '</span>';
+      chip.innerHTML =
+        avatarHTML +
+        '<span class="fw-semibold fs-7 text-gray-800">' + h.nombre + '</span>' +
+        '<button type="button" class="hosts-chip-remove" data-remove="' + id + '" aria-label="Quitar">' +
+          '<i class="ki-outline ki-cross fs-5"></i>' +
+        '</button>';
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  chipsEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove]');
+    if (!btn) return;
+    committed.delete(btn.getAttribute('data-remove'));
+    renderChips();
+  });
+
+  function syncCheckboxesFromCommitted() {
+    listEl.querySelectorAll('.hosts-cb').forEach(function (cb) {
+      cb.checked = committed.has(cb.value);
+    });
+    updateSelectAllState();
+  }
+
+  function visibleCheckboxes() {
+    return Array.from(listEl.querySelectorAll('.hosts-row:not(.is-hidden) .hosts-cb'));
+  }
+
+  function updateSelectAllState() {
+    var vis = visibleCheckboxes();
+    if (vis.length === 0) {
+      selectAllEl.checked = false;
+      selectAllEl.indeterminate = false;
+      return;
+    }
+    var checked = vis.filter(function (cb) { return cb.checked; }).length;
+    selectAllEl.checked = checked === vis.length;
+    selectAllEl.indeterminate = checked > 0 && checked < vis.length;
+  }
+
+  function openPopover() {
+    syncCheckboxesFromCommitted();
+    searchEl.value = '';
+    applyFilter('');
+    popover.classList.remove('d-none');
+    setTimeout(function () { searchEl.focus(); }, 0);
+  }
+
+  function closePopover() {
+    popover.classList.add('d-none');
+  }
+
+  trigger.addEventListener('click', function () {
+    if (popover.classList.contains('d-none')) openPopover();
+    else closePopover();
+  });
+
+  document.addEventListener('click', function (e) {
+    if (popover.classList.contains('d-none')) return;
+    var wrapper = document.getElementById('hosts-picker-wrapper');
+    if (!wrapper.contains(e.target)) closePopover();
+  });
+
+  function applyFilter(q) {
+    q = (q || '').trim().toLowerCase();
+    var anyVisible = false;
+    listEl.querySelectorAll('.hosts-row').forEach(function (row) {
+      var match = !q || row.dataset.search.indexOf(q) !== -1;
+      row.classList.toggle('is-hidden', !match);
+      if (match) anyVisible = true;
+    });
+    emptyEl.classList.toggle('d-none', anyVisible);
+    updateSelectAllState();
+  }
+
+  searchEl.addEventListener('input', function () {
+    applyFilter(searchEl.value);
+  });
+
+  listEl.addEventListener('change', function (e) {
+    if (e.target.classList.contains('hosts-cb')) updateSelectAllState();
+  });
+
+  selectAllEl.addEventListener('change', function () {
+    var check = selectAllEl.checked;
+    visibleCheckboxes().forEach(function (cb) { cb.checked = check; });
+    updateSelectAllState();
+  });
+
+  clearAllEl.addEventListener('click', function (e) {
+    e.preventDefault();
+    listEl.querySelectorAll('.hosts-cb').forEach(function (cb) { cb.checked = false; });
+    updateSelectAllState();
+  });
+
+  applyBtn.addEventListener('click', function () {
+    committed = new Set(
+      Array.from(listEl.querySelectorAll('.hosts-cb'))
+        .filter(function (cb) { return cb.checked; })
+        .map(function (cb) { return cb.value; })
+    );
+    renderChips();
+    closePopover();
+  });
+
+  cancelBtn.addEventListener('click', closePopover);
+
+  renderChips();
+
+  // Gate behind "Evento de equipo"
+  var esEquipoEl = document.getElementById('es_equipo');
+  var section = document.getElementById('organizadores-section');
+
+  function syncSectionVisibility() {
+    var on = esEquipoEl && esEquipoEl.checked;
+    if (!on) {
+      // Re-clip before collapsing so content slides up cleanly
+      section.classList.remove('is-settled');
+      section.classList.remove('is-open');
+      hiddenEl.innerHTML = '';
+      closePopover();
+    } else {
+      section.classList.add('is-open');
+      renderChips();
+    }
+  }
+
+  section.addEventListener('transitionend', function (e) {
+    if (e.propertyName !== 'max-height') return;
+    if (section.classList.contains('is-open')) {
+      section.classList.add('is-settled');
+    }
+  });
+
+  if (esEquipoEl) {
+    esEquipoEl.addEventListener('change', syncSectionVisibility);
+    syncSectionVisibility();
+  }
 })();
 </script>
 {% endblock content %}
