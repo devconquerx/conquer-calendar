@@ -10,6 +10,7 @@ from calendario.availability.models import BloqueHorarioSemanal
 from calendario.event_types.models import EventType, EventTypeXHost
 from calendario.google_calendar.services import (
     consultar_freebusy, crear_evento_google, eliminar_evento_google,
+    obtener_busy_intervalos,
 )
 from .exceptions import SlotNoDisponibleError
 from .models import Reserva
@@ -69,6 +70,8 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
         ).select_related('event_type').order_by('inicio_utc')
     )
 
+    busy_intervalos = obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
+
     slots = []
     step = timedelta(minutes=duracion + buffer_despues)
     fecha_actual = fecha_desde
@@ -98,6 +101,13 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
                     if _intervals_overlap(new_blocked_inicio, new_blocked_fin, r_blocked_inicio, r_blocked_fin):
                         conflict = True
                         break
+                if not conflict:
+                    for busy_inicio, busy_fin in busy_intervalos:
+                        if busy_inicio >= new_blocked_fin:
+                            break  # intervalos ordenados; los siguientes son aún más tardíos.
+                        if _intervals_overlap(new_blocked_inicio, new_blocked_fin, busy_inicio, busy_fin):
+                            conflict = True
+                            break
                 if not conflict:
                     slots.append(slot_utc)
                 cursor_local += step

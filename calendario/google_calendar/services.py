@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime
 
 from django.conf import settings
 from django.db import transaction
@@ -71,6 +72,56 @@ def consultar_freebusy(host_email, inicio_utc, fin_utc):
             "freebusy: error inesperado para %s. Fail-open: sin conflicto.", host_email,
         )
         return False
+
+
+def obtener_busy_intervalos(host_email, time_min_utc, time_max_utc):
+    """
+    Devuelve lista ordenada de (inicio_utc, fin_utc) ocupados en el calendario
+    primario del host entre [time_min_utc, time_max_utc). Una sola llamada a freeBusy.
+    Fail-open: si Google falla, devuelve [] y loguea WARNING.
+    """
+    try:
+        servicio = obtener_servicio_calendar(host_email)
+    except (ServiceAccountNoConfiguradaError, EmailFueraDeDominioError) as e:
+        logger.warning(
+            "busy_intervalos: no se puede consultar para %s — %s. Fail-open: sin ocupados.",
+            host_email, e.__class__.__name__,
+        )
+        return []
+
+    try:
+        body = {
+            'timeMin': time_min_utc.isoformat(),
+            'timeMax': time_max_utc.isoformat(),
+            'timeZone': 'UTC',
+            'items': [{'id': 'primary'}],
+        }
+        resp = servicio.freebusy().query(body=body).execute()
+        cal_info = resp.get('calendars', {}).get('primary', {})
+        if cal_info.get('errors'):
+            logger.info(
+                "busy_intervalos: primary de %s con errores %s, ignorado.",
+                host_email, cal_info['errors'],
+            )
+            return []
+        intervalos = []
+        for b in cal_info.get('busy', []):
+            inicio = datetime.fromisoformat(b['start'].replace('Z', '+00:00'))
+            fin = datetime.fromisoformat(b['end'].replace('Z', '+00:00'))
+            intervalos.append((inicio, fin))
+        intervalos.sort()
+        return intervalos
+    except HttpError as e:
+        logger.warning(
+            "busy_intervalos: query falló para %s (HTTP %s). Fail-open: sin ocupados.",
+            host_email, e.resp.status,
+        )
+        return []
+    except Exception:
+        logger.exception(
+            "busy_intervalos: error inesperado para %s. Fail-open: sin ocupados.", host_email,
+        )
+        return []
 
 
 def _extraer_meet_uri(conference_data):
