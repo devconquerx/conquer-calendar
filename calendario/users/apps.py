@@ -6,3 +6,6 @@ class UsersConfig(AppConfig):
     name = 'calendario.users'
     label = 'users'
     verbose_name = 'Usuarios'
+
+    def ready(self):
+        import calendario.users.signals  # noqa: F401

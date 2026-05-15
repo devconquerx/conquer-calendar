@@ -35,8 +35,16 @@ class User(AbstractUser):
             raise ValidationError({'slug': f"'{self.slug}' es un slug reservado del sistema."})
         super().save(*args, **kwargs)
 
+    def nombre_display(self) -> str:
+        """Nombre legible: get_full_name() si existe, si no formatea el prefijo del email."""
+        nombre = self.get_full_name().strip()
+        if nombre:
+            return nombre
+        prefijo = self.email.split('@')[0]
+        return ' '.join(part.capitalize() for part in prefijo.replace('-', '.').split('.'))
+
     def __str__(self):
-        return self.get_full_name() or self.username
+        return self.nombre_display()
 
     def tiene_permiso(self, codename: str) -> bool:
         if not self.is_active:

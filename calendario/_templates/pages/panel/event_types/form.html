@@ -20,9 +20,11 @@
     opacity: 1;
     transform: translateY(0);
   }
-  /* Once the open transition ends, lift the clip so the popover can overflow */
+  /* Once the open transition ends, lift the clip and drop the transform so
+     the popover can overflow AND escape the stacking context. */
   .et-collapsible.is-open.is-settled {
     overflow: visible;
+    transform: none;
   }
 
   /* Minimal "ghost" button — Calendly-style */
@@ -467,7 +469,7 @@
   var esEquipoEl = document.getElementById('es_equipo');
   var section = document.getElementById('organizadores-section');
 
-  function syncSectionVisibility() {
+  function syncSectionVisibility(animate) {
     var on = esEquipoEl && esEquipoEl.checked;
     if (!on) {
       // Re-clip before collapsing so content slides up cleanly
@@ -478,6 +480,10 @@
     } else {
       section.classList.add('is-open');
       renderChips();
+      if (!animate) {
+        // Initial load (edit mode): no transition fires, settle synchronously.
+        section.classList.add('is-settled');
+      }
     }
   }
 
@@ -489,8 +495,8 @@
   });
 
   if (esEquipoEl) {
-    esEquipoEl.addEventListener('change', syncSectionVisibility);
-    syncSectionVisibility();
+    esEquipoEl.addEventListener('change', function () { syncSectionVisibility(true); });
+    syncSectionVisibility(false);
   }
 })();
 </script>

@@ -212,3 +212,30 @@ def cancelar_reserva(reserva):
         if reserva.google_event_id:
             transaction.on_commit(lambda: eliminar_evento_google(reserva.pk))
     return reserva
+
+
+def eliminar_reserva(reserva):
+    """
+    Elimina la reserva de la BD y borra el evento de Google Calendar si existe.
+    """
+    google_event_id = reserva.google_event_id
+    host_email = reserva.host.email
+    with transaction.atomic():
+        reserva.delete()
+        if google_event_id:
+            transaction.on_commit(
+                lambda: _eliminar_google_event_directo(google_event_id, host_email)
+            )
+
+
+def _eliminar_google_event_directo(google_event_id, host_email):
+    """Elimina un evento de Google Calendar dado su ID directamente (sin objeto Reserva)."""
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        from calendario.google_calendar.services import obtener_servicio_calendar
+        servicio = obtener_servicio_calendar(host_email)
+        servicio.events().delete(calendarId='primary', eventId=google_event_id, sendUpdates='all').execute()
+        logger.info("eliminar_reserva: evento Google %s eliminado (host=%s)", google_event_id, host_email)
+    except Exception:
+        logger.exception("eliminar_reserva: error borrando evento Google %s (host=%s)", google_event_id, host_email)

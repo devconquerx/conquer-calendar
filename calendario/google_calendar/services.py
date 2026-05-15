@@ -150,6 +150,7 @@ def crear_evento_google(reserva_pk):
                     'timeZone': 'UTC',
                 },
                 'attendees': [
+                    {'email': host_email, 'displayName': reserva.host.nombre_display()},
                     {'email': reserva.email_invitado, 'displayName': reserva.nombre_invitado},
                 ],
                 'conferenceData': {

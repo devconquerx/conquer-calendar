@@ -95,7 +95,7 @@
                             <td>
                                 <a href="{% url 'panel_usuarios:usuario_update' usuario.pk %}" class="text-gray-800 fw-semibold fs-7 text-hover-primary">{{ usuario.email }}</a>
                             </td>
-                            <td class="text-gray-600 fs-7">{{ usuario.get_full_name|default:"—" }}</td>
+                            <td class="text-gray-600 fs-7">{{ usuario.nombre_display }}</td>
                             <td>
                                 <div class="d-flex flex-wrap gap-1">
                                     {% for rxu in usuario.roles_asignados.all %}

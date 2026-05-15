@@ -1,0 +1,111 @@
+{% extends 'layout/panel.html' %}
+
+{% block title %}Todas las reservas · {% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header border-0 pt-6">
+        <div class="card-title">
+            <h3 class="fw-bold mb-0">Todas las reservas</h3>
+        </div>
+    </div>
+
+    <div class="card-body pt-0">
+
+        <!--begin::Filtros-->
+        <form method="get" class="d-flex flex-wrap gap-3 mb-6">
+            <select name="host" class="form-select form-select-sm w-auto">
+                <option value="">Todos los hosts</option>
+                {% for h in hosts %}
+                <option value="{{ h.pk }}" {% if filtro_host == h.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ h.nombre_display }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <input type="text" name="email" value="{{ filtro_email }}"
+                   class="form-control form-control-sm w-auto"
+                   placeholder="Email del invitado" style="min-width:220px;" />
+
+            <select name="estado" class="form-select form-select-sm w-auto">
+                <option value="">Todos los estados</option>
+                <option value="confirmada" {% if filtro_estado == 'confirmada' %}selected{% endif %}>Confirmada</option>
+                <option value="cancelada"  {% if filtro_estado == 'cancelada'  %}selected{% endif %}>Cancelada</option>
+            </select>
+
+            <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+            {% if filtro_host or filtro_email or filtro_estado %}
+            <a href="{% url 'panel_reservas:reserva_admin_list' %}" class="btn btn-sm btn-light">Limpiar</a>
+            {% endif %}
+        </form>
+        <!--end::Filtros-->
+
+        <div class="table-responsive">
+            <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                <thead>
+                    <tr class="fw-bold text-dark">
+                        <th class="min-w-130px">Inicio</th>
+                        <th class="min-w-120px">Host</th>
+                        <th class="min-w-130px">Tipo de evento</th>
+                        <th class="min-w-120px">Invitado</th>
+                        <th class="min-w-180px">Email invitado</th>
+                        <th class="min-w-80px text-center">Estado</th>
+                        <th class="min-w-80px text-end">Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in reservas %}
+                    <tr>
+                        <td class="text-gray-800 fw-bold">{{ r.inicio_utc|date:"d/m/Y H:i" }}</td>
+                        <td class="text-gray-700 fw-semibold">{{ r.host.nombre_display }}</td>
+                        <td class="text-gray-600">{{ r.event_type.nombre }}</td>
+                        <td class="text-gray-800 fw-semibold">{{ r.nombre_invitado }}</td>
+                        <td class="text-gray-600">{{ r.email_invitado }}</td>
+                        <td class="text-center">
+                            {% if r.estado == 'confirmada' %}
+                            <span class="badge badge-light-success fw-semibold">Confirmada</span>
+                            {% else %}
+                            <span class="badge badge-light-secondary fw-semibold">Cancelada</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'panel_reservas:reserva_detail' r.pk %}"
+                               class="btn btn-sm btn-icon btn-light-primary" title="Ver detalle">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-10 text-muted">
+                            <i class="bi bi-calendar-x fs-3x d-block mb-3 text-gray-300"></i>
+                            No hay reservas con los filtros aplicados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <div class="d-flex justify-content-between align-items-center pt-4">
+            <span class="text-muted fs-7">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                &nbsp;·&nbsp; {{ page_obj.paginator.count }} reservas en total
+            </span>
+            <div class="d-flex gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?{% if filtro_host %}host={{ filtro_host }}&{% endif %}{% if filtro_email %}email={{ filtro_email }}&{% endif %}{% if filtro_estado %}estado={{ filtro_estado }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                   class="btn btn-sm btn-light">Anterior</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?{% if filtro_host %}host={{ filtro_host }}&{% endif %}{% if filtro_email %}email={{ filtro_email }}&{% endif %}{% if filtro_estado %}estado={{ filtro_estado }}&{% endif %}page={{ page_obj.next_page_number }}"
+                   class="btn btn-sm btn-light">Siguiente</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock content %}

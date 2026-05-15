@@ -43,12 +43,14 @@
                                    title="Ver detalle">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                {% if r.estado == 'confirmada' and 'reservas.cancelar' in PERMISOS_USUARIO %}
-                                <a href="{% url 'panel_reservas:reserva_cancelar' r.pk %}"
-                                   class="btn btn-sm btn-outline-danger"
-                                   title="Cancelar">
-                                    <i class="bi bi-x-circle"></i>
-                                </a>
+                                {% if 'reservas.cancelar' in PERMISOS_USUARIO %}
+                                <form method="post" action="{% url 'panel_reservas:reserva_eliminar' r.pk %}"
+                                      onsubmit="return confirm('¿Eliminar esta reserva? Se borrará también de Google Calendar.')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
                                 {% endif %}
                             </div>
                         </td>

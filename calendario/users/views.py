@@ -30,13 +30,19 @@ class PanelDashboardView(RequierePermisoMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        user = self.request.user
         now = timezone.now()
         hoy_inicio = now.replace(hour=0, minute=0, second=0, microsecond=0)
         semana_inicio = hoy_inicio - timedelta(days=hoy_inicio.weekday())
+        es_admin = user.tiene_permiso('reservas.ver_todas')
 
         confirmadas = Reserva.objects.filter(estado=Reserva.Estado.CONFIRMADA)
+        if not es_admin:
+            confirmadas = confirmadas.filter(host=user)
+
         ctx.update({
             'page_title': 'Dashboard',
+            'es_admin': es_admin,
             'reservas_hoy': confirmadas.filter(
                 inicio_utc__gte=hoy_inicio,
                 inicio_utc__lt=hoy_inicio + timedelta(days=1),
@@ -45,8 +51,11 @@ class PanelDashboardView(RequierePermisoMixin, TemplateView):
                 inicio_utc__gte=semana_inicio,
                 inicio_utc__lt=semana_inicio + timedelta(days=7),
             ).count(),
-            'event_types_activos': EventType.objects.filter(activo=True).count(),
-            'hosts_activos': User.objects.filter(is_active=True).count(),
+            'event_types_activos': (
+                EventType.objects.filter(activo=True).count() if es_admin
+                else EventType.objects.filter(activo=True, hosts_pool__host=user).distinct().count()
+            ),
+            'hosts_activos': User.objects.filter(is_active=True).count() if es_admin else None,
             'proximas_reservas': (
                 confirmadas
                 .filter(inicio_utc__gte=now)

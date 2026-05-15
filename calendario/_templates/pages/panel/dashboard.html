@@ -12,7 +12,9 @@
         <div class="card h-100 border-0 shadow-sm">
             <div class="card-body d-flex flex-column justify-content-between p-6">
                 <div class="d-flex align-items-center justify-content-between mb-4">
-                    <span class="text-muted fw-semibold fs-7 text-uppercase">Reservas hoy</span>
+                    <span class="text-muted fw-semibold fs-7 text-uppercase">
+                        {% if es_admin %}Reservas hoy{% else %}Mis reservas hoy{% endif %}
+                    </span>
                     <span class="bg-light-primary rounded p-2">
                         <i class="bi bi-calendar-check text-primary fs-3"></i>
                     </span>
@@ -26,7 +28,9 @@
         <div class="card h-100 border-0 shadow-sm">
             <div class="card-body d-flex flex-column justify-content-between p-6">
                 <div class="d-flex align-items-center justify-content-between mb-4">
-                    <span class="text-muted fw-semibold fs-7 text-uppercase">Esta semana</span>
+                    <span class="text-muted fw-semibold fs-7 text-uppercase">
+                        {% if es_admin %}Esta semana{% else %}Mis reservas esta semana{% endif %}
+                    </span>
                     <span class="bg-light-success rounded p-2">
                         <i class="bi bi-calendar-week text-success fs-3"></i>
                     </span>
@@ -40,7 +44,9 @@
         <div class="card h-100 border-0 shadow-sm">
             <div class="card-body d-flex flex-column justify-content-between p-6">
                 <div class="d-flex align-items-center justify-content-between mb-4">
-                    <span class="text-muted fw-semibold fs-7 text-uppercase">Tipos de evento</span>
+                    <span class="text-muted fw-semibold fs-7 text-uppercase">
+                        {% if es_admin %}Tipos de evento{% else %}Mis tipos de evento{% endif %}
+                    </span>
                     <span class="bg-light-info rounded p-2">
                         <i class="bi bi-calendar2-event text-info fs-3"></i>
                     </span>
@@ -59,7 +65,11 @@
                         <i class="bi bi-people text-warning fs-3"></i>
                     </span>
                 </div>
+                {% if es_admin %}
                 <div class="fs-2hx fw-bold text-dark">{{ hosts_activos }}</div>
+                {% else %}
+                <div class="fs-6 text-muted fw-semibold mt-2">Solo visible para administradores</div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -70,14 +80,20 @@
 <!--begin::Próximas reservas-->
 <div class="card border-0 shadow-sm">
     <div class="card-header border-0 pt-5">
-        <h3 class="card-title fw-bold text-dark">Próximas reservas</h3>
-        {% if 'reservas.ver_propias' in PERMISOS_USUARIO %}
+        <h3 class="card-title fw-bold text-dark">
+            {% if es_admin %}Próximas reservas{% else %}Mis próximas reservas{% endif %}
+        </h3>
         <div class="card-toolbar">
+            {% if es_admin and 'reservas.ver_todas' in PERMISOS_USUARIO %}
+            <a href="{% url 'panel_reservas:reserva_admin_list' %}" class="btn btn-sm btn-light-primary fw-semibold">
+                Ver todas
+            </a>
+            {% elif 'reservas.ver_propias' in PERMISOS_USUARIO %}
             <a href="{% url 'panel_reservas:reserva_list' %}" class="btn btn-sm btn-light-primary fw-semibold">
                 Ver todas
             </a>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
     <div class="card-body p-0">
         {% if proximas_reservas %}
@@ -88,7 +104,7 @@
                         <th class="min-w-150px">Inicio</th>
                         <th class="min-w-150px">Tipo de evento</th>
                         <th class="min-w-180px">Invitado</th>
-                        <th class="min-w-120px">Host</th>
+                        {% if es_admin %}<th class="min-w-120px">Host</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -105,11 +121,11 @@
                             <span class="fw-semibold text-dark d-block">{{ r.nombre_invitado }}</span>
                             <span class="text-muted fs-7">{{ r.email_invitado }}</span>
                         </td>
+                        {% if es_admin %}
                         <td>
-                            <span class="badge badge-light-primary fw-semibold px-3 py-2">
-                                {{ r.host.get_full_name|default:r.host.username }}
-                            </span>
+                            <span class="fw-bold text-dark">{{ r.host.nombre_display }}</span>
                         </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
