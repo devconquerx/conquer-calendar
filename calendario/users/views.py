@@ -78,12 +78,17 @@ class UsuarioListView(RequierePermisoMixin, ListView):
         qs = super().get_queryset().prefetch_related('roles_asignados__rol')
         dominio = self.request.GET.get('dominio', '').strip()
         estado = self.request.GET.get('estado', '').strip()
+        tipo = self.request.GET.get('tipo', '').strip()
         if dominio:
             qs = qs.filter(email__iendswith=f'@{dominio}')
         if estado == 'activo':
             qs = qs.filter(is_active=True)
         elif estado == 'inactivo':
             qs = qs.filter(is_active=False)
+        if tipo == 'host':
+            qs = qs.filter(roles_asignados__rol__nombre='host').distinct()
+        elif tipo == 'admin':
+            qs = qs.filter(roles_asignados__rol__nombre='admin').distinct()
         return qs
 
     def get_context_data(self, **kwargs):
@@ -96,6 +101,7 @@ class UsuarioListView(RequierePermisoMixin, ListView):
         ctx['dominios'] = dominio_set
         ctx['filtro_dominio'] = self.request.GET.get('dominio', '')
         ctx['filtro_estado'] = self.request.GET.get('estado', '')
+        ctx['filtro_tipo'] = self.request.GET.get('tipo', '')
         return ctx
 
 

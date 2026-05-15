@@ -40,10 +40,11 @@ body { background: var(--bk-bg) !important; }
   display: flex;
   width: 100%;
   max-width: 880px;
+  min-height: 560px;
   overflow: hidden;
   transition: max-width .35s cubic-bezier(.4,0,.2,1), min-width .35s cubic-bezier(.4,0,.2,1);
 }
-.bk-card.has-slots { min-width: 900px; max-width: 1060px; }
+.bk-card.has-slots { min-width: 900px; max-width: 1060px; height: 560px; }
 
 /* ── LEFT PANEL ── */
 .bk-left {

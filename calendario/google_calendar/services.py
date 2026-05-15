@@ -31,8 +31,8 @@ def obtener_servicio_calendar(host_email):
 
 def consultar_freebusy(host_email, inicio_utc, fin_utc):
     """
-    Devuelve True si el rango [inicio_utc, fin_utc) colisiona con algún evento
-    en cualquier calendario visible del host.
+    Devuelve True si el rango [inicio_utc, fin_utc) colisiona con un evento
+    en el calendario primario del host.
     Fail-open: si Google falla, devuelve False y loguea WARNING.
     """
     try:
@@ -44,50 +44,22 @@ def consultar_freebusy(host_email, inicio_utc, fin_utc):
         )
         return False
 
-    # 1) Listar calendarios del host
-    try:
-        cal_list = servicio.calendarList().list(
-            minAccessRole='freeBusyReader',
-            showHidden=False,
-        ).execute()
-        calendar_ids = [
-            c['id'] for c in cal_list.get('items', [])
-            if c.get('selected', False) or c.get('primary', False)
-        ]
-        if not calendar_ids:
-            calendar_ids = ['primary']
-    except HttpError as e:
-        logger.warning(
-            "freebusy: calendarList.list falló para %s (HTTP %s). Fallback a primary.",
-            host_email, e.resp.status,
-        )
-        calendar_ids = ['primary']
-    except Exception:
-        logger.exception(
-            "freebusy: error inesperado listando calendarios de %s. Fallback a primary.",
-            host_email,
-        )
-        calendar_ids = ['primary']
-
-    # 2) Ejecutar freeBusy.query
     try:
         body = {
             'timeMin': inicio_utc.isoformat(),
             'timeMax': fin_utc.isoformat(),
             'timeZone': 'UTC',
-            'items': [{'id': cid} for cid in calendar_ids[:50]],
+            'items': [{'id': 'primary'}],
         }
         resp = servicio.freebusy().query(body=body).execute()
-        for cid, cal_info in resp.get('calendars', {}).items():
-            if cal_info.get('errors'):
-                logger.info(
-                    "freebusy: calendario %s del host %s con errores %s, ignorado.",
-                    cid, host_email, cal_info['errors'],
-                )
-                continue
-            if cal_info.get('busy'):
-                return True
-        return False
+        cal_info = resp.get('calendars', {}).get('primary', {})
+        if cal_info.get('errors'):
+            logger.info(
+                "freebusy: primary de %s con errores %s, ignorado.",
+                host_email, cal_info['errors'],
+            )
+            return False
+        return bool(cal_info.get('busy'))
     except HttpError as e:
         logger.warning(
             "freebusy: query falló para %s (HTTP %s). Fail-open: sin conflicto.",

@@ -1,7 +1,8 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
@@ -10,6 +11,8 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from calendario.permisos.mixins import RequierePermisoMixin
 from .forms import EventTypeForm, _hosts_queryset, _generar_slug_equipo
 from .models import EventType, EventTypeXHost
+
+User = get_user_model()
 
 
 class EventTypeListView(RequierePermisoMixin, ListView):
@@ -20,10 +23,46 @@ class EventTypeListView(RequierePermisoMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        return (EventType.objects
-                .filter(host=self.request.user)
+        qs = EventType.objects.all() if self.request.user.is_superuser \
+            else EventType.objects.filter(host=self.request.user)
+
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            qs = qs.filter(nombre__icontains=q)
+
+        organizadores = [v for v in self.request.GET.getlist('organizador') if v.isdigit()]
+        if organizadores:
+            qs = qs.filter(
+                Q(hosts_pool__host_id__in=organizadores)
+                | Q(host_id__in=organizadores, slug_equipo__isnull=True)
+            )
+
+        creadores = [v for v in self.request.GET.getlist('creador') if v.isdigit()]
+        if creadores:
+            qs = qs.filter(host_id__in=creadores)
+
+        return (qs
                 .annotate(num_hosts=Count('hosts_pool'))
+                .select_related('host')
+                .distinct()
                 .order_by('nombre'))
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['filtro_q'] = self.request.GET.get('q', '')
+        ctx['filtro_organizadores'] = self.request.GET.getlist('organizador')
+        ctx['filtro_creadores'] = self.request.GET.getlist('creador')
+        ctx['filtros_count'] = len(ctx['filtro_organizadores']) + len(ctx['filtro_creadores'])
+        if self.request.user.is_superuser:
+            ctx['organizadores_disponibles'] = list(
+                User.objects.filter(is_active=True, roles_asignados__rol__nombre='host')
+                .distinct().order_by('first_name', 'last_name', 'username')
+            )
+            ctx['creadores_disponibles'] = list(
+                User.objects.filter(is_active=True, event_types__isnull=False)
+                .distinct().order_by('first_name', 'last_name', 'username')
+            )
+        return ctx
 
 
 def _hosts_disponibles_context():
@@ -88,6 +127,8 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
     success_url = reverse_lazy('panel_event_types:event_type_list')
 
     def get_queryset(self):
+        if self.request.user.is_superuser:
+            return EventType.objects.all()
         return EventType.objects.filter(host=self.request.user)
 
     def get_context_data(self, **kwargs):
@@ -132,6 +173,8 @@ class EventTypeDeleteView(RequierePermisoMixin, DeleteView):
     success_url = reverse_lazy('panel_event_types:event_type_list')
 
     def get_queryset(self):
+        if self.request.user.is_superuser:
+            return EventType.objects.all()
         return EventType.objects.filter(host=self.request.user)
 
     def post(self, request, *args, **kwargs):
@@ -144,7 +187,10 @@ class EventTypeToggleActivoView(RequierePermisoMixin, View):
     permiso_requerido = 'event_types.editar'
 
     def post(self, request, pk):
-        obj = get_object_or_404(EventType, pk=pk, host=request.user)
+        if request.user.is_superuser:
+            obj = get_object_or_404(EventType, pk=pk)
+        else:
+            obj = get_object_or_404(EventType, pk=pk, host=request.user)
         obj.activo = not obj.activo
         obj.save(update_fields=['activo', 'fecha_actualizacion'])
         estado = 'activado' if obj.activo else 'desactivado'

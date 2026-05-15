@@ -4,8 +4,83 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-7">
-    <h3 class="fw-bold mb-0">Tipos de evento</h3>
+<div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+    <div class="d-flex align-items-center flex-wrap" style="gap: 32px;">
+        <h3 class="fw-bold mb-0">Tipos de evento</h3>
+
+        <form method="get" id="et-filter-form" class="d-flex gap-2 align-items-center">
+            <div class="position-relative">
+                <i class="bi bi-search position-absolute" style="left:10px; top:50%; transform:translateY(-50%); color:#9aa3af; font-size:12px;"></i>
+                <input type="search" name="q" class="form-control form-control-sm" placeholder="Buscar..." value="{{ filtro_q }}" style="padding-left:30px; width:220px;">
+            </div>
+
+            {% if request.user.is_superuser %}
+            <div class="dropdown">
+                <button type="button" class="btn btn-sm btn-light border d-flex align-items-center gap-1" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    <i class="bi bi-funnel"></i>
+                    <span>Filtro</span>
+                    {% if filtros_count %}<span class="badge bg-primary ms-1">{{ filtros_count }}</span>{% endif %}
+                </button>
+                <div class="dropdown-menu shadow p-0" style="min-width:300px; max-width:300px;">
+
+                    <div class="p-3 border-bottom">
+                        <label class="fw-bold fs-7 text-gray-800 d-block mb-2">Organizadores:</label>
+                        <div class="position-relative mb-2">
+                            <i class="bi bi-search position-absolute" style="left:10px; top:50%; transform:translateY(-50%); color:#9aa3af; font-size:11px;"></i>
+                            <input type="text" class="form-control form-control-sm" placeholder="Buscar..." style="padding-left:28px;" oninput="filterOptions(this, 'org-opt')">
+                        </div>
+                        <div style="max-height:160px; overflow-y:auto;" class="ps-1">
+                            {% for u in organizadores_disponibles %}
+                            <div class="form-check py-1 org-opt" data-name="{{ u.get_full_name|default:u.username|lower }} {{ u.email|lower }}">
+                                <input class="form-check-input" type="checkbox" name="organizador" value="{{ u.pk }}" id="org-{{ u.pk }}"
+                                       {% if u.pk|stringformat:'s' in filtro_organizadores %}checked{% endif %}>
+                                <label class="form-check-label fs-7 text-gray-800" for="org-{{ u.pk }}">
+                                    {{ u.get_full_name|default:u.username }}
+                                </label>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted fs-8 mb-0">Sin organizadores</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="p-3 border-bottom">
+                        <label class="fw-bold fs-7 text-gray-800 d-block mb-2">Creador:</label>
+                        <div class="position-relative mb-2">
+                            <i class="bi bi-search position-absolute" style="left:10px; top:50%; transform:translateY(-50%); color:#9aa3af; font-size:11px;"></i>
+                            <input type="text" class="form-control form-control-sm" placeholder="Buscar..." style="padding-left:28px;" oninput="filterOptions(this, 'cr-opt')">
+                        </div>
+                        <div style="max-height:160px; overflow-y:auto;" class="ps-1">
+                            {% for u in creadores_disponibles %}
+                            <div class="form-check py-1 cr-opt" data-name="{{ u.get_full_name|default:u.username|lower }} {{ u.email|lower }}">
+                                <input class="form-check-input" type="checkbox" name="creador" value="{{ u.pk }}" id="cr-{{ u.pk }}"
+                                       {% if u.pk|stringformat:'s' in filtro_creadores %}checked{% endif %}>
+                                <label class="form-check-label fs-7 text-gray-800" for="cr-{{ u.pk }}">
+                                    {{ u.get_full_name|default:u.username }}
+                                </label>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted fs-8 mb-0">Sin creadores</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between p-3">
+                        <a href="{% url 'panel_event_types:event_type_list' %}{% if filtro_q %}?q={{ filtro_q }}{% endif %}" class="btn btn-sm btn-light">Limpiar</a>
+                        <button type="submit" class="btn btn-sm btn-primary">Aplicar</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
+
+            {% if filtro_q or filtros_count %}
+            <a href="{% url 'panel_event_types:event_type_list' %}" class="btn btn-sm btn-light border" title="Limpiar"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </form>
+    </div>
+
     {% if 'event_types.crear' in PERMISOS_USUARIO %}
     <a href="{% url 'panel_event_types:event_type_create' %}" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-lg me-1"></i>Nuevo tipo de evento
@@ -33,6 +108,11 @@
                         <span class="text-muted fs-7">
                             <i class="bi bi-clock me-1"></i>{{ et.duracion_minutos }} minutos
                         </span>
+                        {% if request.user.is_superuser %}
+                        <div class="text-muted fs-8 mt-1">
+                            <i class="bi bi-person me-1"></i>{{ et.host.get_full_name|default:et.host.username }}
+                        </div>
+                        {% endif %}
                     </div>
                     <!--begin::Three dots menu-->
                     <div class="dropdown ms-2">
@@ -102,13 +182,13 @@
                 <div class="d-flex align-items-center gap-2">
                     <button type="button"
                             class="btn btn-sm btn-light border copy-btn fw-semibold"
-                            data-url="{{ request.scheme }}://{{ request.get_host }}{% if et.slug_equipo %}/e/{{ et.slug_equipo }}/{% else %}/{{ request.user.slug }}/{{ et.slug }}/{% endif %}"
+                            data-url="{{ request.scheme }}://{{ request.get_host }}{% if et.slug_equipo %}/e/{{ et.slug_equipo }}/{% else %}/{{ et.host.slug }}/{{ et.slug }}/{% endif %}"
                             style="font-size:0.78rem;">
                         Copiar enlace
                     </button>
                     <button type="button"
                             class="btn btn-sm btn-light border share-btn fw-semibold"
-                            data-url="{{ request.scheme }}://{{ request.get_host }}{% if et.slug_equipo %}/e/{{ et.slug_equipo }}/{% else %}/{{ request.user.slug }}/{{ et.slug }}/{% endif %}"
+                            data-url="{{ request.scheme }}://{{ request.get_host }}{% if et.slug_equipo %}/e/{{ et.slug_equipo }}/{% else %}/{{ et.host.slug }}/{{ et.slug }}/{% endif %}"
                             data-title="{{ et.nombre }}"
                             style="font-size:0.78rem;">
                         Compartir
@@ -129,10 +209,10 @@
     <span class="text-muted fs-7">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
     <div class="d-flex gap-2">
         {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-light">Anterior</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if filtro_q %}&q={{ filtro_q }}{% endif %}{% for o in filtro_organizadores %}&organizador={{ o }}{% endfor %}{% for c in filtro_creadores %}&creador={{ c }}{% endfor %}" class="btn btn-sm btn-light">Anterior</a>
         {% endif %}
         {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-light">Siguiente</a>
+        <a href="?page={{ page_obj.next_page_number }}{% if filtro_q %}&q={{ filtro_q }}{% endif %}{% for o in filtro_organizadores %}&organizador={{ o }}{% endfor %}{% for c in filtro_creadores %}&creador={{ c }}{% endfor %}" class="btn btn-sm btn-light">Siguiente</a>
         {% endif %}
     </div>
 </div>
@@ -194,5 +274,14 @@ document.querySelectorAll('.share-btn').forEach(function(btn) {
         }
     }.bind(btn));
 });
+
+// Filtro de opciones dentro del dropdown de filtros
+function filterOptions(input, cls) {
+    var q = (input.value || '').toLowerCase();
+    document.querySelectorAll('.' + cls).forEach(function(item) {
+        var name = (item.dataset.name || '').toLowerCase();
+        item.style.display = name.indexOf(q) === -1 ? 'none' : '';
+    });
+}
 </script>
 {% endblock js_footer %}
