@@ -46,6 +46,14 @@ class User(AbstractUser):
     def __str__(self):
         return self.nombre_display()
 
+    @property
+    def es_admin(self) -> bool:
+        if self.is_superuser:
+            return True
+        if not self.is_active:
+            return False
+        return self.roles_asignados.filter(rol__nombre='admin').exists()
+
     def tiene_permiso(self, codename: str) -> bool:
         if not self.is_active:
             return False

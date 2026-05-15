@@ -23,7 +23,7 @@ class EventTypeListView(RequierePermisoMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        qs = EventType.objects.all() if self.request.user.is_superuser \
+        qs = EventType.objects.all() if self.request.user.es_admin \
             else EventType.objects.filter(host=self.request.user)
 
         q = self.request.GET.get('q', '').strip()
@@ -53,7 +53,7 @@ class EventTypeListView(RequierePermisoMixin, ListView):
         ctx['filtro_organizadores'] = self.request.GET.getlist('organizador')
         ctx['filtro_creadores'] = self.request.GET.getlist('creador')
         ctx['filtros_count'] = len(ctx['filtro_organizadores']) + len(ctx['filtro_creadores'])
-        if self.request.user.is_superuser:
+        if self.request.user.es_admin:
             ctx['organizadores_disponibles'] = list(
                 User.objects.filter(is_active=True, roles_asignados__rol__nombre='host')
                 .distinct().order_by('first_name', 'last_name', 'username')
@@ -127,7 +127,7 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
     success_url = reverse_lazy('panel_event_types:event_type_list')
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
+        if self.request.user.es_admin:
             return EventType.objects.all()
         return EventType.objects.filter(host=self.request.user)
 
@@ -173,7 +173,7 @@ class EventTypeDeleteView(RequierePermisoMixin, DeleteView):
     success_url = reverse_lazy('panel_event_types:event_type_list')
 
     def get_queryset(self):
-        if self.request.user.is_superuser:
+        if self.request.user.es_admin:
             return EventType.objects.all()
         return EventType.objects.filter(host=self.request.user)
 
@@ -187,7 +187,7 @@ class EventTypeToggleActivoView(RequierePermisoMixin, View):
     permiso_requerido = 'event_types.editar'
 
     def post(self, request, pk):
-        if request.user.is_superuser:
+        if request.user.es_admin:
             obj = get_object_or_404(EventType, pk=pk)
         else:
             obj = get_object_or_404(EventType, pk=pk, host=request.user)
