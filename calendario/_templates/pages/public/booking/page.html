@@ -40,11 +40,10 @@ body { background: var(--bk-bg) !important; }
   display: flex;
   width: 100%;
   max-width: 880px;
-  min-height: 600px;
   overflow: hidden;
   transition: max-width .35s cubic-bezier(.4,0,.2,1), min-width .35s cubic-bezier(.4,0,.2,1);
 }
-.bk-card.has-slots { min-width: 900px; max-width: 1060px; height: 595px; }
+.bk-card.has-slots { min-width: 900px; max-width: 1060px; }
 
 /* ── LEFT PANEL ── */
 .bk-left {
@@ -266,10 +265,6 @@ body { background: var(--bk-bg) !important; }
       {% if event_type.descripcion %}
       <div class="bk-desc">{{ event_type.descripcion|safe }}</div>
       {% endif %}
-      <div class="bk-footer">
-        <a href="#">Política de privacidad</a>
-        <a href="#">Configuración de cookies</a>
-      </div>
     </div>
 
     {# ── RIGHT PANEL ── #}
@@ -308,7 +303,7 @@ body { background: var(--bk-bg) !important; }
             <table class="bk-grid">
               <thead>
                 <tr>
-                  <th>DOM</th><th>LUN</th><th>MAR</th><th>MIÉ</th><th>JUE</th><th>VIE</th><th>SÁB</th>
+                  <th>LUN</th><th>MAR</th><th>MIÉ</th><th>JUE</th><th>VIE</th><th>SÁB</th><th>DOM</th>
                 </tr>
               </thead>
               <tbody>
@@ -376,7 +371,7 @@ body { background: var(--bk-bg) !important; }
 
       {# STEP 3: Form #}
       <div id="step-form">
-        <form method="post" action="{% url 'public_booking:booking_submit' user_slug=host.slug event_type_slug=event_type.slug %}">
+        <form method="post" action="{% if is_team %}{% url 'public_team:booking_submit' slug_equipo=event_type.slug_equipo %}{% else %}{% url 'public_booking:booking_submit' user_slug=host.slug event_type_slug=event_type.slug %}{% endif %}">
           {% csrf_token %}
           <input type="hidden" id="inicio_utc" name="inicio_utc" value="{{ inicio_utc_str|default:'' }}">
 

@@ -28,8 +28,8 @@ def _build_calendar_ctx(event_type, tz_host, hoy_local, mes_base, max_fecha, fec
         for s in calcular_slots(event_type, desde, hasta):
             dias_con_slots.add(s.astimezone(tz_host).date())
 
-    # Grid (semanas con domingo primero)
-    cal_obj = cal_module.Calendar(firstweekday=6)
+    # Grid (semanas con lunes primero)
+    cal_obj = cal_module.Calendar(firstweekday=0)
     cal_semanas = []
     for semana in cal_obj.monthdatescalendar(mes_base.year, mes_base.month):
         fila = []

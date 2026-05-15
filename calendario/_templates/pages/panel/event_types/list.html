@@ -102,13 +102,13 @@
                 <div class="d-flex align-items-center gap-2">
                     <button type="button"
                             class="btn btn-sm btn-light border copy-btn fw-semibold"
-                            data-url="{{ request.scheme }}://{{ request.get_host }}/{{ request.user.slug }}/{{ et.slug }}/"
+                            data-url="{{ request.scheme }}://{{ request.get_host }}{% if et.slug_equipo %}/e/{{ et.slug_equipo }}/{% else %}/{{ request.user.slug }}/{{ et.slug }}/{% endif %}"
                             style="font-size:0.78rem;">
                         Copiar enlace
                     </button>
                     <button type="button"
                             class="btn btn-sm btn-light border share-btn fw-semibold"
-                            data-url="{{ request.scheme }}://{{ request.get_host }}/{{ request.user.slug }}/{{ et.slug }}/"
+                            data-url="{{ request.scheme }}://{{ request.get_host }}{% if et.slug_equipo %}/e/{{ et.slug_equipo }}/{% else %}/{{ request.user.slug }}/{{ et.slug }}/{% endif %}"
                             data-title="{{ et.nombre }}"
                             style="font-size:0.78rem;">
                         Compartir
