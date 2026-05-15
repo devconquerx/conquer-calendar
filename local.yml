@@ -33,7 +33,7 @@ services:
       dockerfile: ./compose/local/postgres/Dockerfile
     image: conquer_calendario_local_postgres
     volumes:
-      - calendario_local_postgres_data:/var/lib/postgresql/data
+      - calendario_local_postgres_data:/var/lib/postgresql
       - calendario_local_postgres_data_backups:/backups
     env_file:
       - ./.envs/.local/.postgres
