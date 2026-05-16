@@ -17,10 +17,19 @@
   --bk-font:       'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden;
+}
 body { background: var(--bk-bg) !important; }
 
 .bk-wrapper {
   min-height: 100vh;
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -232,14 +241,86 @@ body { background: var(--bk-bg) !important; }
 
 /* ── Responsive ── */
 @media (max-width: 800px) {
-  .bk-card, .bk-card.has-slots { flex-direction: column; max-width: 100%; }
-  .bk-left  { flex: none; border-right: none; border-bottom: 1px solid var(--bk-border); padding: 28px 24px; }
-  .bk-right { padding: 28px 24px; }
+  .bk-wrapper {
+    min-height: 0 !important;
+    align-items: flex-start !important;
+    padding: 12px 8px !important;
+  }
+
+  /* Reset del card: sin min-width fija ni alto forzado */
+  .bk-card,
+  .bk-card.has-slots {
+    flex-direction: column !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Paneles izquierdo y derecho apilados verticalmente */
+  .bk-left,
+  .bk-card.has-slots .bk-left {
+    flex: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--bk-border) !important;
+    padding: 24px 20px !important;
+    width: 100% !important;
+  }
+  .bk-right,
+  .bk-card.has-slots .bk-right {
+    padding: 24px 20px !important;
+    width: 100% !important;
+  }
+
+  /* Title compacto en mobile */
+  .bk-title       { font-size: 22px; line-height: 1.25; }
+  .bk-step-title  { font-size: 17px; margin-bottom: 16px; }
+
+  /* Calendario + slots: en columna, sin separación lateral */
   .bk-date-inner { flex-direction: column; gap: 20px; }
-  .bk-cal-col    { flex: none; min-width: 0; padding-right: 0; }
-  .bk-slots-col  { flex: none; min-width: 0; border-left: none; border-top: 1px solid var(--bk-border); padding-left: 0; padding-top: 18px; animation: none; }
-  .bk-slots-scroll { flex-direction: row; flex-wrap: wrap; max-height: none; }
-  .bk-slot { width: auto; padding: 10px 20px; }
+  .bk-cal-col,
+  .bk-card.has-slots .bk-cal-col {
+    flex: none;
+    min-width: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+  }
+  .bk-slots-col,
+  .bk-card.has-slots .bk-slots-col {
+    flex: none;
+    min-width: 0;
+    border-left: none;
+    border-top: 1px solid var(--bk-border);
+    padding-left: 0;
+    padding-top: 18px;
+    margin-top: 0;
+    animation: none;
+  }
+
+  /* Slots como grid de 2 columnas en lugar de scroll vertical */
+  .bk-slots-scroll {
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+  .bk-slot { flex: 0 0 calc(50% - 5px); width: auto; padding: 12px 8px; }
+
+  /* Días del calendario un poco más chicos para que no se desborden */
+  .bk-day  { width: 36px; height: 36px; font-size: 14px; }
+}
+
+/* Pantallas muy estrechas (< 380px): slots en una sola columna */
+@media (max-width: 380px) {
+  .bk-wrapper { padding: 8px 4px; }
+  .bk-left,
+  .bk-card.has-slots .bk-left  { padding: 20px 16px; }
+  .bk-right,
+  .bk-card.has-slots .bk-right { padding: 20px 16px; }
+  .bk-slot { flex: 0 0 100%; }
+  .bk-day  { width: 32px; height: 32px; font-size: 13px; }
 }
 </style>
 
