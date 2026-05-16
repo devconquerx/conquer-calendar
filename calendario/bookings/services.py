@@ -1,8 +1,9 @@
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from django.db import transaction
+from django.db import connections, transaction
 from django.db.models import Count
 from django.utils import timezone
 
@@ -54,6 +55,11 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
 
     ahora_utc = timezone.now()
     minimo = ahora_utc + timedelta(hours=aviso)
+    maximo = ahora_utc + timedelta(days=event_type.aviso_maximo_dias)
+    # Clamp fecha_hasta al día donde aún caben slots dentro del rolling window.
+    fecha_hasta = min(fecha_hasta, maximo.astimezone(tz_host).date())
+    if fecha_hasta < fecha_desde:
+        return []
 
     bloques_por_dia = defaultdict(list)
     for b in BloqueHorarioSemanal.objects.filter(host=host):
@@ -90,6 +96,9 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
                 if slot_utc < minimo:
                     cursor_local += step
                     continue
+                if slot_utc > maximo:
+                    cursor_local += step
+                    continue
                 new_blocked_inicio = slot_utc - timedelta(minutes=buffer_antes)
                 new_blocked_fin = slot_fin_utc + timedelta(minutes=buffer_despues)
                 conflict = False
@@ -116,18 +125,36 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
     return slots
 
 
+def _slots_host_threadsafe(event_type, host, fecha_desde, fecha_hasta):
+    try:
+        return _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta)
+    finally:
+        # Cada hilo abre su propia conexión a la BD; la cerramos al terminar
+        # para no agotar el pool del backend.
+        connections.close_all()
+
+
 def calcular_slots(event_type, fecha_desde, fecha_hasta):
     """
     Devuelve la unión de slots disponibles entre todos los hosts del pool del event_type.
+    Las llamadas freeBusy son IO-bound; las paralelizamos por host.
     """
     hosts = _obtener_hosts_pool(event_type)
     if not hosts:
         return []
     slots_set = set()
-    for host in hosts:
+    if len(hosts) == 1:
         slots_set.update(
-            _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta)
+            _calcular_slots_para_host(event_type, hosts[0], fecha_desde, fecha_hasta)
         )
+    else:
+        with ThreadPoolExecutor(max_workers=len(hosts)) as pool:
+            futuros = [
+                pool.submit(_slots_host_threadsafe, event_type, h, fecha_desde, fecha_hasta)
+                for h in hosts
+            ]
+            for f in futuros:
+                slots_set.update(f.result())
     return sorted(slots_set)
 
 

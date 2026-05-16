@@ -8,7 +8,8 @@ class EventTypeAdmin(admin.ModelAdmin):
     list_filter = ('activo',)
     search_fields = ('nombre', 'host__username', 'host__email')
     fields = ('host', 'nombre', 'slug', 'slug_equipo', 'descripcion', 'duracion_minutos',
-              'buffer_antes_minutos', 'buffer_despues_minutos', 'aviso_minimo_horas', 'precio', 'activo')
+              'buffer_antes_minutos', 'buffer_despues_minutos', 'aviso_minimo_horas',
+              'aviso_maximo_dias', 'precio', 'activo')
 
 
 @admin.register(EventTypeXHost)

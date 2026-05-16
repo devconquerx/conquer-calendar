@@ -149,9 +149,9 @@
             </div>
             <!--end::Row tiempos-->
 
-            <!--begin::Row aviso + activo-->
+            <!--begin::Row aviso + rango + activo-->
             <div class="row mb-7">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label fw-semibold required">Aviso mínimo (horas)</label>
                     <input type="number" name="aviso_minimo_horas" min="0"
                            class="form-control form-control-lg{% if form.aviso_minimo_horas.errors %} is-invalid{% endif %}"
@@ -160,7 +160,16 @@
                     <div class="invalid-feedback">{{ form.aviso_minimo_horas.errors|join:", " }}</div>
                     {% endif %}
                 </div>
-                <div class="col-md-6 d-flex align-items-end pb-2">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold required">Rango máximo (días)</label>
+                    <input type="number" name="aviso_maximo_dias" min="1" max="365"
+                           class="form-control form-control-lg{% if form.aviso_maximo_dias.errors %} is-invalid{% endif %}"
+                           value="{{ form.aviso_maximo_dias.value|default_if_none:60 }}" />
+                    {% if form.aviso_maximo_dias.errors %}
+                    <div class="invalid-feedback">{{ form.aviso_maximo_dias.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4 d-flex align-items-end pb-2">
                     <div class="form-check form-check-custom form-check-solid form-check-lg">
                         <input class="form-check-input" type="checkbox" name="activo" id="activo"
                                {% if form.activo.value %}checked{% endif %} />
@@ -168,7 +177,7 @@
                     </div>
                 </div>
             </div>
-            <!--end::Row aviso + activo-->
+            <!--end::Row aviso + rango + activo-->
 
             <!--begin::Evento equipo-->
             <div class="separator separator-dashed my-8"></div>

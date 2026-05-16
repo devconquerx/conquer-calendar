@@ -20,6 +20,11 @@ class EventType(models.Model):
     buffer_antes_minutos = models.PositiveSmallIntegerField(default=0)
     buffer_despues_minutos = models.PositiveSmallIntegerField(default=0)
     aviso_minimo_horas = models.PositiveSmallIntegerField(default=0)
+    aviso_maximo_dias = models.PositiveSmallIntegerField(
+        default=60,
+        validators=[MinValueValidator(1), MaxValueValidator(365)],
+        help_text="Rango máximo (rolling) en días contados al minuto desde el momento actual.",
+    )
     slug_equipo = models.SlugField(max_length=120, blank=True, null=True, unique=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     activo = models.BooleanField(default=True)
