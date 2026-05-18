@@ -15,6 +15,7 @@ from calendario.google_calendar.services import (
 )
 from .exceptions import SlotNoDisponibleError
 from .models import Reserva
+from .services_crm import notificar_crm
 
 
 MAX_VENTANA_DIAS = 60
@@ -203,7 +204,8 @@ def _seleccionar_host_round_robin(event_type, candidatos):
     )
 
 
-def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado, notas=''):
+def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
+                  telefono_invitado='', notas=''):
     """
     Crea una reserva eligiendo automáticamente un host del pool (round-robin
     least-loaded). Lock sobre la fila EventType para serializar concurrentes
@@ -231,9 +233,12 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado, notas
             fin_utc=fin_utc,
             nombre_invitado=nombre_invitado.strip(),
             email_invitado=email_invitado,
+            telefono_invitado=telefono_invitado.strip(),
             notas=notas.strip(),
         )
         transaction.on_commit(lambda: crear_evento_google(reserva.pk))
+        if et.notificar_crm:
+            transaction.on_commit(lambda: notificar_crm(reserva.pk))
         return reserva
 
 

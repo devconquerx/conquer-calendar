@@ -28,6 +28,7 @@ class EventType(models.Model):
     slug_equipo = models.SlugField(max_length=120, blank=True, null=True, unique=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     activo = models.BooleanField(default=True)
+    notificar_crm = models.BooleanField(default=False)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 

@@ -4,12 +4,12 @@ from .models import EventType, EventTypeXHost
 
 @admin.register(EventType)
 class EventTypeAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'host', 'duracion_minutos', 'slug_equipo', 'activo', 'fecha_actualizacion')
-    list_filter = ('activo',)
+    list_display = ('nombre', 'host', 'duracion_minutos', 'slug_equipo', 'activo', 'notificar_crm', 'fecha_actualizacion')
+    list_filter = ('activo', 'notificar_crm')
     search_fields = ('nombre', 'host__username', 'host__email')
     fields = ('host', 'nombre', 'slug', 'slug_equipo', 'descripcion', 'duracion_minutos',
               'buffer_antes_minutos', 'buffer_despues_minutos', 'aviso_minimo_horas',
-              'aviso_maximo_dias', 'precio', 'activo')
+              'aviso_maximo_dias', 'precio', 'activo', 'notificar_crm')
 
 
 @admin.register(EventTypeXHost)

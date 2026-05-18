@@ -179,6 +179,20 @@
             </div>
             <!--end::Row aviso + rango + activo-->
 
+            <!--begin::Notificar CRM-->
+            <div class="d-flex align-items-start gap-4 mb-7">
+                <div class="form-check form-check-custom form-check-solid form-check-lg mt-1">
+                    <input class="form-check-input" type="checkbox" name="notificar_crm" id="notificar_crm"
+                           {% if form.notificar_crm.value %}checked{% endif %} />
+                    <label class="form-check-label fw-semibold ms-3" for="notificar_crm">Notificar al CRM</label>
+                </div>
+                <div class="text-muted fs-7" style="max-width: 480px;">
+                    Cuando se agende una reserva de este tipo de evento, se enviará una
+                    notificación al CRM para crear automáticamente la sesión de onboarding.
+                </div>
+            </div>
+            <!--end::Notificar CRM-->
+
             <!--begin::Evento equipo-->
             <div class="separator separator-dashed my-8"></div>
             <div class="d-flex align-items-start gap-4 mb-8">

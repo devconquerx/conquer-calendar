@@ -117,6 +117,7 @@ class BookingFormView(View):
                 inicio_utc=form.cleaned_data['inicio_utc'],
                 nombre_invitado=form.cleaned_data['nombre_invitado'],
                 email_invitado=form.cleaned_data['email_invitado'],
+                telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
             )
         except SlotNoDisponibleError as e:
@@ -146,6 +147,7 @@ class BookingFormView(View):
             'form_errors': form.errors,
             'nombre_invitado': request.POST.get('nombre_invitado', ''),
             'email_invitado': request.POST.get('email_invitado', ''),
+            'telefono_invitado': request.POST.get('telefono_invitado', ''),
             'notas': request.POST.get('notas', ''),
             'inicio_utc_str': request.POST.get('inicio_utc', ''),
             'slot_label': inicio.astimezone(tz_host).strftime('%H:%M') + ' h' if inicio else '',
@@ -210,6 +212,7 @@ class TeamBookingFormView(View):
                 inicio_utc=form.cleaned_data['inicio_utc'],
                 nombre_invitado=form.cleaned_data['nombre_invitado'],
                 email_invitado=form.cleaned_data['email_invitado'],
+                telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
             )
         except SlotNoDisponibleError as e:
@@ -238,6 +241,7 @@ class TeamBookingFormView(View):
             'form_errors': form.errors,
             'nombre_invitado': request.POST.get('nombre_invitado', ''),
             'email_invitado': request.POST.get('email_invitado', ''),
+            'telefono_invitado': request.POST.get('telefono_invitado', ''),
             'notas': request.POST.get('notas', ''),
             'inicio_utc_str': request.POST.get('inicio_utc', ''),
             'slot_label': inicio.astimezone(tz_ref).strftime('%H:%M') + ' h' if inicio else '',

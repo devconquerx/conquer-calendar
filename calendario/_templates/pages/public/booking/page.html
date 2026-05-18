@@ -482,6 +482,11 @@ body { background: var(--bk-bg) !important; }
                      required value="{{ email_invitado|default:'' }}" autocomplete="email">
             </div>
             <div>
+              <label class="bk-label" for="telefono_invitado">Teléfono (opcional)</label>
+              <input type="tel" id="telefono_invitado" name="telefono_invitado" class="bk-input"
+                     maxlength="50" value="{{ telefono_invitado|default:'' }}" autocomplete="tel">
+            </div>
+            <div>
               <label class="bk-label" for="notas">Notas (opcional)</label>
               <textarea id="notas" name="notas" class="bk-input" rows="3"
                         style="resize:vertical;">{{ notas|default:'' }}</textarea>

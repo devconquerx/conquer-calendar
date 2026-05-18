@@ -30,6 +30,7 @@ class Reserva(models.Model):
     fin_utc = models.DateTimeField()
     nombre_invitado = models.CharField(max_length=150)
     email_invitado = models.EmailField()
+    telefono_invitado = models.CharField(max_length=50, blank=True, default='')
     notas = models.TextField(blank=True, default='')
     estado = models.CharField(
         max_length=20,
