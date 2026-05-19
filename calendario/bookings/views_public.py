@@ -10,7 +10,10 @@ from calendario.users.models import User
 from .exceptions import SlotNoDisponibleError
 from .forms import BookingForm
 from .models import Reserva
-from .services import calcular_slots, cancelar_reserva, crear_reserva
+from .services import (
+    _calcular_slots_para_host, calcular_slots, cancelar_reserva, crear_reserva,
+    reagendar_reserva,
+)
 
 
 def _build_calendar_ctx(event_type, tz_host, hoy_local, mes_base, max_fecha, fecha_sel):
@@ -276,3 +279,136 @@ class CancelarPublicaView(View):
         reserva = get_object_or_404(Reserva, confirmacion_token=token)
         cancelar_reserva(reserva)
         return render(request, 'pages/public/booking/cancelada.html', {'reserva': reserva})
+
+
+def _build_reagendar_calendar_ctx(event_type, host, reserva_pk, tz_host, hoy_local, mes_base, max_fecha, fecha_sel):
+    """Variante de _build_calendar_ctx que solo considera al host de la reserva
+    y excluye la reserva en curso del cálculo de conflictos."""
+    mes_min = hoy_local.replace(day=1)
+    mes_max = max_fecha.replace(day=1)
+    mes_base = max(mes_min, min(mes_max, mes_base))
+
+    ultimo_dia = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    desde = max(mes_base, hoy_local)
+    hasta = min(ultimo_dia, max_fecha)
+    dias_con_slots = set()
+    if desde <= hasta:
+        for s in _calcular_slots_para_host(event_type, host, desde, hasta, excluir_reserva_pk=reserva_pk):
+            dias_con_slots.add(s.astimezone(tz_host).date())
+
+    cal_obj = cal_module.Calendar(firstweekday=0)
+    cal_semanas = []
+    for semana in cal_obj.monthdatescalendar(mes_base.year, mes_base.month):
+        fila = []
+        for d in semana:
+            fila.append({
+                'fecha': d,
+                'en_mes': d.month == mes_base.month,
+                'es_hoy': d == hoy_local,
+                'es_seleccionada': d == fecha_sel,
+                'clickable': (
+                    d.month == mes_base.month
+                    and hoy_local <= d <= max_fecha
+                    and d in dias_con_slots
+                ),
+            })
+        cal_semanas.append(fila)
+
+    mes_anterior = (mes_base - timedelta(days=1)).replace(day=1)
+    mes_siguiente = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1)
+
+    return {
+        'mes_base': mes_base,
+        'cal_semanas': cal_semanas,
+        'mes_anterior': mes_anterior if mes_anterior >= mes_min else None,
+        'mes_siguiente': mes_siguiente if mes_siguiente <= mes_max else None,
+    }
+
+
+class ReagendarPublicaView(View):
+
+    def _ctx(self, request, reserva, error=None, fecha=None):
+        host = reserva.host
+        event_type = reserva.event_type
+        tz_host = ZoneInfo(host.timezone)
+        hoy_local = datetime.now(tz_host).date()
+        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
+        inicio_actual_local = reserva.inicio_utc.astimezone(tz_host)
+
+        fecha_str = request.GET.get('fecha', '')
+        if fecha is None:
+            try:
+                fecha = date.fromisoformat(fecha_str) if fecha_str else None
+            except ValueError:
+                fecha = None
+            if fecha and (fecha < hoy_local or fecha > max_fecha):
+                fecha = None
+
+        mes_str = request.GET.get('mes', '')
+        try:
+            mes_base = date.fromisoformat(mes_str).replace(day=1) if mes_str else None
+        except ValueError:
+            mes_base = None
+        if not mes_base:
+            mes_base = fecha.replace(day=1) if fecha else hoy_local.replace(day=1)
+
+        slots_local = []
+        if fecha:
+            slots_local = [
+                (s, s.astimezone(tz_host))
+                for s in _calcular_slots_para_host(
+                    event_type, host, fecha, fecha, excluir_reserva_pk=reserva.pk,
+                )
+            ]
+
+        ctx = {
+            'reserva': reserva,
+            'inicio_actual_local': inicio_actual_local,
+            'fecha': fecha,
+            'fecha_iso': fecha.isoformat() if fecha else '',
+            'slots_local': slots_local,
+            'tz_host': host.timezone,
+            'hoy': hoy_local,
+            'error': error,
+        }
+        ctx.update(_build_reagendar_calendar_ctx(
+            event_type, host, reserva.pk, tz_host, hoy_local, mes_base, max_fecha, fecha,
+        ))
+        return ctx
+
+    def get(self, request, token):
+        reserva = get_object_or_404(
+            Reserva.objects.select_related('event_type', 'host'),
+            confirmacion_token=token,
+            estado=Reserva.Estado.CONFIRMADA,
+        )
+        return render(request, 'pages/public/booking/reagendar.html', self._ctx(request, reserva))
+
+    def post(self, request, token):
+        reserva = get_object_or_404(
+            Reserva.objects.select_related('event_type', 'host'),
+            confirmacion_token=token,
+            estado=Reserva.Estado.CONFIRMADA,
+        )
+        form = BookingForm({
+            'inicio_utc': request.POST.get('inicio_utc', ''),
+            'nombre_invitado': reserva.nombre_invitado,
+            'email_invitado': reserva.email_invitado,
+        })
+        if not form.is_valid() or 'inicio_utc' not in form.cleaned_data:
+            return render(
+                request, 'pages/public/booking/reagendar.html',
+                self._ctx(request, reserva, error="Elegí un horario válido."),
+                status=400,
+            )
+        try:
+            reagendar_reserva(reserva, form.cleaned_data['inicio_utc'])
+        except SlotNoDisponibleError as e:
+            tz_host = ZoneInfo(reserva.host.timezone)
+            fecha = form.cleaned_data['inicio_utc'].astimezone(tz_host).date()
+            return render(
+                request, 'pages/public/booking/reagendar.html',
+                self._ctx(request, reserva, error=str(e), fecha=fecha),
+                status=400,
+            )
+        return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
