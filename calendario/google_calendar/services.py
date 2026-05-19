@@ -253,6 +253,87 @@ def crear_evento_google(reserva_pk):
             reserva.save(update_fields=['google_sync_estado', 'fecha_actualizacion'])
 
 
+def actualizar_evento_google(reserva_pk):
+    """
+    Aplica events.patch sobre el evento existente con el nuevo start/end.
+    sendUpdates='all' para que Google notifique a host e invitado del cambio.
+    Fail-soft: si Google falla, marca google_sync_estado='error'.
+    Si el evento ya no existe (404/410), recrea desde cero (Meet link cambia).
+    Si la reserva nunca sincronizó (google_event_id vacío), delega en crear_evento_google.
+    """
+    from calendario.bookings.models import Reserva
+
+    with transaction.atomic():
+        try:
+            reserva = Reserva.objects.select_for_update().get(pk=reserva_pk)
+        except Reserva.DoesNotExist:
+            logger.warning("actualizar_evento_google: reserva %s no existe", reserva_pk)
+            return
+
+        if reserva.estado == Reserva.Estado.CANCELADA:
+            logger.info(
+                "actualizar_evento_google: reserva %s cancelada, omitiendo.", reserva_pk,
+            )
+            return
+
+        if not reserva.google_event_id:
+            return crear_evento_google(reserva_pk)
+
+        host_email = reserva.host.email
+
+        try:
+            servicio = obtener_servicio_calendar(host_email)
+            body = {
+                'start': {'dateTime': reserva.inicio_utc.isoformat(), 'timeZone': 'UTC'},
+                'end':   {'dateTime': reserva.fin_utc.isoformat(),   'timeZone': 'UTC'},
+            }
+            servicio.events().patch(
+                calendarId='primary',
+                eventId=reserva.google_event_id,
+                body=body,
+                sendUpdates='all',
+            ).execute()
+            reserva.google_sync_estado = Reserva.GoogleSyncEstado.SINCRONIZADO
+            reserva.save(update_fields=['google_sync_estado', 'fecha_actualizacion'])
+            logger.info(
+                "actualizar_evento_google: OK reserva=%s host=%s event_id=%s",
+                reserva_pk, host_email, reserva.google_event_id,
+            )
+        except HttpError as e:
+            if e.resp.status in (404, 410):
+                logger.info(
+                    "actualizar_evento_google: evento inexistente (HTTP %s) reserva=%s — recreando",
+                    e.resp.status, reserva_pk,
+                )
+                reserva.google_event_id = ''
+                reserva.google_meet_url = ''
+                reserva.save(update_fields=[
+                    'google_event_id', 'google_meet_url', 'fecha_actualizacion',
+                ])
+                transaction.on_commit(lambda: crear_evento_google(reserva_pk))
+                return
+            logger.error(
+                "actualizar_evento_google: HttpError %s reserva=%s host=%s — %s",
+                e.resp.status, reserva_pk, host_email, e,
+            )
+            reserva.google_sync_estado = Reserva.GoogleSyncEstado.ERROR
+            reserva.save(update_fields=['google_sync_estado', 'fecha_actualizacion'])
+        except (ServiceAccountNoConfiguradaError, EmailFueraDeDominioError) as e:
+            logger.error(
+                "actualizar_evento_google: config/dominio error reserva=%s host=%s — %s",
+                reserva_pk, host_email, e,
+            )
+            reserva.google_sync_estado = Reserva.GoogleSyncEstado.ERROR
+            reserva.save(update_fields=['google_sync_estado', 'fecha_actualizacion'])
+        except Exception:
+            logger.exception(
+                "actualizar_evento_google: error inesperado reserva=%s host=%s",
+                reserva_pk, host_email,
+            )
+            reserva.google_sync_estado = Reserva.GoogleSyncEstado.ERROR
+            reserva.save(update_fields=['google_sync_estado', 'fecha_actualizacion'])
+
+
 def eliminar_evento_google(reserva_pk):
     """
     Elimina el evento Google Calendar de la reserva. Idempotente.
