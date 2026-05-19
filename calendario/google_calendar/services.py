@@ -30,11 +30,13 @@ def obtener_servicio_calendar(host_email):
     return build('calendar', 'v3', credentials=creds, cache_discovery=False)
 
 
-def consultar_freebusy(host_email, inicio_utc, fin_utc):
+def consultar_freebusy(host_email, inicio_utc, fin_utc, ignorar_event_id=None):
     """
     Devuelve True si el rango [inicio_utc, fin_utc) colisiona con un evento
     en el calendario primario del host.
     Fail-open: si Google falla, devuelve False y loguea WARNING.
+    ignorar_event_id: si está seteado y Google reporta busy, hace fallback con
+    events.list y descarta ese eventId del cálculo (usado por reagendar).
     """
     try:
         servicio = obtener_servicio_calendar(host_email)
@@ -60,7 +62,28 @@ def consultar_freebusy(host_email, inicio_utc, fin_utc):
                 host_email, cal_info['errors'],
             )
             return False
-        return bool(cal_info.get('busy'))
+        if not cal_info.get('busy'):
+            return False
+        if not ignorar_event_id:
+            return True
+        # Fallback: freeBusy no expone eventIds, así que listamos eventos
+        # del rango y descartamos el que pidieron ignorar.
+        eventos = servicio.events().list(
+            calendarId='primary',
+            timeMin=inicio_utc.isoformat(),
+            timeMax=fin_utc.isoformat(),
+            singleEvents=True,
+            showDeleted=False,
+        ).execute().get('items', [])
+        for ev in eventos:
+            if ev.get('id') == ignorar_event_id:
+                continue
+            if ev.get('status') == 'cancelled':
+                continue
+            if ev.get('transparency') == 'transparent':
+                continue
+            return True
+        return False
     except HttpError as e:
         logger.warning(
             "freebusy: query falló para %s (HTTP %s). Fail-open: sin conflicto.",
