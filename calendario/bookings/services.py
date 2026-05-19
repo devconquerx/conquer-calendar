@@ -38,11 +38,13 @@ def _obtener_hosts_pool(event_type):
     return [p.host for p in pivots]
 
 
-def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
+def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, excluir_reserva_pk=None):
     """
     Devuelve lista de inicio_utc aware-UTC disponibles para un host concreto.
     fecha_desde / fecha_hasta: date naive (interpretadas en TZ del host).
     Clamp servidor: fecha_hasta = min(fecha_hasta, fecha_desde + MAX_VENTANA_DIAS).
+    excluir_reserva_pk: si está seteado, ignora esa reserva al calcular conflictos
+    (usado por reagendar para no auto-bloquearse con el slot actual).
     """
     tz_host = ZoneInfo(host.timezone)
     duracion = event_type.duracion_minutos
@@ -69,13 +71,14 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
     desde_utc = datetime.combine(fecha_desde, datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
     hasta_utc = datetime.combine(fecha_hasta + timedelta(days=1), datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
 
-    reservas = list(
-        Reserva.objects.filter(
-            host=host, estado=Reserva.Estado.CONFIRMADA,
-            inicio_utc__lt=hasta_utc + timedelta(hours=24),
-            fin_utc__gt=desde_utc - timedelta(hours=24),
-        ).select_related('event_type').order_by('inicio_utc')
+    reservas_qs = Reserva.objects.filter(
+        host=host, estado=Reserva.Estado.CONFIRMADA,
+        inicio_utc__lt=hasta_utc + timedelta(hours=24),
+        fin_utc__gt=desde_utc - timedelta(hours=24),
     )
+    if excluir_reserva_pk is not None:
+        reservas_qs = reservas_qs.exclude(pk=excluir_reserva_pk)
+    reservas = list(reservas_qs.select_related('event_type').order_by('inicio_utc'))
 
     busy_intervalos = obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
 
