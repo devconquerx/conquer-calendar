@@ -63,10 +63,13 @@ class EventTypeForm(forms.ModelForm):
             'nombre', 'descripcion', 'duracion_minutos',
             'buffer_antes_minutos', 'buffer_despues_minutos',
             'aviso_minimo_horas', 'aviso_maximo_dias', 'activo',
-            'notificar_crm',
+            'notificar_crm', 'unico_por_invitado',
         ]
         widgets = {'descripcion': forms.Textarea(attrs={'rows': 3})}
-        labels = {'notificar_crm': 'Notificar al CRM'}
+        labels = {
+            'notificar_crm': 'Notificar al CRM',
+            'unico_por_invitado': 'Solo una reserva por invitado',
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

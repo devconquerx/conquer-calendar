@@ -586,4 +586,70 @@ document.getElementById('step-form').style.display  = 'flex';
 })();
 {% endif %}
 </script>
+
+{% if mostrar_modal_duplicado %}
+<style>
+.bk-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 9998;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px; box-sizing: border-box;
+  animation: bk-fade-in .15s ease-out;
+}
+@keyframes bk-fade-in { from { opacity: 0 } to { opacity: 1 } }
+.bk-modal {
+  background: #fff; border-radius: 12px; max-width: 460px; width: 100%;
+  box-shadow: 0 12px 36px rgba(0,0,0,.25); padding: 28px 28px 24px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #1a1a2e; letter-spacing: -0.005em;
+}
+.bk-modal h3 {
+  font-size: 19px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.01em;
+}
+.bk-modal p { font-size: 14.5px; line-height: 1.55; color: #4a4a4a; margin: 0 0 10px; }
+.bk-modal .bk-modal-existing {
+  background: #fff3cd; border-left: 3px solid #f5b800; padding: 12px 14px;
+  border-radius: 6px; font-size: 14px; line-height: 1.5; color: #664d03;
+  margin: 14px 0;
+}
+.bk-modal .bk-modal-existing strong { color: #1a1a2e; }
+.bk-modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+.bk-modal-btn {
+  padding: 10px 18px; border-radius: 6px; font-size: 14px; font-weight: 600;
+  cursor: pointer; border: 1px solid transparent;
+}
+.bk-modal-btn.cancel { background: #fff; border-color: #d1d5db; color: #1a1a2e; }
+.bk-modal-btn.cancel:hover { background: #f0f2f5; }
+.bk-modal-btn.primary { background: #0069ff; color: #fff; }
+.bk-modal-btn.primary:hover { background: #0052cc; }
+</style>
+<div class="bk-modal-backdrop" id="bk-modal-dup">
+  <div class="bk-modal" role="dialog" aria-modal="true" aria-labelledby="bk-modal-title">
+    <h3 id="bk-modal-title">Ya tenés una reserva</h3>
+    <p>
+      Detectamos que ya tenés una reserva confirmada para <strong>{{ event_type.nombre }}</strong>:
+    </p>
+    <div class="bk-modal-existing">
+      <strong>{{ duplicado_inicio_local|date:"l, j \d\e F" }}</strong><br>
+      <strong>{{ duplicado_inicio_local|date:"H:i" }} h</strong>
+      &middot; con {{ duplicado.host.nombre_display }}
+    </div>
+    <p>
+      ¿Querés <strong>cancelar esa reserva</strong> y agendar esta nueva
+      {% if nuevo_inicio_local %}para el <strong>{{ nuevo_inicio_local|date:"j \d\e F" }} a las {{ nuevo_inicio_local|date:"H:i" }} h</strong>{% endif %}?
+    </p>
+    <form method="post" action="{% url 'public_token:reemplazar_publica' token=duplicado_token %}" style="margin:0">
+      {% csrf_token %}
+      <input type="hidden" name="inicio_utc" value="{{ inicio_utc_str }}">
+      <input type="hidden" name="nombre_invitado" value="{{ nombre_invitado }}">
+      <input type="hidden" name="email_invitado" value="{{ email_invitado }}">
+      <input type="hidden" name="telefono_invitado" value="{{ telefono_invitado }}">
+      <input type="hidden" name="notas" value="{{ notas }}">
+      <div class="bk-modal-actions">
+        <button type="button" class="bk-modal-btn cancel" onclick="document.getElementById('bk-modal-dup').remove()">No, volver</button>
+        <button type="submit" class="bk-modal-btn primary">Sí, cancelar y agendar nueva</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

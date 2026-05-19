@@ -10,10 +10,10 @@ from django.utils import timezone
 from calendario.availability.models import BloqueHorarioSemanal
 from calendario.event_types.models import EventType, EventTypeXHost
 from calendario.google_calendar.services import (
-    actualizar_evento_google, consultar_freebusy, crear_evento_google,
-    eliminar_evento_google, obtener_busy_intervalos,
+    consultar_freebusy, crear_evento_google, eliminar_evento_google,
+    obtener_busy_intervalos,
 )
-from .exceptions import SlotNoDisponibleError
+from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .models import Reserva
 from .services_crm import notificar_crm
 
@@ -38,13 +38,11 @@ def _obtener_hosts_pool(event_type):
     return [p.host for p in pivots]
 
 
-def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, excluir_reserva_pk=None):
+def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
     """
     Devuelve lista de inicio_utc aware-UTC disponibles para un host concreto.
     fecha_desde / fecha_hasta: date naive (interpretadas en TZ del host).
     Clamp servidor: fecha_hasta = min(fecha_hasta, fecha_desde + MAX_VENTANA_DIAS).
-    excluir_reserva_pk: si está seteado, ignora esa reserva al calcular conflictos
-    (usado por reagendar para no auto-bloquearse con el slot actual).
     """
     tz_host = ZoneInfo(host.timezone)
     duracion = event_type.duracion_minutos
@@ -71,14 +69,13 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, exclui
     desde_utc = datetime.combine(fecha_desde, datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
     hasta_utc = datetime.combine(fecha_hasta + timedelta(days=1), datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
 
-    reservas_qs = Reserva.objects.filter(
-        host=host, estado=Reserva.Estado.CONFIRMADA,
-        inicio_utc__lt=hasta_utc + timedelta(hours=24),
-        fin_utc__gt=desde_utc - timedelta(hours=24),
+    reservas = list(
+        Reserva.objects.filter(
+            host=host, estado=Reserva.Estado.CONFIRMADA,
+            inicio_utc__lt=hasta_utc + timedelta(hours=24),
+            fin_utc__gt=desde_utc - timedelta(hours=24),
+        ).select_related('event_type').order_by('inicio_utc')
     )
-    if excluir_reserva_pk is not None:
-        reservas_qs = reservas_qs.exclude(pk=excluir_reserva_pk)
-    reservas = list(reservas_qs.select_related('event_type').order_by('inicio_utc'))
 
     busy_intervalos = obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
 
@@ -219,6 +216,19 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         if not et.activo:
             raise SlotNoDisponibleError("El evento no está disponible.")
 
+        if et.unico_por_invitado:
+            email_norm = (email_invitado or '').strip().lower()
+            existente = (Reserva.objects
+                         .select_related('host', 'event_type')
+                         .filter(event_type=et,
+                                 estado=Reserva.Estado.CONFIRMADA,
+                                 email_invitado__iexact=email_norm,
+                                 inicio_utc__gt=timezone.now())
+                         .order_by('inicio_utc')
+                         .first())
+            if existente:
+                raise ReservaDuplicadaError(existente)
+
         candidatos = _candidatos_para_slot(et, inicio_utc)
         if not candidatos:
             raise SlotNoDisponibleError("Ese slot ya no está disponible.")
@@ -245,52 +255,37 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         return reserva
 
 
-def reagendar_reserva(reserva, nuevo_inicio_utc):
+def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado,
+                       email_invitado, telefono_invitado='', notas=''):
     """
-    Cambia el horario de una reserva confirmada manteniendo host,
-    confirmacion_token y evento Google (events.patch).
-    Lanza SlotNoDisponibleError si el slot nuevo no está libre.
+    Cancela la reserva vieja y crea una nueva, en una sola transacción atómica.
+    Saltea el check de duplicado de crear_reserva porque, al cancelar primero,
+    la búsqueda de "reserva futura confirmada con el mismo email" ya no
+    encuentra la vieja.
     """
     with transaction.atomic():
-        reserva = (Reserva.objects
-                   .select_for_update()
-                   .select_related('event_type', 'host')
-                   .get(pk=reserva.pk))
-        if reserva.estado != Reserva.Estado.CONFIRMADA:
-            raise SlotNoDisponibleError("La reserva no se puede reagendar.")
+        try:
+            vieja = Reserva.objects.select_for_update().get(pk=reserva_vieja_pk)
+        except Reserva.DoesNotExist:
+            vieja = None
 
-        if reserva.inicio_utc == nuevo_inicio_utc:
-            return reserva  # no-op
+        if vieja and vieja.estado == Reserva.Estado.CONFIRMADA:
+            vieja.estado = Reserva.Estado.CANCELADA
+            vieja.save(update_fields=['estado', 'fecha_actualizacion'])
+            if vieja.google_event_id:
+                google_event_id = vieja.google_event_id
+                vieja_pk = vieja.pk
+                transaction.on_commit(lambda: eliminar_evento_google(vieja_pk))
 
-        et = EventType.objects.select_for_update().get(pk=reserva.event_type_id)
-        if not et.activo:
-            raise SlotNoDisponibleError("El evento no está disponible.")
-
-        host = reserva.host
-        fecha_local = nuevo_inicio_utc.astimezone(ZoneInfo(host.timezone)).date()
-        slots = _calcular_slots_para_host(
-            et, host, fecha_local, fecha_local,
-            excluir_reserva_pk=reserva.pk,
+        # crear_reserva ahora no detecta duplicado porque la vieja está cancelada
+        return crear_reserva(
+            event_type=event_type,
+            inicio_utc=inicio_utc,
+            nombre_invitado=nombre_invitado,
+            email_invitado=email_invitado,
+            telefono_invitado=telefono_invitado,
+            notas=notas,
         )
-        if nuevo_inicio_utc not in slots:
-            raise SlotNoDisponibleError("Ese slot ya no está disponible.")
-
-        nuevo_fin = nuevo_inicio_utc + timedelta(minutes=et.duracion_minutos)
-
-        if consultar_freebusy(
-            host.email, nuevo_inicio_utc, nuevo_fin,
-            ignorar_event_id=reserva.google_event_id or None,
-        ):
-            raise SlotNoDisponibleError("Ese slot ya no está disponible.")
-
-        reserva.inicio_utc = nuevo_inicio_utc
-        reserva.fin_utc = nuevo_fin
-        reserva.google_sync_estado = Reserva.GoogleSyncEstado.PENDIENTE
-        reserva.save(update_fields=[
-            'inicio_utc', 'fin_utc', 'google_sync_estado', 'fecha_actualizacion',
-        ])
-        transaction.on_commit(lambda: actualizar_evento_google(reserva.pk))
-        return reserva
 
 
 def cancelar_reserva(reserva):
