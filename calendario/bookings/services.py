@@ -10,8 +10,8 @@ from django.utils import timezone
 from calendario.availability.models import BloqueHorarioSemanal
 from calendario.event_types.models import EventType, EventTypeXHost
 from calendario.google_calendar.services import (
-    consultar_freebusy, crear_evento_google, eliminar_evento_google,
-    obtener_busy_intervalos,
+    actualizar_evento_google, consultar_freebusy, crear_evento_google,
+    eliminar_evento_google, obtener_busy_intervalos,
 )
 from .exceptions import SlotNoDisponibleError
 from .models import Reserva
@@ -242,6 +242,54 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         transaction.on_commit(lambda: crear_evento_google(reserva.pk))
         if et.notificar_crm:
             transaction.on_commit(lambda: notificar_crm(reserva.pk))
+        return reserva
+
+
+def reagendar_reserva(reserva, nuevo_inicio_utc):
+    """
+    Cambia el horario de una reserva confirmada manteniendo host,
+    confirmacion_token y evento Google (events.patch).
+    Lanza SlotNoDisponibleError si el slot nuevo no está libre.
+    """
+    with transaction.atomic():
+        reserva = (Reserva.objects
+                   .select_for_update()
+                   .select_related('event_type', 'host')
+                   .get(pk=reserva.pk))
+        if reserva.estado != Reserva.Estado.CONFIRMADA:
+            raise SlotNoDisponibleError("La reserva no se puede reagendar.")
+
+        if reserva.inicio_utc == nuevo_inicio_utc:
+            return reserva  # no-op
+
+        et = EventType.objects.select_for_update().get(pk=reserva.event_type_id)
+        if not et.activo:
+            raise SlotNoDisponibleError("El evento no está disponible.")
+
+        host = reserva.host
+        fecha_local = nuevo_inicio_utc.astimezone(ZoneInfo(host.timezone)).date()
+        slots = _calcular_slots_para_host(
+            et, host, fecha_local, fecha_local,
+            excluir_reserva_pk=reserva.pk,
+        )
+        if nuevo_inicio_utc not in slots:
+            raise SlotNoDisponibleError("Ese slot ya no está disponible.")
+
+        nuevo_fin = nuevo_inicio_utc + timedelta(minutes=et.duracion_minutos)
+
+        if consultar_freebusy(
+            host.email, nuevo_inicio_utc, nuevo_fin,
+            ignorar_event_id=reserva.google_event_id or None,
+        ):
+            raise SlotNoDisponibleError("Ese slot ya no está disponible.")
+
+        reserva.inicio_utc = nuevo_inicio_utc
+        reserva.fin_utc = nuevo_fin
+        reserva.google_sync_estado = Reserva.GoogleSyncEstado.PENDIENTE
+        reserva.save(update_fields=[
+            'inicio_utc', 'fin_utc', 'google_sync_estado', 'fecha_actualizacion',
+        ])
+        transaction.on_commit(lambda: actualizar_evento_google(reserva.pk))
         return reserva
 
 
