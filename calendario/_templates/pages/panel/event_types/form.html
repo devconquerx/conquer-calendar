@@ -91,8 +91,16 @@
         </div>
         {% endif %}
 
+        {% if readonly %}
+        <div class="alert alert-info d-flex align-items-center gap-2 mb-6">
+            <i class="ki-duotone ki-information fs-2 text-info"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+            <span>Este evento fue creado por <strong>{{ object.host.get_full_name }}</strong>. Solo puedes verlo.</span>
+        </div>
+        {% endif %}
+
         <form method="post">
             {% csrf_token %}
+        <fieldset {% if readonly %}disabled{% endif %} style="all:unset;display:contents">
 
             <!--begin::Nombre-->
             <div class="fv-row mb-7">
@@ -306,10 +314,14 @@
             </div>
             <!--end::Organizadores-->
 
+        </fieldset>
+
             <!--begin::Acciones-->
             <div class="d-flex gap-3 pt-4 border-top">
+                {% if not readonly %}
                 <button type="submit" class="btn btn-primary btn-lg">Guardar</button>
-                <a href="{% url 'panel_event_types:event_type_list' %}" class="btn btn-light btn-lg">Cancelar</a>
+                {% endif %}
+                <a href="{% url 'panel_event_types:event_type_list' %}" class="btn btn-light btn-lg">{% if readonly %}Volver{% else %}Cancelar{% endif %}</a>
             </div>
             <!--end::Acciones-->
 
@@ -337,6 +349,8 @@
 
   var initial = input.value.trim();
   if (initial) editor.clipboard.dangerouslyPasteHTML(initial);
+
+  {% if readonly %}editor.enable(false);{% endif %}
 
   var form = input.closest('form');
   form.addEventListener('submit', function () {

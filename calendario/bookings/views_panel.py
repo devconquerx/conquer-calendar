@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
@@ -18,9 +19,14 @@ class ReservaListView(RequierePermisoMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
+        # Creador ve todas las reservas de sus eventos + las propias de eventos ajenos
         return (Reserva.objects
-                .filter(host=self.request.user)
-                .select_related('event_type')
+                .filter(
+                    Q(event_type__host=self.request.user) |
+                    Q(host=self.request.user)
+                )
+                .select_related('event_type', 'host')
+                .distinct()
                 .order_by('-inicio_utc'))
 
 

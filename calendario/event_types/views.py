@@ -24,7 +24,10 @@ class EventTypeListView(RequierePermisoMixin, ListView):
 
     def get_queryset(self):
         qs = EventType.objects.all() if self.request.user.es_admin \
-            else EventType.objects.filter(host=self.request.user)
+            else EventType.objects.filter(
+                Q(host=self.request.user) |
+                Q(hosts_pool__host=self.request.user)
+            )
 
         q = self.request.GET.get('q', '').strip()
         if q:
@@ -126,14 +129,28 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
     template_name = 'pages/panel/event_types/form.html'
     success_url = reverse_lazy('panel_event_types:event_type_list')
 
+    def _es_solo_lectura(self):
+        obj = self.get_object()
+        return not self.request.user.es_admin and obj.host != self.request.user
+
     def get_queryset(self):
         if self.request.user.es_admin:
             return EventType.objects.all()
-        return EventType.objects.filter(host=self.request.user)
+        return EventType.objects.filter(
+            Q(host=self.request.user) |
+            Q(hosts_pool__host=self.request.user)
+        ).distinct()
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == 'POST' and self._es_solo_lectura():
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['hosts_disponibles'] = _hosts_disponibles_context()
+        ctx['readonly'] = self._es_solo_lectura()
         return ctx
 
     def form_valid(self, form):
@@ -190,7 +207,7 @@ class EventTypeToggleActivoView(RequierePermisoMixin, View):
         if request.user.es_admin:
             obj = get_object_or_404(EventType, pk=pk)
         else:
-            obj = get_object_or_404(EventType, pk=pk, host=request.user)
+            obj = get_object_or_404(EventType, pk=pk, host=request.user)  # solo creador
         obj.activo = not obj.activo
         obj.save(update_fields=['activo', 'fecha_actualizacion'])
         estado = 'activado' if obj.activo else 'desactivado'
