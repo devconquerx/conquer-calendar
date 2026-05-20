@@ -10,8 +10,8 @@ from django.utils import timezone
 from calendario.availability.models import BloqueHorarioSemanal
 from calendario.event_types.models import EventType, EventTypeXHost
 from calendario.google_calendar.services import (
-    consultar_freebusy, crear_evento_google, eliminar_evento_google,
-    obtener_busy_intervalos,
+    cancelar_evento_google, consultar_freebusy, crear_evento_google,
+    eliminar_evento_google, obtener_busy_intervalos,
 )
 from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .models import Reserva
@@ -223,7 +223,7 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
                          .filter(event_type=et,
                                  estado=Reserva.Estado.CONFIRMADA,
                                  email_invitado__iexact=email_norm,
-                                 inicio_utc__gt=timezone.now())
+                                 fin_utc__gt=timezone.now())
                          .order_by('inicio_utc')
                          .first())
             if existente:
@@ -273,9 +273,8 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
             vieja.estado = Reserva.Estado.CANCELADA
             vieja.save(update_fields=['estado', 'fecha_actualizacion'])
             if vieja.google_event_id:
-                google_event_id = vieja.google_event_id
                 vieja_pk = vieja.pk
-                transaction.on_commit(lambda: eliminar_evento_google(vieja_pk))
+                transaction.on_commit(lambda: cancelar_evento_google(vieja_pk))
 
         # crear_reserva ahora no detecta duplicado porque la vieja está cancelada
         return crear_reserva(
@@ -298,7 +297,7 @@ def cancelar_reserva(reserva):
         reserva.estado = Reserva.Estado.CANCELADA
         reserva.save(update_fields=['estado', 'fecha_actualizacion'])
         if reserva.google_event_id:
-            transaction.on_commit(lambda: eliminar_evento_google(reserva.pk))
+            transaction.on_commit(lambda: cancelar_evento_google(reserva.pk))
     return reserva
 
 

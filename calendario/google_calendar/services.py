@@ -163,7 +163,11 @@ def crear_evento_google(reserva_pk):
             servicio = obtener_servicio_calendar(host_email)
             body = {
                 'summary': f'{reserva.event_type.nombre} con {reserva.nombre_invitado}',
-                'description': reserva.notas or '',
+                'description': '\n'.join(filter(None, [
+                    f"Teléfono: {reserva.telefono_invitado}" if reserva.telefono_invitado else None,
+                    f"Email: {reserva.email_invitado}",
+                    f"Notas: {reserva.notas}" if reserva.notas else None,
+                ])),
                 'start': {
                     'dateTime': reserva.inicio_utc.isoformat(),
                     'timeZone': 'UTC',
@@ -173,7 +177,7 @@ def crear_evento_google(reserva_pk):
                     'timeZone': 'UTC',
                 },
                 'attendees': [
-                    {'email': host_email, 'displayName': reserva.host.nombre_display()},
+                    {'email': host_email, 'displayName': reserva.host.nombre_display(), 'responseStatus': 'accepted'},
                     {'email': reserva.email_invitado, 'displayName': reserva.nombre_invitado},
                 ],
                 'conferenceData': {
@@ -228,6 +232,71 @@ def crear_evento_google(reserva_pk):
             )
             reserva.google_sync_estado = Reserva.GoogleSyncEstado.ERROR
             reserva.save(update_fields=['google_sync_estado', 'fecha_actualizacion'])
+
+
+def cancelar_evento_google(reserva_pk):
+    """
+    Marca el evento en Google Calendar como cancelado: cambia el título a
+    'Cancelado: ...' y lo pone transparente para liberar el hueco en freebusy.
+    Notifica a todos los attendees via sendUpdates='all'.
+    """
+    from calendario.bookings.models import Reserva
+
+    try:
+        reserva = Reserva.objects.select_related('host', 'event_type').get(pk=reserva_pk)
+    except Reserva.DoesNotExist:
+        return
+
+    if not reserva.google_event_id:
+        return
+
+    host_email = reserva.host.email
+
+    try:
+        servicio = obtener_servicio_calendar(host_email)
+        evento_actual = servicio.events().get(
+            calendarId='primary',
+            eventId=reserva.google_event_id,
+        ).execute()
+        attendees_declinados = [
+            {**a, 'responseStatus': 'declined'}
+            for a in evento_actual.get('attendees', [])
+        ]
+        servicio.events().patch(
+            calendarId='primary',
+            eventId=reserva.google_event_id,
+            body={
+                'summary': f'Cancelado: {reserva.event_type.nombre} con {reserva.nombre_invitado}',
+                'transparency': 'transparent',
+                'attendees': attendees_declinados,
+            },
+            sendUpdates='all',
+        ).execute()
+        logger.info(
+            "cancelar_evento_google: OK reserva=%s host=%s event_id=%s",
+            reserva_pk, host_email, reserva.google_event_id,
+        )
+    except HttpError as e:
+        if e.resp.status in (404, 410):
+            logger.info(
+                "cancelar_evento_google: evento ya inexistente (HTTP %s) reserva=%s",
+                e.resp.status, reserva_pk,
+            )
+            return
+        logger.error(
+            "cancelar_evento_google: HttpError %s reserva=%s host=%s — %s",
+            e.resp.status, reserva_pk, host_email, e,
+        )
+    except (ServiceAccountNoConfiguradaError, EmailFueraDeDominioError) as e:
+        logger.error(
+            "cancelar_evento_google: config/dominio error reserva=%s host=%s — %s",
+            reserva_pk, host_email, e,
+        )
+    except Exception:
+        logger.exception(
+            "cancelar_evento_google: error inesperado reserva=%s host=%s",
+            reserva_pk, host_email,
+        )
 
 
 def eliminar_evento_google(reserva_pk):

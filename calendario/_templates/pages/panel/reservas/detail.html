@@ -40,6 +40,12 @@
                 <div class="text-gray-600">{{ reserva.email_invitado }}</div>
             </div>
             <div class="col-sm-6">
+                <div class="text-muted fs-7 fw-semibold mb-1">Teléfono</div>
+                <div class="text-gray-600">
+                    {% if reserva.telefono_invitado %}{{ reserva.telefono_invitado }}{% else %}<span class="text-muted">—</span>{% endif %}
+                </div>
+            </div>
+            <div class="col-sm-6">
                 <div class="text-muted fs-7 fw-semibold mb-1">Inicio (UTC)</div>
                 <div class="text-gray-800 fw-bold">{{ reserva.inicio_utc|date:"d/m/Y H:i" }}</div>
             </div>
