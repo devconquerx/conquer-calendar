@@ -49,3 +49,7 @@ Thumbs.db
 
 # Documentación interna / planificación (no se sube al repo)
 docs_internos/
+
+# Datos y scripts de restauración local
+restore.data.md
+prod_dump.json

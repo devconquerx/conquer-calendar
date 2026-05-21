@@ -22,6 +22,15 @@ MAX_VENTANA_DIAS = 60
 UTC = ZoneInfo('UTC')
 
 
+def _alinear_al_grid(dt, step_minutes):
+    """Avanza dt hasta el próximo múltiplo de step_minutes desde medianoche."""
+    total = dt.hour * 60 + dt.minute
+    remainder = total % step_minutes
+    if remainder == 0:
+        return dt
+    return dt + timedelta(minutes=step_minutes - remainder)
+
+
 def _intervals_overlap(a_inicio, a_fin, b_inicio, b_fin):
     return a_inicio < b_fin and b_inicio < a_fin
 
@@ -80,14 +89,17 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
     busy_intervalos = obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
 
     slots = []
-    step = timedelta(minutes=duracion + buffer_despues)
+    step = timedelta(minutes=duracion)
     fecha_actual = fecha_desde
     while fecha_actual <= fecha_hasta:
         dia_semana = fecha_actual.weekday()
         for bloque in bloques_por_dia[dia_semana]:
-            cursor_local = datetime.combine(fecha_actual, bloque.hora_inicio).replace(tzinfo=tz_host)
+            cursor_local = _alinear_al_grid(
+                datetime.combine(fecha_actual, bloque.hora_inicio).replace(tzinfo=tz_host) + timedelta(minutes=buffer_antes),
+                duracion,
+            )
             fin_local = datetime.combine(fecha_actual, bloque.hora_fin).replace(tzinfo=tz_host)
-            while cursor_local + timedelta(minutes=duracion) <= fin_local:
+            while cursor_local + timedelta(minutes=duracion + buffer_despues) <= fin_local:
                 slot_utc = cursor_local.astimezone(UTC)
                 slot_fin_utc = slot_utc + timedelta(minutes=duracion)
                 # Filtro DST: si el offset cambia dentro del slot, descartar.
@@ -103,6 +115,7 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
                 new_blocked_inicio = slot_utc - timedelta(minutes=buffer_antes)
                 new_blocked_fin = slot_fin_utc + timedelta(minutes=buffer_despues)
                 conflict = False
+                next_cursor = cursor_local + step
                 for r in reservas:
                     r_blocked_inicio = r.inicio_utc - timedelta(minutes=r.event_type.buffer_antes_minutos)
                     r_blocked_fin = r.fin_utc + timedelta(minutes=r.event_type.buffer_despues_minutos)
@@ -110,6 +123,9 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
                         break  # reservas ordenadas; las siguientes son aún más tardías.
                     if _intervals_overlap(new_blocked_inicio, new_blocked_fin, r_blocked_inicio, r_blocked_fin):
                         conflict = True
+                        jump = r_blocked_fin.astimezone(tz_host) + timedelta(minutes=buffer_antes)
+                        if jump > next_cursor:
+                            next_cursor = jump
                         break
                 if not conflict:
                     for busy_inicio, busy_fin in busy_intervalos:
@@ -117,10 +133,13 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
                             break  # intervalos ordenados; los siguientes son aún más tardíos.
                         if _intervals_overlap(new_blocked_inicio, new_blocked_fin, busy_inicio, busy_fin):
                             conflict = True
+                            jump = busy_fin.astimezone(tz_host) + timedelta(minutes=buffer_antes)
+                            if jump > next_cursor:
+                                next_cursor = jump
                             break
                 if not conflict:
                     slots.append(slot_utc)
-                cursor_local += step
+                cursor_local = next_cursor
         fecha_actual += timedelta(days=1)
 
     return slots
