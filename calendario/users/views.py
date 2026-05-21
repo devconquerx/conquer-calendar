@@ -1,6 +1,8 @@
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import login as auth_login, logout as auth_logout, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core import signing
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
@@ -22,6 +24,39 @@ from calendario.users.forms import (
     UsuarioEdicionForm,
 )
 from calendario.users.models import User
+
+
+class MagicLoginView(View):
+    """Autentica al usuario codificado en el token firmado. No requiere sesión previa."""
+
+    def get(self, request, token):
+        try:
+            payload = signing.loads(token, salt='magic-login', max_age=3600)
+            user = User.objects.get(pk=payload['user_pk'])
+        except Exception:
+            messages.error(request, "El enlace de acceso no es válido o ha expirado.")
+            return redirect(settings.LOGIN_URL)
+        auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        request.session['magic_login_admin_pk'] = payload.get('admin_pk')
+        return redirect('panel_usuarios:dashboard')
+
+
+class MagicLoginStopView(View):
+    """Re-autentica al admin original guardado en sesión al hacer el login mágico."""
+
+    def get(self, request):
+        admin_pk = request.session.get('magic_login_admin_pk')
+        if not admin_pk:
+            return redirect('panel_usuarios:dashboard')
+        try:
+            admin = User.objects.get(pk=admin_pk, is_active=True)
+            if not admin.es_admin:
+                raise User.DoesNotExist
+        except User.DoesNotExist:
+            auth_logout(request)
+            return redirect(settings.LOGIN_URL)
+        auth_login(request, admin, backend='django.contrib.auth.backends.ModelBackend')
+        return redirect('panel_usuarios:dashboard')
 
 
 class PanelDashboardView(RequierePermisoMixin, TemplateView):
@@ -142,6 +177,17 @@ class UsuarioUpdateView(RequierePermisoMixin, UpdateView):
     form_class = UsuarioEdicionForm
     template_name = 'pages/panel/usuarios/form.html'
     success_url = reverse_lazy('panel_usuarios:usuario_list')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        obj = self.object
+        if (obj and obj != self.request.user
+                and self.request.user.es_admin):
+            ctx['magic_login_token'] = signing.dumps(
+                {'user_pk': obj.pk, 'admin_pk': self.request.user.pk},
+                salt='magic-login',
+            )
+        return ctx
 
     def form_valid(self, form):
         response = super().form_valid(form)

@@ -117,6 +117,26 @@
 
             <!--begin::Main-->
             <div class="app-main flex-column flex-row-fluid" id="kt_app_main">
+
+                <!--begin::Magic login banner-->
+                {% if magic_login_admin %}
+                <div class="d-flex align-items-center justify-content-between px-6 py-3 mb-0"
+                     style="position: sticky; top: 0; z-index: 1060; background-color: #7239ea; color: #fff;">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="ki-outline ki-eye fs-2"></i>
+                        <span class="fw-semibold">
+                            Estás accediendo como
+                            <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>.
+                        </span>
+                    </div>
+                    <a href="{% url 'magic_login_stop' %}" class="btn btn-sm btn-light" style="color: #7239ea;">
+                        <i class="ki-outline ki-exit-left fs-4 me-1"></i>
+                        Volver a mi cuenta ({{ magic_login_admin.get_full_name|default:magic_login_admin.username }})
+                    </a>
+                </div>
+                {% endif %}
+                <!--end::Magic login banner-->
+
                 <div class="d-flex flex-column flex-column-fluid">
 
                     <!--begin::Toolbar-->

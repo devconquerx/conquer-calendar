@@ -5,6 +5,8 @@ from django.conf.urls.static import static
 from django.http import JsonResponse
 from django.views.generic import RedirectView
 
+from calendario.users.views import MagicLoginView, MagicLoginStopView
+
 
 def health(request):
     return JsonResponse({"status": "ok", "service": "conquer-calendario"})
@@ -13,6 +15,8 @@ def health(request):
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     path('accounts/', include('allauth.urls')),
+    path('acceder-como/stop/', MagicLoginStopView.as_view(), name='magic_login_stop'),
+    path('acceder-como/<str:token>/', MagicLoginView.as_view(), name='magic_login'),
     path('health/', health, name='health'),
     path('panel/', include('calendario.users.urls')),
     path('panel/', include('calendario.permisos.urls')),

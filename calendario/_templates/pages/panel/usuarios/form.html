@@ -127,6 +127,39 @@
             </div>
             <!--end::Roles-->
 
+            <!--begin::Magic login-->
+            {% if magic_login_token %}
+            <div class="fv-row mb-7">
+                <label class="form-label fw-semibold">Acceso como este usuario</label>
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button"
+                            class="btn btn-sm"
+                            style="background-color:#7239ea;border-color:#7239ea;color:#fff;"
+                            data-magic-url="{% url 'magic_login' magic_login_token %}"
+                            onclick="copyMagicLink(this)">
+                        <i class="ki-outline ki-entrance-right fs-4 me-1"></i>
+                        <span class="btn-label">Copiar enlace de acceso</span>
+                    </button>
+                    <span class="text-muted fs-7">El enlace es válido 1 hora y funciona en cualquier navegador.</span>
+                </div>
+            </div>
+            <script>
+            function copyMagicLink(btn) {
+                const url = window.location.origin + btn.dataset.magicUrl;
+                const label = btn.querySelector('.btn-label');
+                navigator.clipboard.writeText(url).then(function () {
+                    label.textContent = '¡Enlace copiado!';
+                    btn.style.backgroundColor = '#5e35b1';
+                    setTimeout(function () {
+                        label.textContent = 'Copiar enlace de acceso';
+                        btn.style.backgroundColor = '#7239ea';
+                    }, 2000);
+                });
+            }
+            </script>
+            {% endif %}
+            <!--end::Magic login-->
+
             <!--begin::Acciones-->
             <div class="d-flex gap-3 pt-4 border-top">
                 <button type="submit" class="btn btn-primary btn-lg">Guardar</button>

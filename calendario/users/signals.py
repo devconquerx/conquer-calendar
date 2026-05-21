@@ -7,11 +7,11 @@ from .models import User
 
 
 DISPONIBILIDAD_DEFAULT = [
-    (0, time(8, 0), time(16, 0)),  # Lunes
-    (1, time(8, 0), time(16, 0)),  # Martes
-    (2, time(8, 0), time(16, 0)),  # Miércoles
-    (3, time(8, 0), time(16, 0)),  # Jueves
-    (4, time(8, 0), time(16, 0)),  # Viernes
+    (0, time(0, 0), time(23, 59)),  # Lunes
+    (1, time(0, 0), time(23, 59)),  # Martes
+    (2, time(0, 0), time(23, 59)),  # Miércoles
+    (3, time(0, 0), time(23, 59)),  # Jueves
+    (4, time(0, 0), time(23, 59)),  # Viernes
 ]
 
 
