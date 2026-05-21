@@ -291,6 +291,99 @@
   box-shadow: 0 0 0 3px rgba(0, 105, 255, .12);
 }
 
+.tz-combo {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.tz-input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 7px 30px 7px 10px;
+  font-size: 13px;
+  color: #374151;
+  background: #fff;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.tz-input:focus {
+  border-color: #0069ff;
+  box-shadow: 0 0 0 3px rgba(0, 105, 255, .12);
+}
+
+.tz-combo-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.tz-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
+  z-index: 50;
+}
+
+.tz-option {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.tz-option:last-child { border-bottom: none; }
+
+.tz-option:hover,
+.tz-option.tz-active {
+  background: #f3f4f6;
+}
+
+.tz-option.tz-selected {
+  background: #e0e7ff;
+  color: #0069ff;
+  font-weight: 500;
+}
+
+.tz-empty {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.tz-btn-detect {
+  width: 100%;
+  background: #fff;
+  color: #7239ea;
+  border: 1px solid #7239ea;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: background .15s, color .15s;
+}
+
+.tz-btn-detect:hover {
+  background: #7239ea;
+  color: #fff;
+}
+
 .tz-btn-save {
   width: 100%;
   background: #0069ff;
@@ -471,13 +564,18 @@
       <form method="post" action="{% url 'panel_usuarios:actualizar_timezone' %}">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.path }}" />
-        <select name="timezone" class="tz-select">
-          {% for value, label in timezone_choices %}
-          <option value="{{ value }}"{% if value == request.user.timezone %} selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
+        <div class="tz-combo">
+          <input type="text" id="tz-input" class="tz-input" placeholder="Buscar zona…" autocomplete="off" />
+          <i class="bi bi-chevron-down tz-combo-icon"></i>
+          <div id="tz-dropdown" class="tz-dropdown" hidden></div>
+        </div>
+        <input type="hidden" name="timezone" id="tz-hidden" value="{{ request.user.timezone }}" />
+        <button type="button" id="tz-detect" class="tz-btn-detect">
+          <i class="bi bi-crosshair me-1"></i>Detectar mi zona
+        </button>
         <button type="submit" class="tz-btn-save">Guardar</button>
       </form>
+      <script id="tz-data" type="application/json">[{% for value, label in timezone_choices %}["{{ value }}","{{ label|escapejs }}"]{% if not forloop.last %},{% endif %}{% endfor %}]</script>
     </div>
   </div>
   <!-- ── /Timezone card ── -->
@@ -547,6 +645,92 @@
         }
       }
     });
+  });
+}());
+</script>
+
+<script>
+// ── Timezone combobox: input filtrable + dropdown estilo Facebook ──
+(function () {
+  var input = document.getElementById('tz-input');
+  var dropdown = document.getElementById('tz-dropdown');
+  var hidden = document.getElementById('tz-hidden');
+  var detect = document.getElementById('tz-detect');
+  var dataEl = document.getElementById('tz-data');
+  if (!input || !dropdown || !hidden || !detect || !dataEl) return;
+
+  var allOptions = JSON.parse(dataEl.textContent).map(function (pair) {
+    return { value: pair[0], label: pair[1] };
+  });
+
+  function labelOf(value) {
+    var match = allOptions.find(function (o) { return o.value === value; });
+    return match ? match.label : value;
+  }
+
+  function setSelected(value) {
+    hidden.value = value;
+    input.value = labelOf(value);
+  }
+
+  function render(filter) {
+    var q = (filter || '').trim().toLowerCase();
+    var current = hidden.value;
+    dropdown.innerHTML = '';
+    var matched = allOptions.filter(function (o) {
+      return !q || o.label.toLowerCase().indexOf(q) !== -1;
+    });
+    if (matched.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'tz-empty';
+      empty.textContent = 'Sin coincidencias';
+      dropdown.appendChild(empty);
+      return;
+    }
+    matched.forEach(function (o) {
+      var item = document.createElement('div');
+      item.className = 'tz-option' + (o.value === current ? ' tz-selected' : '');
+      item.textContent = o.label;
+      item.dataset.value = o.value;
+      item.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        setSelected(o.value);
+        closeDropdown();
+      });
+      dropdown.appendChild(item);
+    });
+  }
+
+  function openDropdown() {
+    input.value = '';
+    input.setAttribute('placeholder', labelOf(hidden.value));
+    render('');
+    dropdown.hidden = false;
+  }
+
+  function closeDropdown() {
+    dropdown.hidden = true;
+    input.value = labelOf(hidden.value);
+    input.setAttribute('placeholder', 'Buscar zona…');
+  }
+
+  setSelected(hidden.value);
+
+  input.addEventListener('focus', openDropdown);
+  input.addEventListener('input', function () { render(this.value); dropdown.hidden = false; });
+  input.addEventListener('blur', function () { setTimeout(closeDropdown, 120); });
+
+  detect.addEventListener('click', function () {
+    var tz;
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { tz = null; }
+    if (!tz) { alert('No se pudo detectar la zona horaria del navegador.'); return; }
+    var match = allOptions.find(function (o) { return o.value === tz; });
+    if (!match) { alert('Zona detectada (' + tz + ') no disponible en la lista.'); return; }
+    setSelected(tz);
+    detect.innerHTML = '<i class="bi bi-check-lg me-1"></i>Detectada: ' + tz;
+    setTimeout(function () {
+      detect.innerHTML = '<i class="bi bi-crosshair me-1"></i>Detectar mi zona';
+    }, 2500);
   });
 }());
 </script>
