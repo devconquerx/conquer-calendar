@@ -45,7 +45,15 @@
                     <option value="admin" {% if filtro_tipo == 'admin' %}selected{% endif %}>Administradores</option>
                 </select>
             </div>
-            {% if filtro_dominio or filtro_estado or filtro_tipo %}
+            <div>
+                <label class="form-label fs-7 fw-semibold text-muted mb-1">Creación</label>
+                <select name="creacion" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="" {% if not filtro_creacion %}selected{% endif %}>Por defecto</option>
+                    <option value="antiguos" {% if filtro_creacion == 'antiguos' %}selected{% endif %}>Más antiguos primero</option>
+                    <option value="recientes" {% if filtro_creacion == 'recientes' %}selected{% endif %}>Más recientes primero</option>
+                </select>
+            </div>
+            {% if filtro_dominio or filtro_estado or filtro_tipo or filtro_creacion %}
             <div class="align-self-end">
                 <a href="{% url 'panel_usuarios:usuario_list' %}" class="btn btn-sm btn-light">
                     <i class="bi bi-x-lg me-1"></i>Limpiar
@@ -164,16 +172,16 @@
         <div class="d-flex justify-content-between align-items-center pt-4">
             <span class="text-muted fs-7">
                 Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-                {% if filtro_dominio or filtro_estado or filtro_tipo %}
+                {% if filtro_dominio or filtro_estado or filtro_tipo or filtro_creacion %}
                 · filtrado
                 {% endif %}
             </span>
             <div class="d-flex gap-2">
                 {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if filtro_dominio %}&dominio={{ filtro_dominio }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}" class="btn btn-sm btn-light">Anterior</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if filtro_dominio %}&dominio={{ filtro_dominio }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}{% if filtro_creacion %}&creacion={{ filtro_creacion }}{% endif %}" class="btn btn-sm btn-light">Anterior</a>
                 {% endif %}
                 {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if filtro_dominio %}&dominio={{ filtro_dominio }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}" class="btn btn-sm btn-light">Siguiente</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if filtro_dominio %}&dominio={{ filtro_dominio }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}{% if filtro_creacion %}&creacion={{ filtro_creacion }}{% endif %}" class="btn btn-sm btn-light">Siguiente</a>
                 {% endif %}
             </div>
         </div>

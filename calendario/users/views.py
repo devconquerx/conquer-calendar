@@ -114,6 +114,7 @@ class UsuarioListView(RequierePermisoMixin, ListView):
         dominio = self.request.GET.get('dominio', '').strip()
         estado = self.request.GET.get('estado', '').strip()
         tipo = self.request.GET.get('tipo', '').strip()
+        creacion = self.request.GET.get('creacion', '').strip()
         if dominio:
             qs = qs.filter(email__iendswith=f'@{dominio}')
         if estado == 'activo':
@@ -124,6 +125,10 @@ class UsuarioListView(RequierePermisoMixin, ListView):
             qs = qs.filter(roles_asignados__rol__nombre='host').distinct()
         elif tipo == 'admin':
             qs = qs.filter(roles_asignados__rol__nombre='admin').distinct()
+        if creacion == 'antiguos':
+            qs = qs.order_by('date_joined')
+        elif creacion == 'recientes':
+            qs = qs.order_by('-date_joined')
         return qs
 
     def get_context_data(self, **kwargs):
@@ -137,6 +142,7 @@ class UsuarioListView(RequierePermisoMixin, ListView):
         ctx['filtro_dominio'] = self.request.GET.get('dominio', '')
         ctx['filtro_estado'] = self.request.GET.get('estado', '')
         ctx['filtro_tipo'] = self.request.GET.get('tipo', '')
+        ctx['filtro_creacion'] = self.request.GET.get('creacion', '')
         return ctx
 
 
