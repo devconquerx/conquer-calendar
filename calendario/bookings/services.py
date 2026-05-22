@@ -22,15 +22,6 @@ MAX_VENTANA_DIAS = 60
 UTC = ZoneInfo('UTC')
 
 
-def _alinear_al_grid(dt, step_minutes):
-    """Avanza dt hasta el próximo múltiplo de step_minutes desde medianoche."""
-    total = dt.hour * 60 + dt.minute
-    remainder = total % step_minutes
-    if remainder == 0:
-        return dt
-    return dt + timedelta(minutes=step_minutes - remainder)
-
-
 def _intervals_overlap(a_inicio, a_fin, b_inicio, b_fin):
     return a_inicio < b_fin and b_inicio < a_fin
 
@@ -86,7 +77,17 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
         ).select_related('event_type').order_by('inicio_utc')
     )
 
-    busy_intervalos = obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
+    # Eventos externos cortos (<=duracion) se tratan como reuniones y reciben
+    # buffer alrededor. Los largos se asumen bloqueos manuales (almuerzo,
+    # focus time, etc.) y se respetan tal cual. Iguala el comportamiento de
+    # Calendly.
+    step_td = timedelta(minutes=duracion)
+    busy_intervalos = [
+        (b_ini - timedelta(minutes=buffer_antes), b_fin + timedelta(minutes=buffer_despues))
+        if (b_fin - b_ini) <= step_td
+        else (b_ini, b_fin)
+        for b_ini, b_fin in obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
+    ]
 
     slots = []
     step = timedelta(minutes=duracion)
@@ -94,12 +95,12 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
     while fecha_actual <= fecha_hasta:
         dia_semana = fecha_actual.weekday()
         for bloque in bloques_por_dia[dia_semana]:
-            cursor_local = _alinear_al_grid(
-                datetime.combine(fecha_actual, bloque.hora_inicio).replace(tzinfo=tz_host) + timedelta(minutes=buffer_antes),
-                duracion,
+            cursor_local = (
+                datetime.combine(fecha_actual, bloque.hora_inicio).replace(tzinfo=tz_host)
+                + timedelta(minutes=buffer_antes)
             )
             fin_local = datetime.combine(fecha_actual, bloque.hora_fin).replace(tzinfo=tz_host)
-            while cursor_local + timedelta(minutes=duracion + buffer_despues) <= fin_local:
+            while cursor_local + timedelta(minutes=duracion) <= fin_local:
                 slot_utc = cursor_local.astimezone(UTC)
                 slot_fin_utc = slot_utc + timedelta(minutes=duracion)
                 # Filtro DST: si el offset cambia dentro del slot, descartar.

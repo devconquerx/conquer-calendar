@@ -368,7 +368,7 @@ body { background: var(--bk-bg) !important; }
 
             <div class="bk-month-nav">
               {% if mes_anterior %}
-              <a href="?mes={{ mes_anterior|date:'Y-m-d' }}{% if fecha_iso %}&fecha={{ fecha_iso }}{% endif %}" class="bk-nav-btn">‹</a>
+              <a href="?mes={{ mes_anterior|date:'Y-m-d' }}{% if fecha_iso %}&fecha={{ fecha_iso }}{% endif %}&tz={{ tz_visitante }}" class="bk-nav-btn">‹</a>
               {% else %}
               <span class="bk-nav-btn off">‹</span>
               {% endif %}
@@ -376,7 +376,7 @@ body { background: var(--bk-bg) !important; }
               <span class="bk-month-label">{{ mes_base|date:"F Y" }}</span>
 
               {% if mes_siguiente %}
-              <a href="?mes={{ mes_siguiente|date:'Y-m-d' }}{% if fecha_iso %}&fecha={{ fecha_iso }}{% endif %}" class="bk-nav-btn">›</a>
+              <a href="?mes={{ mes_siguiente|date:'Y-m-d' }}{% if fecha_iso %}&fecha={{ fecha_iso }}{% endif %}&tz={{ tz_visitante }}" class="bk-nav-btn">›</a>
               {% else %}
               <span class="bk-nav-btn off">›</span>
               {% endif %}
@@ -396,7 +396,7 @@ body { background: var(--bk-bg) !important; }
                     {% if not dia.en_mes %}
                       <span class="bk-day out">{{ dia.fecha.day }}</span>
                     {% elif dia.clickable %}
-                      <a href="?fecha={{ dia.fecha|date:'Y-m-d' }}&mes={{ mes_base|date:'Y-m-d' }}"
+                      <a href="?fecha={{ dia.fecha|date:'Y-m-d' }}&mes={{ mes_base|date:'Y-m-d' }}&tz={{ tz_visitante }}"
                          class="bk-day avail{% if dia.es_seleccionada %} sel{% endif %}{% if dia.es_hoy %} today{% endif %}">
                         {{ dia.fecha.day }}
                       </a>
@@ -435,10 +435,10 @@ body { background: var(--bk-bg) !important; }
             <div class="bk-slots-scroll">
               {% for slot_utc, slot_local in slots_local %}
               <button type="button" class="bk-slot"
-                      data-utc="{{ slot_utc|date:'c' }}"
-                      data-label="{{ slot_local|date:'H:i' }} h"
+                      data-utc="{{ slot_utc }}"
+                      data-label="{{ slot_local }} h"
                       onclick="pickSlot(this)">
-                {{ slot_local|date:"H:i" }} h
+                {{ slot_local }} h
               </button>
               {% endfor %}
             </div>
@@ -456,6 +456,7 @@ body { background: var(--bk-bg) !important; }
         <form method="post" action="{% if is_team %}{% url 'public_team:booking_submit' slug_equipo=event_type.slug_equipo %}{% else %}{% url 'public_booking:booking_submit' user_slug=host.slug event_type_slug=event_type.slug %}{% endif %}">
           {% csrf_token %}
           <input type="hidden" id="inicio_utc" name="inicio_utc" value="{{ inicio_utc_str|default:'' }}">
+          <input type="hidden" name="tz" value="{{ tz_visitante }}">
 
           <button type="button" class="bk-back" onclick="goBack()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -505,11 +506,19 @@ body { background: var(--bk-bg) !important; }
   var params    = new URLSearchParams(window.location.search);
   var urlTz     = params.get('tz') || '';
   var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  var activeTz  = urlTz || browserTz;
 
-  var sel     = document.getElementById('tz-select');
-  var display = document.getElementById('tz-display-text');
-  var now     = new Date();
+  // Si la URL no trae tz, redirigimos a la misma página con la TZ del navegador.
+  // El backend la usará para agrupar slots/días en la TZ del visitante.
+  if (!urlTz && browserTz) {
+    params.set('tz', browserTz);
+    window.location.replace(window.location.pathname + '?' + params.toString());
+    return;
+  }
+
+  var activeTz = urlTz || browserTz;
+  var sel      = document.getElementById('tz-select');
+  var display  = document.getElementById('tz-display-text');
+  var now      = new Date();
 
   function tzLabel(tz) {
     var city = tz.split('/').pop().replace(/_/g, ' ');
@@ -519,24 +528,8 @@ body { background: var(--bk-bg) !important; }
     return city + ' (' + time + ')';
   }
 
-  function fmtSlot(utcStr, tz) {
-    try {
-      return new Date(utcStr).toLocaleTimeString('es-ES', {
-        hour: '2-digit', minute: '2-digit', timeZone: tz, hour12: false,
-      }) + ' h';
-    } catch (e) { return utcStr; }
-  }
-
-  function refreshSlots(tz) {
-    document.querySelectorAll('.bk-slot').forEach(function (btn) {
-      var label = fmtSlot(btn.dataset.utc, tz);
-      btn.textContent = label;
-      btn.dataset.label = label;
-    });
-  }
-
   var zones = [];
-  try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { zones = [browserTz]; }
+  try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { zones = [activeTz]; }
   zones.forEach(function (tz) {
     var o = document.createElement('option');
     o.value = tz;
@@ -545,15 +538,16 @@ body { background: var(--bk-bg) !important; }
     sel.appendChild(o);
   });
 
-  function updateDisplay() {
-    var tz = sel.value;
-    display.textContent = tzLabel(tz);
-    refreshSlots(tz);
-  }
+  function updateDisplay() { display.textContent = tzLabel(sel.value); }
 
-  sel.addEventListener('change', updateDisplay);
+  // Cambiar TZ recarga la página: el backend reagrupa días y slots en la nueva TZ.
+  sel.addEventListener('change', function () {
+    var p = new URLSearchParams(window.location.search);
+    p.set('tz', sel.value);
+    window.location.href = window.location.pathname + '?' + p.toString();
+  });
+
   updateDisplay();
-
   setInterval(function () { now = new Date(); updateDisplay(); }, 60000);
 })();
 
@@ -629,13 +623,13 @@ document.getElementById('step-form').style.display  = 'flex';
       Detectamos que ya tenés una reserva confirmada para <strong>{{ event_type.nombre }}</strong>:
     </p>
     <div class="bk-modal-existing">
-      <strong>{{ duplicado_inicio_local|date:"l, j \d\e F" }}</strong><br>
-      <strong>{{ duplicado_inicio_local|date:"H:i" }} h</strong>
+      <strong>{{ duplicado_inicio_dia }}</strong><br>
+      <strong>{{ duplicado_inicio_hora }} h</strong>
       &middot; con {{ duplicado.host.nombre_display }}
     </div>
     <p>
       ¿Querés <strong>cancelar esa reserva</strong> y agendar esta nueva
-      {% if nuevo_inicio_local %}para el <strong>{{ nuevo_inicio_local|date:"j \d\e F" }} a las {{ nuevo_inicio_local|date:"H:i" }} h</strong>{% endif %}?
+      {% if nuevo_inicio_dia %}para el <strong>{{ nuevo_inicio_dia }} a las {{ nuevo_inicio_hora }} h</strong>{% endif %}?
     </p>
     <form method="post" action="{% url 'public_token:reemplazar_publica' token=duplicado_token %}" style="margin:0">
       {% csrf_token %}

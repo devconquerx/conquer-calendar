@@ -1,8 +1,9 @@
 import calendar as cal_module
 from datetime import date, datetime, timedelta
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.formats import date_format
 from django.views import View
 
 from calendario.event_types.models import EventType
@@ -13,20 +14,53 @@ from .models import Reserva
 from .services import calcular_slots, cancelar_reserva, crear_reserva, reemplazar_reserva
 
 
-def _build_calendar_ctx(event_type, tz_host, hoy_local, mes_base, max_fecha, fecha_sel):
-    """Construye el contexto de calendario (grid + días con slots) para el template."""
+def _tz_visitante(request, tz_fallback):
+    """Lee tz de query/form y devuelve ZoneInfo válido o el fallback (TZ del host)."""
+    raw = (request.GET.get('tz') or request.POST.get('tz') or '').strip()
+    if not raw:
+        return tz_fallback
+    try:
+        return ZoneInfo(raw)
+    except (ZoneInfoNotFoundError, ValueError):
+        return tz_fallback
+
+
+def _slots_dia_visitante(event_type, fecha, tz_visitante):
+    """Slots cuyo inicio_utc cae dentro de [fecha 00:00 tz_visitante, +24h).
+    Pide ±1 día al servicio para cubrir el solape entre TZ visitante y TZ host."""
+    inicio_dia_utc = datetime.combine(fecha, datetime.min.time(), tzinfo=tz_visitante)
+    fin_dia_utc = inicio_dia_utc + timedelta(days=1)
+    crudos = calcular_slots(event_type, fecha - timedelta(days=1), fecha + timedelta(days=1))
+    return [s for s in crudos if inicio_dia_utc <= s < fin_dia_utc]
+
+
+def _slots_template(slots_utc, tz_visitante):
+    """Pre-formatea (utc_iso, 'HH:MM') para que el filtro |date del template
+    no re-convierta a la TIME_ZONE de Django y rompa la TZ del visitante."""
+    return [
+        (s.isoformat(), s.astimezone(tz_visitante).strftime('%H:%M'))
+        for s in slots_utc
+    ]
+
+
+def _build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha_sel):
+    """Construye el contexto de calendario (grid + días con slots) para el template.
+    Todas las fechas se agrupan en la TZ del visitante."""
     mes_min = hoy_local.replace(day=1)
     mes_max = max_fecha.replace(day=1)
     mes_base = max(mes_min, min(mes_max, mes_base))
 
-    # Días con slots en el mes visible
+    # Días con slots en el mes visible. Pedimos ±1 día al servicio para no
+    # perder slots que cruzan la frontera de día entre TZ del host y del visitante.
     ultimo_dia = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
     desde = max(mes_base, hoy_local)
     hasta = min(ultimo_dia, max_fecha)
     dias_con_slots = set()
     if desde <= hasta:
-        for s in calcular_slots(event_type, desde, hasta):
-            dias_con_slots.add(s.astimezone(tz_host).date())
+        for s in calcular_slots(event_type, desde - timedelta(days=1), hasta + timedelta(days=1)):
+            d = s.astimezone(tz_visitante).date()
+            if desde <= d <= hasta:
+                dias_con_slots.add(d)
 
     # Grid (semanas con lunes primero)
     cal_obj = cal_module.Calendar(firstweekday=0)
@@ -65,7 +99,8 @@ class BookingPageView(View):
         event_type = get_object_or_404(EventType, host=host, slug=event_type_slug, activo=True)
 
         tz_host = ZoneInfo(host.timezone)
-        hoy_local = datetime.now(tz_host).date()
+        tz_visitante = _tz_visitante(request, tz_host)
+        hoy_local = datetime.now(tz_visitante).date()
         max_fecha = hoy_local + timedelta(days=60)
 
         fecha_str = request.GET.get('fecha', '')
@@ -86,7 +121,10 @@ class BookingPageView(View):
 
         slots_local = []
         if fecha:
-            slots_local = [(s, s.astimezone(tz_host)) for s in calcular_slots(event_type, fecha, fecha)]
+            slots_local = _slots_template(
+                _slots_dia_visitante(event_type, fecha, tz_visitante),
+                tz_visitante,
+            )
 
         ctx = {
             'host': host,
@@ -97,9 +135,10 @@ class BookingPageView(View):
             'max_fecha_iso': max_fecha.isoformat(),
             'slots_local': slots_local,
             'tz_host': host.timezone,
+            'tz_visitante': str(tz_visitante),
             'hoy': hoy_local,
         }
-        ctx.update(_build_calendar_ctx(event_type, tz_host, hoy_local, mes_base, max_fecha, fecha))
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
         return render(request, 'pages/public/booking/page.html', ctx)
 
 
@@ -130,11 +169,12 @@ class BookingFormView(View):
     def _render_with_errors(self, request, host, event_type, form, duplicado=None):
         inicio = form.cleaned_data.get('inicio_utc') if form.is_bound and form.cleaned_data else None
         tz_host = ZoneInfo(host.timezone)
-        hoy_local = datetime.now(tz_host).date()
+        tz_visitante = _tz_visitante(request, tz_host)
+        hoy_local = datetime.now(tz_visitante).date()
         max_fecha = hoy_local + timedelta(days=60)
-        fecha = inicio.astimezone(tz_host).date() if inicio else hoy_local
+        fecha = inicio.astimezone(tz_visitante).date() if inicio else hoy_local
         mes_base = fecha.replace(day=1)
-        slots = calcular_slots(event_type, fecha, fecha)
+        slots = _slots_dia_visitante(event_type, fecha, tz_visitante)
 
         ctx = {
             'host': host,
@@ -143,8 +183,9 @@ class BookingFormView(View):
             'fecha_iso': fecha.isoformat(),
             'min_fecha_iso': hoy_local.isoformat(),
             'max_fecha_iso': max_fecha.isoformat(),
-            'slots_local': [(s, s.astimezone(tz_host)) for s in slots],
+            'slots_local': _slots_template(slots, tz_visitante),
             'tz_host': host.timezone,
+            'tz_visitante': str(tz_visitante),
             'hoy': hoy_local,
             'form_errors': form.errors,
             'nombre_invitado': request.POST.get('nombre_invitado', ''),
@@ -152,22 +193,26 @@ class BookingFormView(View):
             'telefono_invitado': request.POST.get('telefono_invitado', ''),
             'notas': request.POST.get('notas', ''),
             'inicio_utc_str': request.POST.get('inicio_utc', ''),
-            'slot_label': inicio.astimezone(tz_host).strftime('%H:%M') + ' h' if inicio else '',
+            'slot_label': inicio.astimezone(tz_visitante).strftime('%H:%M') + ' h' if inicio else '',
         }
-        ctx.update(_build_calendar_ctx(event_type, tz_host, hoy_local, mes_base, max_fecha, fecha))
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
         if duplicado is not None:
-            ctx.update(_duplicado_ctx(duplicado, inicio, tz_host))
+            ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
         return render(request, 'pages/public/booking/page.html', ctx, status=400 if not duplicado else 200)
 
 
 def _duplicado_ctx(duplicado, inicio_nuevo_utc, tz_ref):
     tz_dup = ZoneInfo(duplicado.host.timezone)
+    dup_local = duplicado.inicio_utc.astimezone(tz_dup)
+    nuevo_local = inicio_nuevo_utc.astimezone(tz_ref) if inicio_nuevo_utc else None
     return {
         'mostrar_modal_duplicado': True,
         'duplicado': duplicado,
-        'duplicado_inicio_local': duplicado.inicio_utc.astimezone(tz_dup),
+        'duplicado_inicio_dia': date_format(dup_local, r"l, j \d\e F"),
+        'duplicado_inicio_hora': dup_local.strftime('%H:%M'),
         'duplicado_token': str(duplicado.confirmacion_token),
-        'nuevo_inicio_local': inicio_nuevo_utc.astimezone(tz_ref) if inicio_nuevo_utc else None,
+        'nuevo_inicio_dia': date_format(nuevo_local, r"j \d\e F") if nuevo_local else '',
+        'nuevo_inicio_hora': nuevo_local.strftime('%H:%M') if nuevo_local else '',
     }
 
 
@@ -176,7 +221,8 @@ class TeamBookingPageView(View):
     def get(self, request, slug_equipo):
         event_type = get_object_or_404(EventType, slug_equipo=slug_equipo, activo=True)
         tz_ref = ZoneInfo(event_type.host.timezone)
-        hoy_local = datetime.now(tz_ref).date()
+        tz_visitante = _tz_visitante(request, tz_ref)
+        hoy_local = datetime.now(tz_visitante).date()
         max_fecha = hoy_local + timedelta(days=60)
 
         fecha_str = request.GET.get('fecha', '')
@@ -197,7 +243,10 @@ class TeamBookingPageView(View):
 
         slots_local = []
         if fecha:
-            slots_local = [(s, s.astimezone(tz_ref)) for s in calcular_slots(event_type, fecha, fecha)]
+            slots_local = _slots_template(
+                _slots_dia_visitante(event_type, fecha, tz_visitante),
+                tz_visitante,
+            )
 
         ctx = {
             'event_type': event_type,
@@ -207,10 +256,11 @@ class TeamBookingPageView(View):
             'max_fecha_iso': max_fecha.isoformat(),
             'slots_local': slots_local,
             'tz_ref': event_type.host.timezone,
+            'tz_visitante': str(tz_visitante),
             'hoy': hoy_local,
             'is_team': True,
         }
-        ctx.update(_build_calendar_ctx(event_type, tz_ref, hoy_local, mes_base, max_fecha, fecha))
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
         return render(request, 'pages/public/booking/page.html', ctx)
 
 
@@ -240,11 +290,12 @@ class TeamBookingFormView(View):
     def _render_with_errors(self, request, event_type, form, duplicado=None):
         inicio = form.cleaned_data.get('inicio_utc') if form.is_bound and form.cleaned_data else None
         tz_ref = ZoneInfo(event_type.host.timezone)
-        hoy_local = datetime.now(tz_ref).date()
+        tz_visitante = _tz_visitante(request, tz_ref)
+        hoy_local = datetime.now(tz_visitante).date()
         max_fecha = hoy_local + timedelta(days=60)
-        fecha = inicio.astimezone(tz_ref).date() if inicio else hoy_local
+        fecha = inicio.astimezone(tz_visitante).date() if inicio else hoy_local
         mes_base = fecha.replace(day=1)
-        slots = calcular_slots(event_type, fecha, fecha)
+        slots = _slots_dia_visitante(event_type, fecha, tz_visitante)
 
         ctx = {
             'event_type': event_type,
@@ -252,8 +303,9 @@ class TeamBookingFormView(View):
             'fecha_iso': fecha.isoformat(),
             'min_fecha_iso': hoy_local.isoformat(),
             'max_fecha_iso': max_fecha.isoformat(),
-            'slots_local': [(s, s.astimezone(tz_ref)) for s in slots],
+            'slots_local': _slots_template(slots, tz_visitante),
             'tz_ref': event_type.host.timezone,
+            'tz_visitante': str(tz_visitante),
             'hoy': hoy_local,
             'form_errors': form.errors,
             'nombre_invitado': request.POST.get('nombre_invitado', ''),
@@ -261,12 +313,12 @@ class TeamBookingFormView(View):
             'telefono_invitado': request.POST.get('telefono_invitado', ''),
             'notas': request.POST.get('notas', ''),
             'inicio_utc_str': request.POST.get('inicio_utc', ''),
-            'slot_label': inicio.astimezone(tz_ref).strftime('%H:%M') + ' h' if inicio else '',
+            'slot_label': inicio.astimezone(tz_visitante).strftime('%H:%M') + ' h' if inicio else '',
             'is_team': True,
         }
-        ctx.update(_build_calendar_ctx(event_type, tz_ref, hoy_local, mes_base, max_fecha, fecha))
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
         if duplicado is not None:
-            ctx.update(_duplicado_ctx(duplicado, inicio, tz_ref))
+            ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
         return render(request, 'pages/public/booking/page.html', ctx, status=400 if not duplicado else 200)
 
 
