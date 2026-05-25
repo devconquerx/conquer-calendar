@@ -509,13 +509,17 @@ body { background: var(--bk-bg) !important; }
 
   // Si la URL no trae tz, redirigimos a la misma página con la TZ del navegador.
   // El backend la usará para agrupar slots/días en la TZ del visitante.
-  if (!urlTz && browserTz) {
+  // EXCEPCIÓN: cuando hay errores de formulario, Django renderiza el template en la
+  // URL /reservar/ (sin ?tz=) — no redirigir o el GET al endpoint de submit devuelve 405.
+  // En ese caso el tz viene del contexto del servidor (tz_visitante).
+  var onSubmitEndpoint = window.location.pathname.endsWith('/reservar/');
+  if (!urlTz && browserTz && !onSubmitEndpoint) {
     params.set('tz', browserTz);
     window.location.replace(window.location.pathname + '?' + params.toString());
     return;
   }
 
-  var activeTz = urlTz || browserTz;
+  var activeTz = urlTz || '{{ tz_visitante }}' || browserTz;
   var sel      = document.getElementById('tz-select');
   var display  = document.getElementById('tz-display-text');
   var now      = new Date();
