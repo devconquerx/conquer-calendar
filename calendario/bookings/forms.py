@@ -8,7 +8,7 @@ class BookingForm(forms.Form):
     )
     nombre_invitado = forms.CharField(max_length=150, min_length=2)
     email_invitado = forms.EmailField()
-    telefono_invitado = forms.CharField(max_length=50, required=False)
+    telefono_invitado = forms.CharField(max_length=50)
     notas = forms.CharField(max_length=1000, required=False, widget=forms.Textarea(attrs={'rows': 3}))
 
     def clean_nombre_invitado(self):
@@ -18,4 +18,7 @@ class BookingForm(forms.Form):
         return v
 
     def clean_telefono_invitado(self):
-        return self.cleaned_data.get('telefono_invitado', '').strip()
+        v = self.cleaned_data.get('telefono_invitado', '').strip()
+        if not v:
+            raise forms.ValidationError("El número de teléfono es obligatorio.")
+        return v

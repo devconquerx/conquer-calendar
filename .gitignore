@@ -53,3 +53,5 @@ docs_internos/
 # Datos y scripts de restauración local
 restore.data.md
 prod_dump.json
+prod_dump_backup_*.json
+prod_restore/

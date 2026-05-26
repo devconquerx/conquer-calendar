@@ -236,6 +236,7 @@ class BookingFormViewTimezoneTest(TestCase):
             'inicio_utc': inicio_utc.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
             'nombre_invitado': NOMBRE_INVITADO,
             'email_invitado': EMAIL_INVITADO,
+            'telefono_invitado': '+58 4241234567',
         })
 
         self.assertEqual(resp.status_code, 302)
@@ -254,6 +255,7 @@ class BookingFormViewTimezoneTest(TestCase):
             'inicio_utc': inicio_utc.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
             'nombre_invitado': NOMBRE_INVITADO,
             'email_invitado': EMAIL_INVITADO,
+            'telefono_invitado': '+58 4241234567',
             'tz': TZ_VISITANTE,
         })
 
@@ -273,6 +275,7 @@ class BookingFormViewTimezoneTest(TestCase):
             'inicio_utc': inicio_utc.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
             'nombre_invitado': NOMBRE_INVITADO,
             'email_invitado': EMAIL_INVITADO,
+            'telefono_invitado': '+58 4241234567',
             # sin tz
         })
 
@@ -322,6 +325,7 @@ class FlujoCompletoTimezoneTest(TestCase):
             'inicio_utc': inicio_utc.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
             'nombre_invitado': NOMBRE_INVITADO,
             'email_invitado': EMAIL_INVITADO,
+            'telefono_invitado': '+58 4241234567',
         })
 
         # 1. El POST redirige a confirmación

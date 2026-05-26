@@ -272,6 +272,71 @@ body { background: var(--bk-bg) !important; }
 }
 .bk-submit:hover { background: var(--bk-blue-hover); }
 
+/* ── Phone picker ── */
+.ph-wrap {
+  display: flex; align-items: stretch;
+  border: 1px solid var(--bk-border); border-radius: 8px;
+  position: relative; overflow: visible;
+  transition: border-color .12s;
+}
+.ph-wrap:focus-within { border-color: var(--bk-blue); }
+.ph-wrap.ph-error     { border-color: #e00; }
+.ph-country-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: #f8f9fa; border: none;
+  border-right: 1px solid var(--bk-border);
+  border-radius: 8px 0 0 8px;
+  padding: 10px 12px; cursor: pointer;
+  font-size: 14px; font-family: inherit; color: var(--bk-text);
+  white-space: nowrap; flex-shrink: 0;
+  transition: background .12s;
+  user-select: none;
+}
+.ph-country-btn:hover { background: #eef0f3; }
+.ph-flag  { font-size: 18px; line-height: 1; }
+.ph-code  { font-size: 14px; font-weight: 500; }
+.ph-caret { font-size: 8px; color: var(--bk-muted); }
+.ph-number-input {
+  flex: 1; border: none; border-radius: 0 8px 8px 0;
+  padding: 10px 13px; font-size: 14px;
+  outline: none; font-family: inherit;
+  color: var(--bk-text); background: transparent;
+  min-width: 0;
+}
+.ph-number-input::placeholder { color: #b0b0b0; }
+/* Dropdown */
+.ph-dropdown {
+  position: absolute; top: calc(100% + 5px); left: 0;
+  width: 300px; max-height: 260px;
+  background: #fff; border: 1px solid var(--bk-border);
+  border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,.13);
+  z-index: 500; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.ph-search-wrap {
+  padding: 10px 12px; border-bottom: 1px solid var(--bk-border);
+}
+.ph-search {
+  width: 100%; border: 1px solid var(--bk-border); border-radius: 6px;
+  padding: 7px 10px; font-size: 13px; outline: none;
+  font-family: inherit; color: var(--bk-text); box-sizing: border-box;
+}
+.ph-search:focus { border-color: var(--bk-blue); }
+.ph-list {
+  overflow-y: auto; flex: 1;
+}
+.ph-option {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 12px; cursor: pointer; font-size: 13.5px;
+  color: var(--bk-text);
+}
+.ph-option:hover { background: #f3f4f6; }
+.ph-option.ph-sel { background: var(--bk-blue-light); color: var(--bk-blue); font-weight: 500; }
+.ph-option-flag { font-size: 18px; line-height: 1; flex-shrink: 0; }
+.ph-option-name { flex: 1; }
+.ph-option-code { color: var(--bk-muted); font-size: 12.5px; flex-shrink: 0; }
+.ph-empty { padding: 12px; font-size: 13px; color: var(--bk-muted); text-align: center; }
+
 /* ── Responsive ── */
 @media (max-width: 800px) {
   .bk-wrapper {
@@ -520,9 +585,26 @@ body { background: var(--bk-bg) !important; }
                      required value="{{ email_invitado|default:'' }}" autocomplete="email">
             </div>
             <div>
-              <label class="bk-label" for="telefono_invitado">Teléfono (opcional)</label>
-              <input type="tel" id="telefono_invitado" name="telefono_invitado" class="bk-input"
-                     maxlength="50" value="{{ telefono_invitado|default:'' }}" autocomplete="tel">
+              <label class="bk-label" for="ph-number">Teléfono *</label>
+              <div class="ph-wrap" id="ph-wrap">
+                <button type="button" class="ph-country-btn" id="ph-country-btn" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="ph-flag" id="ph-flag">🌍</span>
+                  <span class="ph-code" id="ph-dial">+1</span>
+                  <span class="ph-caret">▼</span>
+                </button>
+                <div class="ph-dropdown" id="ph-dropdown" hidden role="listbox">
+                  <div class="ph-search-wrap">
+                    <input type="text" class="ph-search" id="ph-search"
+                           placeholder="Buscar país..." autocomplete="off" spellcheck="false">
+                  </div>
+                  <div class="ph-list" id="ph-list"></div>
+                </div>
+                <input type="tel" class="ph-number-input" id="ph-number"
+                       placeholder="Número de teléfono"
+                       autocomplete="tel-national" inputmode="tel">
+              </div>
+              <input type="hidden" name="telefono_invitado" id="telefono_invitado"
+                     value="{{ telefono_invitado|default:'' }}">
             </div>
             <div>
               <label class="bk-label" for="notas">Notas (opcional)</label>
@@ -639,16 +721,19 @@ function pickSlot(el) {
     + ' &middot; {{ event_type.duracion_minutos }} min';
   document.getElementById('step-date').style.display = 'none';
   document.getElementById('step-form').style.display = 'flex';
+  document.querySelector('.bk-card').classList.remove('has-slots');
 }
 
 function goBack() {
   document.getElementById('step-form').style.display = 'none';
   document.getElementById('step-date').style.display = 'flex';
+  document.querySelector('.bk-card').classList.add('has-slots');
 }
 
 {% if form_errors and inicio_utc_str %}
 document.getElementById('step-date').style.display = 'none';
 document.getElementById('step-form').style.display  = 'flex';
+document.querySelector('.bk-card').classList.remove('has-slots');
 {% endif %}
 
 {% if fecha %}
@@ -659,6 +744,267 @@ document.getElementById('step-form').style.display  = 'flex';
   card.classList.add('has-slots');
 })();
 {% endif %}
+
+/* ─────────────────────────────────────────────
+   PHONE PICKER
+───────────────────────────────────────────── */
+(function () {
+  /* ── Lista de países [código ISO, nombre en español, prefijo] ── */
+  var COUNTRIES = [
+    ['AF','Afganistán','+93'],['AL','Albania','+355'],['DE','Alemania','+49'],
+    ['DZ','Algeria','+213'],['AD','Andorra','+376'],['AO','Angola','+244'],
+    ['AG','Antigua y Barbuda','+1268'],['SA','Arabia Saudita','+966'],
+    ['AR','Argentina','+54'],['AM','Armenia','+374'],['AU','Australia','+61'],
+    ['AT','Austria','+43'],['AZ','Azerbaiyán','+994'],['BS','Bahamas','+1242'],
+    ['BH','Bahrein','+973'],['BD','Bangladés','+880'],['BB','Barbados','+1246'],
+    ['BE','Bélgica','+32'],['BZ','Belice','+501'],['BJ','Benín','+229'],
+    ['BY','Bielorrusia','+375'],['BO','Bolivia','+591'],['BA','Bosnia y Herzegovina','+387'],
+    ['BW','Botsuana','+267'],['BR','Brasil','+55'],['BN','Brunéi','+673'],
+    ['BG','Bulgaria','+359'],['BF','Burkina Faso','+226'],['BI','Burundi','+257'],
+    ['CV','Cabo Verde','+238'],['KH','Camboya','+855'],['CM','Camerún','+237'],
+    ['CA','Canadá','+1'],['QA','Catar','+974'],['TD','Chad','+235'],
+    ['CL','Chile','+56'],['CN','China','+86'],['CY','Chipre','+357'],
+    ['CO','Colombia','+57'],['KM','Comoras','+269'],['CG','Congo','+242'],
+    ['CD','Congo (RD)','+243'],['KP','Corea del Norte','+850'],['KR','Corea del Sur','+82'],
+    ['CR','Costa Rica','+506'],['CI','Costa de Marfil','+225'],['HR','Croacia','+385'],
+    ['CU','Cuba','+53'],['DK','Dinamarca','+45'],['DJ','Djibouti','+253'],
+    ['DM','Dominica','+1767'],['EC','Ecuador','+593'],['EG','Egipto','+20'],
+    ['SV','El Salvador','+503'],['AE','Emiratos Árabes Unidos','+971'],
+    ['ER','Eritrea','+291'],['SK','Eslovaquia','+421'],['SI','Eslovenia','+386'],
+    ['ES','España','+34'],['US','Estados Unidos','+1'],['EE','Estonia','+372'],
+    ['ET','Etiopía','+251'],['PH','Filipinas','+63'],['FI','Finlandia','+358'],
+    ['FJ','Fiyi','+679'],['FR','Francia','+33'],['GA','Gabón','+241'],
+    ['GM','Gambia','+220'],['GE','Georgia','+995'],['GH','Ghana','+233'],
+    ['GD','Granada','+1473'],['GR','Grecia','+30'],['GT','Guatemala','+502'],
+    ['GN','Guinea','+224'],['GW','Guinea-Bisáu','+245'],['GQ','Guinea Ecuatorial','+240'],
+    ['GY','Guyana','+592'],['HT','Haití','+509'],['HN','Honduras','+504'],
+    ['HU','Hungría','+36'],['IN','India','+91'],['ID','Indonesia','+62'],
+    ['IQ','Irak','+964'],['IR','Irán','+98'],['IE','Irlanda','+353'],
+    ['IS','Islandia','+354'],['MH','Islas Marshall','+692'],['SB','Islas Salomón','+677'],
+    ['IL','Israel','+972'],['IT','Italia','+39'],['JM','Jamaica','+1876'],
+    ['JP','Japón','+81'],['JO','Jordania','+962'],['KZ','Kazajistán','+7'],
+    ['KE','Kenia','+254'],['KG','Kirguistán','+996'],['KI','Kiribati','+686'],
+    ['KW','Kuwait','+965'],['LA','Laos','+856'],['LS','Lesoto','+266'],
+    ['LV','Letonia','+371'],['LB','Líbano','+961'],['LR','Liberia','+231'],
+    ['LY','Libia','+218'],['LI','Liechtenstein','+423'],['LT','Lituania','+370'],
+    ['LU','Luxemburgo','+352'],['MK','Macedonia del Norte','+389'],['MG','Madagascar','+261'],
+    ['MY','Malasia','+60'],['MW','Malaui','+265'],['MV','Maldivas','+960'],
+    ['ML','Malí','+223'],['MT','Malta','+356'],['MA','Marruecos','+212'],
+    ['MU','Mauricio','+230'],['MR','Mauritania','+222'],['MX','México','+52'],
+    ['FM','Micronesia','+691'],['MD','Moldavia','+373'],['MC','Mónaco','+377'],
+    ['MN','Mongolia','+976'],['ME','Montenegro','+382'],['MZ','Mozambique','+258'],
+    ['MM','Myanmar','+95'],['NA','Namibia','+264'],['NR','Nauru','+674'],
+    ['NP','Nepal','+977'],['NI','Nicaragua','+505'],['NE','Níger','+227'],
+    ['NG','Nigeria','+234'],['NO','Noruega','+47'],['NZ','Nueva Zelanda','+64'],
+    ['OM','Omán','+968'],['NL','Países Bajos','+31'],['PK','Pakistán','+92'],
+    ['PW','Palaos','+680'],['PA','Panamá','+507'],['PG','Papúa Nueva Guinea','+675'],
+    ['PY','Paraguay','+595'],['PE','Perú','+51'],['PL','Polonia','+48'],
+    ['PT','Portugal','+351'],['GB','Reino Unido','+44'],['CF','República Centroafricana','+236'],
+    ['CZ','República Checa','+420'],['DO','República Dominicana','+1809'],
+    ['RW','Ruanda','+250'],['RO','Rumanía','+40'],['RU','Rusia','+7'],
+    ['WS','Samoa','+685'],['KN','San Cristóbal y Nieves','+1869'],
+    ['SM','San Marino','+378'],['VC','San Vicente y las Granadinas','+1784'],
+    ['SH','Santa Helena','+290'],['LC','Santa Lucía','+1758'],
+    ['ST','Santo Tomé y Príncipe','+239'],['SN','Senegal','+221'],
+    ['RS','Serbia','+381'],['SC','Seychelles','+248'],['SL','Sierra Leona','+232'],
+    ['SG','Singapur','+65'],['SO','Somalia','+252'],['LK','Sri Lanka','+94'],
+    ['SZ','Suazilandia','+268'],['ZA','Sudáfrica','+27'],['SD','Sudán','+249'],
+    ['SS','Sudán del Sur','+211'],['SE','Suecia','+46'],['CH','Suiza','+41'],
+    ['SR','Surinam','+597'],['TH','Tailandia','+66'],['TZ','Tanzania','+255'],
+    ['TJ','Tayikistán','+992'],['TL','Timor Oriental','+670'],['TG','Togo','+228'],
+    ['TO','Tonga','+676'],['TT','Trinidad y Tobago','+1868'],['TN','Túnez','+216'],
+    ['TM','Turkmenistán','+993'],['TR','Turquía','+90'],['TV','Tuvalu','+688'],
+    ['UA','Ucrania','+380'],['UG','Uganda','+256'],['UY','Uruguay','+598'],
+    ['UZ','Uzbekistán','+998'],['VU','Vanuatu','+678'],['VA','Vaticano','+39'],
+    ['VE','Venezuela','+58'],['VN','Vietnam','+84'],['YE','Yemen','+967'],
+    ['ZM','Zambia','+260'],['ZW','Zimbabue','+263'],
+  ];
+
+  /* Mapa de timezone → código de país */
+  var TZ_MAP = {
+    'America/Caracas':'VE','America/Bogota':'CO','America/Lima':'PE',
+    'America/Mexico_City':'MX','America/Monterrey':'MX','America/Merida':'MX',
+    'America/Cancun':'MX','America/Buenos_Aires':'AR','America/Argentina/Buenos_Aires':'AR',
+    'America/Santiago':'CL','America/Guayaquil':'EC','America/La_Paz':'BO',
+    'America/Asuncion':'PY','America/Montevideo':'UY','America/Manaus':'BR',
+    'America/Sao_Paulo':'BR','America/Recife':'BR','America/Belem':'BR',
+    'America/New_York':'US','America/Chicago':'US','America/Denver':'US',
+    'America/Los_Angeles':'US','America/Phoenix':'US','America/Anchorage':'US',
+    'America/Toronto':'CA','America/Vancouver':'CA','America/Havana':'CU',
+    'America/Guatemala':'GT','America/Tegucigalpa':'HN','America/El_Salvador':'SV',
+    'America/Managua':'NI','America/Costa_Rica':'CR','America/Panama':'PA',
+    'America/Santo_Domingo':'DO','America/Port-au-Prince':'HT',
+    'America/Port_of_Spain':'TT','America/Guyana':'GY','America/Paramaribo':'SR',
+    'Europe/Madrid':'ES','Europe/London':'GB','Europe/Paris':'FR',
+    'Europe/Berlin':'DE','Europe/Rome':'IT','Europe/Lisbon':'PT',
+    'Europe/Amsterdam':'NL','Europe/Brussels':'BE','Europe/Zurich':'CH',
+    'Europe/Vienna':'AT','Europe/Warsaw':'PL','Europe/Prague':'CZ',
+    'Europe/Budapest':'HU','Europe/Bucharest':'RO','Europe/Sofia':'BG',
+    'Europe/Athens':'GR','Europe/Helsinki':'FI','Europe/Stockholm':'SE',
+    'Europe/Oslo':'NO','Europe/Copenhagen':'DK','Europe/Dublin':'IE',
+    'Europe/Moscow':'RU','Europe/Kiev':'UA','Europe/Minsk':'BY',
+    'Europe/Istanbul':'TR','Europe/Riga':'LV','Europe/Tallinn':'EE',
+    'Europe/Vilnius':'LT','Europe/Lisbon':'PT',
+    'Asia/Tokyo':'JP','Asia/Seoul':'KR','Asia/Shanghai':'CN',
+    'Asia/Hong_Kong':'CN','Asia/Kolkata':'IN','Asia/Calcutta':'IN',
+    'Asia/Dubai':'AE','Asia/Riyadh':'SA','Asia/Baghdad':'IQ',
+    'Asia/Tehran':'IR','Asia/Karachi':'PK','Asia/Dhaka':'BD',
+    'Asia/Bangkok':'TH','Asia/Jakarta':'ID','Asia/Singapore':'SG',
+    'Asia/Manila':'PH','Asia/Taipei':'CN','Asia/Kuala_Lumpur':'MY',
+    'Asia/Beirut':'LB','Asia/Amman':'JO','Asia/Jerusalem':'IL',
+    'Asia/Baku':'AZ','Asia/Yerevan':'AM','Asia/Tbilisi':'GE',
+    'Africa/Cairo':'EG','Africa/Casablanca':'MA','Africa/Lagos':'NG',
+    'Africa/Nairobi':'KE','Africa/Johannesburg':'ZA','Africa/Accra':'GH',
+    'Africa/Abidjan':'CI','Africa/Tunis':'TN','Africa/Algiers':'DZ',
+    'Australia/Sydney':'AU','Australia/Melbourne':'AU','Australia/Brisbane':'AU',
+    'Australia/Perth':'AU','Pacific/Auckland':'NZ',
+  };
+
+  /* Bandera emoji desde código ISO */
+  function flag(code) {
+    return String.fromCodePoint(
+      0x1F1A5 + code.charCodeAt(0),
+      0x1F1A5 + code.charCodeAt(1)
+    );
+  }
+
+  /* Detección inicial */
+  var browserTz = '';
+  try { browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e) {}
+  var detectedCode = TZ_MAP[browserTz] || 'VE';
+
+  /* Estado */
+  var selectedCode = detectedCode;
+  var selectedDial = '';
+
+  function findCountry(code) {
+    return COUNTRIES.find(function(c){ return c[0] === code; }) || COUNTRIES.find(function(c){ return c[0] === 'VE'; });
+  }
+
+  /* Elementos */
+  var wrap      = document.getElementById('ph-wrap');
+  var btn       = document.getElementById('ph-country-btn');
+  var flagEl    = document.getElementById('ph-flag');
+  var dialEl    = document.getElementById('ph-dial');
+  var dropdown  = document.getElementById('ph-dropdown');
+  var searchEl  = document.getElementById('ph-search');
+  var listEl    = document.getElementById('ph-list');
+  var numberEl  = document.getElementById('ph-number');
+  var hiddenEl  = document.getElementById('telefono_invitado');
+  if (!wrap) return;
+
+  /* ── Restaurar valor si viene de un POST con errores ── */
+  var existingVal = hiddenEl.value.trim();
+  var initCode = detectedCode, initNum = '';
+  if (existingVal.startsWith('+')) {
+    /* Buscar el prefijo más largo que coincida */
+    var best = null;
+    COUNTRIES.forEach(function(c) {
+      if (existingVal.startsWith(c[2])) {
+        if (!best || c[2].length > best[2].length) best = c;
+      }
+    });
+    if (best) {
+      initCode = best[0];
+      initNum  = existingVal.slice(best[2].length).trim();
+    }
+  }
+  selectedCode = initCode;
+
+  /* ── Renderizar selector ── */
+  function applySelection(code) {
+    selectedCode = code;
+    var c = findCountry(code);
+    selectedDial = c[2];
+    flagEl.textContent = flag(code);
+    dialEl.textContent = c[2];
+    syncHidden();
+  }
+
+  function syncHidden() {
+    var num = numberEl.value.trim();
+    hiddenEl.value = num ? selectedDial + ' ' + num : '';
+  }
+
+  applySelection(initCode);
+  if (initNum) numberEl.value = initNum;
+
+  /* ── Renderizar lista ── */
+  function renderList(query) {
+    var q = (query || '').trim().toLowerCase();
+    listEl.innerHTML = '';
+    var filtered = q
+      ? COUNTRIES.filter(function(c){
+          return c[1].toLowerCase().indexOf(q) !== -1 || c[2].indexOf(q) !== -1 || c[0].toLowerCase().indexOf(q) !== -1;
+        })
+      : COUNTRIES;
+    if (!filtered.length) {
+      var em = document.createElement('div');
+      em.className = 'ph-empty';
+      em.textContent = 'Sin resultados';
+      listEl.appendChild(em);
+      return;
+    }
+    filtered.forEach(function(c) {
+      var item = document.createElement('div');
+      item.className = 'ph-option' + (c[0] === selectedCode ? ' ph-sel' : '');
+      item.innerHTML =
+        '<span class="ph-option-flag">' + flag(c[0]) + '</span>' +
+        '<span class="ph-option-name">' + c[1] + '</span>' +
+        '<span class="ph-option-code">' + c[2] + '</span>';
+      item.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        applySelection(c[0]);
+        closeDropdown();
+        numberEl.focus();
+      });
+      listEl.appendChild(item);
+    });
+    /* Scroll al seleccionado */
+    var sel = listEl.querySelector('.ph-sel');
+    if (sel && !q) sel.scrollIntoView({ block: 'nearest' });
+  }
+
+  function openDropdown() {
+    btn.setAttribute('aria-expanded', 'true');
+    dropdown.hidden = false;
+    searchEl.value = '';
+    renderList('');
+    searchEl.focus();
+  }
+  function closeDropdown() {
+    dropdown.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+  }
+
+  btn.addEventListener('click', function() {
+    dropdown.hidden ? openDropdown() : closeDropdown();
+  });
+  searchEl.addEventListener('input', function() { renderList(this.value); });
+  searchEl.addEventListener('blur', function() { setTimeout(closeDropdown, 180); });
+
+  numberEl.addEventListener('input', syncHidden);
+  numberEl.addEventListener('change', syncHidden);
+
+  /* Cerrar al click fuera */
+  document.addEventListener('mousedown', function(e) {
+    if (!wrap.contains(e.target)) closeDropdown();
+  });
+
+  /* Validación antes de submit: asegurar que haya número */
+  var form = wrap.closest('form');
+  if (form) {
+    form.addEventListener('submit', function() {
+      syncHidden();
+      if (!hiddenEl.value.trim()) {
+        wrap.classList.add('ph-error');
+        numberEl.focus();
+        return false;
+      }
+      wrap.classList.remove('ph-error');
+    });
+  }
+})();
 </script>
 
 {% if mostrar_modal_duplicado %}

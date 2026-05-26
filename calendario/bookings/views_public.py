@@ -345,10 +345,24 @@ class ConfirmacionView(View):
             tz_display = ZoneInfo(reserva.host.timezone)
         inicio_local = reserva.inicio_utc.astimezone(tz_display)
         fin_local = (reserva.inicio_utc + timedelta(minutes=reserva.event_type.duracion_minutos)).astimezone(tz_display)
+        # Pasamos strings pre-formateados para evitar que Django reconvierta
+        # los datetimes a TIME_ZONE del servidor en el template (TIME_ZONE="Europe/Madrid").
+        # Usamos listas fijas en español porque strftime('%A'/'%B') depende del
+        # locale del SO (inglés en producción).
+        _DIAS_ES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+        _MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                     'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
         ctx = {
             'reserva': reserva,
             'inicio_local': inicio_local,
             'fin_local': fin_local,
+            'inicio_hora_str': inicio_local.strftime('%-H:%M'),
+            'fin_hora_str': fin_local.strftime('%-H:%M'),
+            'inicio_fecha_str': (
+                f"{_DIAS_ES[inicio_local.weekday()]}, "
+                f"{inicio_local.day} de {_MESES_ES[inicio_local.month - 1]} "
+                f"de {inicio_local.year}"
+            ),
             'tz_host': tz_display_str,
         }
         return render(request, 'pages/public/booking/confirmacion.html', ctx)
