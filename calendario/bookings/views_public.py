@@ -150,6 +150,8 @@ class BookingFormView(View):
         form = BookingForm(request.POST)
         if not form.is_valid():
             return self._render_with_errors(request, host, event_type, form)
+        tz_host = ZoneInfo(host.timezone)
+        tz_visitante = _tz_visitante(request, tz_host)
         try:
             reserva = crear_reserva(
                 event_type=event_type,
@@ -158,6 +160,7 @@ class BookingFormView(View):
                 email_invitado=form.cleaned_data['email_invitado'],
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
+                timezone_invitado=str(tz_visitante),
             )
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, host, event_type, form, duplicado=e.reserva_existente)
@@ -271,6 +274,8 @@ class TeamBookingFormView(View):
         form = BookingForm(request.POST)
         if not form.is_valid():
             return self._render_with_errors(request, event_type, form)
+        tz_ref = ZoneInfo(event_type.host.timezone)
+        tz_visitante = _tz_visitante(request, tz_ref)
         try:
             reserva = crear_reserva(
                 event_type=event_type,
@@ -279,6 +284,7 @@ class TeamBookingFormView(View):
                 email_invitado=form.cleaned_data['email_invitado'],
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
+                timezone_invitado=str(tz_visitante),
             )
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, event_type, form, duplicado=e.reserva_existente)
@@ -329,14 +335,21 @@ class ConfirmacionView(View):
             Reserva.objects.select_related('event_type', 'host'),
             confirmacion_token=token,
         )
-        tz_host = ZoneInfo(reserva.host.timezone)
-        inicio_local = reserva.inicio_utc.astimezone(tz_host)
-        fin_local = (reserva.inicio_utc + timedelta(minutes=reserva.event_type.duracion_minutos)).astimezone(tz_host)
+        # Mostrar la hora en la TZ que el visitante eligió al reservar.
+        # Si la reserva es anterior al campo (default 'UTC'), se usa la TZ del host
+        # como fallback razonable.
+        tz_display_str = reserva.timezone_invitado or reserva.host.timezone
+        try:
+            tz_display = ZoneInfo(tz_display_str)
+        except Exception:
+            tz_display = ZoneInfo(reserva.host.timezone)
+        inicio_local = reserva.inicio_utc.astimezone(tz_display)
+        fin_local = (reserva.inicio_utc + timedelta(minutes=reserva.event_type.duracion_minutos)).astimezone(tz_display)
         ctx = {
             'reserva': reserva,
             'inicio_local': inicio_local,
             'fin_local': fin_local,
-            'tz_host': reserva.host.timezone,
+            'tz_host': tz_display_str,
         }
         return render(request, 'pages/public/booking/confirmacion.html', ctx)
 
@@ -368,6 +381,10 @@ class ReemplazarPublicaView(View):
         if not form.is_valid():
             return redirect('public_token:confirmacion', token=vieja.confirmacion_token)
 
+        # Mantener la TZ que el visitante tenía al hacer la reserva original.
+        # Si el modal lleva un campo tz en el POST se usaría ese; de lo contrario
+        # se preserva el de la reserva vieja para no cambiarla sin querer.
+        tz_visitante = _tz_visitante(request, ZoneInfo(vieja.timezone_invitado or vieja.host.timezone))
         try:
             nueva = reemplazar_reserva(
                 reserva_vieja_pk=vieja.pk,
@@ -377,6 +394,7 @@ class ReemplazarPublicaView(View):
                 email_invitado=form.cleaned_data['email_invitado'],
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
+                timezone_invitado=str(tz_visitante),
             )
         except SlotNoDisponibleError:
             # El slot nuevo se llenó entre que vio el modal y aceptó. Volvemos al confirmation

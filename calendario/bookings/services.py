@@ -225,7 +225,7 @@ def _seleccionar_host_round_robin(event_type, candidatos):
 
 
 def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
-                  telefono_invitado='', notas=''):
+                  telefono_invitado='', notas='', timezone_invitado=''):
     """
     Crea una reserva eligiendo automáticamente un host del pool (round-robin
     least-loaded). Lock sobre la fila EventType para serializar concurrentes
@@ -268,6 +268,7 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
             email_invitado=email_invitado,
             telefono_invitado=telefono_invitado.strip(),
             notas=notas.strip(),
+            timezone_invitado=timezone_invitado,
         )
         transaction.on_commit(lambda: crear_evento_google(reserva.pk))
         if et.notificar_crm:
@@ -276,7 +277,7 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
 
 
 def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado,
-                       email_invitado, telefono_invitado='', notas=''):
+                       email_invitado, telefono_invitado='', notas='', timezone_invitado=''):
     """
     Cancela la reserva vieja y crea una nueva, en una sola transacción atómica.
     Saltea el check de duplicado de crear_reserva porque, al cancelar primero,
@@ -304,6 +305,7 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
             email_invitado=email_invitado,
             telefono_invitado=telefono_invitado,
             notas=notas,
+            timezone_invitado=timezone_invitado,
         )
 
 

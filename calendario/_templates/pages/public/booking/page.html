@@ -153,13 +153,46 @@ body { background: var(--bk-bg) !important; }
 .bk-tz-section { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--bk-border); }
 .bk-card.has-slots .bk-tz-section { margin-top: auto; }
 .bk-tz-label   { font-size: 13px; font-weight: 700; color: var(--bk-text); margin: 0 0 8px; }
-.bk-tz-row     { display: flex; align-items: center; gap: 7px; position: relative; cursor: pointer; }
+
+/* Timezone combobox */
+.bk-tz-row     { display: flex; align-items: center; gap: 7px; }
 .bk-tz-row svg { flex-shrink: 0; color: var(--bk-text); }
-.bk-tz-display { font-size: 14px; font-weight: 500; color: var(--bk-text); display: flex; align-items: center; gap: 4px; }
-.bk-tz-chevron { font-size: 10px; color: var(--bk-muted); }
-.bk-tz-select-real {
-  position: absolute; inset: 0; opacity: 0; cursor: pointer;
-  width: 100%; height: 100%; font-size: 16px;
+.bk-tz-combo { position: relative; display: inline-block; }
+.bk-tz-display-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: none; border: none; padding: 4px 0; cursor: pointer;
+  font-family: var(--bk-font); color: var(--bk-muted);
+  line-height: 1.4;
+}
+#tz-display-text { font-size: 14px; color: var(--bk-text); }
+.bk-tz-caret { font-size: 8px; color: var(--bk-muted); line-height: 1; }
+.bk-tz-input {
+  display: none;
+  position: absolute; top: 50%; left: 0; transform: translateY(-50%);
+  border: none; outline: none; background: #fff;
+  font-size: 14px; font-family: var(--bk-font); color: var(--bk-text);
+  padding: 4px 0; width: 180px; z-index: 1;
+}
+.bk-tz-dropdown {
+  position: absolute; bottom: calc(100% + 4px); left: 0;
+  min-width: 260px; width: max-content; max-width: 320px;
+  max-height: 450px; overflow-y: auto;
+  background: #fff; border: 1px solid var(--bk-border);
+  border-radius: 6px; box-shadow: 0 -4px 14px rgba(0,0,0,.10);
+  z-index: 100;
+}
+.bk-tz-option {
+  padding: 8px 12px; font-size: 12.5px; color: var(--bk-text);
+  cursor: pointer; border-bottom: 1px solid #f3f4f6;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bk-tz-option:last-child { border-bottom: none; }
+.bk-tz-option:hover { background: #f3f4f6; }
+.bk-tz-option.tz-selected {
+  background: var(--bk-blue-light); color: var(--bk-blue); font-weight: 500;
+}
+.bk-tz-empty {
+  padding: 10px 12px; font-size: 13px; color: var(--bk-muted); text-align: center;
 }
 
 /* ── Slots column ── */
@@ -410,7 +443,7 @@ body { background: var(--bk-bg) !important; }
               </tbody>
             </table>
 
-            {# Timezone #}
+            {# Timezone combobox #}
             <div class="bk-tz-section">
               <p class="bk-tz-label">Zona horaria</p>
               <div class="bk-tz-row">
@@ -418,11 +451,15 @@ body { background: var(--bk-bg) !important; }
                   <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
                   <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                 </svg>
-                <span class="bk-tz-display">
-                  <span id="tz-display-text">cargando…</span>
-                  <span class="bk-tz-chevron">▼</span>
-                </span>
-                <select id="tz-select" class="bk-tz-select-real" aria-label="Zona horaria"></select>
+                <div class="bk-tz-combo">
+                  <button type="button" id="tz-display-btn" class="bk-tz-display-btn">
+                    <span id="tz-display-text"></span>
+                    <span class="bk-tz-caret">▼</span>
+                  </button>
+                  <input type="text" id="tz-input" class="bk-tz-input"
+                         placeholder="Buscar zona…" autocomplete="off" spellcheck="false">
+                  <div id="tz-dropdown" class="bk-tz-dropdown" hidden></div>
+                </div>
               </div>
             </div>
           </div>
@@ -505,13 +542,11 @@ body { background: var(--bk-bg) !important; }
 (function () {
   var params    = new URLSearchParams(window.location.search);
   var urlTz     = params.get('tz') || '';
-  var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  var browserTz = '';
+  try { browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
 
-  // Si la URL no trae tz, redirigimos a la misma página con la TZ del navegador.
-  // El backend la usará para agrupar slots/días en la TZ del visitante.
-  // EXCEPCIÓN: cuando hay errores de formulario, Django renderiza el template en la
-  // URL /reservar/ (sin ?tz=) — no redirigir o el GET al endpoint de submit devuelve 405.
-  // En ese caso el tz viene del contexto del servidor (tz_visitante).
+  // Si la URL no trae tz, redirigimos con la TZ del navegador.
+  // EXCEPCIÓN: errores de formulario renderizan en /reservar/ sin ?tz= — no redirigir.
   var onSubmitEndpoint = window.location.pathname.endsWith('/reservar/');
   if (!urlTz && browserTz && !onSubmitEndpoint) {
     params.set('tz', browserTz);
@@ -519,40 +554,81 @@ body { background: var(--bk-bg) !important; }
     return;
   }
 
-  var activeTz = urlTz || '{{ tz_visitante }}' || browserTz;
-  var sel      = document.getElementById('tz-select');
-  var display  = document.getElementById('tz-display-text');
+  var activeTz = urlTz || '{{ tz_visitante }}' || browserTz || 'UTC';
   var now      = new Date();
+
+  var zones = [];
+  try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { if (activeTz) zones = [activeTz]; }
 
   function tzLabel(tz) {
     var city = tz.split('/').pop().replace(/_/g, ' ');
-    var time = now.toLocaleTimeString('es-ES', {
-      hour: '2-digit', minute: '2-digit', timeZone: tz, hour12: false,
-    });
-    return city + ' (' + time + ')';
+    try {
+      var time = now.toLocaleTimeString('es-ES', {
+        hour: '2-digit', minute: '2-digit', timeZone: tz, hour12: false,
+      });
+      return city + ' (' + time + ')';
+    } catch (e) { return city; }
   }
 
-  var zones = [];
-  try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { zones = [activeTz]; }
-  zones.forEach(function (tz) {
-    var o = document.createElement('option');
-    o.value = tz;
-    o.textContent = tz;
-    if (tz === activeTz) o.selected = true;
-    sel.appendChild(o);
-  });
+  var displayBtn  = document.getElementById('tz-display-btn');
+  var displayText = document.getElementById('tz-display-text');
+  var input       = document.getElementById('tz-input');
+  var dropdown    = document.getElementById('tz-dropdown');
+  if (!displayBtn || !input || !dropdown) return;
 
-  function updateDisplay() { display.textContent = tzLabel(sel.value); }
+  function render(filter) {
+    var q = (filter || '').trim().toLowerCase();
+    dropdown.innerHTML = '';
+    var matched = !q
+      ? zones
+      : zones.filter(function (tz) { return tz.toLowerCase().indexOf(q) !== -1; });
+    if (!matched.length) {
+      var empty = document.createElement('div');
+      empty.className = 'bk-tz-empty';
+      empty.textContent = 'Sin coincidencias';
+      dropdown.appendChild(empty);
+      return;
+    }
+    var top  = matched.filter(function (tz) { return tz === activeTz; });
+    var rest = matched.filter(function (tz) { return tz !== activeTz; });
+    top.concat(rest).slice(0, 120).forEach(function (tz) {
+      var item = document.createElement('div');
+      item.className = 'bk-tz-option' + (tz === activeTz ? ' tz-selected' : '');
+      item.textContent = tz;
+      item.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        var p = new URLSearchParams(window.location.search);
+        p.set('tz', tz);
+        window.location.href = window.location.pathname + '?' + p.toString();
+      });
+      dropdown.appendChild(item);
+    });
+  }
 
-  // Cambiar TZ recarga la página: el backend reagrupa días y slots en la nueva TZ.
-  sel.addEventListener('change', function () {
-    var p = new URLSearchParams(window.location.search);
-    p.set('tz', sel.value);
-    window.location.href = window.location.pathname + '?' + p.toString();
-  });
+  function openDropdown() {
+    input.style.display = 'block';
+    input.value = '';
+    input.placeholder = tzLabel(activeTz);
+    input.focus();
+    render('');
+    dropdown.hidden = false;
+  }
 
-  updateDisplay();
-  setInterval(function () { now = new Date(); updateDisplay(); }, 60000);
+  function closeDropdown() {
+    dropdown.hidden = true;
+    input.style.display = 'none';
+    displayText.textContent = tzLabel(activeTz);
+  }
+
+  // Inicializar
+  displayText.textContent = tzLabel(activeTz);
+
+  displayBtn.addEventListener('click', openDropdown);
+  input.addEventListener('input', function () { render(this.value); dropdown.hidden = false; });
+  input.addEventListener('blur',  function () { setTimeout(closeDropdown, 150); });
+
+  // Actualizar hora cada minuto
+  setInterval(function () { now = new Date(); if (dropdown.hidden) displayText.textContent = tzLabel(activeTz); }, 60000);
 })();
 
 function pickSlot(el) {

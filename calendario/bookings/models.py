@@ -32,6 +32,7 @@ class Reserva(models.Model):
     email_invitado = models.EmailField()
     telefono_invitado = models.CharField(max_length=50, blank=True, default='')
     notas = models.TextField(blank=True, default='')
+    timezone_invitado = models.CharField(max_length=100, blank=True, default='')
     estado = models.CharField(
         max_length=20,
         choices=Estado.choices,
