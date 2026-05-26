@@ -416,6 +416,406 @@
   background: #f9fafb;
   border-color: #9ca3af;
 }
+
+/* ── Card header row (title + hours button) ── */
+.avail-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.avail-btn-hours {
+  background: #fff;
+  color: #0069ff;
+  border: 1px solid #0069ff;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+
+.avail-btn-hours:hover {
+  background: #0069ff;
+  color: #fff;
+}
+
+.avail-btn-cal {
+  color: #7239ea;
+  border-color: #7239ea;
+}
+
+.avail-btn-cal:hover {
+  background: #7239ea;
+  color: #fff;
+}
+
+#open-fecha-modal .bi-plus-lg {
+  font-size: 15px;
+  -webkit-text-stroke: 0.4px currentColor;
+}
+
+/* ── Date-specific hours list ── */
+.avail-fechas-section {
+  padding: 18px 24px 20px;
+  border-top: 1px solid #e1e4e8;
+}
+
+.avail-fechas-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 14px;
+}
+
+.avail-fecha-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.avail-fecha-row:last-child { border-bottom: none; }
+
+.avail-fecha-label {
+  width: 170px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #374151;
+  text-transform: capitalize;
+  padding-top: 3px;
+}
+
+.avail-fecha-ranges { flex: 1; min-width: 0; }
+
+.avail-fecha-range {
+  font-size: 13px;
+  color: #374151;
+  background: #f9fafb;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 5px 10px;
+}
+
+/* ── Modal ── */
+.fm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, .45);
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 1050;
+  padding: 40px 16px;
+  overflow-y: auto;
+}
+
+.fm-overlay.open { display: flex; }
+
+.fm-box {
+  background: #fff;
+  border-radius: 12px;
+  width: 340px;
+  max-width: 100%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .2);
+  overflow: hidden;
+}
+
+.fm-body { padding: 22px 22px 0; }
+
+.fm-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px;
+  line-height: 1.4;
+}
+
+/* Calendar */
+.fm-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.fm-cal-month {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  text-transform: capitalize;
+}
+
+.fm-cal-nav {
+  background: none;
+  border: none;
+  color: #0069ff;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 15px;
+  border-radius: 6px;
+}
+
+.fm-cal-nav:hover { background: #f0f6ff; }
+.fm-cal-nav:disabled { color: #d1d5db; cursor: default; background: none; }
+
+.fm-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.fm-cal-dow {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  padding: 4px 0;
+  text-transform: uppercase;
+}
+
+.fm-cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #374151;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: background .12s;
+}
+
+.fm-cal-day:hover:not(:disabled):not(.sel) { background: #f0f6ff; }
+.fm-cal-day:disabled { color: #d1d5db; cursor: default; }
+.fm-cal-day.empty { cursor: default; }
+.fm-cal-day.sel { background: #0069ff; color: #fff; font-weight: 600; }
+
+/* Hours editor inside modal */
+.fm-hours {
+  display: none;
+  border-top: 1px solid #e1e4e8;
+  margin-top: 18px;
+  padding-top: 16px;
+}
+
+.fm-hours.open { display: block; }
+
+.fm-hours-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.fm-range-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.fm-add-range {
+  background: none;
+  border: none;
+  color: #0069ff;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.fm-add-range:hover { color: #0051cc; }
+
+.fm-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 22px 20px;
+  margin-top: 18px;
+  border-top: 1px solid #e1e4e8;
+}
+
+.fm-btn-cancel {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 24px;
+  padding: 9px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.fm-btn-cancel:hover { background: #f9fafb; }
+
+.fm-btn-apply {
+  flex: 1;
+  background: #0069ff;
+  border: none;
+  border-radius: 24px;
+  padding: 9px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.fm-btn-apply:hover { background: #0051cc; }
+.fm-btn-apply:disabled { background: #9dc4ff; cursor: default; }
+
+.avail-header-btns {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Calendar month-view modal ── */
+.cal-box {
+  width: 860px;
+  max-width: 100%;
+}
+
+.cal-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 8px;
+}
+
+.cal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.cal-close:hover { color: #374151; }
+
+.cal-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 22px 14px;
+}
+
+.cal-nav-row .fm-cal-month { font-size: 15px; }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-top: 1px solid #e1e4e8;
+  border-left: 1px solid #e1e4e8;
+}
+
+.cal-dow {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  padding: 8px 8px;
+  border-right: 1px solid #e1e4e8;
+  border-bottom: 1px solid #e1e4e8;
+  background: #fafbfc;
+}
+
+.cal-cell {
+  min-height: 92px;
+  border-right: 1px solid #e1e4e8;
+  border-bottom: 1px solid #e1e4e8;
+  padding: 6px 8px;
+  font-size: 12px;
+  position: relative;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: background .12s;
+  display: block;
+  width: 100%;
+}
+
+.cal-cell:hover:not(.past):not(.empty) { background: #f0f6ff; }
+.cal-cell.empty { background: #fafbfc; cursor: default; }
+.cal-cell.past { background: #fafbfc; cursor: default; }
+
+.cal-cell-daynum {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cal-cell.past .cal-cell-daynum { color: #c1c7d0; }
+
+.cal-cell-repeat {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.cal-cell-range {
+  margin-top: 5px;
+  color: #374151;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.cal-cell.past .cal-cell-range { color: #c1c7d0; }
+
+.cal-cell.override .cal-cell-range {
+  color: #0069ff;
+  font-weight: 500;
+}
+
+.cal-cell.override::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #0069ff;
+}
+
+.cal-legend {
+  display: flex;
+  gap: 20px;
+  padding: 14px 22px 20px;
+  font-size: 12px;
+  color: #6b7280;
+  align-items: center;
+}
+
+.cal-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-dot-override {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: #0069ff;
+}
 </style>
 {% endblock css %}
 
@@ -427,10 +827,24 @@
 
     <!-- Header -->
     <div class="avail-card-header">
-      <h5>Horas semanales</h5>
-      <div class="avail-tz">
-        <i class="bi bi-globe2"></i>
-        {{ request.user.timezone|default:"UTC" }}
+      <div class="avail-header-row">
+        <div>
+          <h5>Horas semanales</h5>
+          <div class="avail-tz">
+            <i class="bi bi-globe2"></i>
+            {{ request.user.timezone|default:"UTC" }}
+          </div>
+        </div>
+        {% if 'availability.editar' in PERMISOS_USUARIO %}
+        <div class="avail-header-btns">
+          <button type="button" id="open-fecha-modal" class="avail-btn-hours">
+            <i class="bi bi-plus-lg"></i>Horas específicas
+          </button>
+          <button type="button" id="open-cal-modal" class="avail-btn-hours avail-btn-cal">
+            <i class="bi bi-calendar3"></i>Calendario
+          </button>
+        </div>
+        {% endif %}
       </div>
     </div>
 
@@ -551,6 +965,36 @@
     {% endfor %}
     </div>
 
+    <!-- ── Date-specific hours list ── -->
+    {% if fechas_agrupadas %}
+    <div class="avail-fechas-section">
+      <div class="avail-fechas-title">Horas por fechas específicas</div>
+      {% for grupo in fechas_agrupadas %}
+      <div class="avail-fecha-row">
+        <div class="avail-fecha-label">{{ grupo.fecha|date:"l, j \d\e F" }}</div>
+        <div class="avail-fecha-ranges">
+          {% for b in grupo.bloques %}
+          <div class="avail-time-row">
+            <span class="avail-fecha-range">{{ b.hora_inicio|time:'H:i' }} – {{ b.hora_fin|time:'H:i' }}</span>
+            {% if 'availability.editar' in PERMISOS_USUARIO %}
+            <form method="post"
+                  action="{% url 'panel_disponibilidad:bloque_fecha_delete' b.pk %}"
+                  class="d-inline mb-0"
+                  onsubmit="return confirm('¿Eliminar este horario?')">
+              {% csrf_token %}
+              <button type="submit" class="avail-btn-del" title="Eliminar">
+                <i class="bi bi-trash3" style="font-size:14px;"></i>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
   </div>
   <!-- ── /Weekly hours card ── -->
 
@@ -581,6 +1025,70 @@
   <!-- ── /Timezone card ── -->
 
 </div>
+
+<!-- ── Date-specific hours modal ── -->
+{% if 'availability.editar' in PERMISOS_USUARIO %}
+<div class="fm-overlay" id="fecha-modal">
+  <div class="fm-box">
+    <form method="post" action="{% url 'panel_disponibilidad:bloque_fecha_create' %}" id="fecha-form">
+      {% csrf_token %}
+      <input type="hidden" name="fechas" id="fm-fechas" value="" />
+      <div class="fm-body">
+        <h3 class="fm-title">Selecciona la(s) fecha(s) a las que asignar horas específicas</h3>
+
+        <div id="fm-cal-section">
+          <div class="fm-cal-head">
+            <span class="fm-cal-month" id="fm-month"></span>
+            <span>
+              <button type="button" class="fm-cal-nav" id="fm-prev" title="Mes anterior">&lsaquo;</button>
+              <button type="button" class="fm-cal-nav" id="fm-next" title="Mes siguiente">&rsaquo;</button>
+            </span>
+          </div>
+          <div class="fm-cal-grid" id="fm-grid"></div>
+        </div>
+
+        <div class="fm-hours" id="fm-hours">
+          <div class="fm-hours-title">¿Qué horas estás disponible?</div>
+          <div id="fm-ranges"></div>
+          <button type="button" class="fm-add-range" id="fm-add-range" title="Añadir rango">
+            <i class="bi bi-plus-lg"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="fm-footer">
+        <button type="button" class="fm-btn-cancel" id="fm-cancel">Cancelar</button>
+        <button type="button" class="fm-btn-apply" id="fm-apply" disabled>Aplicar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Calendar month view modal ── -->
+<div class="fm-overlay" id="cal-modal">
+  <div class="fm-box cal-box">
+    <div class="cal-modal-head">
+      <h3 class="fm-title" style="margin:0;">Tu disponibilidad</h3>
+      <button type="button" class="cal-close" id="cal-close" title="Cerrar">&times;</button>
+    </div>
+    <div class="cal-nav-row">
+      <span class="fm-cal-month" id="cal-month"></span>
+      <span>
+        <button type="button" class="fm-cal-nav" id="cal-prev" title="Mes anterior">&lsaquo;</button>
+        <button type="button" class="fm-cal-nav" id="cal-next" title="Mes siguiente">&rsaquo;</button>
+      </span>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-legend">
+      <span><i class="bi bi-arrow-repeat"></i> Horario semanal</span>
+      <span><span class="cal-dot-override"></span> Horario específico</span>
+    </div>
+  </div>
+</div>
+
+{{ horas_semanales_json|json_script:"weekly-data" }}
+{{ overrides_json|json_script:"overrides-data" }}
+{% endif %}
 {% endblock content %}
 
 {% block js_footer %}
@@ -732,6 +1240,296 @@
       detect.innerHTML = '<i class="bi bi-crosshair me-1"></i>Detectar mi zona';
     }, 2500);
   });
+}());
+</script>
+
+<script>
+// ── Disponibilidad: modal de horas específicas + vista calendario mensual ──
+(function () {
+  var overlay = document.getElementById('fecha-modal');
+  if (!overlay) return;
+
+  function readJSON(id) {
+    var el = document.getElementById(id);
+    if (!el) return {};
+    try { return JSON.parse(el.textContent); } catch (e) { return {}; }
+  }
+  var weeklyData = readJSON('weekly-data');        // {"0": [["09:00","17:00"]], ...} lunes=0
+  var overridesData = readJSON('overrides-data');  // {"YYYY-MM-DD": [[ini,fin], ...]}
+
+  var DOW = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function iso(y, m, d) { return y + '-' + pad(m + 1) + '-' + pad(d); }
+
+  // Horario efectivo de una fecha: el override si existe, si no el semanal.
+  function effectiveRanges(y, m, d) {
+    var key = iso(y, m, d);
+    if (overridesData[key]) return { ranges: overridesData[key], isOverride: true };
+    var wd = (new Date(y, m, d).getDay() + 6) % 7;  // lunes = 0
+    return { ranges: weeklyData[String(wd)] || [], isOverride: false };
+  }
+
+  // ===== Modal de horas específicas (picker) =====
+  var grid = document.getElementById('fm-grid');
+  var monthLabel = document.getElementById('fm-month');
+  var prevBtn = document.getElementById('fm-prev');
+  var nextBtn = document.getElementById('fm-next');
+  var hoursWrap = document.getElementById('fm-hours');
+  var rangesWrap = document.getElementById('fm-ranges');
+  var addRangeBtn = document.getElementById('fm-add-range');
+  var applyBtn = document.getElementById('fm-apply');
+  var cancelBtn = document.getElementById('fm-cancel');
+  var fechasInput = document.getElementById('fm-fechas');
+  var form = document.getElementById('fecha-form');
+  var openBtn = document.getElementById('open-fecha-modal');
+  var calSection = document.getElementById('fm-cal-section');
+
+  var viewYear = today.getFullYear();
+  var viewMonth = today.getMonth();
+  var selected = {};      // iso -> true
+  var expanded = false;
+
+  function atCurrentMonth() {
+    return viewYear === today.getFullYear() && viewMonth === today.getMonth();
+  }
+  function updateApply() {
+    applyBtn.disabled = Object.keys(selected).length === 0;
+  }
+
+  function renderPickerCal() {
+    monthLabel.textContent = new Date(viewYear, viewMonth, 1)
+      .toLocaleDateString('es', { month: 'long', year: 'numeric' });
+    prevBtn.disabled = atCurrentMonth();
+
+    grid.innerHTML = '';
+    DOW.forEach(function (d) {
+      var h = document.createElement('div');
+      h.className = 'fm-cal-dow';
+      h.textContent = d;
+      grid.appendChild(h);
+    });
+
+    var first = new Date(viewYear, viewMonth, 1);
+    var offset = (first.getDay() + 6) % 7;  // lunes primero
+    var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+    for (var i = 0; i < offset; i++) {
+      var blank = document.createElement('div');
+      blank.className = 'fm-cal-day empty';
+      grid.appendChild(blank);
+    }
+
+    for (var day = 1; day <= daysInMonth; day++) {
+      var cellDate = new Date(viewYear, viewMonth, day);
+      var key = iso(viewYear, viewMonth, day);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'fm-cal-day';
+      btn.textContent = day;
+      if (cellDate < today) {
+        btn.disabled = true;
+      } else {
+        if (selected[key]) btn.classList.add('sel');
+        btn.dataset.iso = key;
+        btn.addEventListener('click', function () {
+          var k = this.dataset.iso;
+          if (selected[k]) { delete selected[k]; } else { selected[k] = true; }
+          this.classList.toggle('sel');
+          updateApply();
+        });
+      }
+      grid.appendChild(btn);
+    }
+  }
+
+  function rangeRow(ini, fin) {
+    var row = document.createElement('div');
+    row.className = 'fm-range-row';
+    row.innerHTML =
+      '<input type="time" name="hora_inicio" class="avail-time-input" value="' + ini + '" required>' +
+      '<span class="avail-sep">–</span>' +
+      '<input type="time" name="hora_fin" class="avail-time-input" value="' + fin + '" required>' +
+      '<button type="button" class="avail-btn-del fm-del-range" title="Quitar"><i class="bi bi-x-lg"></i></button>';
+    row.querySelector('.fm-del-range').addEventListener('click', function () {
+      if (rangesWrap.children.length > 1) row.remove();
+    });
+    return row;
+  }
+
+  function closeModal() { overlay.classList.remove('open'); }
+
+  // Abre el picker de calendario. Si se pasa una fecha (YYYY-MM-DD), arranca
+  // con ese día ya seleccionado, el calendario en su mes y el editor de horas
+  // desplegado (con las horas de ese día precargadas) — sin pasar por el
+  // primer "Aplicar", porque la fecha ya viene elegida desde el calendario.
+  function openPicker(preset) {
+    selected = {};
+    rangesWrap.innerHTML = '';
+    if (preset) {
+      var parts = preset.split('-');
+      viewYear = parseInt(parts[0], 10);
+      viewMonth = parseInt(parts[1], 10) - 1;
+      selected[preset] = true;
+      expanded = true;
+      var eff = effectiveRanges(viewYear, viewMonth, parseInt(parts[2], 10)).ranges;
+      if (eff && eff.length) {
+        eff.forEach(function (r) { rangesWrap.appendChild(rangeRow(r[0], r[1])); });
+      } else {
+        rangesWrap.appendChild(rangeRow('09:00', '17:00'));
+      }
+      hoursWrap.classList.add('open');
+    } else {
+      viewYear = today.getFullYear();
+      viewMonth = today.getMonth();
+      expanded = false;
+      hoursWrap.classList.remove('open');
+    }
+    calSection.style.display = '';
+    renderPickerCal();
+    updateApply();
+    overlay.classList.add('open');
+  }
+
+  if (openBtn) openBtn.addEventListener('click', function () { openPicker(); });
+  cancelBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('mousedown', function (e) {
+    if (e.target === overlay) closeModal();
+  });
+
+  prevBtn.addEventListener('click', function () {
+    if (atCurrentMonth()) return;
+    viewMonth--;
+    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    renderPickerCal();
+  });
+  nextBtn.addEventListener('click', function () {
+    viewMonth++;
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderPickerCal();
+  });
+
+  addRangeBtn.addEventListener('click', function () {
+    rangesWrap.appendChild(rangeRow('09:00', '17:00'));
+  });
+
+  applyBtn.addEventListener('click', function () {
+    if (!expanded) {
+      if (Object.keys(selected).length === 0) return;
+      expanded = true;
+      hoursWrap.classList.add('open');
+      if (rangesWrap.children.length === 0) {
+        rangesWrap.appendChild(rangeRow('09:00', '17:00'));
+      }
+      return;
+    }
+    fechasInput.value = Object.keys(selected).join(',');
+    form.submit();
+  });
+
+  // Salvaguarda: si el form se envía con Enter, asegura fechas y que esté expandido.
+  form.addEventListener('submit', function (e) {
+    if (!expanded || Object.keys(selected).length === 0) {
+      e.preventDefault();
+      return;
+    }
+    fechasInput.value = Object.keys(selected).join(',');
+  });
+
+  // ===== Modal vista calendario mensual =====
+  var calOverlay = document.getElementById('cal-modal');
+  var openCalBtn = document.getElementById('open-cal-modal');
+  if (calOverlay && openCalBtn) {
+    var calGrid = document.getElementById('cal-grid');
+    var calMonthLabel = document.getElementById('cal-month');
+    var calPrev = document.getElementById('cal-prev');
+    var calNext = document.getElementById('cal-next');
+    var calClose = document.getElementById('cal-close');
+    var calYear = today.getFullYear();
+    var calMonthIdx = today.getMonth();
+
+    function calAtCurrent() {
+      return calYear === today.getFullYear() && calMonthIdx === today.getMonth();
+    }
+
+    function renderCalView() {
+      calMonthLabel.textContent = new Date(calYear, calMonthIdx, 1)
+        .toLocaleDateString('es', { month: 'long', year: 'numeric' });
+      calPrev.disabled = calAtCurrent();
+
+      calGrid.innerHTML = '';
+      DOW.forEach(function (d) {
+        var h = document.createElement('div');
+        h.className = 'cal-dow';
+        h.textContent = d;
+        calGrid.appendChild(h);
+      });
+
+      var first = new Date(calYear, calMonthIdx, 1);
+      var offset = (first.getDay() + 6) % 7;
+      var daysInMonth = new Date(calYear, calMonthIdx + 1, 0).getDate();
+
+      for (var i = 0; i < offset; i++) {
+        var blank = document.createElement('div');
+        blank.className = 'cal-cell empty';
+        calGrid.appendChild(blank);
+      }
+
+      for (var day = 1; day <= daysInMonth; day++) {
+        var cellDate = new Date(calYear, calMonthIdx, day);
+        var key = iso(calYear, calMonthIdx, day);
+        var isPast = cellDate < today;
+        var eff = effectiveRanges(calYear, calMonthIdx, day);
+
+        var cell = document.createElement(isPast ? 'div' : 'button');
+        if (!isPast) cell.type = 'button';
+        cell.className = 'cal-cell' + (isPast ? ' past' : '') + (eff.isOverride ? ' override' : '');
+
+        var repeatIcon = (!eff.isOverride && eff.ranges.length)
+          ? '<i class="bi bi-arrow-repeat cal-cell-repeat"></i>' : '';
+        var head = '<div class="cal-cell-daynum"><span>' + day + '</span>' + repeatIcon + '</div>';
+        var body = eff.ranges.length
+          ? '<div class="cal-cell-range">' +
+              eff.ranges.map(function (r) { return r[0] + ' – ' + r[1]; }).join('<br>') +
+            '</div>'
+          : '';
+        cell.innerHTML = head + body;
+
+        if (!isPast) {
+          cell.dataset.iso = key;
+          cell.addEventListener('click', function () {
+            calOverlay.classList.remove('open');
+            openPicker(this.dataset.iso);
+          });
+        }
+        calGrid.appendChild(cell);
+      }
+    }
+
+    openCalBtn.addEventListener('click', function () {
+      calYear = today.getFullYear();
+      calMonthIdx = today.getMonth();
+      renderCalView();
+      calOverlay.classList.add('open');
+    });
+    calClose.addEventListener('click', function () { calOverlay.classList.remove('open'); });
+    calOverlay.addEventListener('mousedown', function (e) {
+      if (e.target === calOverlay) calOverlay.classList.remove('open');
+    });
+    calPrev.addEventListener('click', function () {
+      if (calAtCurrent()) return;
+      calMonthIdx--;
+      if (calMonthIdx < 0) { calMonthIdx = 11; calYear--; }
+      renderCalView();
+    });
+    calNext.addEventListener('click', function () {
+      calMonthIdx++;
+      if (calMonthIdx > 11) { calMonthIdx = 0; calYear++; }
+      renderCalView();
+    });
+  }
 }());
 </script>
 {% endblock js_footer %}

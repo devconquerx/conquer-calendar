@@ -58,3 +58,55 @@ class BloqueHorarioSemanal(models.Model):
 
     def __str__(self):
         return f"{self.get_dia_semana_display()} {self.hora_inicio:%H:%M}–{self.hora_fin:%H:%M}"
+
+
+class BloqueHorarioFecha(models.Model):
+    """
+    Horario específico para una fecha concreta. Cuando una fecha tiene al menos
+    un bloque, estos rangos SOBRESCRIBEN al horario semanal de ese día (igual
+    que el "date-specific hours" de Calendly).
+    """
+
+    host = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='bloques_disponibilidad_fecha',
+    )
+    fecha = models.DateField()
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'bloques_horarios_fecha'
+        ordering = ['host_id', 'fecha', 'hora_inicio']
+        verbose_name = 'bloque horario por fecha'
+        verbose_name_plural = 'bloques horarios por fecha'
+        indexes = [
+            models.Index(fields=['host', 'fecha'], name='ix_bloque_host_fecha'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['host', 'fecha', 'hora_inicio', 'hora_fin'],
+                name='uq_bloque_horario_host_fecha_rango',
+            ),
+            models.CheckConstraint(
+                check=Q(hora_fin__gt=F('hora_inicio')),
+                name='ck_bloque_fecha_hora_fin_mayor_inicio',
+            ),
+        ]
+
+    def clean(self):
+        if self.hora_fin and self.hora_inicio and self.hora_fin <= self.hora_inicio:
+            raise ValidationError({'hora_fin': 'La hora de fin debe ser posterior a la de inicio.'})
+        if self.host_id is None:
+            return
+        qs = BloqueHorarioFecha.objects.filter(
+            host_id=self.host_id, fecha=self.fecha
+        ).exclude(pk=self.pk)
+        if qs.filter(hora_inicio__lt=self.hora_fin, hora_fin__gt=self.hora_inicio).exists():
+            raise ValidationError('Este bloque se solapa con otro existente de la misma fecha.')
+
+    def __str__(self):
+        return f"{self.fecha:%Y-%m-%d} {self.hora_inicio:%H:%M}–{self.hora_fin:%H:%M}"

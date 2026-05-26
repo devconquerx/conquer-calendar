@@ -7,7 +7,7 @@ from django.db import connections, transaction
 from django.db.models import Count
 from django.utils import timezone
 
-from calendario.availability.models import BloqueHorarioSemanal
+from calendario.availability.models import BloqueHorarioSemanal, BloqueHorarioFecha
 from calendario.event_types.models import EventType, EventTypeXHost
 from calendario.google_calendar.services import (
     cancelar_evento_google, consultar_freebusy, crear_evento_google,
@@ -66,6 +66,14 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
     for b in BloqueHorarioSemanal.objects.filter(host=host):
         bloques_por_dia[b.dia_semana].append(b)
 
+    # Overrides por fecha: si una fecha tiene bloques específicos, estos
+    # sobrescriben el horario semanal de ese día (igual que Calendly).
+    overrides_por_fecha = defaultdict(list)
+    for b in BloqueHorarioFecha.objects.filter(
+        host=host, fecha__range=(fecha_desde, fecha_hasta)
+    ):
+        overrides_por_fecha[b.fecha].append(b)
+
     desde_utc = datetime.combine(fecha_desde, datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
     hasta_utc = datetime.combine(fecha_hasta + timedelta(days=1), datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
 
@@ -93,8 +101,11 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
     step = timedelta(minutes=duracion)
     fecha_actual = fecha_desde
     while fecha_actual <= fecha_hasta:
-        dia_semana = fecha_actual.weekday()
-        for bloque in bloques_por_dia[dia_semana]:
+        if fecha_actual in overrides_por_fecha:
+            bloques_del_dia = overrides_por_fecha[fecha_actual]
+        else:
+            bloques_del_dia = bloques_por_dia[fecha_actual.weekday()]
+        for bloque in bloques_del_dia:
             cursor_local = (
                 datetime.combine(fecha_actual, bloque.hora_inicio).replace(tzinfo=tz_host)
                 + timedelta(minutes=buffer_antes)
