@@ -1,5 +1,5 @@
 {% extends 'layout/panel.html' %}
-{% load i18n %}
+{% load i18n tz %}
 
 {% block title %}Dashboard · {% endblock %}
 
@@ -111,8 +111,24 @@
                     {% for r in proximas_reservas %}
                     <tr>
                         <td>
+                            {% timezone "UTC" %}
                             <span class="fw-semibold text-dark d-block">{{ r.inicio_utc|date:"d/m/Y" }}</span>
-                            <span class="text-muted fs-7">{{ r.inicio_utc|date:"H:i" }} UTC</span>
+                            <span class="text-muted fs-7">
+                                {{ r.inicio_utc|date:"H:i" }} UTC
+                                <button type="button"
+                                    class="btn btn-icon btn-sm btn-light-primary ms-1 p-0 tz-info-btn"
+                                    style="width:18px;height:18px;min-width:unset;"
+                                    data-inicio="{{ r.inicio_utc|date:'c' }}"
+                                    data-fin="{{ r.fin_utc|date:'c' }}"
+                                    data-tz-host="{{ r.host.timezone }}"
+                                    data-tz-inv="{{ r.timezone_invitado|default:r.host.timezone }}"
+                                    data-nombre-inv="{{ r.nombre_invitado }}"
+                                    data-nombre-host="{{ r.host.nombre_display }}"
+                                    title="Ver horas">
+                                    <i class="bi bi-chevron-up" style="font-size:10px;"></i>
+                                </button>
+                            </span>
+                            {% endtimezone %}
                         </td>
                         <td>
                             <span class="fw-semibold text-dark">{{ r.event_type.nombre }}</span>
@@ -140,5 +156,94 @@
     </div>
 </div>
 <!--end::Próximas reservas-->
+
+<!-- Modal horas por zona horaria -->
+<div class="modal fade" id="tzModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:340px;">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold fs-6">Horas de la reunión</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-4 pb-5">
+                <div class="d-flex flex-column gap-4">
+                    <div>
+                        <div class="text-muted fs-7 fw-semibold mb-1" id="tzLabelInv">Hora invitado</div>
+                        <div class="fw-bold text-dark fs-6" id="tzHoraInv">—</div>
+                        <div class="text-muted fs-7" id="tzFechaInv">—</div>
+                    </div>
+                    <div>
+                        <div class="text-muted fs-7 fw-semibold mb-1" id="tzLabelHost">Hora host</div>
+                        <div class="fw-bold text-dark fs-6" id="tzHoraHost">—</div>
+                        <div class="text-muted fs-7" id="tzFechaHost">—</div>
+                    </div>
+                    <div>
+                        <div class="text-muted fs-7 fw-semibold mb-1">Hora UTC</div>
+                        <div class="fw-bold text-dark fs-6" id="tzHoraUTC">—</div>
+                        <div class="text-muted fs-7" id="tzFechaUTC">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    function fmtHora(dt, tz) {
+        return new Intl.DateTimeFormat('es', {
+            hour: '2-digit', minute: '2-digit', timeZone: tz, hour12: false
+        }).format(dt);
+    }
+    function fmtFecha(dt, tz) {
+        return new Intl.DateTimeFormat('es', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+            timeZone: tz
+        }).format(dt);
+    }
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.tz-info-btn');
+        if (!btn) return;
+
+        const inicio = new Date(btn.dataset.inicio);
+        const fin    = new Date(btn.dataset.fin);
+        const tzHost = btn.dataset.tzHost;
+        const tzInv  = btn.dataset.tzInv;
+        const nombreInv  = btn.dataset.nombreInv;
+        const nombreHost = btn.dataset.nombreHost;
+
+        // Invitado
+        const tzInvReal = (tzInv && tzInv !== 'UTC') ? tzInv : null;
+        if (tzInvReal) {
+            document.getElementById('tzLabelInv').textContent = 'Hora invitado – ' + nombreInv + ' (' + tzInvReal + ')';
+            document.getElementById('tzHoraInv').textContent  = fmtHora(inicio, tzInvReal) + ' – ' + fmtHora(fin, tzInvReal);
+            document.getElementById('tzFechaInv').textContent = fmtFecha(inicio, tzInvReal);
+        } else {
+            document.getElementById('tzLabelInv').textContent = 'Hora invitado – ' + nombreInv;
+            document.getElementById('tzHoraInv').textContent  = 'Zona horaria no detectada';
+            document.getElementById('tzFechaInv').textContent = '';
+        }
+
+        // Host
+        document.getElementById('tzLabelHost').textContent = 'Hora host – ' + nombreHost + ' (' + tzHost + ')';
+        document.getElementById('tzHoraHost').textContent  = fmtHora(inicio, tzHost) + ' – ' + fmtHora(fin, tzHost);
+        document.getElementById('tzFechaHost').textContent = fmtFecha(inicio, tzHost);
+
+        // UTC
+        const h  = pad(inicio.getUTCHours()) + ':' + pad(inicio.getUTCMinutes());
+        const hf = pad(fin.getUTCHours())    + ':' + pad(fin.getUTCMinutes());
+        const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+        const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        document.getElementById('tzHoraUTC').textContent  = h + ' – ' + hf;
+        document.getElementById('tzFechaUTC').textContent =
+            dias[inicio.getUTCDay()] + ', ' + inicio.getUTCDate() +
+            ' de ' + meses[inicio.getUTCMonth()] + ' de ' + inicio.getUTCFullYear();
+
+        new bootstrap.Modal(document.getElementById('tzModal')).show();
+    });
+})();
+</script>
 
 {% endblock content %}

@@ -1,9 +1,10 @@
 {% extends 'layout/panel.html' %}
+{% load tz %}
 
 {% block title %}Detalle reserva · {% endblock %}
 
 {% block content %}
-<div class="card shadow-sm" style="max-width: 640px;">
+<div class="card shadow-sm" style="max-width: 960px;">
     <div class="card-header border-0 pt-6">
         <div class="card-title">
             <h3 class="fw-bold mb-0">Detalle de reserva</h3>
@@ -17,58 +18,149 @@
     <div class="card-body pt-4">
 
         <div class="row gy-4 mb-6">
-            <div class="col-sm-6">
+
+            <div class="col-sm-4">
                 <div class="text-muted fs-7 fw-semibold mb-1">Tipo de evento</div>
                 <div class="text-gray-800 fw-bold">{{ reserva.event_type.nombre }}</div>
             </div>
-            <div class="col-sm-6">
+            <div class="col-sm-4">
                 <div class="text-muted fs-7 fw-semibold mb-1">Estado</div>
-                <div>
-                    {% if reserva.estado == 'confirmada' %}
-                    <span class="badge badge-light-success fw-semibold">Confirmada</span>
-                    {% else %}
-                    <span class="badge badge-light-secondary fw-semibold">Cancelada</span>
-                    {% endif %}
-                </div>
+                {% if reserva.estado == 'confirmada' %}
+                <span class="badge badge-light-success fw-semibold">Confirmada</span>
+                {% else %}
+                <span class="badge badge-light-secondary fw-semibold">Cancelada</span>
+                {% endif %}
             </div>
-            <div class="col-sm-6">
+            {# Fila 1: Tipo evento | Estado | Google Meet #}
+            <div class="col-sm-4">
+                <div class="text-muted fs-7 fw-semibold mb-1">Google Meet</div>
+                {% if reserva.google_meet_url %}
+                <a href="{{ reserva.google_meet_url }}" target="_blank" rel="noopener" class="text-primary fw-semibold">
+                    <i class="bi bi-camera-video me-1"></i>Abrir Meet
+                </a>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+            </div>
+
+            {# Fila 2: Invitado | Email | Google Calendar #}
+            <div class="col-sm-4">
                 <div class="text-muted fs-7 fw-semibold mb-1">Invitado</div>
                 <div class="text-gray-800 fw-bold">{{ reserva.nombre_invitado }}</div>
             </div>
-            <div class="col-sm-6">
+            <div class="col-sm-4">
                 <div class="text-muted fs-7 fw-semibold mb-1">Email</div>
                 <div class="text-gray-600">{{ reserva.email_invitado }}</div>
             </div>
-            <div class="col-sm-6">
+            <div class="col-sm-4">
+                <div class="text-muted fs-7 fw-semibold mb-1">Google Calendar</div>
+                {% if reserva.google_event_url %}
+                <a href="{{ reserva.google_event_url }}" target="_blank" rel="noopener" class="text-primary fw-semibold">
+                    <i class="bi bi-calendar-event me-1"></i>Abrir en GCal
+                </a>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+            </div>
+
+            {# Fila 3: Hora invitado | Hora host | Sync Google Calendar #}
+            <div class="col-sm-4">
+                <div class="text-muted fs-7 fw-semibold mb-1">Hora invitado</div>
+                <div class="text-gray-800 fw-bold">
+                    {{ rango_invitado.hora_inicio }} – {{ rango_invitado.hora_fin }}
+                    <span class="text-muted fw-normal">({{ rango_invitado.tz }})</span>
+                </div>
+                <div class="text-gray-600 fs-7 mt-1">{{ rango_invitado.fecha }}</div>
+            </div>
+            <div class="col-sm-4">
+                <div class="text-muted fs-7 fw-semibold mb-1">Hora host</div>
+                <div class="text-gray-800 fw-bold">
+                    {{ rango_host.hora_inicio }} – {{ rango_host.hora_fin }}
+                    <span class="text-muted fw-normal">({{ rango_host.tz }})</span>
+                </div>
+                <div class="text-gray-600 fs-7 mt-1">{{ rango_host.fecha }}</div>
+            </div>
+            <div class="col-sm-4">
+                <div class="text-muted fs-7 fw-semibold mb-1">Sync Google Calendar</div>
+                {% if reserva.google_sync_estado == 'sincronizado' %}
+                <span class="badge badge-light-success fw-semibold">
+                    <i class="bi bi-check-circle me-1"></i>Sincronizado
+                </span>
+                {% elif reserva.google_sync_estado == 'error' %}
+                <span class="badge badge-light-danger fw-semibold">
+                    <i class="bi bi-exclamation-circle me-1"></i>Error sync
+                </span>
+                {% else %}
+                <span class="badge badge-light-warning fw-semibold">
+                    <i class="bi bi-clock me-1"></i>Pendiente
+                </span>
+                {% endif %}
+                {% if gcal_utc %}
+                <div class="mt-2 fs-7 text-gray-600">
+                    <span class="fw-semibold">UTC en GCal:</span>
+                    {{ gcal_utc.inicio }} – {{ gcal_utc.fin }}
+                    <span class="text-muted">({{ gcal_utc.fecha }})</span>
+                    {% if gcal_coincide %}
+                    <i class="bi bi-check2 text-success ms-1" title="Coincide con la BD"></i>
+                    {% else %}
+                    <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="¡Difiere de la BD!"></i>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-sm-4">
+                <div class="text-muted fs-7 fw-semibold mb-1">Hora UTC</div>
+                {% timezone "UTC" %}
+                <div class="text-gray-600">
+                    {{ reserva.inicio_utc|date:"H:i" }} – {{ reserva.fin_utc|date:"H:i" }}
+                </div>
+                <div class="text-gray-600 fs-7 mt-1">{{ reserva.inicio_utc|date:"d/m/Y" }}</div>
+                {% endtimezone %}
+            </div>
+            <div class="col-sm-4">
+                <div class="text-muted fs-7 fw-semibold mb-1">Creada</div>
+                <div class="text-gray-600">{{ reserva.fecha_creacion|date:"d/m/Y H:i" }}</div>
+            </div>
+            <div class="col-sm-4"></div>{# spacer #}
+
+            <div class="col-sm-4">
                 <div class="text-muted fs-7 fw-semibold mb-1">Teléfono</div>
                 <div class="text-gray-600">
                     {% if reserva.telefono_invitado %}{{ reserva.telefono_invitado }}{% else %}<span class="text-muted">—</span>{% endif %}
                 </div>
             </div>
-            <div class="col-sm-6">
-                <div class="text-muted fs-7 fw-semibold mb-1">Inicio (UTC)</div>
-                <div class="text-gray-800 fw-bold">{{ reserva.inicio_utc|date:"d/m/Y H:i" }}</div>
+            <div class="col-sm-4">
+                <div class="text-muted fs-7 fw-semibold mb-1">Enlace del lead</div>
+                <a href="{% url 'public_token:confirmacion' token=reserva.confirmacion_token %}"
+                   target="_blank" rel="noopener" class="text-primary fw-semibold">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Ver enlace
+                </a>
             </div>
-            <div class="col-sm-6">
-                <div class="text-muted fs-7 fw-semibold mb-1">Fin (UTC)</div>
-                <div class="text-gray-600">{{ reserva.fin_utc|date:"d/m/Y H:i" }}</div>
-            </div>
-            <div class="col-sm-6">
-                <div class="text-muted fs-7 fw-semibold mb-1">Creada</div>
-                <div class="text-gray-600">{{ reserva.fecha_creacion|date:"d/m/Y H:i" }}</div>
-            </div>
+            <div class="col-sm-4"></div>{# spacer #}
+
             <div class="col-sm-12">
                 <div class="text-muted fs-7 fw-semibold mb-1">Notas</div>
                 <div class="text-gray-600">
                     {% if reserva.notas %}{{ reserva.notas }}{% else %}<span class="text-muted">—</span>{% endif %}
                 </div>
             </div>
+
         </div>
 
         {% if 'reservas.cancelar' in PERMISOS_USUARIO %}
-        <div class="border-top pt-5">
+        <div class="border-top pt-5 d-flex gap-3">
+            {% if reserva.estado == 'confirmada' %}
+            <form method="post" action="{% url 'panel_reservas:reserva_cancelar' reserva.pk %}"
+                  onsubmit="return confirm('¿Cancelar esta reserva? Se cancelará también en Google Calendar pero quedará el registro.')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar reserva
+                </button>
+            </form>
+            {% endif %}
             <form method="post" action="{% url 'panel_reservas:reserva_eliminar' reserva.pk %}"
-                  onsubmit="return confirm('¿Eliminar esta reserva? Se borrará también de Google Calendar.')">
+                  onsubmit="return confirm('¿Eliminar esta reserva? Se borrará por completo de la BD y de Google Calendar.')">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger">
                     <i class="bi bi-trash me-1"></i>Eliminar reserva

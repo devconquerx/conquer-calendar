@@ -323,6 +323,7 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
 def cancelar_reserva(reserva):
     """
     Cancela una reserva idempotente. Si ya está cancelada, no hace nada.
+    También cancela el evento en Google Calendar.
     """
     if reserva.estado == Reserva.Estado.CANCELADA:
         return reserva
@@ -331,6 +332,18 @@ def cancelar_reserva(reserva):
         reserva.save(update_fields=['estado', 'fecha_actualizacion'])
         if reserva.google_event_id:
             transaction.on_commit(lambda: cancelar_evento_google(reserva.pk))
+    return reserva
+
+
+def cancelar_reserva_solo_bd(reserva):
+    """
+    Marca la reserva como cancelada en BD únicamente.
+    El evento de Google Calendar queda intacto.
+    """
+    if reserva.estado == Reserva.Estado.CANCELADA:
+        return reserva
+    reserva.estado = Reserva.Estado.CANCELADA
+    reserva.save(update_fields=['estado', 'fecha_actualizacion'])
     return reserva
 
 

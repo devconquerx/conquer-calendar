@@ -178,7 +178,7 @@ def crear_evento_google(reserva_pk):
                 },
                 'attendees': [
                     {'email': host_email, 'displayName': reserva.host.nombre_display(), 'responseStatus': 'accepted'},
-                    {'email': reserva.email_invitado, 'displayName': reserva.nombre_invitado},
+                    {'email': reserva.email_invitado, 'displayName': reserva.nombre_invitado, 'responseStatus': 'accepted'},
                 ],
                 'conferenceData': {
                     'createRequest': {

@@ -1,3 +1,4 @@
+import base64
 import uuid
 
 from django.conf import settings
@@ -75,6 +76,19 @@ class Reserva(models.Model):
                 name='ix_reserva_host_estado_inicio',
             ),
         ]
+
+    @property
+    def google_event_url(self):
+        """URL directa al evento en Google Calendar del host."""
+        if not self.google_event_id:
+            return ''
+        try:
+            eid = base64.b64encode(
+                f"{self.google_event_id} {self.host.email}".encode()
+            ).decode().rstrip('=')
+            return f"https://calendar.google.com/calendar/event?eid={eid}"
+        except Exception:
+            return ''
 
     def __str__(self):
         return f"{self.event_type.nombre} — {self.nombre_invitado} @ {self.inicio_utc:%Y-%m-%d %H:%M UTC}"

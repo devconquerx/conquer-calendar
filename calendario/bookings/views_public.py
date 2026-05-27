@@ -356,8 +356,8 @@ class ConfirmacionView(View):
             'reserva': reserva,
             'inicio_local': inicio_local,
             'fin_local': fin_local,
-            'inicio_hora_str': inicio_local.strftime('%-H:%M'),
-            'fin_hora_str': fin_local.strftime('%-H:%M'),
+            'inicio_hora_str': f"{inicio_local.hour}:{inicio_local.minute:02d}",
+            'fin_hora_str':    f"{fin_local.hour}:{fin_local.minute:02d}",
             'inicio_fecha_str': (
                 f"{_DIAS_ES[inicio_local.weekday()]}, "
                 f"{inicio_local.day} de {_MESES_ES[inicio_local.month - 1]} "

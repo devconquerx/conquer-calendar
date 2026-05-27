@@ -7,4 +7,5 @@ urlpatterns = [
     path('todas/', v.ReservaAdminListView.as_view(), name='reserva_admin_list'),
     path('<int:pk>/', v.ReservaDetailView.as_view(), name='reserva_detail'),
     path('<int:pk>/eliminar/', v.ReservaEliminarView.as_view(), name='reserva_eliminar'),
+    path('<int:pk>/cancelar/', v.ReservaCancelarView.as_view(), name='reserva_cancelar'),
 ]

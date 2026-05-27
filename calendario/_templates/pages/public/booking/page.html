@@ -922,7 +922,16 @@ document.querySelector('.bk-card').classList.remove('has-slots');
   }
 
   function syncHidden() {
-    var num = numberEl.value.trim();
+    var num = numberEl.value.trim()
+      .replace(/[\s\-().]/g, '');  // elimina separadores comunes
+
+    // Si el lead escribió el código de país en el campo (+34... ó 34...)
+    var dialDigits = selectedDial.replace('+', ''); // "+34" → "34"
+    if (num.startsWith('+')) num = num.slice(1);    // "+34679..." → "34679..."
+    if (num.startsWith(dialDigits)) num = num.slice(dialDigits.length); // "34679..." → "679..."
+
+    num = num.replace(/^0+/, ''); // quita el 0 de marcación nacional (0424… → 424…)
+
     hiddenEl.value = num ? selectedDial + ' ' + num : '';
   }
 
