@@ -145,7 +145,7 @@ class SlotsMesJSONView(View):
         tz_host = ZoneInfo(host.timezone)
         tz_visitante = _tz_visitante(request, tz_host)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=60)
+        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
         data = _calcular_slots_mes_json(
             event_type, tz_visitante, hoy_local, max_fecha,
             request.GET.get('mes', ''),
@@ -160,7 +160,7 @@ class SlotsMesJSONTeamView(View):
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=60)
+        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
         data = _calcular_slots_mes_json(
             event_type, tz_visitante, hoy_local, max_fecha,
             request.GET.get('mes', ''),
@@ -177,7 +177,7 @@ class BookingPageView(View):
         tz_host = ZoneInfo(host.timezone)
         tz_visitante = _tz_visitante(request, tz_host)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=60)
+        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
 
         fecha_str = request.GET.get('fecha', '')
         try:
@@ -250,7 +250,7 @@ class BookingFormView(View):
         tz_host = ZoneInfo(host.timezone)
         tz_visitante = _tz_visitante(request, tz_host)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=60)
+        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
         fecha = inicio.astimezone(tz_visitante).date() if inicio else hoy_local
         mes_base = fecha.replace(day=1)
         slots = _slots_dia_visitante(event_type, fecha, tz_visitante)
@@ -302,7 +302,7 @@ class TeamBookingPageView(View):
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=60)
+        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
 
         fecha_str = request.GET.get('fecha', '')
         try:
@@ -374,7 +374,7 @@ class TeamBookingFormView(View):
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=60)
+        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
         fecha = inicio.astimezone(tz_visitante).date() if inicio else hoy_local
         mes_base = fecha.replace(day=1)
         slots = _slots_dia_visitante(event_type, fecha, tz_visitante)

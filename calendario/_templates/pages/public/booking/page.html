@@ -932,17 +932,21 @@ document.querySelector('.bk-card').classList.remove('has-slots');
   // Day click
   document.addEventListener('click', function (e) {
     var dayEl = e.target.closest('.bk-day.avail[data-fecha]');
-    if (!dayEl || !cache[mesActual]) return;
+    if (!dayEl) return;
     e.preventDefault();
     fechaSel = dayEl.dataset.fecha;
     document.querySelectorAll('.bk-day.avail').forEach(function (el) {
       el.classList.toggle('sel', el.dataset.fecha === fechaSel);
     });
-    renderSlots(fechaSel, cache[mesActual]);
     var p = new URLSearchParams(window.location.search);
     p.set('fecha', fechaSel);
     p.set('mes', mesActual + '-01');
     history.pushState(null, '', window.location.pathname + '?' + p.toString());
+    if (cache[mesActual]) {
+      renderSlots(fechaSel, cache[mesActual]);
+    } else {
+      fetchMes(mesActual, function (data) { renderSlots(fechaSel, data); });
+    }
   });
 
   // Month nav click
