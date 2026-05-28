@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from django.core.cache import cache
 from django.db import connections, transaction
 from django.db.models import Count
 from django.utils import timezone
@@ -190,6 +191,37 @@ def calcular_slots(event_type, fecha_desde, fecha_hasta):
     return sorted(slots_set)
 
 
+_SLOTS_TTL = 45
+
+
+def invalidar_slots(event_type_id):
+    key_gen = f'slots_gen:{event_type_id}'
+    try:
+        cache.incr(key_gen)
+    except ValueError:
+        cache.set(key_gen, 1, timeout=None)
+
+
+def invalidar_slots_por_host(host_id):
+    et_ids = (EventTypeXHost.objects
+              .filter(host_id=host_id)
+              .values_list('event_type_id', flat=True))
+    for et_id in et_ids:
+        invalidar_slots(et_id)
+
+
+def calcular_slots_cacheado(event_type, fecha_desde, fecha_hasta):
+    key_gen = f'slots_gen:{event_type.pk}'
+    gen = cache.get(key_gen, default=0)
+    key = f'slots:{event_type.pk}:{gen}:{fecha_desde.isoformat()}:{fecha_hasta.isoformat()}'
+    cached = cache.get(key)
+    if cached is not None:
+        return [datetime.fromisoformat(s) for s in cached]
+    slots = calcular_slots(event_type, fecha_desde, fecha_hasta)
+    cache.set(key, [s.isoformat() for s in slots], timeout=_SLOTS_TTL)
+    return slots
+
+
 def _candidatos_para_slot(event_type, inicio_utc):
     """
     Hosts del pool que tienen inicio_utc disponible (dentro de su disponibilidad
@@ -281,6 +313,8 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
             notas=notas.strip(),
             timezone_invitado=timezone_invitado,
         )
+        et_id = et.pk
+        transaction.on_commit(lambda: invalidar_slots(et_id))
         transaction.on_commit(lambda: crear_evento_google(reserva.pk))
         if et.notificar_crm:
             transaction.on_commit(lambda: notificar_crm(reserva.pk))
@@ -304,6 +338,8 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
         if vieja and vieja.estado == Reserva.Estado.CONFIRMADA:
             vieja.estado = Reserva.Estado.CANCELADA
             vieja.save(update_fields=['estado', 'fecha_actualizacion'])
+            vieja_et_id = vieja.event_type_id
+            transaction.on_commit(lambda: invalidar_slots(vieja_et_id))
             if vieja.google_event_id:
                 vieja_pk = vieja.pk
                 transaction.on_commit(lambda: cancelar_evento_google(vieja_pk))
@@ -330,6 +366,8 @@ def cancelar_reserva(reserva):
     with transaction.atomic():
         reserva.estado = Reserva.Estado.CANCELADA
         reserva.save(update_fields=['estado', 'fecha_actualizacion'])
+        et_id = reserva.event_type_id
+        transaction.on_commit(lambda: invalidar_slots(et_id))
         if reserva.google_event_id:
             transaction.on_commit(lambda: cancelar_evento_google(reserva.pk))
     return reserva
