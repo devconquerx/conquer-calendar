@@ -466,7 +466,7 @@ body { background: var(--bk-bg) !important; }
 
             <div class="bk-month-nav">
               {% if mes_anterior %}
-              <a href="?mes={{ mes_anterior|date:'Y-m-d' }}{% if fecha_iso %}&fecha={{ fecha_iso }}{% endif %}&tz={{ tz_visitante }}" class="bk-nav-btn">‹</a>
+              <a href="?mes={{ mes_anterior|date:'Y-m-d' }}{% if fecha_iso %}&fecha={{ fecha_iso }}{% endif %}&tz={{ tz_visitante }}" class="bk-nav-btn" data-mes="{{ mes_anterior|date:'Y-m' }}">‹</a>
               {% else %}
               <span class="bk-nav-btn off">‹</span>
               {% endif %}
@@ -474,7 +474,7 @@ body { background: var(--bk-bg) !important; }
               <span class="bk-month-label">{{ mes_base|date:"F Y" }}</span>
 
               {% if mes_siguiente %}
-              <a href="?mes={{ mes_siguiente|date:'Y-m-d' }}{% if fecha_iso %}&fecha={{ fecha_iso }}{% endif %}&tz={{ tz_visitante }}" class="bk-nav-btn">›</a>
+              <a href="?mes={{ mes_siguiente|date:'Y-m-d' }}{% if fecha_iso %}&fecha={{ fecha_iso }}{% endif %}&tz={{ tz_visitante }}" class="bk-nav-btn" data-mes="{{ mes_siguiente|date:'Y-m' }}">›</a>
               {% else %}
               <span class="bk-nav-btn off">›</span>
               {% endif %}
@@ -495,7 +495,8 @@ body { background: var(--bk-bg) !important; }
                       <span class="bk-day out">{{ dia.fecha.day }}</span>
                     {% elif dia.clickable %}
                       <a href="?fecha={{ dia.fecha|date:'Y-m-d' }}&mes={{ mes_base|date:'Y-m-d' }}&tz={{ tz_visitante }}"
-                         class="bk-day avail{% if dia.es_seleccionada %} sel{% endif %}{% if dia.es_hoy %} today{% endif %}">
+                         class="bk-day avail{% if dia.es_seleccionada %} sel{% endif %}{% if dia.es_hoy %} today{% endif %}"
+                         data-fecha="{{ dia.fecha|date:'Y-m-d' }}">
                         {{ dia.fecha.day }}
                       </a>
                     {% else %}
@@ -539,6 +540,7 @@ body { background: var(--bk-bg) !important; }
               <button type="button" class="bk-slot"
                       data-utc="{{ slot_utc }}"
                       data-label="{{ slot_local }} h"
+                      data-fecha-display="{{ fecha|date:'j \d\e F' }}"
                       onclick="pickSlot(this)">
                 {{ slot_local }} h
               </button>
@@ -715,9 +717,10 @@ body { background: var(--bk-bg) !important; }
 
 function pickSlot(el) {
   document.getElementById('inicio_utc').value = el.dataset.utc;
+  var fechaLabel = el.dataset.fechaDisplay || '{{ fecha|date:"j \\d\\e F" }}';
   document.getElementById('slot-badge').innerHTML =
     '🕐 <strong>' + el.dataset.label + '</strong>'
-    + ' &mdash; {{ fecha|date:"j \\d\\e F" }}'
+    + ' &mdash; ' + fechaLabel
     + ' &middot; {{ event_type.duracion_minutos }} min';
   document.getElementById('step-date').style.display = 'none';
   document.getElementById('step-form').style.display = 'flex';
@@ -744,6 +747,239 @@ document.querySelector('.bk-card').classList.remove('has-slots');
   card.classList.add('has-slots');
 })();
 {% endif %}
+
+/* ─────────────────────────────────────────────
+   SLOTS MES — fetch + navegación local (Paso 4)
+───────────────────────────────────────────── */
+(function () {
+  if (window.location.pathname.endsWith('/reservar/')) return;
+
+  {% if is_team %}
+  var SLOTS_URL = '{% url "public_team:slots_mes_json" slug_equipo=event_type.slug_equipo %}';
+  {% else %}
+  var SLOTS_URL = '{% url "public_booking:slots_mes_json" user_slug=host.slug event_type_slug=event_type.slug %}';
+  {% endif %}
+
+  var SP  = new URLSearchParams(window.location.search);
+  var TZ  = SP.get('tz') || '{{ tz_visitante }}';
+  var HOY = '{{ hoy|date:"Y-m-d" }}';
+
+  var cache     = {};
+  var mesActual = (SP.get('mes') || HOY).slice(0, 7);
+  var fechaSel  = SP.get('fecha') || null;
+
+  var MESES_CAP = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var DIAS_ES   = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var MESES_ES  = ['enero','febrero','marzo','abril','mayo','junio',
+                   'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function fechaDisplay(ds) {
+    var p = ds.split('-');
+    return parseInt(p[2], 10) + ' de ' + MESES_ES[parseInt(p[1], 10) - 1];
+  }
+  function fechaTitle(ds) {
+    var d = new Date(ds + 'T12:00:00');
+    var dow = DIAS_ES[d.getDay()];
+    return dow.charAt(0).toUpperCase() + dow.slice(1) + ', ' + fechaDisplay(ds);
+  }
+
+  function fetchMes(mes, cb) {
+    if (cache[mes]) { cb(cache[mes]); return; }
+    fetch(SLOTS_URL + '?mes=' + mes + '&tz=' + encodeURIComponent(TZ))
+      .then(function (r) { return r.json(); })
+      .then(function (d) { cache[mes] = d; cb(d); })
+      .catch(function () {});
+  }
+
+  function renderSlots(fecha, data) {
+    var card      = document.querySelector('.bk-card');
+    var dateInner = document.querySelector('.bk-date-inner');
+    if (!dateInner) return;
+    var existing = dateInner.querySelector('.bk-slots-col');
+
+    if (!fecha || !data) {
+      if (existing) existing.remove();
+      if (card) card.classList.remove('has-slots');
+      return;
+    }
+
+    var slots = (data.dias && data.dias[fecha]) ? data.dias[fecha] : [];
+    var utcs  = (data.slots_utc && data.slots_utc[fecha]) ? data.slots_utc[fecha] : [];
+    var fd    = fechaDisplay(fecha);
+    var ft    = fechaTitle(fecha);
+
+    var col = existing || document.createElement('div');
+    col.className = 'bk-slots-col';
+
+    // Title
+    var titleEl = col.querySelector('.bk-slots-title');
+    if (!titleEl) {
+      titleEl = document.createElement('p');
+      titleEl.className = 'bk-slots-title';
+      col.insertBefore(titleEl, col.firstChild);
+    }
+    titleEl.textContent = ft;
+
+    // Body
+    var body = col.querySelector('.bk-slots-scroll, .bk-empty');
+    if (body) body.remove();
+
+    if (slots.length) {
+      var scroll = document.createElement('div');
+      scroll.className = 'bk-slots-scroll';
+      slots.forEach(function (hora, i) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'bk-slot';
+        btn.dataset.utc          = utcs[i] || '';
+        btn.dataset.label        = hora + ' h';
+        btn.dataset.fechaDisplay = fd;
+        btn.textContent = hora + ' h';
+        btn.addEventListener('click', function () { pickSlot(this); });
+        scroll.appendChild(btn);
+      });
+      col.appendChild(scroll);
+    } else {
+      var empty = document.createElement('p');
+      empty.className = 'bk-empty';
+      empty.textContent = 'Sin horarios para este día.';
+      col.appendChild(empty);
+    }
+
+    if (!existing) dateInner.appendChild(col);
+
+    if (card) {
+      card.classList.remove('has-slots');
+      void card.offsetWidth;
+      card.classList.add('has-slots');
+    }
+  }
+
+  function buildGrid(data, fechaSelArg) {
+    var mes    = data.mes;
+    var year   = parseInt(mes.slice(0, 4), 10);
+    var month  = parseInt(mes.slice(5, 7), 10);
+    var maxF   = data.max_fecha;
+
+    // Label
+    var label = document.querySelector('.bk-month-label');
+    if (label) label.textContent = MESES_CAP[month - 1] + ' ' + year;
+
+    // Nav buttons
+    var navBtns = document.querySelectorAll('.bk-month-nav .bk-nav-btn');
+    function setNav(btn, mesVal) {
+      if (!btn) return;
+      if (mesVal) {
+        btn.classList.remove('off');
+        btn.dataset.mes = mesVal.slice(0, 7);
+      } else {
+        btn.classList.add('off');
+        delete btn.dataset.mes;
+      }
+    }
+    setNav(navBtns[0], data.mes_anterior);
+    setNav(navBtns[navBtns.length - 1], data.mes_siguiente);
+
+    // Grid
+    var tbody = document.querySelector('.bk-grid tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    var firstDow = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+    var leadDays = firstDow === 0 ? 6 : firstDow - 1;
+    var daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    var numRows = Math.ceil((leadDays + daysInMonth) / 7);
+    var cur = new Date(Date.UTC(year, month - 1, 1 - leadDays));
+
+    for (var w = 0; w < numRows; w++) {
+      var tr = document.createElement('tr');
+      for (var c = 0; c < 7; c++) {
+        var td  = document.createElement('td');
+        var dy  = cur.getUTCFullYear(), dm = cur.getUTCMonth() + 1, dd = cur.getUTCDate();
+        var ds  = dy + '-' + pad(dm) + '-' + pad(dd);
+        var inM = dm === month;
+        var hasS = !!(data.dias && data.dias[ds] && data.dias[ds].length);
+        var ok   = inM && hasS && ds >= HOY && ds <= maxF;
+        var isSel = ds === fechaSelArg, isToday = ds === HOY;
+
+        var el;
+        if (!inM) {
+          el = document.createElement('span');
+          el.className = 'bk-day out';
+          el.textContent = dd;
+        } else if (ok) {
+          el = document.createElement('a');
+          el.className = 'bk-day avail' + (isSel ? ' sel' : '') + (isToday ? ' today' : '');
+          el.href = '?fecha=' + ds + '&mes=' + mes + '&tz=' + encodeURIComponent(TZ);
+          el.dataset.fecha = ds;
+          el.textContent = dd;
+        } else {
+          el = document.createElement('span');
+          el.className = 'bk-day' + (isToday ? ' today' : '');
+          el.textContent = dd;
+        }
+        td.appendChild(el);
+        tr.appendChild(td);
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+      tbody.appendChild(tr);
+    }
+  }
+
+  // Day click
+  document.addEventListener('click', function (e) {
+    var dayEl = e.target.closest('.bk-day.avail[data-fecha]');
+    if (!dayEl || !cache[mesActual]) return;
+    e.preventDefault();
+    fechaSel = dayEl.dataset.fecha;
+    document.querySelectorAll('.bk-day.avail').forEach(function (el) {
+      el.classList.toggle('sel', el.dataset.fecha === fechaSel);
+    });
+    renderSlots(fechaSel, cache[mesActual]);
+    var p = new URLSearchParams(window.location.search);
+    p.set('fecha', fechaSel);
+    p.set('mes', mesActual + '-01');
+    history.pushState(null, '', window.location.pathname + '?' + p.toString());
+  });
+
+  // Month nav click
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.bk-nav-btn:not(.off)[data-mes]');
+    if (!btn) return;
+    var nuevoMes = btn.dataset.mes;
+    if (!nuevoMes) return;
+    e.preventDefault();
+    mesActual = nuevoMes;
+    fechaSel  = null;
+    fetchMes(nuevoMes, function (data) {
+      buildGrid(data, null);
+      renderSlots(null, null);
+    });
+    var p = new URLSearchParams(window.location.search);
+    p.set('mes', nuevoMes + '-01');
+    p.delete('fecha');
+    history.pushState(null, '', window.location.pathname + '?' + p.toString());
+  });
+
+  // Initial fetch — warm cache; update nav data-mes for JS interception
+  fetchMes(mesActual, function (data) {
+    var navBtns = document.querySelectorAll('.bk-month-nav .bk-nav-btn');
+    if (navBtns[0] && !navBtns[0].classList.contains('off') && data.mes_anterior) {
+      navBtns[0].dataset.mes = data.mes_anterior.slice(0, 7);
+    }
+    var last = navBtns[navBtns.length - 1];
+    if (last && !last.classList.contains('off') && data.mes_siguiente) {
+      last.dataset.mes = data.mes_siguiente.slice(0, 7);
+    }
+    // If a date is pre-selected from URL but no server-side slots column exists, render it
+    if (fechaSel && !document.querySelector('.bk-slots-col')) {
+      renderSlots(fechaSel, data);
+    }
+  });
+})();
 
 /* ─────────────────────────────────────────────
    PHONE PICKER

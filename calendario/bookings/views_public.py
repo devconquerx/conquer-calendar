@@ -113,21 +113,23 @@ def _calcular_slots_mes_json(event_type, tz_visitante, hoy_local, max_fecha, mes
     mes_siguiente = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1)
 
     dias = {}
+    utcs = {}
     if desde <= hasta:
-        slots_utc = calcular_slots_cacheado(
+        slots_mes = calcular_slots_cacheado(
             event_type,
             desde - timedelta(days=1),
             hasta + timedelta(days=1),
         )
-        for s in slots_utc:
+        for s in slots_mes:
             d = s.astimezone(tz_visitante).date()
             if desde <= d <= hasta:
-                dias.setdefault(d.isoformat(), []).append(
-                    s.astimezone(tz_visitante).strftime('%H:%M')
-                )
+                key = d.isoformat()
+                dias.setdefault(key, []).append(s.astimezone(tz_visitante).strftime('%H:%M'))
+                utcs.setdefault(key, []).append(s.isoformat())
 
     return {
         'dias': dias,
+        'slots_utc': utcs,
         'mes': mes_base.isoformat(),
         'mes_anterior': mes_anterior.isoformat() if mes_anterior >= mes_min else None,
         'mes_siguiente': mes_siguiente.isoformat() if mes_siguiente <= mes_max else None,
