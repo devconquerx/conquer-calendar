@@ -38,9 +38,11 @@ class EventTypeForm(forms.ModelForm):
         required=False, min_value=0, initial=0,
         label='Buffer después (min)',
     )
-    aviso_minimo_horas = forms.IntegerField(
-        required=False, min_value=0, initial=0,
-        label='Aviso mínimo (horas)',
+    aviso_minimo_minutos = forms.TypedChoiceField(
+        coerce=int,
+        choices=EventType.AVISO_MINIMO_CHOICES,
+        initial=0,
+        label='Aviso mínimo',
     )
     aviso_maximo_dias = forms.IntegerField(
         required=False, min_value=1, max_value=365, initial=60,
@@ -62,7 +64,7 @@ class EventTypeForm(forms.ModelForm):
         fields = [
             'nombre', 'descripcion', 'duracion_minutos',
             'buffer_antes_minutos', 'buffer_despues_minutos',
-            'aviso_minimo_horas', 'aviso_maximo_dias', 'activo',
+            'aviso_minimo_minutos', 'aviso_maximo_dias', 'activo',
             'notificar_crm', 'unico_por_invitado',
         ]
         widgets = {'descripcion': forms.Textarea(attrs={'rows': 3})}
@@ -91,8 +93,8 @@ class EventTypeForm(forms.ModelForm):
         v = self.cleaned_data.get('buffer_despues_minutos')
         return v if v is not None else 0
 
-    def clean_aviso_minimo_horas(self):
-        v = self.cleaned_data.get('aviso_minimo_horas')
+    def clean_aviso_minimo_minutos(self):
+        v = self.cleaned_data.get('aviso_minimo_minutos')
         return v if v is not None else 0
 
     def clean_aviso_maximo_dias(self):

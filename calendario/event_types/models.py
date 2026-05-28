@@ -17,9 +17,22 @@ class EventType(models.Model):
     duracion_minutos = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(5), MaxValueValidator(480)],
     )
+    AVISO_MINIMO_CHOICES = [
+        (0,   'Sin aviso mínimo'),
+        (15,  '15 minutos'),
+        (30,  '30 minutos'),
+        (45,  '45 minutos'),
+        (60,  '1 hora'),
+        (120, '2 horas'),
+        (180, '3 horas'),
+    ]
+
     buffer_antes_minutos = models.PositiveSmallIntegerField(default=0)
     buffer_despues_minutos = models.PositiveSmallIntegerField(default=0)
-    aviso_minimo_horas = models.PositiveSmallIntegerField(default=0)
+    aviso_minimo_minutos = models.PositiveSmallIntegerField(
+        default=0,
+        choices=AVISO_MINIMO_CHOICES,
+    )
     aviso_maximo_dias = models.PositiveSmallIntegerField(
         default=60,
         validators=[MinValueValidator(1), MaxValueValidator(365)],

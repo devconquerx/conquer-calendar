@@ -49,14 +49,14 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
     duracion = event_type.duracion_minutos
     buffer_antes = event_type.buffer_antes_minutos
     buffer_despues = event_type.buffer_despues_minutos
-    aviso = event_type.aviso_minimo_horas
+    aviso = event_type.aviso_minimo_minutos
 
     fecha_hasta = min(fecha_hasta, fecha_desde + timedelta(days=MAX_VENTANA_DIAS))
     if fecha_hasta < fecha_desde:
         return []
 
     ahora_utc = timezone.now()
-    minimo = ahora_utc + timedelta(hours=aviso)
+    minimo = ahora_utc + timedelta(minutes=aviso)
     maximo = ahora_utc + timedelta(days=event_type.aviso_maximo_dias)
     # Clamp fecha_hasta al día donde aún caben slots dentro del rolling window.
     fecha_hasta = min(fecha_hasta, maximo.astimezone(tz_host).date())

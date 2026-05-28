@@ -160,12 +160,15 @@
             <!--begin::Row aviso + rango + activo-->
             <div class="row mb-7">
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold required">Aviso mínimo (horas)</label>
-                    <input type="number" name="aviso_minimo_horas" min="0"
-                           class="form-control form-control-lg{% if form.aviso_minimo_horas.errors %} is-invalid{% endif %}"
-                           value="{{ form.aviso_minimo_horas.value|default_if_none:'' }}" />
-                    {% if form.aviso_minimo_horas.errors %}
-                    <div class="invalid-feedback">{{ form.aviso_minimo_horas.errors|join:", " }}</div>
+                    <label class="form-label fw-semibold">Aviso mínimo</label>
+                    <select name="aviso_minimo_minutos"
+                            class="form-select form-select-lg{% if form.aviso_minimo_minutos.errors %} is-invalid{% endif %}">
+                      {% for val, label in form.aviso_minimo_minutos.field.choices %}
+                      <option value="{{ val }}"{% if form.aviso_minimo_minutos.value|stringformat:"s" == val|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                    {% if form.aviso_minimo_minutos.errors %}
+                    <div class="invalid-feedback">{{ form.aviso_minimo_minutos.errors|join:", " }}</div>
                     {% endif %}
                 </div>
                 <div class="col-md-4">
