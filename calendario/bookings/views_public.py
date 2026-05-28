@@ -2,6 +2,7 @@ import calendar as cal_module
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.formats import date_format
 from django.views import View
@@ -11,7 +12,7 @@ from calendario.users.models import User
 from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .forms import BookingForm
 from .models import Reserva
-from .services import calcular_slots, cancelar_reserva, crear_reserva, reemplazar_reserva
+from .services import calcular_slots, calcular_slots_cacheado, cancelar_reserva, crear_reserva, reemplazar_reserva
 
 
 def _tz_visitante(request, tz_fallback):
@@ -90,6 +91,79 @@ def _build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha
         'mes_anterior': mes_anterior if mes_anterior >= mes_min else None,
         'mes_siguiente': mes_siguiente if mes_siguiente <= mes_max else None,
     }
+
+
+def _calcular_slots_mes_json(event_type, tz_visitante, hoy_local, max_fecha, mes_str):
+    try:
+        mes_base = date.fromisoformat(mes_str + '-01') if mes_str else None
+    except ValueError:
+        mes_base = None
+    if not mes_base:
+        mes_base = hoy_local.replace(day=1)
+
+    mes_min = hoy_local.replace(day=1)
+    mes_max = max_fecha.replace(day=1)
+    mes_base = max(mes_min, min(mes_max, mes_base))
+
+    ultimo_dia = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    desde = max(mes_base, hoy_local)
+    hasta = min(ultimo_dia, max_fecha)
+
+    mes_anterior = (mes_base - timedelta(days=1)).replace(day=1)
+    mes_siguiente = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1)
+
+    dias = {}
+    if desde <= hasta:
+        slots_utc = calcular_slots_cacheado(
+            event_type,
+            desde - timedelta(days=1),
+            hasta + timedelta(days=1),
+        )
+        for s in slots_utc:
+            d = s.astimezone(tz_visitante).date()
+            if desde <= d <= hasta:
+                dias.setdefault(d.isoformat(), []).append(
+                    s.astimezone(tz_visitante).strftime('%H:%M')
+                )
+
+    return {
+        'dias': dias,
+        'mes': mes_base.isoformat(),
+        'mes_anterior': mes_anterior.isoformat() if mes_anterior >= mes_min else None,
+        'mes_siguiente': mes_siguiente.isoformat() if mes_siguiente <= mes_max else None,
+        'max_fecha': max_fecha.isoformat(),
+    }
+
+
+class SlotsMesJSONView(View):
+
+    def get(self, request, user_slug, event_type_slug):
+        host = get_object_or_404(User, slug=user_slug, is_active=True)
+        event_type = get_object_or_404(EventType, host=host, slug=event_type_slug, activo=True)
+        tz_host = ZoneInfo(host.timezone)
+        tz_visitante = _tz_visitante(request, tz_host)
+        hoy_local = datetime.now(tz_visitante).date()
+        max_fecha = hoy_local + timedelta(days=60)
+        data = _calcular_slots_mes_json(
+            event_type, tz_visitante, hoy_local, max_fecha,
+            request.GET.get('mes', ''),
+        )
+        return JsonResponse(data)
+
+
+class SlotsMesJSONTeamView(View):
+
+    def get(self, request, slug_equipo):
+        event_type = get_object_or_404(EventType, slug_equipo=slug_equipo, activo=True)
+        tz_ref = ZoneInfo(event_type.host.timezone)
+        tz_visitante = _tz_visitante(request, tz_ref)
+        hoy_local = datetime.now(tz_visitante).date()
+        max_fecha = hoy_local + timedelta(days=60)
+        data = _calcular_slots_mes_json(
+            event_type, tz_visitante, hoy_local, max_fecha,
+            request.GET.get('mes', ''),
+        )
+        return JsonResponse(data)
 
 
 class BookingPageView(View):
