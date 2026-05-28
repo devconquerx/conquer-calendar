@@ -177,6 +177,13 @@ GOOGLE_CALENDAR_SCOPES = [
 ]
 GOOGLE_CALENDAR_TIMEOUT_SECONDS = env.int('GOOGLE_CALENDAR_TIMEOUT_SECONDS', default=8)
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'cache_disponibilidad',
+    }
+}
+
 # CRM webhook (Make)
 CRM_WEBHOOK_URL = env.str('CRM_WEBHOOK_URL', default='')
 CRM_WEBHOOK_API_KEY = env.str('CRM_WEBHOOK_API_KEY', default='')
