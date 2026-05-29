@@ -13,6 +13,7 @@ from calendario.event_types.models import EventType, EventTypeXHost
 from calendario.google_calendar.services import (
     cancelar_evento_google, consultar_freebusy, crear_evento_google,
     eliminar_evento_google, obtener_busy_intervalos,
+    obtener_busy_intervalos_local,
 )
 from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .models import Reserva
@@ -37,6 +38,21 @@ def _obtener_hosts_pool(event_type):
               .select_related('host')
               .order_by('id'))
     return [p.host for p in pivots]
+
+
+def _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc):
+    """
+    Devuelve intervalos busy del host intentando primero la copia local.
+    Fallback a freeBusy en vivo si el host no tiene sync activo (regla #2).
+    """
+    from calendario.google_calendar.models import GoogleCalendarSyncEstado
+    try:
+        sync_estado = GoogleCalendarSyncEstado.objects.get(host=host)
+        if sync_estado.estado == GoogleCalendarSyncEstado.ACTIVO:
+            return obtener_busy_intervalos_local(host, desde_utc, hasta_utc)
+    except GoogleCalendarSyncEstado.DoesNotExist:
+        pass
+    return obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
 
 
 def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
@@ -95,7 +111,7 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
         (b_ini - timedelta(minutes=buffer_antes), b_fin + timedelta(minutes=buffer_despues))
         if (b_fin - b_ini) <= step_td
         else (b_ini, b_fin)
-        for b_ini, b_fin in obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
+        for b_ini, b_fin in _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc)
     ]
 
     slots = []

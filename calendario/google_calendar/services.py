@@ -124,6 +124,28 @@ def obtener_busy_intervalos(host_email, time_min_utc, time_max_utc):
         return []
 
 
+def obtener_busy_intervalos_local(host, time_min_utc, time_max_utc):
+    """
+    Devuelve lista ordenada de (inicio_utc, fin_utc) ocupados leyendo la copia
+    local (GoogleCalendarEvento). Misma estructura que obtener_busy_intervalos.
+    Solo considera eventos opaque y no cancelados.
+    """
+    from .models import GoogleCalendarEvento
+    eventos = (
+        GoogleCalendarEvento.objects
+        .filter(
+            host=host,
+            transparencia='opaque',
+            inicio_utc__lt=time_max_utc,
+            fin_utc__gt=time_min_utc,
+        )
+        .exclude(estado='cancelled')
+        .order_by('inicio_utc')
+        .values_list('inicio_utc', 'fin_utc')
+    )
+    return list(eventos)
+
+
 def _extraer_meet_uri(conference_data):
     for ep in conference_data.get('entryPoints', []):
         if ep.get('entryPointType') == 'video' and ep.get('uri'):
