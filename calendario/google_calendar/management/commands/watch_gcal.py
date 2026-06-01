@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
+from calendario.google_calendar.models import GoogleCalendarSyncLog
 from calendario.google_calendar.sync import registrar_canal_watch
 
 User = get_user_model()
@@ -35,14 +36,19 @@ class Command(BaseCommand):
         total = len(hosts)
         self.stdout.write(f"Registrando canales watch para {total} host(s) → {webhook_url}")
 
-        ok = 0
+        exitosos = 0
+        fallidos_emails = []
         for host in hosts:
             self.stdout.write(f"  → {host.email} ... ", ending='')
             exito = registrar_canal_watch(host, webhook_url)
             if exito:
                 self.stdout.write(self.style.SUCCESS("OK"))
-                ok += 1
+                exitosos += 1
             else:
                 self.stdout.write(self.style.ERROR("ERROR (ver logs)"))
+                fallidos_emails.append(host.email)
 
-        self.stdout.write(f"\nCompletado: {ok}/{total} canales registrados.")
+        self.stdout.write(f"\nCompletado: {exitosos}/{total} canales registrados.")
+        GoogleCalendarSyncLog.registrar(
+            GoogleCalendarSyncLog.WATCH_GCAL, total, exitosos, fallidos_emails
+        )

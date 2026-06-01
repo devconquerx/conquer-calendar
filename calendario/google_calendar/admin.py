@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import GoogleCalendarEvento, GoogleCalendarSyncEstado
+from .models import GoogleCalendarEvento, GoogleCalendarSyncEstado, GoogleCalendarSyncLog
 
 
 @admin.register(GoogleCalendarEvento)
@@ -10,6 +10,20 @@ class GoogleCalendarEventoAdmin(admin.ModelAdmin):
     search_fields = ('host__email', 'google_event_id')
     ordering = ('host', 'inicio_utc')
     readonly_fields = ('actualizado_en',)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(GoogleCalendarSyncLog)
+class GoogleCalendarSyncLogAdmin(admin.ModelAdmin):
+    list_display = ('ejecutado_en', 'comando', 'total', 'exitosos', 'fallidos', 'hosts_fallidos')
+    list_filter = ('comando',)
+    ordering = ('-ejecutado_en',)
+    readonly_fields = ('ejecutado_en', 'comando', 'total', 'exitosos', 'fallidos', 'hosts_fallidos')
 
     def has_add_permission(self, request):
         return False

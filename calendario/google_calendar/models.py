@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
+from django.utils import timezone as django_tz
 
 
 class GoogleCalendarEvento(models.Model):
@@ -83,3 +86,49 @@ class GoogleCalendarSyncEstado(models.Model):
 
     def __str__(self):
         return f"{self.host} [{self.estado}]"
+
+
+class GoogleCalendarSyncLog(models.Model):
+    SYNC_INICIAL = 'sync_inicial'
+    SYNC_INCREMENTAL = 'sync_incremental'
+    WATCH_GCAL = 'watch_gcal'
+    RENOVAR_CANALES = 'renovar_canales'
+
+    COMANDO_CHOICES = [
+        (SYNC_INICIAL, 'sync_gcal_inicial'),
+        (SYNC_INCREMENTAL, 'sync_gcal_incremental'),
+        (WATCH_GCAL, 'watch_gcal'),
+        (RENOVAR_CANALES, 'renovar_canales_gcal'),
+    ]
+
+    comando = models.CharField(max_length=30, choices=COMANDO_CHOICES)
+    ejecutado_en = models.DateTimeField(auto_now_add=True)
+    total = models.PositiveIntegerField(default=0)
+    exitosos = models.PositiveIntegerField(default=0)
+    fallidos = models.PositiveIntegerField(default=0)
+    hosts_fallidos = models.TextField(blank=True, default='')
+
+    class Meta:
+        db_table = 'google_calendar_sync_log'
+        ordering = ['-ejecutado_en']
+        verbose_name = 'log de sync'
+        verbose_name_plural = 'logs de sync'
+        indexes = [
+            models.Index(fields=['ejecutado_en'], name='ix_gcal_log_ejecutado'),
+            models.Index(fields=['comando'], name='ix_gcal_log_comando'),
+        ]
+
+    def __str__(self):
+        return f"{self.get_comando_display()} {self.ejecutado_en:%Y-%m-%d %H:%M} — {self.exitosos}/{self.total} OK"
+
+    @classmethod
+    def registrar(cls, comando, total, exitosos, fallidos_emails):
+        cls.objects.create(
+            comando=comando,
+            total=total,
+            exitosos=exitosos,
+            fallidos=len(fallidos_emails),
+            hosts_fallidos=', '.join(fallidos_emails),
+        )
+        corte = django_tz.now() - timedelta(days=90)
+        cls.objects.filter(ejecutado_en__lt=corte).delete()

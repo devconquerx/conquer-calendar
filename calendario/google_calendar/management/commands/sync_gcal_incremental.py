@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
-from calendario.google_calendar.models import GoogleCalendarSyncEstado
+from calendario.google_calendar.models import GoogleCalendarSyncEstado, GoogleCalendarSyncLog
 from calendario.google_calendar.sync import sincronizar_host_incremental
 
 User = get_user_model()
@@ -40,6 +40,8 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Sync incremental para {total} host(s)...")
 
+        exitosos = 0
+        fallidos_emails = []
         for host in hosts:
             self.stdout.write(f"  → {host.email} ... ", ending='')
             sincronizar_host_incremental(host)
@@ -47,9 +49,15 @@ class Command(BaseCommand):
                 sync = GoogleCalendarSyncEstado.objects.get(host=host)
                 if sync.estado == GoogleCalendarSyncEstado.ACTIVO:
                     self.stdout.write(self.style.SUCCESS("OK"))
+                    exitosos += 1
                 else:
                     self.stdout.write(self.style.ERROR(f"ERROR (estado={sync.estado})"))
+                    fallidos_emails.append(host.email)
             except GoogleCalendarSyncEstado.DoesNotExist:
                 self.stdout.write(self.style.WARNING("sin estado"))
+                fallidos_emails.append(host.email)
 
         self.stdout.write("Completado.")
+        GoogleCalendarSyncLog.registrar(
+            GoogleCalendarSyncLog.SYNC_INCREMENTAL, total, exitosos, fallidos_emails
+        )

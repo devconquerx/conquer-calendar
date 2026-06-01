@@ -335,22 +335,33 @@ def renovar_canales_por_expirar(margen_horas=24):
     """
     Renueva los canales watch cuya expiración está dentro del margen indicado.
     Requiere la URL del webhook; se lee de settings.GCAL_WEBHOOK_URL.
+    Devuelve (total, exitosos, fallidos_emails).
     """
     webhook_url = getattr(settings, 'GCAL_WEBHOOK_URL', '')
     if not webhook_url:
         logger.warning("renovar_canales: GCAL_WEBHOOK_URL no configurada, omitiendo renovación")
-        return
+        return 0, 0, []
 
     limite = django_tz.now() + timedelta(hours=margen_horas)
-    por_renovar = GoogleCalendarSyncEstado.objects.filter(
-        canal_expira_utc__lte=limite,
-        canal_id__gt='',
-    ).select_related('host')
+    por_renovar = list(
+        GoogleCalendarSyncEstado.objects.filter(
+            canal_expira_utc__lte=limite,
+            canal_id__gt='',
+        ).select_related('host')
+    )
 
+    exitosos = 0
+    fallidos_emails = []
     for sync_estado in por_renovar:
         host = sync_estado.host
         detener_canal(host)
-        registrar_canal_watch(host, webhook_url)
+        ok = registrar_canal_watch(host, webhook_url)
+        if ok:
+            exitosos += 1
+        else:
+            fallidos_emails.append(host.email)
+
+    return len(por_renovar), exitosos, fallidos_emails
 
 
 def _invalidar_cache_por_host(host):

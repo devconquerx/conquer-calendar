@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 
+from calendario.google_calendar.models import GoogleCalendarSyncLog
 from calendario.google_calendar.sync import renovar_canales_por_expirar
 
 
@@ -20,5 +21,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         margen = options['margen_horas']
         self.stdout.write(f"Renovando canales con expiración en menos de {margen}h...")
-        renovar_canales_por_expirar(margen_horas=margen)
-        self.stdout.write(self.style.SUCCESS("Completado."))
+        total, exitosos, fallidos_emails = renovar_canales_por_expirar(margen_horas=margen)
+        if total == 0:
+            self.stdout.write("No hay canales próximos a vencer.")
+        else:
+            self.stdout.write(self.style.SUCCESS(f"Completado: {exitosos}/{total} canales renovados."))
+            if fallidos_emails:
+                self.stdout.write(self.style.ERROR(f"  Fallidos: {', '.join(fallidos_emails)}"))
+        GoogleCalendarSyncLog.registrar(
+            GoogleCalendarSyncLog.RENOVAR_CANALES, total, exitosos, fallidos_emails
+        )
