@@ -54,4 +54,5 @@ docs_internos/
 restore.data.md
 prod_dump.json
 prod_dump_backup_*.json
+prod_backup_previo.json
 prod_restore/

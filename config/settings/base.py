@@ -176,6 +176,7 @@ GOOGLE_CALENDAR_SCOPES = [
     'https://www.googleapis.com/auth/meetings.space.created',
 ]
 GOOGLE_CALENDAR_TIMEOUT_SECONDS = env.int('GOOGLE_CALENDAR_TIMEOUT_SECONDS', default=8)
+GCAL_WEBHOOK_URL = env.str('GCAL_WEBHOOK_URL', default='')
 
 CACHES = {
     'default': {
