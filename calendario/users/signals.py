@@ -1,3 +1,4 @@
+import logging
 from datetime import time
 
 from django.db.models.signals import post_save
@@ -5,6 +6,7 @@ from django.dispatch import receiver
 
 from .models import User
 
+logger = logging.getLogger(__name__)
 
 DISPONIBILIDAD_DEFAULT = [
     (0, time(0, 0), time(23, 59)),  # Lunes
@@ -29,3 +31,19 @@ def crear_disponibilidad_default(sender, instance, created, **kwargs):
         )
         for dia, inicio, fin in DISPONIBILIDAD_DEFAULT
     ], ignore_conflicts=True)
+
+
+@receiver(post_save, sender=User)
+def inicializar_gcal(sender, instance, created, **kwargs):
+    # raw=True durante loaddata — saltamos para no interferir con la restauración
+    if not created or kwargs.get('raw'):
+        return
+    try:
+        from django.conf import settings
+        from calendario.google_calendar.sync import sincronizar_host_completo, registrar_canal_watch
+        sincronizar_host_completo(instance)
+        webhook_url = getattr(settings, 'GCAL_WEBHOOK_URL', '')
+        if webhook_url:
+            registrar_canal_watch(instance, webhook_url)
+    except Exception:
+        logger.exception('inicializar_gcal: error al sincronizar host=%s', instance.email)
