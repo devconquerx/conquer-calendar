@@ -15,6 +15,18 @@ from .forms import BloqueHorarioSemanalForm
 from .models import BloqueHorarioSemanal, BloqueHorarioFecha
 
 
+class _BloqueaDisponibilidadMixin:
+    """Bloquea escritura si el grupo del host tiene bloquear_editar_disponibilidad=True.
+    El magic login (supervisor actuando como host) bypasea el bloqueo."""
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == 'POST':
+            from calendario.grupos.utils import usuario_bloqueado
+            if usuario_bloqueado(request.user, 'bloquear_editar_disponibilidad', request):
+                messages.error(request, 'Tu grupo no te autoriza para modificar la disponibilidad.')
+                return redirect('panel_disponibilidad:bloque_list')
+        return super().dispatch(request, *args, **kwargs)
+
+
 class MiDisponibilidadListView(RequierePermisoMixin, ListView):
     permiso_requerido = 'availability.ver'
     model = BloqueHorarioSemanal
@@ -71,7 +83,7 @@ class MiDisponibilidadListView(RequierePermisoMixin, ListView):
         return ctx
 
 
-class BloqueHorarioCreateView(RequierePermisoMixin, CreateView):
+class BloqueHorarioCreateView(_BloqueaDisponibilidadMixin, RequierePermisoMixin, CreateView):
     permiso_requerido = 'availability.editar'
     model = BloqueHorarioSemanal
     form_class = BloqueHorarioSemanalForm
@@ -94,7 +106,7 @@ class BloqueHorarioCreateView(RequierePermisoMixin, CreateView):
         return redirect(self.get_success_url())
 
 
-class BloqueHorarioDeleteView(RequierePermisoMixin, DeleteView):
+class BloqueHorarioDeleteView(_BloqueaDisponibilidadMixin, RequierePermisoMixin, DeleteView):
     permiso_requerido = 'availability.editar'
     model = BloqueHorarioSemanal
     template_name = 'pages/panel/disponibilidad/confirm_delete.html'
@@ -108,7 +120,7 @@ class BloqueHorarioDeleteView(RequierePermisoMixin, DeleteView):
         return super().post(request, *args, **kwargs)
 
 
-class LimpiarDiaView(RequierePermisoMixin, View):
+class LimpiarDiaView(_BloqueaDisponibilidadMixin, RequierePermisoMixin, View):
     permiso_requerido = 'availability.editar'
 
     def post(self, request, dia):
@@ -128,7 +140,7 @@ def _parse_time(valor):
     return None
 
 
-class BloqueHorarioFechaCreateView(RequierePermisoMixin, View):
+class BloqueHorarioFechaCreateView(_BloqueaDisponibilidadMixin, RequierePermisoMixin, View):
     """
     Asigna horas específicas a una o varias fechas. Las horas asignadas
     SOBRESCRIBEN cualquier override previo de esas fechas. Recibe:
@@ -186,7 +198,7 @@ class BloqueHorarioFechaCreateView(RequierePermisoMixin, View):
         return redirect('panel_disponibilidad:bloque_list')
 
 
-class BloqueHorarioFechaDeleteView(RequierePermisoMixin, View):
+class BloqueHorarioFechaDeleteView(_BloqueaDisponibilidadMixin, RequierePermisoMixin, View):
     permiso_requerido = 'availability.editar'
 
     def post(self, request, pk):
@@ -195,7 +207,7 @@ class BloqueHorarioFechaDeleteView(RequierePermisoMixin, View):
         return redirect('panel_disponibilidad:bloque_list')
 
 
-class LimpiarFechaView(RequierePermisoMixin, View):
+class LimpiarFechaView(_BloqueaDisponibilidadMixin, RequierePermisoMixin, View):
     permiso_requerido = 'availability.editar'
 
     def post(self, request, fecha):

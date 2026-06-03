@@ -23,6 +23,7 @@ urlpatterns = [
     path('panel/event-types/', include('calendario.event_types.urls')),
     path('panel/disponibilidad/', include('calendario.availability.urls')),
     path('panel/reservas/', include('calendario.bookings.urls_panel')),
+    path('panel/grupos/', include('calendario.grupos.urls')),
     path('', RedirectView.as_view(url='/panel/', permanent=False)),
     path('webhooks/', include('calendario.google_calendar.urls')),
     path('r/', include('calendario.bookings.urls_public_token')),

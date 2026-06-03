@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import login as auth_login, logout as auth_logout, update_session_auth_hash
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import signing
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
@@ -50,7 +51,7 @@ class MagicLoginStopView(View):
             return redirect('panel_usuarios:dashboard')
         try:
             admin = User.objects.get(pk=admin_pk, is_active=True)
-            if not admin.es_admin:
+            if not admin.es_admin and not admin.tiene_permiso('usuarios.editar_grupo'):
                 raise User.DoesNotExist
         except User.DoesNotExist:
             auth_logout(request)
@@ -177,22 +178,53 @@ class UsuarioCreateView(RequierePermisoMixin, CreateView):
         return response
 
 
-class UsuarioUpdateView(RequierePermisoMixin, UpdateView):
-    permiso_requerido = 'usuarios.editar'
+class UsuarioUpdateView(LoginRequiredMixin, UpdateView):
     model = User
     form_class = UsuarioEdicionForm
     template_name = 'pages/panel/usuarios/form.html'
-    success_url = reverse_lazy('panel_usuarios:usuario_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        # Admin: acceso completo
+        if request.user.tiene_permiso('usuarios.editar'):
+            return super().dispatch(request, *args, **kwargs)
+        # Supervisor: solo usuarios de sus grupos
+        if request.user.tiene_permiso('usuarios.editar_grupo'):
+            from calendario.grupos.models import GrupoXUsuario
+            target_pk = kwargs.get('pk')
+            puede = GrupoXUsuario.objects.filter(
+                grupo__membresias__usuario_id=target_pk,
+                usuario=request.user,
+                es_supervisor=True,
+            ).exists()
+            if puede:
+                return super().dispatch(request, *args, **kwargs)
+        raise PermissionDenied('No tienes permisos para editar este usuario.')
+
+    def get_success_url(self):
+        if (self.request.user.tiene_permiso('usuarios.editar_grupo')
+                and not self.request.user.tiene_permiso('usuarios.editar')):
+            return reverse_lazy('panel_grupos:grupo_list')
+        return reverse_lazy('panel_usuarios:usuario_list')
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         obj = self.object
-        if (obj and obj != self.request.user
-                and self.request.user.es_admin):
-            ctx['magic_login_token'] = signing.dumps(
-                {'user_pk': obj.pk, 'admin_pk': self.request.user.pk},
-                salt='magic-login',
-            )
+        if obj and obj != self.request.user:
+            puede_impersonar = self.request.user.es_admin
+            if not puede_impersonar and self.request.user.tiene_permiso('usuarios.editar_grupo'):
+                from calendario.grupos.models import GrupoXUsuario
+                puede_impersonar = GrupoXUsuario.objects.filter(
+                    grupo__membresias__usuario=obj,
+                    usuario=self.request.user,
+                    es_supervisor=True,
+                ).exists()
+            if puede_impersonar:
+                ctx['magic_login_token'] = signing.dumps(
+                    {'user_pk': obj.pk, 'admin_pk': self.request.user.pk},
+                    salt='magic-login',
+                )
         return ctx
 
     def form_valid(self, form):

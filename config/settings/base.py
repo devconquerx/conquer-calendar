@@ -49,6 +49,7 @@ LOCAL_APPS = [
     'calendario.availability',
     'calendario.bookings',
     'calendario.google_calendar',
+    'calendario.grupos',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -99,6 +100,15 @@ MEDIA_ROOT = "/calendario-media"
 MEDIA_URL = "/media/"
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+from django.contrib.messages import constants as message_constants
+MESSAGE_TAGS = {
+    message_constants.DEBUG:   'secondary',
+    message_constants.INFO:    'info',
+    message_constants.SUCCESS: 'success',
+    message_constants.WARNING: 'warning',
+    message_constants.ERROR:   'danger',
+}
 
 TEMPLATES_DIR = str(APPS_DIR.path("_templates"))
 TEMPLATES = [

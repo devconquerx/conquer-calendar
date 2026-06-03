@@ -23,11 +23,15 @@ class EventTypeListView(RequierePermisoMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        qs = EventType.objects.all() if self.request.user.es_admin \
-            else EventType.objects.filter(
-                Q(host=self.request.user) |
-                Q(hosts_pool__host=self.request.user)
-            )
+        if self.request.user.es_admin:
+            qs = EventType.objects.all()
+        else:
+            from calendario.grupos.utils import miembros_de_mis_grupos
+            q = Q(host=self.request.user) | Q(hosts_pool__host=self.request.user)
+            grupo_ids = miembros_de_mis_grupos(self.request.user)
+            if grupo_ids:
+                q |= Q(host_id__in=grupo_ids)
+            qs = EventType.objects.filter(q)
 
         q = self.request.GET.get('q', '').strip()
         if q:
@@ -56,6 +60,10 @@ class EventTypeListView(RequierePermisoMixin, ListView):
         ctx['filtro_organizadores'] = self.request.GET.getlist('organizador')
         ctx['filtro_creadores'] = self.request.GET.getlist('creador')
         ctx['filtros_count'] = len(ctx['filtro_organizadores']) + len(ctx['filtro_creadores'])
+        ctx['soy_organizador_ids'] = set(
+            EventTypeXHost.objects.filter(host=self.request.user)
+            .values_list('event_type_id', flat=True)
+        )
         if self.request.user.es_admin:
             ctx['organizadores_disponibles'] = list(
                 User.objects.filter(is_active=True, roles_asignados__rol__nombre='host')
@@ -93,6 +101,13 @@ class EventTypeCreateView(RequierePermisoMixin, CreateView):
         ctx['hosts_disponibles'] = _hosts_disponibles_context()
         return ctx
 
+    def dispatch(self, request, *args, **kwargs):
+        from calendario.grupos.utils import usuario_bloqueado
+        if usuario_bloqueado(request.user, 'bloquear_crear_event_types', request):
+            messages.error(request, 'Tu grupo no te autoriza para crear eventos.')
+            return redirect('panel_event_types:event_type_list')
+        return super().dispatch(request, *args, **kwargs)
+
     def form_valid(self, form):
         obj = form.save(commit=False)
         obj.host = self.request.user
@@ -129,22 +144,37 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
     template_name = 'pages/panel/event_types/form.html'
     success_url = reverse_lazy('panel_event_types:event_type_list')
 
+    def _es_supervisor_del_evento(self, obj):
+        from calendario.grupos.utils import miembros_de_mis_grupos
+        return obj.host_id in miembros_de_mis_grupos(self.request.user)
+
     def _es_solo_lectura(self):
         obj = self.get_object()
-        return not self.request.user.es_admin and obj.host != self.request.user
+        if self.request.user.es_admin:
+            return False
+        if self._es_supervisor_del_evento(obj):
+            return False
+        if obj.host == self.request.user:
+            from calendario.grupos.utils import usuario_bloqueado
+            if usuario_bloqueado(self.request.user, 'bloquear_editar_event_types', self.request):
+                return True
+            return False
+        return True
 
     def get_queryset(self):
         if self.request.user.es_admin:
             return EventType.objects.all()
-        return EventType.objects.filter(
-            Q(host=self.request.user) |
-            Q(hosts_pool__host=self.request.user)
-        ).distinct()
+        from calendario.grupos.utils import miembros_de_mis_grupos
+        q = Q(host=self.request.user) | Q(hosts_pool__host=self.request.user)
+        grupo_ids = miembros_de_mis_grupos(self.request.user)
+        if grupo_ids:
+            q |= Q(host_id__in=grupo_ids)
+        return EventType.objects.filter(q).distinct()
 
     def dispatch(self, request, *args, **kwargs):
         if request.method == 'POST' and self._es_solo_lectura():
-            from django.core.exceptions import PermissionDenied
-            raise PermissionDenied
+            messages.error(request, 'Tu grupo no te autoriza para editar este evento.')
+            return redirect('panel_event_types:event_type_list')
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -195,6 +225,11 @@ class EventTypeDeleteView(RequierePermisoMixin, DeleteView):
         return EventType.objects.filter(host=self.request.user)
 
     def post(self, request, *args, **kwargs):
+        if not request.user.es_admin:
+            from calendario.grupos.utils import usuario_bloqueado
+            if usuario_bloqueado(request.user, 'bloquear_eliminar_event_types', request):
+                messages.error(request, 'Tu grupo no te autoriza para eliminar eventos.')
+                return redirect('panel_event_types:event_type_list')
         obj = self.get_object()
         messages.success(request, f"Tipo de evento '{obj.nombre}' eliminado.")
         return super().post(request, *args, **kwargs)
@@ -204,10 +239,20 @@ class EventTypeToggleActivoView(RequierePermisoMixin, View):
     permiso_requerido = 'event_types.editar'
 
     def post(self, request, pk):
+        if not request.user.es_admin:
+            from calendario.grupos.utils import usuario_bloqueado
+            if usuario_bloqueado(request.user, 'bloquear_activar_event_types', request):
+                messages.error(request, 'Tu grupo no te autoriza para activar o desactivar eventos.')
+                return redirect('panel_event_types:event_type_list')
         if request.user.es_admin:
             obj = get_object_or_404(EventType, pk=pk)
         else:
-            obj = get_object_or_404(EventType, pk=pk, host=request.user)  # solo creador
+            from calendario.grupos.utils import miembros_de_mis_grupos
+            grupo_ids = miembros_de_mis_grupos(request.user)
+            obj = get_object_or_404(
+                EventType,
+                Q(pk=pk) & (Q(host=request.user) | Q(host_id__in=grupo_ids))
+            )
         obj.activo = not obj.activo
         obj.save(update_fields=['activo', 'fecha_actualizacion'])
         estado = 'activado' if obj.activo else 'desactivado'

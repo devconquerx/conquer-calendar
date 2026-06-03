@@ -6,6 +6,7 @@
 {% url 'panel_disponibilidad:bloque_list' as url_disponibilidad %}
 {% url 'panel_reservas:reserva_list' as url_reservas %}
 {% url 'panel_reservas:reserva_admin_list' as url_reservas_admin %}
+{% url 'panel_grupos:grupo_list' as url_grupos %}
 
 <!--begin::Section principal-->
 <div class="menu-item">
@@ -50,7 +51,7 @@
 <!--end::Section principal-->
 
 <!--begin::Section admin-->
-{% if 'usuarios.ver' in PERMISOS_USUARIO or 'roles.ver' in PERMISOS_USUARIO or 'reservas.ver_todas' in PERMISOS_USUARIO %}
+{% if 'usuarios.ver' in PERMISOS_USUARIO or 'roles.ver' in PERMISOS_USUARIO or 'reservas.ver_todas' in PERMISOS_USUARIO or 'grupos.ver' in PERMISOS_USUARIO %}
 <div class="menu-item mt-4">
     <div class="menu-content pb-2">
         <span class="menu-heading fw-semibold text-uppercase fs-7 text-muted">Administración</span>
@@ -62,6 +63,13 @@
     <a class="menu-link {% if url_reservas_admin in request.path %}active{% endif %}" href="{{ url_reservas_admin }}">
         <span class="menu-icon"><i class="bi bi-calendar2-check fs-4"></i></span>
         <span class="menu-title fw-semibold">Todas las reservas</span>
+    </a>
+</div>
+{% elif 'grupos.ver' in PERMISOS_USUARIO %}
+<div class="menu-item">
+    <a class="menu-link {% if url_reservas_admin in request.path %}active{% endif %}" href="{{ url_reservas_admin }}">
+        <span class="menu-icon"><i class="bi bi-calendar2-check fs-4"></i></span>
+        <span class="menu-title fw-semibold">Reservas del grupo</span>
     </a>
 </div>
 {% endif %}
@@ -84,6 +92,14 @@
 </div>
 {% endif %}
 
+{% if 'grupos.ver' in PERMISOS_USUARIO %}
+<div class="menu-item">
+    <a class="menu-link {% if url_grupos in request.path %}active{% endif %}" href="{{ url_grupos }}">
+        <span class="menu-icon"><i class="bi bi-diagram-3 fs-4"></i></span>
+        <span class="menu-title fw-semibold">Grupos</span>
+    </a>
+</div>
+{% endif %}
 
 {% endif %}
 <!--end::Section admin-->

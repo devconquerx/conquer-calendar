@@ -14,6 +14,12 @@ from calendario.users.models import User
 from .models import Reserva
 from .services import cancelar_reserva_solo_bd, eliminar_reserva
 
+
+def _miembros_grupo(user):
+    """PKs de todos los miembros en grupos donde user es supervisor."""
+    from calendario.grupos.utils import miembros_de_mis_grupos
+    return miembros_de_mis_grupos(user)
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -97,7 +103,13 @@ class ReservaDetailView(RequierePermisoMixin, DetailView):
         qs = Reserva.objects.select_related('event_type', 'host')
         if self.request.user.tiene_permiso('reservas.ver_todas'):
             return qs
-        return qs.filter(host=self.request.user)
+        miembro_ids = _miembros_grupo(self.request.user)
+        return qs.filter(
+            Q(event_type__host=self.request.user) |
+            Q(host=self.request.user) |
+            Q(event_type__host_id__in=miembro_ids) |
+            Q(host_id__in=miembro_ids)
+        ).distinct()
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -157,8 +169,27 @@ class ReservaAdminListView(RequierePermisoMixin, ListView):
     context_object_name = 'reservas'
     paginate_by = 25
 
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        if request.user.tiene_permiso('reservas.ver_todas') or request.user.tiene_permiso('grupos.ver'):
+            return super(RequierePermisoMixin, self).dispatch(request, *args, **kwargs)
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    def _es_supervisor(self):
+        return (not self.request.user.tiene_permiso('reservas.ver_todas')
+                and self.request.user.tiene_permiso('grupos.ver'))
+
     def get_queryset(self):
-        qs = Reserva.objects.select_related('event_type', 'host')
+        if self._es_supervisor():
+            miembro_ids = _miembros_grupo(self.request.user)
+            qs = Reserva.objects.filter(
+                Q(event_type__host_id__in=miembro_ids) | Q(host_id__in=miembro_ids)
+            ).select_related('event_type', 'host').distinct()
+        else:
+            qs = Reserva.objects.select_related('event_type', 'host')
+
         host_id = self.request.GET.get('host', '').strip()
         email   = self.request.GET.get('email', '').strip()
         estado  = self.request.GET.get('estado', '').strip()
@@ -179,7 +210,13 @@ class ReservaAdminListView(RequierePermisoMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['hosts']          = User.objects.filter(is_active=True).order_by('email')
+        es_supervisor = self._es_supervisor()
+        ctx['titulo'] = 'Reservas del grupo' if es_supervisor else 'Todas las reservas'
+        if es_supervisor:
+            miembro_ids = _miembros_grupo(self.request.user)
+            ctx['hosts'] = User.objects.filter(pk__in=miembro_ids, is_active=True).order_by('email')
+        else:
+            ctx['hosts'] = User.objects.filter(is_active=True).order_by('email')
         ctx['filtro_host']    = self.request.GET.get('host', '')
         ctx['filtro_email']   = self.request.GET.get('email', '')
         ctx['filtro_estado']  = self.request.GET.get('estado', '')
@@ -208,6 +245,11 @@ class ReservaCancelarView(RequierePermisoMixin, View):
     permiso_requerido = 'reservas.cancelar'
 
     def post(self, request, pk):
+        if not request.user.tiene_permiso('reservas.ver_todas'):
+            from calendario.grupos.utils import usuario_bloqueado
+            if usuario_bloqueado(request.user, 'bloquear_cancelar_reservas', request):
+                messages.error(request, 'Tu grupo no te autoriza para cancelar reservas.')
+                return redirect('panel_reservas:reserva_detail', pk=pk)
         qs = Reserva.objects.all() if request.user.tiene_permiso('reservas.ver_todas') else Reserva.objects.filter(host=request.user)
         reserva = get_object_or_404(qs, pk=pk)
         cancelar_reserva_solo_bd(reserva)
