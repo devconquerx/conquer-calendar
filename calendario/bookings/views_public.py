@@ -2,6 +2,7 @@ import calendar as cal_module
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.formats import date_format
@@ -14,6 +15,16 @@ from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .forms import BookingForm
 from .models import Reserva
 from .services import calcular_slots, calcular_slots_cacheado, cancelar_reserva, crear_reserva, reemplazar_reserva
+
+
+def _enviar_correos_confirmacion(reserva_pk):
+    """Envía correos de confirmación con la reserva ya refrescada de BD (google_event_id poblado)."""
+    try:
+        r = Reserva.objects.get(pk=reserva_pk)
+    except Reserva.DoesNotExist:
+        return
+    enviar_confirmacion_host(r)
+    enviar_confirmacion_invitado(r)
 
 
 def _tz_visitante(request, tz_fallback):
@@ -244,8 +255,7 @@ class BookingFormView(View):
         except SlotNoDisponibleError as e:
             form.add_error(None, str(e))
             return self._render_with_errors(request, host, event_type, form)
-        enviar_confirmacion_host(reserva)
-        enviar_confirmacion_invitado(reserva)
+        transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
         return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
 
     def _render_with_errors(self, request, host, event_type, form, duplicado=None):
@@ -370,8 +380,7 @@ class TeamBookingFormView(View):
         except SlotNoDisponibleError as e:
             form.add_error(None, str(e))
             return self._render_with_errors(request, event_type, form)
-        enviar_confirmacion_host(reserva)
-        enviar_confirmacion_invitado(reserva)
+        transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
         return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
 
     def _render_with_errors(self, request, event_type, form, duplicado=None):
@@ -496,4 +505,5 @@ class ReemplazarPublicaView(View):
             # de la vieja para que pruebe otro horario.
             return redirect('public_token:confirmacion', token=vieja.confirmacion_token)
 
+        transaction.on_commit(lambda: _enviar_correos_confirmacion(nueva.pk))
         return redirect('public_token:confirmacion', token=nueva.confirmacion_token)
