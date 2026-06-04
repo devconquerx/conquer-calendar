@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import admin
+from django.urls import re_path
 from django.urls import path, include
 from django.conf.urls.static import static
 from django.http import JsonResponse
@@ -26,10 +27,12 @@ urlpatterns = [
     path('panel/correos/', include('calendario.bookings.urls_correos')),
     path('panel/grupos/', include('calendario.grupos.urls')),
     path('', RedirectView.as_view(url='/panel/', permanent=False)),
-    path('webhooks/', include('calendario.google_calendar.urls')),
     path('r/', include('calendario.bookings.urls_public_token')),
     path('e/<slug:slug_equipo>/', include('calendario.bookings.urls_public_team')),
-    path('<slug:user_slug>/<slug:event_type_slug>/', include('calendario.bookings.urls_public_booking')),
+    re_path(
+        r'^(?P<user_slug>[-a-zA-Z0-9_.]+)/(?P<event_type_slug>[-a-zA-Z0-9_]+)/',
+        include('calendario.bookings.urls_public_booking'),
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 admin.site.site_header = "Conquer Calendario"

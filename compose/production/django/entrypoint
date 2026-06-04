@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+if [ -z "${DATABASE_URL:-}" ]; then
+    : "${CALENDARIO_POSTGRES_USER:?CALENDARIO_POSTGRES_USER is required when DATABASE_URL is not set}"
+    : "${CALENDARIO_POSTGRES_PASSWORD:?CALENDARIO_POSTGRES_PASSWORD is required when DATABASE_URL is not set}"
+    : "${CALENDARIO_POSTGRES_HOST:?CALENDARIO_POSTGRES_HOST is required when DATABASE_URL is not set}"
+    : "${CALENDARIO_POSTGRES_PORT:?CALENDARIO_POSTGRES_PORT is required when DATABASE_URL is not set}"
+    : "${CALENDARIO_POSTGRES_DB:?CALENDARIO_POSTGRES_DB is required when DATABASE_URL is not set}"
+    export DATABASE_URL="postgres://${CALENDARIO_POSTGRES_USER}:${CALENDARIO_POSTGRES_PASSWORD}@${CALENDARIO_POSTGRES_HOST}:${CALENDARIO_POSTGRES_PORT}/${CALENDARIO_POSTGRES_DB}?sslmode=${CALENDARIO_POSTGRES_SSLMODE:-require}"
+fi
+
+postgres_ready() {
+python <<'PY'
+import os
+import sys
+import psycopg2
+
+database_url = os.environ["DATABASE_URL"]
+
+try:
+    psycopg2.connect(database_url)
+except psycopg2.OperationalError:
+    sys.exit(1)
+
+sys.exit(0)
+PY
+}
+
+until postgres_ready; do
+    >&2 echo 'Esperando a Postgres...'
+    sleep 1
+done
+
+>&2 echo 'Postgres listo.'
+
+exec "$@"
