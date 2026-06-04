@@ -210,11 +210,17 @@ def crear_evento_google(reserva_pk):
                 },
                 'reminders': {'useDefault': True},
             }
+            # Si Django tiene plantilla de correo para el invitado, suprime el
+            # email de GCal para no duplicar. GCal sigue creando el evento y Meet.
+            from calendario.bookings.correos import resolver_config
+            _, cfg_inv = resolver_config(reserva, 'confirmacion_inv')
+            send_updates = 'none' if cfg_inv else 'all'
+
             evento = servicio.events().insert(
                 calendarId='primary',
                 body=body,
                 conferenceDataVersion=1,
-                sendUpdates='all',
+                sendUpdates=send_updates,
             ).execute()
 
             reserva.google_event_id = evento['id']

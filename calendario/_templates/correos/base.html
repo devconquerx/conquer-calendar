@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ texto_encabezado }}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:{{ color_encabezado|default:'#111827' }};padding:28px 40px;text-align:center;">
+              <img src="{{ logo_url|default:default_logo_url }}" alt="Logo"
+                   style="max-height:55px;max-width:190px;display:block;margin:0 auto 18px;border-radius:7px;box-shadow:0 4px 14px rgba(0,0,0,0.35);background:#ffffff;padding:4px 8px;">
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;line-height:1.3;">{{ texto_encabezado }}</h1>
+            </td>
+          </tr>
+
+          <!-- Mensaje -->
+          <tr>
+            <td style="padding:36px 40px 28px;color:#374151;font-size:15px;line-height:1.7;">
+              {{ cuerpo|linebreaks }}
+            </td>
+          </tr>
+
+          <!-- Info card -->
+          <tr>
+            <td style="padding:0 40px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+                <tr>
+                  <td style="padding:20px 20px 8px;">
+
+                    {% if 'nombre_evento' in campos %}
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">
+                      <tr>
+                        <td style="width:80px;color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;vertical-align:top;padding-top:3px;">Evento</td>
+                        <td style="color:#111827;font-size:14px;font-weight:700;">{{ nombre_evento }}</td>
+                      </tr>
+                    </table>
+                    {% endif %}
+
+                    {% if 'nombre_host' in campos %}
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">
+                      <tr>
+                        <td style="width:80px;color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;vertical-align:top;padding-top:3px;">Con</td>
+                        <td>
+                          <span style="color:#374151;font-size:14px;">{{ nombre_host }}</span>
+                          <span style="color:#9ca3af;font-size:14px;"> — Organizador</span>
+                          {% if 'email_host' in campos %}
+                          <span style="color:#6b7280;font-size:12px;display:block;margin-top:2px;">{{ email_host }}</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    </table>
+                    {% endif %}
+
+                    {% if 'nombre_invitado' in campos %}
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">
+                      <tr>
+                        <td style="width:80px;color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;vertical-align:top;padding-top:3px;">Invitado</td>
+                        <td>
+                          <span style="color:#374151;font-size:14px;">{{ nombre_invitado }}</span>
+                          {% if 'telefono_invitado' in campos and telefono_invitado %}
+                          <span style="color:#6b7280;font-size:14px;"> · {{ telefono_invitado }}</span>
+                          {% endif %}
+                          {% if 'email_invitado' in campos %}
+                          <span style="color:#6b7280;font-size:12px;display:block;margin-top:2px;">{{ email_invitado }}</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    </table>
+                    {% endif %}
+
+                    {% if 'fecha_hora_invitado' in campos %}
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">
+                      <tr>
+                        <td style="width:80px;color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;vertical-align:top;padding-top:3px;">Fecha</td>
+                        <td style="color:#374151;font-size:14px;">
+                          {{ fecha_hora_invitado }}
+                          <span style="color:#6b7280;font-size:12px;">
+                            {% if 'timezone' in campos %} · {{ timezone }}{% endif %}
+                            {% if 'fecha_hora_utc' in campos %} &mdash; {{ fecha_hora_utc }}{% endif %}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+                    {% endif %}
+
+                    {% if 'fecha_hora_host' in campos %}
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">
+                      <tr>
+                        <td style="width:80px;color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;vertical-align:top;padding-top:3px;">Fecha</td>
+                        <td style="color:#374151;font-size:14px;">
+                          {{ fecha_hora_host }}
+                          {% if 'timezone_host' in campos %}
+                          <span style="color:#6b7280;font-size:12px;"> · {{ timezone_host }}</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    </table>
+                    {% endif %}
+
+                    {% if 'duracion' in campos %}
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+                      <tr>
+                        <td style="width:80px;color:#9ca3af;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;vertical-align:top;padding-top:3px;">Duración</td>
+                        <td style="color:#374151;font-size:14px;">{{ duracion }} minutos</td>
+                      </tr>
+                    </table>
+                    {% endif %}
+
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Links -->
+          {% with show_gcal=google_event_url show_meet=google_meet_url show_app=link_reserva %}
+          {% if show_gcal and 'google_event_url' in campos or show_meet and 'google_meet_url' in campos or show_app and 'link_reserva' in campos %}
+          <tr>
+            <td style="padding:0 40px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+
+                {% if show_gcal and 'google_event_url' in campos %}
+                <tr>
+                  <td style="padding:13px 16px;border-bottom:1px solid #e5e7eb;background:#ffffff;">
+                    <table cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td style="width:28px;vertical-align:middle;">
+                        <img src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png"
+                             alt="Google Calendar" width="20" height="20"
+                             style="display:block;width:20px;height:20px;border-radius:4px;">
+                      </td>
+                      <td style="padding-left:10px;vertical-align:middle;font-size:14px;">
+                        <a href="{{ google_event_url }}" style="color:#1a73e8;text-decoration:none;font-weight:500;">Ver en Google Calendar</a>
+                      </td>
+                    </tr></table>
+                  </td>
+                </tr>
+                {% endif %}
+
+                {% if show_meet and 'google_meet_url' in campos %}
+                <tr>
+                  <td style="padding:13px 16px;{% if show_app and 'link_reserva' in campos %}border-bottom:1px solid #e5e7eb;{% endif %}background:#ffffff;">
+                    <table cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td style="width:28px;vertical-align:middle;">
+                        <img src="https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v6/web-512dp/logo_meet_2020q4_color_2x_web_512dp.png"
+                             alt="Google Meet" width="20" height="20"
+                             style="display:block;width:20px;height:20px;border-radius:4px;">
+                      </td>
+                      <td style="padding-left:10px;vertical-align:middle;font-size:14px;">
+                        <a href="{{ google_meet_url }}" style="color:#1a73e8;text-decoration:none;font-weight:500;">Unirse por Google Meet</a>
+                      </td>
+                    </tr></table>
+                  </td>
+                </tr>
+                {% endif %}
+
+                {% if show_app and 'link_reserva' in campos %}
+                <tr>
+                  <td style="padding:13px 16px;background:#ffffff;">
+                    <table cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td style="width:28px;vertical-align:middle;">
+                        <span style="display:inline-block;width:20px;height:20px;background:#6366f1;border-radius:4px;text-align:center;line-height:20px;font-size:11px;font-weight:700;color:#ffffff;">C</span>
+                      </td>
+                      <td style="padding-left:10px;vertical-align:middle;font-size:14px;">
+                        <a href="{{ link_reserva }}" style="color:#6366f1;text-decoration:none;font-weight:500;">Ver reserva en Conquer Calendario</a>
+                      </td>
+                    </tr></table>
+                  </td>
+                </tr>
+                {% endif %}
+
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+          {% endwith %}
+
+          <!-- Cancelar -->
+          {% if link_cancelar and 'link_cancelar' in campos %}
+          <tr>
+            <td style="padding:0 40px 36px;">
+              <a href="{{ link_cancelar }}"
+                 style="display:inline-block;background-color:#fee2e2;color:#dc2626;font-size:13px;font-weight:600;padding:10px 22px;border-radius:6px;text-decoration:none;border:1px solid #fca5a5;">
+                Cancelar reserva
+              </a>
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- Footer -->
+          {% if pie_pagina %}
+          <tr>
+            <td style="padding:20px 40px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.5;">{{ pie_pagina }}</p>
+            </td>
+          </tr>
+          {% endif %}
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

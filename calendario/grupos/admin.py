@@ -1,4 +1,7 @@
 from django.contrib import admin
+
+from calendario.bookings.admin import ConfigCorreoGrupoInline
+
 from .models import Grupo, GrupoXUsuario
 
 
@@ -10,4 +13,4 @@ class GrupoXUsuarioInline(admin.TabularInline):
 @admin.register(Grupo)
 class GrupoAdmin(admin.ModelAdmin):
     list_display = ['nombre', 'fecha_creacion']
-    inlines = [GrupoXUsuarioInline]
+    inlines = [GrupoXUsuarioInline, ConfigCorreoGrupoInline]

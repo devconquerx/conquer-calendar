@@ -135,11 +135,18 @@ TEMPLATES = [
     },
 ]
 
-# Email (placeholder; se configurará con un proveedor real en fases posteriores)
+# Email
 EMAIL_BACKEND = env.str(
     'CALENDARIO_DJANGO_EMAIL_BACKEND',
     default='django.core.mail.backends.console.EmailBackend',
 )
+DEFAULT_FROM_EMAIL = env.str('CALENDARIO_DEFAULT_FROM_EMAIL', default='noreply@mg.conquerx.com')
+SITE_URL = env.str('CALENDARIO_SITE_URL', default='http://localhost:8000')
+
+ANYMAIL = {
+    'MAILGUN_API_KEY': env.str('MAILGUN_API_KEY', default=''),
+    'MAILGUN_SENDER_DOMAIN': env.str('MAILGUN_SENDER_DOMAIN', default='mg.conquerx.com'),
+}
 
 ADMIN_URL = "admin/"
 

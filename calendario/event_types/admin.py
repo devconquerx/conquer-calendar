@@ -1,4 +1,7 @@
 from django.contrib import admin
+
+from calendario.bookings.admin import ConfigCorreoEventoInline
+
 from .models import EventType, EventTypeXHost
 
 
@@ -10,6 +13,7 @@ class EventTypeAdmin(admin.ModelAdmin):
     fields = ('host', 'nombre', 'slug', 'slug_equipo', 'descripcion', 'duracion_minutos',
               'buffer_antes_minutos', 'buffer_despues_minutos', 'aviso_minimo_minutos',
               'aviso_maximo_dias', 'precio', 'activo', 'notificar_crm')
+    inlines = [ConfigCorreoEventoInline]
 
 
 @admin.register(EventTypeXHost)

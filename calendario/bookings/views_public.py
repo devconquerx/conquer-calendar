@@ -9,6 +9,7 @@ from django.views import View
 
 from calendario.event_types.models import EventType
 from calendario.users.models import User
+from .correos import enviar_confirmacion_host, enviar_confirmacion_invitado
 from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .forms import BookingForm
 from .models import Reserva
@@ -243,6 +244,8 @@ class BookingFormView(View):
         except SlotNoDisponibleError as e:
             form.add_error(None, str(e))
             return self._render_with_errors(request, host, event_type, form)
+        enviar_confirmacion_host(reserva)
+        enviar_confirmacion_invitado(reserva)
         return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
 
     def _render_with_errors(self, request, host, event_type, form, duplicado=None):
@@ -367,6 +370,8 @@ class TeamBookingFormView(View):
         except SlotNoDisponibleError as e:
             form.add_error(None, str(e))
             return self._render_with_errors(request, event_type, form)
+        enviar_confirmacion_host(reserva)
+        enviar_confirmacion_invitado(reserva)
         return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
 
     def _render_with_errors(self, request, event_type, form, duplicado=None):

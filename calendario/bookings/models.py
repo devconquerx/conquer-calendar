@@ -6,6 +6,39 @@ from django.db import models
 from django.db.models import Q, F
 
 
+class PlantillaCorreo(models.Model):
+    nombre = models.CharField(max_length=150)
+    logo = models.FileField(upload_to='plantillas_correo/', blank=True, null=True)
+    color_encabezado = models.CharField(max_length=7, default='#111827', verbose_name='Color del encabezado')
+    texto_encabezado = models.CharField(max_length=200)
+    cuerpo = models.TextField(
+        help_text=(
+            'Variables: {{nombre_invitado}}, {{email_invitado}}, {{nombre_host}}, '
+            '{{nombre_evento}}, {{fecha_hora}}, {{duracion}}, {{google_meet_url}}, {{link_cancelar}}'
+        )
+    )
+    pie_pagina = models.CharField(max_length=300, blank=True, default='')
+    campos_visibles = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='Campos visibles en el correo',
+    )
+    recordatorio_1_activo = models.BooleanField(default=True, verbose_name='Recordatorio 1 activo')
+    recordatorio_1_horas = models.PositiveSmallIntegerField(default=24, verbose_name='Recordatorio 1 — horas antes')
+    recordatorio_2_activo = models.BooleanField(default=False, verbose_name='Recordatorio 2 activo')
+    recordatorio_2_horas = models.PositiveSmallIntegerField(default=1, verbose_name='Recordatorio 2 — horas antes')
+    activa = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'plantillas_correo'
+        verbose_name = 'Plantilla de correo'
+        verbose_name_plural = 'Plantillas de correo'
+
+    def __str__(self):
+        return self.nombre
+
+
 class Reserva(models.Model):
 
     class Estado(models.TextChoices):
@@ -51,6 +84,8 @@ class Reserva(models.Model):
         choices=GoogleSyncEstado.choices,
         default=GoogleSyncEstado.PENDIENTE,
     )
+    recordatorio_1_enviado = models.BooleanField(default=False)
+    recordatorio_2_enviado = models.BooleanField(default=False)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -92,3 +127,155 @@ class Reserva(models.Model):
 
     def __str__(self):
         return f"{self.event_type.nombre} — {self.nombre_invitado} @ {self.inicio_utc:%Y-%m-%d %H:%M UTC}"
+
+
+class ConfigCorreoEvento(models.Model):
+    event_type = models.OneToOneField(
+        'event_types.EventType',
+        on_delete=models.CASCADE,
+        related_name='config_correo',
+    )
+    plantilla_confirmacion_host = models.ForeignKey(
+        PlantillaCorreo,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='configs_confirmacion_host',
+        verbose_name='Correo al host',
+        help_text='Si no se selecciona, Google Calendar solo notifica al host si el invitado confirma manualmente.',
+    )
+    plantilla_confirmacion_inv = models.ForeignKey(
+        PlantillaCorreo,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='configs_confirmacion_inv',
+        verbose_name='Correo al invitado',
+        help_text='Si no se selecciona, Google Calendar sigue enviando su correo por defecto.',
+    )
+    plantilla_recordatorio = models.ForeignKey(
+        PlantillaCorreo,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='configs_recordatorio_evento',
+        verbose_name='Plantilla de recordatorio',
+        help_text='Los tiempos de envío se leen de la plantilla seleccionada.',
+    )
+
+    class Meta:
+        db_table = 'config_correo_evento'
+        verbose_name = 'Configuración de correo por evento'
+        verbose_name_plural = 'Configuraciones de correo por evento'
+
+    def __str__(self):
+        return f'Config correo — {self.event_type.nombre}'
+
+
+class ConfigCorreoDefault(models.Model):
+    """Config global de correos — aplica a todos cuando no hay config por evento ni grupo."""
+    plantilla_confirmacion_host = models.ForeignKey(
+        PlantillaCorreo, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='default_confirmacion_host',
+        verbose_name='Correo al host (por defecto)',
+    )
+    plantilla_confirmacion_inv = models.ForeignKey(
+        PlantillaCorreo, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='default_confirmacion_inv',
+        verbose_name='Correo al invitado (por defecto)',
+    )
+    plantilla_recordatorio = models.ForeignKey(
+        PlantillaCorreo, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='default_recordatorio',
+        verbose_name='Recordatorio (por defecto)',
+    )
+
+    class Meta:
+        db_table = 'config_correo_default'
+        verbose_name = 'Configuración global de correos'
+        verbose_name_plural = 'Configuración global de correos'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return 'Configuración global de correos'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+class ConfigCorreoGrupo(models.Model):
+    grupo = models.OneToOneField(
+        'grupos.Grupo',
+        on_delete=models.CASCADE,
+        related_name='config_correo',
+    )
+    plantilla_confirmacion_host = models.ForeignKey(
+        PlantillaCorreo,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='configs_grupo_confirmacion_host',
+        verbose_name='Correo al host',
+        help_text='Se aplica a todos los miembros del grupo salvo que el evento tenga su propia config. Sin plantilla, Google Calendar solo notifica al host si el invitado confirma manualmente.',
+    )
+    plantilla_confirmacion_inv = models.ForeignKey(
+        PlantillaCorreo,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='configs_grupo_confirmacion_inv',
+        verbose_name='Correo al invitado',
+    )
+    plantilla_recordatorio = models.ForeignKey(
+        PlantillaCorreo,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='configs_grupo_recordatorio',
+        verbose_name='Plantilla de recordatorio',
+    )
+
+    class Meta:
+        db_table = 'config_correo_grupo'
+        verbose_name = 'Configuración de correo por grupo'
+        verbose_name_plural = 'Configuraciones de correo por grupo'
+
+    def __str__(self):
+        return f'Config correo — {self.grupo.nombre}'
+
+
+class LogCorreo(models.Model):
+    class Tipo(models.TextChoices):
+        CONFIRMACION_HOST = 'confirmacion_host', 'Confirmación host'
+        CONFIRMACION_INV = 'confirmacion_invitado', 'Confirmación invitado'
+        RECORDATORIO_1 = 'recordatorio_1', 'Recordatorio 1'
+        RECORDATORIO_2 = 'recordatorio_2', 'Recordatorio 2'
+        CANCELACION = 'cancelacion', 'Cancelación'
+
+    reserva = models.ForeignKey(
+        Reserva,
+        on_delete=models.CASCADE,
+        related_name='logs_correo',
+    )
+    tipo = models.CharField(max_length=30, choices=Tipo.choices)
+    plantilla = models.ForeignKey(
+        PlantillaCorreo,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name='logs',
+    )
+    destinatario = models.EmailField()
+    enviado_en = models.DateTimeField(auto_now_add=True)
+    exitoso = models.BooleanField()
+    error_detalle = models.TextField(blank=True, default='')
+
+    class Meta:
+        db_table = 'logs_correo'
+        verbose_name = 'Log de correo'
+        verbose_name_plural = 'Logs de correo'
+        ordering = ['-enviado_en']
+
+    def __str__(self):
+        return f'{self.tipo} → {self.destinatario} ({self.enviado_en:%Y-%m-%d %H:%M})'

@@ -19,3 +19,6 @@ PyJWT==2.10.1
 # Google APIs (placeholder para integración futura con Calendar / Meet)
 google-auth>=2.14.1
 google-api-python-client==2.141.0
+
+# Email
+django-anymail[mailgun]==10.3

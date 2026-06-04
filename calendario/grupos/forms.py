@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
+from calendario.bookings.models import ConfigCorreoGrupo, PlantillaCorreo
+
 from .models import Grupo, GrupoXUsuario
 
 User = get_user_model()
@@ -126,3 +128,53 @@ class GrupoPermisosForm(forms.ModelForm):
             f: forms.CheckboxInput(attrs={'class': 'form-check-input form-check-input-lg'})
             for f in _PERMISOS_FIELDS
         }
+
+
+_PLANTILLA_WIDGET = forms.Select(attrs={'class': 'form-select form-select-solid'})
+
+_PLANTILLA_QUERYSET = PlantillaCorreo.objects.filter(activa=True).order_by('nombre')
+
+
+class ConfigCorreoGrupoForm(forms.ModelForm):
+    plantilla_confirmacion_host = forms.ModelChoiceField(
+        queryset=_PLANTILLA_QUERYSET,
+        required=False,
+        empty_label='— Sin plantilla (usa global) —',
+        widget=_PLANTILLA_WIDGET,
+        label='Correo al host',
+        help_text='Sin plantilla, aplica la configuración global.',
+    )
+    plantilla_confirmacion_inv = forms.ModelChoiceField(
+        queryset=_PLANTILLA_QUERYSET,
+        required=False,
+        empty_label='— Sin plantilla (usa global) —',
+        widget=_PLANTILLA_WIDGET,
+        label='Correo al invitado',
+    )
+    plantilla_recordatorio = forms.ModelChoiceField(
+        queryset=_PLANTILLA_QUERYSET,
+        required=False,
+        empty_label='— Sin plantilla (usa global) —',
+        widget=_PLANTILLA_WIDGET,
+        label='Plantilla de recordatorio',
+    )
+
+    class Meta:
+        model = ConfigCorreoGrupo
+        fields = ['plantilla_confirmacion_host', 'plantilla_confirmacion_inv', 'plantilla_recordatorio']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.is_bound:
+            return
+        try:
+            from calendario.bookings.models import ConfigCorreoDefault
+            cfg = ConfigCorreoDefault.get()
+            if not self.initial.get('plantilla_confirmacion_host'):
+                self.initial['plantilla_confirmacion_host'] = cfg.plantilla_confirmacion_host_id
+            if not self.initial.get('plantilla_confirmacion_inv'):
+                self.initial['plantilla_confirmacion_inv'] = cfg.plantilla_confirmacion_inv_id
+            if not self.initial.get('plantilla_recordatorio'):
+                self.initial['plantilla_recordatorio'] = cfg.plantilla_recordatorio_id
+        except Exception:
+            pass

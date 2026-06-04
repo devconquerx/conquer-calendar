@@ -5,7 +5,9 @@ from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 
 from calendario.permisos.mixins import RequierePermisoMixin
-from .forms import GrupoForm, GrupoPermisosForm, _usuarios_activos_context, _supervisores_disponibles_context
+from calendario.bookings.models import ConfigCorreoGrupo
+
+from .forms import ConfigCorreoGrupoForm, GrupoForm, GrupoPermisosForm, _usuarios_activos_context, _supervisores_disponibles_context
 from .models import Grupo, GrupoXUsuario
 
 
@@ -123,7 +125,27 @@ class GrupoPermisosView(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['grupo'] = self.object
+        config, _ = ConfigCorreoGrupo.objects.get_or_create(grupo=self.object)
+        ctx['correo_form'] = ConfigCorreoGrupoForm(instance=config)
         return ctx
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if request.POST.get('_form_type') == 'correos':
+            return self._handle_correos(request)
+        return super().post(request, *args, **kwargs)
+
+    def _handle_correos(self, request):
+        from django.shortcuts import redirect
+        config, _ = ConfigCorreoGrupo.objects.get_or_create(grupo=self.object)
+        form = ConfigCorreoGrupoForm(request.POST, instance=config)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Correos del grupo "{self.object.nombre}" actualizados.')
+            return redirect(request.path)
+        # Re-render con errores en el form de correos
+        permisos_form = self.get_form()
+        return self.render_to_response(self.get_context_data(form=permisos_form, correo_form=form))
 
     def form_valid(self, form):
         response = super().form_valid(form)
