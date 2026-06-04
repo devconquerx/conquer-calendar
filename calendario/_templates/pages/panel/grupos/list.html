@@ -59,6 +59,12 @@
                                    title="Editar grupo">
                                     <i class="bi bi-pencil"></i>
                                 </a>
+                                {% elif 'grupos.editar_propio' in PERMISOS_USUARIO %}
+                                <a href="{% url 'panel_grupos:grupo_miembros' grupo.pk %}"
+                                   class="btn btn-sm btn-icon btn-light-warning"
+                                   title="Editar miembros">
+                                    <i class="bi bi-people"></i>
+                                </a>
                                 {% endif %}
                                 {% if 'grupos.editar' in PERMISOS_USUARIO or 'grupos.editar_propio' in PERMISOS_USUARIO %}
                                 <a href="{% url 'panel_grupos:grupo_permisos' grupo.pk %}"
@@ -106,6 +112,11 @@
                class="btn btn-sm btn-light-warning">
                 <i class="bi bi-pencil me-1"></i>Editar
             </a>
+            {% elif 'grupos.editar_propio' in PERMISOS_USUARIO %}
+            <a href="{% url 'panel_grupos:grupo_miembros' grupo.pk %}"
+               class="btn btn-sm btn-light-warning">
+                <i class="bi bi-people me-1"></i>Editar miembros
+            </a>
             {% endif %}
             {% if 'grupos.editar' in PERMISOS_USUARIO or 'grupos.editar_propio' in PERMISOS_USUARIO %}
             <a href="{% url 'panel_grupos:grupo_permisos' grupo.pk %}"
@@ -148,7 +159,7 @@
                         <th class="min-w-140px">Nombre</th>
                         <th class="min-w-100px">Roles</th>
                         <th class="min-w-80px text-center">Supervisor</th>
-                        <th class="min-w-80px text-end">CRM</th>
+                        <th class="min-w-80px text-end">Impersonate</th>
                     </tr>
                 </thead>
                 <tbody>

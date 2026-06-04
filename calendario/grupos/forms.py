@@ -109,6 +109,39 @@ class GrupoForm(forms.ModelForm):
         return []
 
 
+class GrupoMiembrosForm(forms.Form):
+    """Formulario reducido para que supervisores editen solo los miembros (no supervisores)."""
+
+    def __init__(self, *args, grupo=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.grupo = grupo
+
+    def _parse_ids(self):
+        ids = []
+        for v in self.data.getlist('miembros'):
+            try:
+                ids.append(int(v))
+            except (ValueError, TypeError):
+                pass
+        return ids
+
+    def save(self):
+        miembro_ids = set(self._parse_ids())
+        with transaction.atomic():
+            GrupoXUsuario.objects.filter(grupo=self.grupo, es_supervisor=False).delete()
+            GrupoXUsuario.objects.bulk_create([
+                GrupoXUsuario(grupo=self.grupo, usuario_id=uid, es_supervisor=False)
+                for uid in miembro_ids
+            ])
+        return self.grupo
+
+    def initial_miembro_ids(self):
+        return list(
+            GrupoXUsuario.objects.filter(grupo=self.grupo, es_supervisor=False)
+            .values_list('usuario_id', flat=True)
+        )
+
+
 _PERMISOS_FIELDS = [
     'permite_ver_reservas_grupo',
     'bloquear_editar_disponibilidad',

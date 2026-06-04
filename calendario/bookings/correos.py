@@ -181,6 +181,8 @@ def _enviar(reserva, tipo_correo, destinatario, plantilla):
         destinatario=destinatario,
         exitoso=exitoso,
         error_detalle=error_detalle,
+        html_content=html_content,
+        payload=vars_dict,
     )
 
     return exitoso

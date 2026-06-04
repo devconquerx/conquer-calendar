@@ -249,7 +249,7 @@ class ConfigCorreoGrupo(models.Model):
 class LogCorreo(models.Model):
     class Tipo(models.TextChoices):
         CONFIRMACION_HOST = 'confirmacion_host', 'Confirmación host'
-        CONFIRMACION_INV = 'confirmacion_invitado', 'Confirmación invitado'
+        CONFIRMACION_INV = 'confirmacion_inv', 'Confirmación invitado'
         RECORDATORIO_1 = 'recordatorio_1', 'Recordatorio 1'
         RECORDATORIO_2 = 'recordatorio_2', 'Recordatorio 2'
         CANCELACION = 'cancelacion', 'Cancelación'
@@ -270,6 +270,8 @@ class LogCorreo(models.Model):
     enviado_en = models.DateTimeField(auto_now_add=True)
     exitoso = models.BooleanField()
     error_detalle = models.TextField(blank=True, default='')
+    html_content = models.TextField(blank=True, default='', verbose_name='Contenido HTML')
+    payload = models.JSONField(default=dict, blank=True, verbose_name='Payload')
 
     class Meta:
         db_table = 'logs_correo'

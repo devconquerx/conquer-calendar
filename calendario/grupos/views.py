@@ -1,13 +1,16 @@
+import json
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
 
 from calendario.permisos.mixins import RequierePermisoMixin
 from calendario.bookings.models import ConfigCorreoGrupo
 
-from .forms import ConfigCorreoGrupoForm, GrupoForm, GrupoPermisosForm, _usuarios_activos_context, _supervisores_disponibles_context
+from .forms import ConfigCorreoGrupoForm, GrupoForm, GrupoMiembrosForm, GrupoPermisosForm, _usuarios_activos_context, _supervisores_disponibles_context
 from .models import Grupo, GrupoXUsuario
 
 
@@ -151,3 +154,33 @@ class GrupoPermisosView(LoginRequiredMixin, UpdateView):
         response = super().form_valid(form)
         messages.success(self.request, f'Permisos del grupo "{self.object.nombre}" actualizados.')
         return response
+
+
+class GrupoMiembrosUpdateView(LoginRequiredMixin, View):
+    """Permite a un supervisor editar solo los miembros (no supervisores) de su grupo."""
+    template_name = 'pages/panel/grupos/miembros_form.html'
+
+    def _get_grupo_o_403(self, pk):
+        grupo = get_object_or_404(Grupo, pk=pk)
+        user = self.request.user
+        if user.es_admin:
+            return grupo
+        if not GrupoXUsuario.objects.filter(grupo=grupo, usuario=user, es_supervisor=True).exists():
+            raise PermissionDenied
+        return grupo
+
+    def get(self, request, pk):
+        grupo = self._get_grupo_o_403(pk)
+        form = GrupoMiembrosForm(grupo=grupo)
+        return render(request, self.template_name, {
+            'grupo': grupo,
+            'miembros_disponibles': _usuarios_activos_context(),
+            'initial_miembro_ids': json.dumps(form.initial_miembro_ids()),
+        })
+
+    def post(self, request, pk):
+        grupo = self._get_grupo_o_403(pk)
+        form = GrupoMiembrosForm(request.POST, grupo=grupo)
+        form.save()
+        messages.success(request, f'Miembros del grupo "{grupo.nombre}" actualizados.')
+        return redirect(reverse_lazy('panel_grupos:grupo_list'))

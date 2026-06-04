@@ -38,7 +38,6 @@ class Command(BaseCommand):
                 and tiempo_restante <= timedelta(hours=plantilla.recordatorio_1_horas)
             ):
                 ok = _enviar(reserva, 'recordatorio_1', reserva.email_invitado, plantilla)
-                _enviar(reserva, 'recordatorio_1', reserva.host.email, plantilla)
                 Reserva.objects.filter(pk=reserva.pk).update(recordatorio_1_enviado=True)
                 if ok:
                     enviados += 1
@@ -52,7 +51,6 @@ class Command(BaseCommand):
                 and tiempo_restante <= timedelta(hours=plantilla.recordatorio_2_horas)
             ):
                 ok = _enviar(reserva, 'recordatorio_2', reserva.email_invitado, plantilla)
-                _enviar(reserva, 'recordatorio_2', reserva.host.email, plantilla)
                 Reserva.objects.filter(pk=reserva.pk).update(recordatorio_2_enviado=True)
                 if ok:
                     enviados += 1

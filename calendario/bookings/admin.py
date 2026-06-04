@@ -1,6 +1,10 @@
+import json
+
 from django import forms
 from django.contrib import admin
 from django.contrib.admin.widgets import FilteredSelectMultiple
+from django.http import HttpResponse
+from django.urls import path, reverse
 from django.utils.html import format_html, mark_safe
 
 from .models import ConfigCorreoDefault, ConfigCorreoEvento, ConfigCorreoGrupo, LogCorreo, PlantillaCorreo, Reserva
@@ -172,10 +176,74 @@ class ConfigCorreoDefaultAdmin(admin.ModelAdmin):
 
 @admin.register(LogCorreo)
 class LogCorreoAdmin(admin.ModelAdmin):
-    list_display = ('tipo', 'destinatario', 'exitoso', 'enviado_en', 'reserva')
+    list_display = ('tipo', 'destinatario', 'exitoso_icon', 'enviado_en', 'reserva', 'ver_contenido_link')
     list_filter = ('tipo', 'exitoso')
     search_fields = ('destinatario',)
-    readonly_fields = [f.name for f in LogCorreo._meta.fields]
+    readonly_fields = [
+        f.name for f in LogCorreo._meta.fields
+        if f.name not in ('html_content', 'payload')
+    ] + ['html_content_preview', 'payload_preview', 'ver_contenido_link']
+    exclude = ('html_content', 'payload')
+    fieldsets = (
+        ('Información', {
+            'fields': ('reserva', 'tipo', 'plantilla', 'destinatario', 'enviado_en'),
+        }),
+        ('Estado', {
+            'fields': ('exitoso', 'error_detalle'),
+        }),
+        ('Contenido', {
+            'fields': ('payload_preview', 'html_content_preview', 'ver_contenido_link'),
+        }),
+    )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<int:pk>/content/',
+                self.admin_site.admin_view(self.view_email_content),
+                name='bookings_logcorreo_content',
+            ),
+        ]
+        return custom_urls + urls
+
+    def view_email_content(self, request, pk):
+        try:
+            log = LogCorreo.objects.get(pk=pk)
+            return HttpResponse(log.html_content, content_type='text/html')
+        except LogCorreo.DoesNotExist:
+            return HttpResponse('Correo no encontrado', status=404)
+
+    @admin.display(description='Enviado', ordering='exitoso')
+    def exitoso_icon(self, obj):
+        if obj.exitoso:
+            return format_html('<span style="color:green;font-weight:bold;">✓</span>')
+        return format_html('<span style="color:red;font-weight:bold;">✗</span>')
+
+    @admin.display(description='Ver contenido')
+    def ver_contenido_link(self, obj):
+        if obj.pk and obj.html_content:
+            url = reverse('admin:bookings_logcorreo_content', args=[obj.pk])
+            return format_html('<a href="{}" target="_blank" class="button">Ver contenido</a>', url)
+        return '-'
+
+    @admin.display(description='Contenido HTML')
+    def html_content_preview(self, obj):
+        if obj.html_content:
+            preview = obj.html_content[:500]
+            if len(obj.html_content) > 500:
+                preview += '...'
+            return format_html("<pre style='max-height:200px;overflow:auto;white-space:pre-wrap;'>{}</pre>", preview)
+        return '-'
+
+    @admin.display(description='Payload')
+    def payload_preview(self, obj):
+        if obj.payload:
+            return format_html(
+                "<pre style='max-height:200px;overflow:auto;'>{}</pre>",
+                json.dumps(obj.payload, indent=2, ensure_ascii=False),
+            )
+        return '-'
 
     def has_add_permission(self, request):
         return False
