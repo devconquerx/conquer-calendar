@@ -1,9 +1,15 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import Funnel from './Funnel'
+import TrackingProvider from './components/tracking/TrackingProvider'
 
 const container = document.getElementById('funnel-root')
 const slug = container.dataset.slug
 const csrf = container.dataset.csrf
+const escuela = container.dataset.escuela || ''
 
-createRoot(container).render(<Funnel slug={slug} csrf={csrf} />)
+createRoot(container).render(
+  <TrackingProvider>
+    <Funnel slug={slug} csrf={csrf} escuela={escuela} />
+  </TrackingProvider>
+)

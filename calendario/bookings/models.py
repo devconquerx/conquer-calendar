@@ -4,6 +4,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.db.models import Q, F
+from taggit.managers import TaggableManager
 
 
 class PlantillaCorreo(models.Model):
@@ -88,6 +89,9 @@ class Reserva(models.Model):
     recordatorio_2_enviado = models.BooleanField(default=False)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    # Tags de estado para las tareas de conversión (browser_done, sch_*_done, *_failed)
+    tags = TaggableManager(blank=True)
 
     class Meta:
         db_table = 'reservas'

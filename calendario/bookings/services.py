@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
@@ -18,6 +19,8 @@ from calendario.google_calendar.services import (
 from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .models import Reserva
 from .services_crm import notificar_crm
+
+logger = logging.getLogger(__name__)
 
 
 MAX_VENTANA_DIAS = 60
@@ -334,7 +337,21 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         transaction.on_commit(lambda: crear_evento_google(reserva.pk))
         if et.notificar_crm:
             transaction.on_commit(lambda: notificar_crm(reserva.pk))
+        # Conversiones server-side (Meta CAPI/TikTok/Google Ads/AC/Respond.io/CRM)
+        # vía Celery. La reserva ya quedó creada; si Celery/Redis falla, no
+        # bloquea ni rompe el booking.
+        reserva.tags.add('browser_done')
+        transaction.on_commit(lambda: _dispatch_schedule_conversions(reserva.pk))
         return reserva
+
+
+def _dispatch_schedule_conversions(reserva_id):
+    """Encola las tareas de conversión de la reserva (best-effort)."""
+    try:
+        from .tasks import dispatch_schedule_tasks
+        dispatch_schedule_tasks(reserva_id)
+    except Exception:
+        logger.exception("No se pudieron encolar las tareas de conversión de la reserva %s", reserva_id)
 
 
 def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado,

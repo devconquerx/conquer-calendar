@@ -14,6 +14,12 @@ requests==2.28.1
 pytz==2023.3
 python-dateutil==2.9.0.post0
 
+# Async tasks (Celery + Redis) e integraciones de tracking/conversiones
+celery[redis]>=5.4,<6.0
+django-celery-beat>=2.6,<3.0
+redis>=5.0,<6.0
+django-taggit>=6.0,<7.0
+
 # Auth (Google OAuth se añadirá en fase posterior)
 django-allauth==65.13.1
 PyJWT==2.10.1

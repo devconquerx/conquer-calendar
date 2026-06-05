@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react'
-import { fetchConfig, postResolver } from './api'
+import React, { useState, useEffect, useRef } from 'react'
+import { fetchConfig, postResolver, registerLead } from './api'
+import useTracking from './hooks/useTracking'
+import { fireAllLead } from './lib/pixelEvents'
 import FormStep from './components/FormStep'
 import Calendar from './components/Calendar'
 import BookingDetails from './components/BookingDetails'
@@ -10,7 +12,9 @@ import WelcomeScreen from './components/form-engine/fields/WelcomeScreen'
 import { getTheme, ThemeContext } from './themes'
 import './funnel.css'
 
-export default function Funnel({ slug }) {
+export default function Funnel({ slug, escuela: escuelaProp = '' }) {
+  const tracking = useTracking()
+  const leadRegisteredRef = useRef(false)
   const [blocks, setBlocks] = useState([])
   const [escuela, setEscuela] = useState('')
   const [messages, setMessages] = useState({})
@@ -47,6 +51,31 @@ export default function Funnel({ slug }) {
     setRespuestas(prev => ({ ...prev, [current.id]: value }))
   }
 
+  // Registra el lead (nombre+email+tracking) apenas se captura el email, para
+  // capturarlo aunque abandone antes de agendar (igual que funnels).
+  const maybeRegisterLead = (answers) => {
+    if (leadRegisteredRef.current) return
+    const email = answers.email
+    if (!email) return
+    leadRegisteredRef.current = true
+    registerLead({
+      name: answers.name || '',
+      email,
+      lead_phone: answers.phone || '',
+      escuela: escuelaProp || escuela,
+      funnel: slug,
+      event_id: tracking.eventId,
+      journey_id: tracking.journeyId,
+      user_agent: navigator.userAgent,
+      url: window.location.href,
+      ...tracking.utmParams,
+      ...tracking.clickIds,
+      _fbp: tracking.pixelCookies._fbp || '',
+      _fbc: tracking.pixelCookies._fbc || '',
+      _ttp: tracking.pixelCookies._ttp || '',
+    })
+  }
+
   const handleNext = (value) => {
     if (!current) return
     const updated =
@@ -54,6 +83,7 @@ export default function Funnel({ slug }) {
         ? { ...respuestas, [current.id]: value }
         : { ...respuestas }
     setRespuestas(updated)
+    maybeRegisterLead(updated)
 
     setDirection('forward')
     if (currentIndex < blocks.length - 1) {
@@ -71,7 +101,18 @@ export default function Funnel({ slug }) {
   const submitResolver = async (finalRespuestas) => {
     setPhase('resolving')
     try {
-      const result = await postResolver(slug, finalRespuestas)
+      const result = await postResolver(slug, finalRespuestas, tracking.buildFullPayload())
+      // Dispara el evento Lead en todas las plataformas (Meta/Google/GA4/TikTok)
+      fireAllLead({
+        eventId: tracking.eventId,
+        journeyId: tracking.journeyId,
+        email: finalRespuestas.email || '',
+        phone: finalRespuestas.phone || '',
+        name: finalRespuestas.name || '',
+        schoolSlug: escuelaProp || escuela,
+        fbp: tracking.pixelCookies._fbp || '',
+        fbc: tracking.pixelCookies._fbc || '',
+      })
       setOutcome(result)
       setPhase('outcome')
     } catch (e) {
@@ -121,6 +162,7 @@ export default function Funnel({ slug }) {
             eventoInfo={outcome.evento_info}
             prellamadaToken={outcome.prellamada_token}
             funnelSlug={slug}
+            escuela={escuelaProp || escuela}
             onBack={() => setSelectedSlot(null)}
           />
         )

@@ -187,11 +187,17 @@ class ReservarView(View):
 
 
 class FunnelPageView(View):
-    """GET /f/<slug>/ → plantilla mínima (placeholder; React real en Paso 6+)."""
+    """GET /f/<slug>/ → plantilla del funnel (monta React + pixeles base)."""
 
     def get(self, request, slug):
         funnel = get_object_or_404(FunnelForm, slug=slug, activo=True)
-        return render(request, 'pages/public/funnel/page.html', {'funnel': funnel, 'slug': slug})
+        from .context_processors import get_pixel_ids
+        return render(request, 'pages/public/funnel/page.html', {
+            'funnel': funnel,
+            'slug': slug,
+            'pixel_ids': get_pixel_ids(funnel.escuela),
+            'app_base_path': '',
+        })
 
 
 # Producto (en la URL pública) → escuela (en BD). Las URLs canónicas por marca
@@ -215,8 +221,14 @@ class FunnelAgendaView(View):
         funnel = get_object_or_404(
             FunnelForm, escuela=escuela, region=region, activo=True
         )
+        from .context_processors import get_pixel_ids
         return render(
             request,
             'pages/public/funnel/page.html',
-            {'funnel': funnel, 'slug': funnel.slug},
+            {
+                'funnel': funnel,
+                'slug': funnel.slug,
+                'pixel_ids': get_pixel_ids(funnel.escuela),
+                'app_base_path': '',
+            },
         )

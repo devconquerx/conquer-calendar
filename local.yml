@@ -12,13 +12,16 @@ services:
       - .:/app
       - ./calendario_logs:/calendario_logs
       - ./calendario-media:/calendario-media
-      - /home/santiago19t/Escritorio/conquer/conquer-crm/conquercrm/users/scripts/google-meet-credentials.json:/opt/google-credentials/conquer-calendario.json:ro
+      - ./compose/local/google/credentials.placeholder.json:/opt/google-credentials/conquer-calendario.json:ro
     env_file:
       - ./.envs/.local/.django
       - ./.envs/.local/.postgres
     ports:
       - "8002:8000"
     command: /start
+    environment:
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     dns:
@@ -26,6 +29,30 @@ services:
       - 1.1.1.1
     depends_on:
       - postgres
+      - redis
+
+  celeryworker:
+    <<: *django
+    image: conquer_calendario_local_celeryworker
+    ports: []
+    command: /app/compose/local/django/start-celeryworker
+    depends_on:
+      - postgres
+      - redis
+
+  celerybeat:
+    <<: *django
+    image: conquer_calendario_local_celerybeat
+    ports: []
+    command: /app/compose/local/django/start-celerybeat
+    depends_on:
+      - postgres
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6381:6379"
 
   postgres:
     build:

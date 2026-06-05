@@ -1,3 +1,6 @@
+volumes:
+  calendario_production_redis_data: {}
+
 services:
   django:
     build:
@@ -14,9 +17,52 @@ services:
       - ./staticfiles:/app/staticfiles
       - ./calendario-media:/calendario-media
       - /etc/conquer:/etc/conquer:ro
+    depends_on:
+      - redis
+    environment:
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
     healthcheck:
       test: ["CMD", "curl", "-f", "-H", "Host: calendar.conquerx.com", "http://127.0.0.1:8000/health/"]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 20s
+
+  celeryworker:
+    image: conquer_calendario_production_django
+    restart: unless-stopped
+    env_file:
+      - /home/conquer-calendar/.env
+    command: /start-celeryworker
+    volumes:
+      - ./calendario-media:/calendario-media
+      - /etc/conquer:/etc/conquer:ro
+    environment:
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+    depends_on:
+      - django
+      - redis
+
+  celerybeat:
+    image: conquer_calendario_production_django
+    restart: unless-stopped
+    env_file:
+      - /home/conquer-calendar/.env
+    command: /start-celerybeat
+    volumes:
+      - ./calendario-media:/calendario-media
+      - /etc/conquer:/etc/conquer:ro
+    environment:
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+    depends_on:
+      - django
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - calendario_production_redis_data:/data

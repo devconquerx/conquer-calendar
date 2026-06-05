@@ -39,6 +39,8 @@ THIRD_PARTY_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'taggit',
+    'django_celery_beat',
 ]
 
 LOCAL_APPS = [
@@ -54,6 +56,8 @@ LOCAL_APPS = [
     'calendario.google_calendar',
     'calendario.grupos',
     'calendario.funnels',
+    'calendario.leads',
+    'calendario.monitoring',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -141,6 +145,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'calendario.users.context_processors.calendario_context',
+                'calendario.funnels.context_processors.pixel_ids',
             ],
             'libraries': {
                 'theme': 'metronic.templatetags.theme',
@@ -161,8 +166,9 @@ EMAIL_BACKEND = env.str(
 DEFAULT_FROM_EMAIL = env.str('CALENDARIO_DEFAULT_FROM_EMAIL', default='noreply@mg.conquerx.com')
 SITE_URL = env.str('CALENDARIO_SITE_URL', default='http://localhost:8000')
 
+MAILGUN_API_KEY = env.str('MAILGUN_API_KEY', default='')
 ANYMAIL = {
-    'MAILGUN_API_KEY': env.str('MAILGUN_API_KEY', default=''),
+    'MAILGUN_API_KEY': MAILGUN_API_KEY,
     'MAILGUN_SENDER_DOMAIN': env.str('MAILGUN_SENDER_DOMAIN', default='mg.conquerx.com'),
 }
 
@@ -224,6 +230,60 @@ CACHES = {
 CRM_WEBHOOK_URL = env.str('CRM_WEBHOOK_URL', default='')
 CRM_WEBHOOK_API_KEY = env.str('CRM_WEBHOOK_API_KEY', default='')
 CRM_WEBHOOK_TIMEOUT_SECONDS = env.int('CRM_WEBHOOK_TIMEOUT_SECONDS', default=8)
+
+# ──────────────────────────────────────────────────────────────────────
+# Tracking / conversiones (lead + schedule). Todas las claves tienen
+# default '' → si faltan, cada integración hace no-op y loguea (igual que
+# notificar_crm). El flujo de lead/booking nunca se rompe por falta de claves.
+# ──────────────────────────────────────────────────────────────────────
+META_ACCESS_TOKEN = env.str('META_ACCESS_TOKEN', default='')
+ACTIVECAMPAIGN_API_URL = env.str('ACTIVECAMPAIGN_API_URL', default='')
+ACTIVECAMPAIGN_API_KEY = env.str('ACTIVECAMPAIGN_API_KEY', default='')
+NEVERBOUNCE_API_KEY = env.str('NEVERBOUNCE_API_KEY', default='')
+RESPONDIO_API_KEY = env.str('RESPONDIO_API_KEY', default='')
+GOOGLE_ADS_DEVELOPER_TOKEN = env.str('GOOGLE_ADS_DEVELOPER_TOKEN', default='')
+GOOGLE_ADS_CLIENT_ID = env.str('GOOGLE_ADS_CLIENT_ID', default='')
+GOOGLE_ADS_CLIENT_SECRET = env.str('GOOGLE_ADS_CLIENT_SECRET', default='')
+GOOGLE_ADS_REFRESH_TOKEN = env.str('GOOGLE_ADS_REFRESH_TOKEN', default='')
+GOOGLE_ADS_LOGIN_CUSTOMER_ID = env.str('GOOGLE_ADS_LOGIN_CUSTOMER_ID', default='')
+# CRM ingest (distinto del webhook de Make de arriba)
+CRM_BASE_URL = env.str('CRM_BASE_URL', default='https://crm.conquerx.com')
+CRM_API_KEY = env.str('CRM_API_KEY', default='')
+
+# Monitoring / alertas de tasks
+MONITORING_ENABLED = env.bool('MONITORING_ENABLED', default=False)
+MONITORING_MAILGUN_DOMAIN = env.str('MONITORING_MAILGUN_DOMAIN', default='conquerblocks.com')
+MONITORING_ALERT_RECIPIENTS = [
+    r.strip() for r in env.str('MONITORING_ALERT_RECIPIENTS', default='').split(',') if r.strip()
+]
+SENTRY_ORG_URL = env.str('SENTRY_ORG_URL', default='')
+
+# Celery
+CELERY_BROKER_URL = env.str('CELERY_BROKER_URL', default='redis://redis:6379/0')
+CELERY_RESULT_BACKEND = env.str('CELERY_RESULT_BACKEND', default='redis://redis:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 120
+CELERY_TASK_SOFT_TIME_LIMIT = 90
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+CELERY_BEAT_SCHEDULE = {
+    'sweep-incomplete-leads': {
+        'task': 'calendario.leads.tasks.sweep_incomplete_leads',
+        'schedule': 60.0,
+    },
+    'sweep-incomplete-reservas': {
+        'task': 'calendario.bookings.tasks.sweep_incomplete_reservas',
+        'schedule': 60.0,
+    },
+    'check-funnel-health': {
+        'task': 'calendario.monitoring.tasks.check_funnel_health',
+        'schedule': 300.0,
+    },
+}
 
 SOCIALACCOUNT_ADAPTER = 'calendario.users.adapters.ConquerSocialAccountAdapter'
 SOCIALACCOUNT_AUTO_SIGNUP = False
