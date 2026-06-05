@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.views.generic import RedirectView
 
 from calendario.users.views import MagicLoginView, MagicLoginStopView
+from calendario.funnels.views import FunnelAgendaView
 
 
 def health(request):
@@ -30,6 +31,8 @@ urlpatterns = [
     path('r/', include('calendario.bookings.urls_public_token')),
     path('e/<slug:slug_equipo>/', include('calendario.bookings.urls_public_team')),
     path('f/', include('calendario.funnels.urls')),
+    # URLs públicas canónicas por marca/producto (antes del catch-all de booking).
+    path('agenda/<slug:producto>/<slug:region>/', FunnelAgendaView.as_view(), name='funnel_agenda'),
     re_path(
         r'^(?P<user_slug>[-a-zA-Z0-9_.]+)/(?P<event_type_slug>[-a-zA-Z0-9_]+)/',
         include('calendario.bookings.urls_public_booking'),

@@ -34,6 +34,7 @@ class ConfigView(View):
         funnel = get_object_or_404(FunnelForm, slug=slug, activo=True)
         cfg = funnel.config or {}
         data = {
+            'escuela': funnel.escuela,
             'blocks': cfg.get('blocks', []),
             'q_order': cfg.get('q_order', []),
             'settings': cfg.get('settings', {}),
@@ -191,3 +192,31 @@ class FunnelPageView(View):
     def get(self, request, slug):
         funnel = get_object_or_404(FunnelForm, slug=slug, activo=True)
         return render(request, 'pages/public/funnel/page.html', {'funnel': funnel, 'slug': slug})
+
+
+# Producto (en la URL pública) → escuela (en BD). Las URLs canónicas por marca
+# son /agenda/<producto>/<region>/. Añadir aquí nuevas marcas/productos.
+PRODUCTO_A_ESCUELA = {
+    'fullstack': 'conquer-blocks',
+    'proptrading': 'conquer-finance',
+    'english': 'conquer-languages',
+}
+
+
+class FunnelAgendaView(View):
+    """GET /agenda/<producto>/<region>/ → resuelve el funnel por escuela+región.
+
+    URL pública por marca (ej. /agenda/fullstack/eu/). La API sigue siendo por
+    slug (/f/api/<slug>/...): la plantilla recibe el slug del funnel resuelto.
+    """
+
+    def get(self, request, producto, region):
+        escuela = PRODUCTO_A_ESCUELA.get(producto)
+        funnel = get_object_or_404(
+            FunnelForm, escuela=escuela, region=region, activo=True
+        )
+        return render(
+            request,
+            'pages/public/funnel/page.html',
+            {'funnel': funnel, 'slug': funnel.slug},
+        )
