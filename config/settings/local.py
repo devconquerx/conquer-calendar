@@ -7,6 +7,9 @@ DEBUG = env.bool('CALENDARIO_DJANGO_DEBUG', default=True)
 
 ALLOWED_HOSTS = ["*"]
 
+# Vite dev server (HMR) on localhost:5173
+DJANGO_VITE["default"]["dev_mode"] = True  # noqa: F821
+
 CSRF_TRUSTED_ORIGINS = [
     'http://*',
     'https://*',

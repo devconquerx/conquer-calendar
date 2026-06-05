@@ -1,0 +1,130 @@
+{
+  "key": "EspLatam",
+  "slug": "especializacion-latam",
+  "escuela": "conquer-blocks-esp",
+  "region": "latam",
+  "nombre": "Conquer Blocks — Especialización LATAM",
+  "config": {
+    "key": "EspLatam",
+    "blocks": [
+      {
+        "name": "welcome-screen",
+        "id": "welcome",
+        "attributes": {
+          "label": "Sesión de Consultoría | Especialización",
+          "description": "Déjanos saber un poco más acerca de ti antes de continuar. Este formulario solo te llevará 20 segundos y, al final del mismo, te mostraremos nuestro calendario para agendar una cita.",
+          "buttonText": "Comenzar"
+        }
+      },
+      {
+        "name": "short-text",
+        "id": "name",
+        "attributes": {
+          "label": "Nombre",
+          "required": true,
+          "placeholder": "Escribe aquí tu respuesta..."
+        }
+      },
+      {
+        "name": "email",
+        "id": "email",
+        "attributes": {
+          "label": "Tu mejor correo electrónico",
+          "required": true,
+          "placeholder": "nombre@ejemplo.com"
+        }
+      },
+      {
+        "name": "phone-number",
+        "id": "phone",
+        "attributes": {
+          "label": "Número de teléfono",
+          "required": true
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "especialization",
+        "attributes": {
+          "label": "¿En qué especialización estás interesado?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Inteligencia artificial",
+              "value": "Inteligencia artificial"
+            },
+            {
+              "label": "Blockchain",
+              "value": "Blockchain"
+            },
+            {
+              "label": "Ciberseguridad",
+              "value": "Ciberseguridad"
+            },
+            {
+              "label": "Fullstack",
+              "value": "Fullstack"
+            }
+          ]
+        }
+      }
+    ],
+    "q_order": [
+      "especialization"
+    ],
+    "validate": [],
+    "neverCancel": [],
+    "score_ranges": [
+      {
+        "min_score": 0,
+        "max_score": 100,
+        "event_type_slug": "consultoria-especializacion-latam"
+      }
+    ],
+    "cancel_screen": {
+      "titulo": "Gracias por tu interés",
+      "mensaje": "Por el momento esta sesión de consultoría no encaja con tu situación actual. Te dejamos nuestro contenido gratuito para que sigas avanzando.",
+      "cta_url": "https://www.youtube.com/@ConquerBlocks"
+    },
+    "settings": {
+      "disableWheelSwiping": true,
+      "disableNavigationArrows": false,
+      "disableProgressBar": false
+    },
+    "theme": {
+      "font": "Roboto",
+      "buttonsBgColor": "#000000",
+      "logo": {
+        "src": ""
+      },
+      "questionsColor": "#000",
+      "answersColor": "#000000bf",
+      "buttonsFontColor": "#fff",
+      "buttonsBorderRadius": 10,
+      "errorsFontColor": "#fff",
+      "errorsBgColor": "#e74c3c",
+      "progressBarFillColor": "#000",
+      "progressBarBgColor": "#ccc"
+    },
+    "messages": {
+      "label.button.ok": "Siguiente",
+      "label.hintText.enter": "presiona <strong>Enter ↵</strong>",
+      "label.hintText.multipleSelection": "Elige tantos como desees",
+      "block.shortText.placeholder": "Escribe tu respuesta aquí",
+      "block.longText.placeholder": "Escribe tu respuesta aquí",
+      "block.email.placeholder": "Escribe tu correo aquí",
+      "label.progress.percent": "{{progress:percent}}% completado",
+      "label.errorAlert.required": "¡Este campo es obligatorio!",
+      "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
+      "label.errorAlert.email": "¡Correo electrónico no válido!",
+      "label.submitBtn": "Enviar"
+    }
+  },
+  "score_ranges": [
+    {
+      "min_score": 0,
+      "max_score": 100,
+      "event_type_id": null
+    }
+  ]
+}

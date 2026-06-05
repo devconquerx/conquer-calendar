@@ -13,6 +13,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && locale-gen \
     && rm -rf /var/lib/apt/lists/*
 
+# Node 20 — needed for `npm run build` in prod and optional dev use.
+# For local HMR dev, run Vite outside the container:
+#   cd frontend && npm install && npm run dev   (requires Node on host)
+# Or inside the running container:
+#   docker compose -f local.yml exec django bash -c "cd /app/frontend && npm install && npm run dev"
+# (add port 5173:5173 to local.yml if running inside the container)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY ./requirements /requirements
 RUN pip install --upgrade pip \
     && pip install django-environ psycopg2-binary \

@@ -1,0 +1,288 @@
+{
+  "key": "PropTradingUs",
+  "slug": "finance-us",
+  "escuela": "conquer-finance",
+  "region": "us",
+  "nombre": "Conquer Finance — US",
+  "config": {
+    "key": "PropTradingUs",
+    "blocks": [
+      {
+        "name": "welcome-screen",
+        "id": "welcome",
+        "attributes": {
+          "label": "Sesión de Consultoría | Conquer Finance",
+          "description": "Déjanos saber un poco más acerca de ti antes de continuar. Este formulario solo te llevará 20 segundos y, al final del mismo, te mostraremos nuestro calendario para agendar una cita.",
+          "buttonText": "Comenzar"
+        }
+      },
+      {
+        "name": "short-text",
+        "id": "name",
+        "attributes": {
+          "label": "Nombre",
+          "required": true,
+          "placeholder": "Escribe aquí tu respuesta..."
+        }
+      },
+      {
+        "name": "email",
+        "id": "email",
+        "attributes": {
+          "label": "Tu mejor correo electrónico",
+          "required": true,
+          "placeholder": "nombre@ejemplo.com"
+        }
+      },
+      {
+        "name": "phone-number",
+        "id": "phone",
+        "attributes": {
+          "label": "Número de teléfono",
+          "required": true
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "age",
+        "attributes": {
+          "label": "¿Qué edad tienes?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Soy menor de 18 años.",
+              "value": "Soy menor de 18 años."
+            },
+            {
+              "label": "Tengo entre 18 y 24 años.",
+              "value": "Tengo entre 18 y 24 años."
+            },
+            {
+              "label": "Tengo entre 25 y 34 años.",
+              "value": "Tengo entre 25 y 34 años."
+            },
+            {
+              "label": "Tengo entre 35 y 44 años.",
+              "value": "Tengo entre 35 y 44 años."
+            },
+            {
+              "label": "Tengo entre 45 y 54 años.",
+              "value": "Tengo entre 45 y 54 años."
+            },
+            {
+              "label": "Tengo entre 55 y 64 años.",
+              "value": "Tengo entre 55 y 64 años."
+            },
+            {
+              "label": "Soy mayor de 64 años.",
+              "value": "Soy mayor de 64 años."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "employment_situation",
+        "attributes": {
+          "label": "¿A qué te dedicas en este momento?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Tengo un empleo.",
+              "value": "Tengo un empleo."
+            },
+            {
+              "label": "Soy emprendedor / inversor.",
+              "value": "Soy emprendedor / inversor."
+            },
+            {
+              "label": "Soy estudiante.",
+              "value": "Soy estudiante."
+            },
+            {
+              "label": "Soy jubilado.",
+              "value": "Soy jubilado."
+            },
+            {
+              "label": "Me encuentro desempleado.",
+              "value": "Me encuentro desempleado."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "legal_status",
+        "attributes": {
+          "label": "¿Qué tipo de residencia tienes en Estados Unidos?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Visa de trabajo temporal",
+              "value": "Visa de trabajo temporal"
+            },
+            {
+              "label": "Visa de estudiante",
+              "value": "Visa de estudiante"
+            },
+            {
+              "label": "Visa de turista",
+              "value": "Visa de turista"
+            },
+            {
+              "label": "Visa de inversor",
+              "value": "Visa de inversor"
+            },
+            {
+              "label": "Green card",
+              "value": "Green card"
+            },
+            {
+              "label": "Tengo ciudadanía",
+              "value": "Tengo ciudadanía"
+            },
+            {
+              "label": "Todavía estoy en trámites",
+              "value": "Todavía estoy en trámites"
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "investment_capacity",
+        "attributes": {
+          "label": "Solo para conocer tu punto de partida, ¿Qué capacidad de ahorro mensual tienes en este momento?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Menos de 200 dólares mensuales.",
+              "value": "Menos de 200 dólares mensuales."
+            },
+            {
+              "label": "De 200 a 500 dólares mensuales.",
+              "value": "De 200 a 500 dólares mensuales."
+            },
+            {
+              "label": "De 500 a 700 dólares mensuales.",
+              "value": "De 500 a 700 dólares mensuales."
+            },
+            {
+              "label": "De 700 a 1000 dólares mensuales.",
+              "value": "De 700 a 1000 dólares mensuales."
+            },
+            {
+              "label": "Más de 1000 dólares mensuales.",
+              "value": "Más de 1000 dólares mensuales."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "goal_target",
+        "attributes": {
+          "label": "¿Qué objetivo tienes que crees que podemos ayudarte a conseguir gracias al método de Conquer Finance?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Soy principiante y quiero aprender a invertir con buen pie.",
+              "value": "Soy principiante y quiero aprender a invertir con buen pie."
+            },
+            {
+              "label": "El mundo de las inversiones es mi pasión, y quiero capitalizarme para poder vivir de esto.",
+              "value": "El mundo de las inversiones es mi pasión, y quiero capitalizarme para poder vivir de esto."
+            },
+            {
+              "label": "Quiero generar una segunda fuente de ingresos para no depender únicamente de mi fuente de ingresos actual o de mi futura jubilación.",
+              "value": "Quiero generar una segunda fuente de ingresos para no depender únicamente de mi fuente de ingresos actual o de mi futura jubilación."
+            },
+            {
+              "label": "Me gustaría aprender una forma de generar dinero que me permita tener libertad de ubicación.",
+              "value": "Me gustaría aprender una forma de generar dinero que me permita tener libertad de ubicación."
+            },
+            {
+              "label": "Otro.",
+              "value": "Otro."
+            }
+          ]
+        }
+      },
+      {
+        "name": "long-text",
+        "id": "current_problems",
+        "attributes": {
+          "label": "¿Qué problemas encuentras en tu situación actual que quieres solucionar aprendiendo el método de inversión de Conquer Finance?",
+          "required": true,
+          "placeholder": "Describe tus principales desafíos o inquietudes actuales."
+        }
+      }
+    ],
+    "q_order": [
+      "age",
+      "employment_situation",
+      "investment_capacity",
+      "goal_target",
+      "current_problems",
+      "legal_status"
+    ],
+    "validate": [
+      {
+        "age": "Soy menor de 18 años."
+      }
+    ],
+    "neverCancel": [],
+    "score_ranges": [
+      {
+        "min_score": 0,
+        "max_score": 100,
+        "event_type_slug": "consultoria-finance-us"
+      }
+    ],
+    "cancel_screen": {
+      "titulo": "Gracias por tu interés",
+      "mensaje": "Por el momento esta sesión de consultoría no encaja con tu situación actual. Te dejamos nuestro contenido gratuito para que sigas avanzando.",
+      "cta_url": "https://www.youtube.com/@ConquerFinance"
+    },
+    "settings": {
+      "disableWheelSwiping": true,
+      "disableNavigationArrows": false,
+      "disableProgressBar": false
+    },
+    "theme": {
+      "font": "Roboto",
+      "buttonsBgColor": "#000000",
+      "logo": {
+        "src": ""
+      },
+      "questionsColor": "#000",
+      "answersColor": "#000000bf",
+      "buttonsFontColor": "#fff",
+      "buttonsBorderRadius": 10,
+      "errorsFontColor": "#fff",
+      "errorsBgColor": "#e74c3c",
+      "progressBarFillColor": "#000",
+      "progressBarBgColor": "#ccc"
+    },
+    "messages": {
+      "label.button.ok": "Siguiente",
+      "label.hintText.enter": "presiona <strong>Enter ↵</strong>",
+      "label.hintText.multipleSelection": "Elige tantos como desees",
+      "block.shortText.placeholder": "Escribe tu respuesta aquí",
+      "block.longText.placeholder": "Escribe tu respuesta aquí",
+      "block.email.placeholder": "Escribe tu correo aquí",
+      "label.progress.percent": "{{progress:percent}}% completado",
+      "label.errorAlert.required": "¡Este campo es obligatorio!",
+      "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
+      "label.errorAlert.email": "¡Correo electrónico no válido!",
+      "label.submitBtn": "Enviar"
+    }
+  },
+  "score_ranges": [
+    {
+      "min_score": 0,
+      "max_score": 100,
+      "event_type_id": null
+    }
+  ]
+}

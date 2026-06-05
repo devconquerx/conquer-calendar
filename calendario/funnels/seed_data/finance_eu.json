@@ -1,0 +1,255 @@
+{
+  "key": "PropTradingEu",
+  "slug": "finance-eu",
+  "escuela": "conquer-finance",
+  "region": "eu",
+  "nombre": "Conquer Finance — EU",
+  "config": {
+    "key": "PropTradingEu",
+    "blocks": [
+      {
+        "name": "welcome-screen",
+        "id": "welcome",
+        "attributes": {
+          "label": "Sesión de Consultoría | Conquer Finance",
+          "description": "Déjanos saber un poco más acerca de ti antes de continuar. Este formulario solo te llevará 20 segundos y, al final del mismo, te mostraremos nuestro calendario para agendar una cita.",
+          "buttonText": "Comenzar"
+        }
+      },
+      {
+        "name": "short-text",
+        "id": "name",
+        "attributes": {
+          "label": "Nombre",
+          "required": true,
+          "placeholder": "Escribe aquí tu respuesta..."
+        }
+      },
+      {
+        "name": "email",
+        "id": "email",
+        "attributes": {
+          "label": "Tu mejor correo electrónico",
+          "required": true,
+          "placeholder": "nombre@ejemplo.com"
+        }
+      },
+      {
+        "name": "phone-number",
+        "id": "phone",
+        "attributes": {
+          "label": "Número de teléfono",
+          "required": true
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "age",
+        "attributes": {
+          "label": "¿Qué edad tienes?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Soy menor de 18 años.",
+              "value": "Soy menor de 18 años."
+            },
+            {
+              "label": "Tengo entre 18 y 24 años.",
+              "value": "Tengo entre 18 y 24 años."
+            },
+            {
+              "label": "Tengo entre 25 y 34 años.",
+              "value": "Tengo entre 25 y 34 años."
+            },
+            {
+              "label": "Tengo entre 35 y 44 años.",
+              "value": "Tengo entre 35 y 44 años."
+            },
+            {
+              "label": "Tengo entre 45 y 54 años.",
+              "value": "Tengo entre 45 y 54 años."
+            },
+            {
+              "label": "Tengo entre 55 y 64 años.",
+              "value": "Tengo entre 55 y 64 años."
+            },
+            {
+              "label": "Soy mayor de 64 años.",
+              "value": "Soy mayor de 64 años."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "employment_situation",
+        "attributes": {
+          "label": "¿A qué te dedicas en este momento?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Tengo un empleo.",
+              "value": "Tengo un empleo."
+            },
+            {
+              "label": "Soy emprendedor / inversor.",
+              "value": "Soy emprendedor / inversor."
+            },
+            {
+              "label": "Soy estudiante.",
+              "value": "Soy estudiante."
+            },
+            {
+              "label": "Soy jubilado.",
+              "value": "Soy jubilado."
+            },
+            {
+              "label": "Me encuentro desempleado.",
+              "value": "Me encuentro desempleado."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "investment_capacity",
+        "attributes": {
+          "label": "Solo para conocer tu punto de partida, ¿Qué capacidad de ahorro mensual tienes en este momento?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Ahorro menos de 100 euros al mes",
+              "value": "Ahorro menos de 100 euros al mes"
+            },
+            {
+              "label": "Ahorro entre 100 a 250 euros al mes.",
+              "value": "Ahorro entre 100 a 250 euros al mes."
+            },
+            {
+              "label": "Ahorro entre 250 a 500 euros al mes.",
+              "value": "Ahorro entre 250 a 500 euros al mes."
+            },
+            {
+              "label": "Ahorro entre 500 a 1000 euros al mes.",
+              "value": "Ahorro entre 500 a 1000 euros al mes."
+            },
+            {
+              "label": "Ahorro más de 1000 euros al mes.",
+              "value": "Ahorro más de 1000 euros al mes."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "goal_target",
+        "attributes": {
+          "label": "¿Qué objetivo tienes que crees que podemos ayudarte a conseguir gracias al método de Conquer Finance?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Soy principiante y quiero aprender a invertir con buen pie.",
+              "value": "Soy principiante y quiero aprender a invertir con buen pie."
+            },
+            {
+              "label": "El mundo de las inversiones es mi pasión, y quiero capitalizarme para poder vivir de esto.",
+              "value": "El mundo de las inversiones es mi pasión, y quiero capitalizarme para poder vivir de esto."
+            },
+            {
+              "label": "Quiero generar una segunda fuente de ingresos para no depender únicamente de mi fuente de ingresos actual o de mi futura jubilación.",
+              "value": "Quiero generar una segunda fuente de ingresos para no depender únicamente de mi fuente de ingresos actual o de mi futura jubilación."
+            },
+            {
+              "label": "Me gustaría aprender una forma de generar dinero que me permita tener libertad de ubicación.",
+              "value": "Me gustaría aprender una forma de generar dinero que me permita tener libertad de ubicación."
+            },
+            {
+              "label": "Otro.",
+              "value": "Otro."
+            }
+          ]
+        }
+      },
+      {
+        "name": "long-text",
+        "id": "current_problems",
+        "attributes": {
+          "label": "¿Qué problemas encuentras en tu situación actual que quieres solucionar aprendiendo el método de inversión de Conquer Finance?",
+          "required": true,
+          "placeholder": "Describe tus principales desafíos o inquietudes actuales."
+        }
+      }
+    ],
+    "q_order": [
+      "age",
+      "employment_situation",
+      "investment_capacity",
+      "goal_target",
+      "current_problems"
+    ],
+    "validate": [],
+    "neverCancel": [],
+    "score_ranges": [
+      {
+        "min_score": 0,
+        "max_score": 3.4,
+        "event_type_slug": "consultoria-finance-eu-bajo"
+      },
+      {
+        "min_score": 3.5,
+        "max_score": 100,
+        "event_type_slug": "consultoria-finance-eu-alto"
+      }
+    ],
+    "cancel_screen": {
+      "titulo": "Gracias por tu interés",
+      "mensaje": "Por el momento esta sesión de consultoría no encaja con tu situación actual. Te dejamos nuestro contenido gratuito para que sigas avanzando.",
+      "cta_url": "https://www.youtube.com/@ConquerFinance"
+    },
+    "settings": {
+      "disableWheelSwiping": true,
+      "disableNavigationArrows": false,
+      "disableProgressBar": false
+    },
+    "theme": {
+      "font": "Roboto",
+      "buttonsBgColor": "#000000",
+      "logo": {
+        "src": ""
+      },
+      "questionsColor": "#000",
+      "answersColor": "#000000bf",
+      "buttonsFontColor": "#fff",
+      "buttonsBorderRadius": 10,
+      "errorsFontColor": "#fff",
+      "errorsBgColor": "#e74c3c",
+      "progressBarFillColor": "#000",
+      "progressBarBgColor": "#ccc"
+    },
+    "messages": {
+      "label.button.ok": "Siguiente",
+      "label.hintText.enter": "presiona <strong>Enter ↵</strong>",
+      "label.hintText.multipleSelection": "Elige tantos como desees",
+      "block.shortText.placeholder": "Escribe tu respuesta aquí",
+      "block.longText.placeholder": "Escribe tu respuesta aquí",
+      "block.email.placeholder": "Escribe tu correo aquí",
+      "label.progress.percent": "{{progress:percent}}% completado",
+      "label.errorAlert.required": "¡Este campo es obligatorio!",
+      "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
+      "label.errorAlert.email": "¡Correo electrónico no válido!",
+      "label.submitBtn": "Enviar"
+    }
+  },
+  "score_ranges": [
+    {
+      "min_score": 0,
+      "max_score": 3.4,
+      "event_type_id": null
+    },
+    {
+      "min_score": 3.5,
+      "max_score": 100,
+      "event_type_id": null
+    }
+  ]
+}

@@ -29,6 +29,7 @@ urlpatterns = [
     path('', RedirectView.as_view(url='/panel/', permanent=False)),
     path('r/', include('calendario.bookings.urls_public_token')),
     path('e/<slug:slug_equipo>/', include('calendario.bookings.urls_public_team')),
+    path('f/', include('calendario.funnels.urls')),
     re_path(
         r'^(?P<user_slug>[-a-zA-Z0-9_.]+)/(?P<event_type_slug>[-a-zA-Z0-9_]+)/',
         include('calendario.bookings.urls_public_booking'),

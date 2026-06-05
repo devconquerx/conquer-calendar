@@ -1,0 +1,251 @@
+{
+  "key": "EnglishLatam",
+  "slug": "languages-latam",
+  "escuela": "conquer-languages",
+  "region": "latam",
+  "nombre": "Conquer Languages — LATAM",
+  "config": {
+    "key": "EnglishLatam",
+    "blocks": [
+      {
+        "name": "welcome-screen",
+        "id": "welcome",
+        "attributes": {
+          "label": "Sesión de Consultoría | Conquer Languages",
+          "description": "Déjanos saber un poco más acerca de ti antes de continuar. Este formulario solo te llevará 20 segundos y, al final del mismo, te mostraremos nuestro calendario para agendar una cita.",
+          "buttonText": "Comenzar"
+        }
+      },
+      {
+        "name": "short-text",
+        "id": "name",
+        "attributes": {
+          "label": "Nombre",
+          "required": true,
+          "placeholder": "Escribe aquí tu respuesta..."
+        }
+      },
+      {
+        "name": "email",
+        "id": "email",
+        "attributes": {
+          "label": "Tu mejor correo electrónico",
+          "required": true,
+          "placeholder": "nombre@ejemplo.com"
+        }
+      },
+      {
+        "name": "phone-number",
+        "id": "phone",
+        "attributes": {
+          "label": "Número de teléfono",
+          "required": true
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "age",
+        "attributes": {
+          "label": "¿Qué edad tienes?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Soy menor de 18 años.",
+              "value": "Soy menor de 18 años."
+            },
+            {
+              "label": "Tengo entre 18 y 24 años.",
+              "value": "Tengo entre 18 y 24 años."
+            },
+            {
+              "label": "Tengo entre 25 y 34 años.",
+              "value": "Tengo entre 25 y 34 años."
+            },
+            {
+              "label": "Tengo entre 35 y 44 años.",
+              "value": "Tengo entre 35 y 44 años."
+            },
+            {
+              "label": "Tengo entre 45 y 54 años.",
+              "value": "Tengo entre 45 y 54 años."
+            },
+            {
+              "label": "Tengo entre 55 y 64 años.",
+              "value": "Tengo entre 55 y 64 años."
+            },
+            {
+              "label": "Soy mayor de 64 años.",
+              "value": "Soy mayor de 64 años."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "employment_situation",
+        "attributes": {
+          "label": "¿A qué te dedicas en este momento?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Tengo un empleo.",
+              "value": "Tengo un empleo."
+            },
+            {
+              "label": "Soy emprendedor / inversor.",
+              "value": "Soy emprendedor / inversor."
+            },
+            {
+              "label": "Soy estudiante.",
+              "value": "Soy estudiante."
+            },
+            {
+              "label": "Soy jubilado.",
+              "value": "Soy jubilado."
+            },
+            {
+              "label": "Me encuentro desempleado.",
+              "value": "Me encuentro desempleado."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "english_level",
+        "attributes": {
+          "label": "¿Cuál es tu nivel actual de inglés?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Parto absolutamente de cero.",
+              "value": "Parto absolutamente de cero."
+            },
+            {
+              "label": "Nivel básico, puedo mantener conversaciones básicas.",
+              "value": "Nivel básico, puedo mantener conversaciones básicas."
+            },
+            {
+              "label": "Nivel medio de inglés, puedo mantener conversaciones profesionales.",
+              "value": "Nivel medio de inglés, puedo mantener conversaciones profesionales."
+            },
+            {
+              "label": "Tengo un nivel avanzado de inglés.",
+              "value": "Tengo un nivel avanzado de inglés."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "reason_to_learn",
+        "attributes": {
+          "label": "¿Por qué motivo quieres aprender inglés?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Mejorar mi carrera profesional.",
+              "value": "Mejorar mi carrera profesional."
+            },
+            {
+              "label": "Vivo en un país donde es necesario.",
+              "value": "Vivo en un país donde es necesario."
+            },
+            {
+              "label": "Por turismo, me gusta viajar.",
+              "value": "Por turismo, me gusta viajar."
+            },
+            {
+              "label": "Satisfacción personal.",
+              "value": "Satisfacción personal."
+            }
+          ]
+        }
+      },
+      {
+        "name": "long-text",
+        "id": "current_problems",
+        "attributes": {
+          "label": "¿Qué problemas te has encontrado hasta la fecha, que han hecho que todavía no hayas alcanzado el nivel de inglés que desearías?",
+          "required": true,
+          "placeholder": "Describe tus principales desafíos o inquietudes actuales."
+        }
+      }
+    ],
+    "q_order": [
+      "age",
+      "employment_situation",
+      "english_level",
+      "reason_to_learn",
+      "current_problems"
+    ],
+    "validate": [
+      {
+        "age": "Soy menor de 18 años."
+      }
+    ],
+    "neverCancel": [],
+    "score_ranges": [
+      {
+        "min_score": 2,
+        "max_score": 2.9,
+        "event_type_slug": "consultoria-languages-latam-bajo"
+      },
+      {
+        "min_score": 3,
+        "max_score": 100,
+        "event_type_slug": "consultoria-languages-latam-alto"
+      }
+    ],
+    "cancel_screen": {
+      "titulo": "Gracias por tu interés",
+      "mensaje": "Por el momento esta sesión de consultoría no encaja con tu situación actual. Te dejamos nuestro contenido gratuito para que sigas avanzando.",
+      "cta_url": "https://www.youtube.com/@ConquerLanguages"
+    },
+    "settings": {
+      "disableWheelSwiping": true,
+      "disableNavigationArrows": false,
+      "disableProgressBar": false
+    },
+    "theme": {
+      "font": "Roboto",
+      "buttonsBgColor": "#000000",
+      "logo": {
+        "src": ""
+      },
+      "questionsColor": "#000",
+      "answersColor": "#000000bf",
+      "buttonsFontColor": "#fff",
+      "buttonsBorderRadius": 10,
+      "errorsFontColor": "#fff",
+      "errorsBgColor": "#e74c3c",
+      "progressBarFillColor": "#000",
+      "progressBarBgColor": "#ccc"
+    },
+    "messages": {
+      "label.button.ok": "Siguiente",
+      "label.hintText.enter": "presiona <strong>Enter ↵</strong>",
+      "label.hintText.multipleSelection": "Elige tantos como desees",
+      "block.shortText.placeholder": "Escribe tu respuesta aquí",
+      "block.longText.placeholder": "Escribe tu respuesta aquí",
+      "block.email.placeholder": "Escribe tu correo aquí",
+      "label.progress.percent": "{{progress:percent}}% completado",
+      "label.errorAlert.required": "¡Este campo es obligatorio!",
+      "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
+      "label.errorAlert.email": "¡Correo electrónico no válido!",
+      "label.submitBtn": "Enviar"
+    }
+  },
+  "score_ranges": [
+    {
+      "min_score": 2,
+      "max_score": 2.9,
+      "event_type_id": null
+    },
+    {
+      "min_score": 3,
+      "max_score": 100,
+      "event_type_id": null
+    }
+  ]
+}

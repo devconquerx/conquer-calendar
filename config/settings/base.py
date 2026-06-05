@@ -1,4 +1,5 @@
 import environ
+import os
 from pathlib import Path
 
 env = environ.Env()
@@ -30,6 +31,8 @@ THIRD_PARTY_APPS = [
     'crispy_forms',
     'ckeditor',
     'django_extensions',
+    'django_json_widget',
+    'django_vite',
     'rest_framework',
     'corsheaders',
     'allauth',
@@ -50,6 +53,7 @@ LOCAL_APPS = [
     'calendario.bookings',
     'calendario.google_calendar',
     'calendario.grupos',
+    'calendario.funnels',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -92,9 +96,23 @@ STATICFILES_FINDERS = [
 
 STATIC_ROOT = str(ROOT_DIR("staticfiles"))
 STATIC_URL = '/static/'
+
+_FRONTEND_DIST = str(ROOT_DIR.path("frontend").path("dist"))
 STATICFILES_DIRS = [
-    str(ROOT_DIR.path("calendario").path('static')),
+    str(ROOT_DIR.path("calendario").path("static")),
+    _FRONTEND_DIST,  # populated by `npm run build`; Django 4.2 won't error if empty/missing files
 ]
+
+DJANGO_VITE = {
+    "default": {
+        # dev_mode is overridden to True in local.py; prod defaults to False
+        "dev_mode": env.bool("DJANGO_VITE_DEV_MODE", default=False),
+        "dev_server_protocol": "http",
+        "dev_server_host": "localhost",
+        "dev_server_port": 5173,
+        "manifest_path": os.path.join(_FRONTEND_DIST, ".vite", "manifest.json"),
+    }
+}
 
 MEDIA_ROOT = "/calendario-media"
 MEDIA_URL = "/media/"

@@ -75,8 +75,13 @@
 <div class="card shadow-sm" style="max-width: 760px;">
     <div class="card-header border-0 pt-6">
         <div class="card-title">
-            <h3 class="fw-bold mb-0">
+            <h3 class="fw-bold mb-0 d-flex align-items-center gap-3 flex-wrap">
                 {% if object %}Editar: {{ object.nombre }}{% else %}Nuevo tipo de evento{% endif %}
+                {% if object and request.user.es_admin %}
+                <span style="background:#0041ff;color:#fff;font-size:16px;font-weight:700;padding:5px 14px;border-radius:6px;letter-spacing:.03em;">
+                    ID {{ object.id }}
+                </span>
+                {% endif %}
             </h3>
         </div>
     </div>

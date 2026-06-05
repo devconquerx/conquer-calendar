@@ -1,0 +1,255 @@
+{
+  "key": "FullEu",
+  "slug": "blocks-eu",
+  "escuela": "conquer-blocks",
+  "region": "eu",
+  "nombre": "Conquer Blocks — EU (Full Stack)",
+  "config": {
+    "key": "FullEu",
+    "blocks": [
+      {
+        "name": "welcome-screen",
+        "id": "welcome",
+        "attributes": {
+          "label": "Sesión de Consultoría | Desarrollo Full Stack",
+          "description": "Déjanos saber un poco más acerca de ti antes de continuar. Este formulario solo te llevará 20 segundos y, al final del mismo, te mostraremos nuestro calendario para agendar una cita.",
+          "buttonText": "Comenzar"
+        }
+      },
+      {
+        "name": "short-text",
+        "id": "name",
+        "attributes": {
+          "label": "Nombre",
+          "required": true,
+          "placeholder": "Escribe aquí tu respuesta..."
+        }
+      },
+      {
+        "name": "email",
+        "id": "email",
+        "attributes": {
+          "label": "Tu mejor correo electrónico",
+          "required": true,
+          "placeholder": "nombre@ejemplo.com"
+        }
+      },
+      {
+        "name": "phone-number",
+        "id": "phone",
+        "attributes": {
+          "label": "Número de teléfono",
+          "required": true
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "age",
+        "attributes": {
+          "label": "¿Qué edad tienes?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Soy menor de 18 años.",
+              "value": "Soy menor de 18 años."
+            },
+            {
+              "label": "Tengo entre 18 y 24 años.",
+              "value": "Tengo entre 18 y 24 años."
+            },
+            {
+              "label": "Tengo entre 25 y 34 años.",
+              "value": "Tengo entre 25 y 34 años."
+            },
+            {
+              "label": "Tengo entre 35 y 44 años.",
+              "value": "Tengo entre 35 y 44 años."
+            },
+            {
+              "label": "Tengo entre 45 y 54 años.",
+              "value": "Tengo entre 45 y 54 años."
+            },
+            {
+              "label": "Tengo entre 55 y 64 años.",
+              "value": "Tengo entre 55 y 64 años."
+            },
+            {
+              "label": "Soy mayor de 64 años.",
+              "value": "Soy mayor de 64 años."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "employment_situation",
+        "attributes": {
+          "label": "¿A qué te dedicas en este momento?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Tengo un empleo.",
+              "value": "Tengo un empleo."
+            },
+            {
+              "label": "Soy emprendedor / inversor.",
+              "value": "Soy emprendedor / inversor."
+            },
+            {
+              "label": "Soy estudiante.",
+              "value": "Soy estudiante."
+            },
+            {
+              "label": "Soy jubilado.",
+              "value": "Soy jubilado."
+            },
+            {
+              "label": "Me encuentro desempleado.",
+              "value": "Me encuentro desempleado."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "income",
+        "attributes": {
+          "label": "¿Qué ingresos mensuales netos estás generando en la actualidad? (en euros)",
+          "required": true,
+          "choices": [
+            {
+              "label": "Menos de 350 euros.",
+              "value": "Menos de 350 euros."
+            },
+            {
+              "label": "Entre 350 y 800 euros.",
+              "value": "Entre 350 y 800 euros."
+            },
+            {
+              "label": "Entre 800 y 1600 euros.",
+              "value": "Entre 800 y 1600 euros."
+            },
+            {
+              "label": "Entre 1600 y 2500 euros.",
+              "value": "Entre 1600 y 2500 euros."
+            },
+            {
+              "label": "Más de 2500 euros.",
+              "value": "Más de 2500 euros."
+            }
+          ]
+        }
+      },
+      {
+        "name": "multiple-choice",
+        "id": "income_target",
+        "attributes": {
+          "label": "¿Cuál es tu objetivo a conseguir gracias a convertirte en Desarrollador Full Stack?",
+          "required": true,
+          "choices": [
+            {
+              "label": "Tener un salario de más de 2000 dólares americanos al mes.",
+              "value": "Tener un salario de más de 2000 dólares americanos al mes."
+            },
+            {
+              "label": "Conseguir un puesto de empleo remoto y con flexibilidad.",
+              "value": "Conseguir un puesto de empleo remoto y con flexibilidad."
+            },
+            {
+              "label": "Aprender una profesión con la que tener un plan de carrera y crecimiento profesional.",
+              "value": "Aprender una profesión con la que tener un plan de carrera y crecimiento profesional."
+            },
+            {
+              "label": "Vivir sin incertidumbre gracias a cambiarte a un sector donde siempre hay trabajo.",
+              "value": "Vivir sin incertidumbre gracias a cambiarte a un sector donde siempre hay trabajo."
+            },
+            {
+              "label": "Otro",
+              "value": "Otro"
+            }
+          ]
+        }
+      },
+      {
+        "name": "long-text",
+        "id": "current_problems",
+        "attributes": {
+          "label": "¿Qué problemas encuentras en tu situación actual que quieres solucionar convirtiéndote en Desarrollador Full Stack?",
+          "required": true,
+          "placeholder": "Describe tus principales desafíos o inquietudes actuales."
+        }
+      }
+    ],
+    "q_order": [
+      "age",
+      "employment_situation",
+      "income",
+      "income_target",
+      "current_problems"
+    ],
+    "validate": [],
+    "neverCancel": [],
+    "score_ranges": [
+      {
+        "min_score": 0,
+        "max_score": 3.4,
+        "event_type_slug": "consultoria-blocks-eu-bajo"
+      },
+      {
+        "min_score": 3.5,
+        "max_score": 100,
+        "event_type_slug": "consultoria-blocks-eu-alto"
+      }
+    ],
+    "cancel_screen": {
+      "titulo": "Gracias por tu interés",
+      "mensaje": "Por el momento esta sesión de consultoría no encaja con tu situación actual. Te dejamos nuestro contenido gratuito para que sigas avanzando.",
+      "cta_url": "https://www.youtube.com/@ConquerBlocks"
+    },
+    "settings": {
+      "disableWheelSwiping": true,
+      "disableNavigationArrows": false,
+      "disableProgressBar": false
+    },
+    "theme": {
+      "font": "Roboto",
+      "buttonsBgColor": "#000000",
+      "logo": {
+        "src": ""
+      },
+      "questionsColor": "#000",
+      "answersColor": "#000000bf",
+      "buttonsFontColor": "#fff",
+      "buttonsBorderRadius": 10,
+      "errorsFontColor": "#fff",
+      "errorsBgColor": "#e74c3c",
+      "progressBarFillColor": "#000",
+      "progressBarBgColor": "#ccc"
+    },
+    "messages": {
+      "label.button.ok": "Siguiente",
+      "label.hintText.enter": "presiona <strong>Enter ↵</strong>",
+      "label.hintText.multipleSelection": "Elige tantos como desees",
+      "block.shortText.placeholder": "Escribe tu respuesta aquí",
+      "block.longText.placeholder": "Escribe tu respuesta aquí",
+      "block.email.placeholder": "Escribe tu correo aquí",
+      "label.progress.percent": "{{progress:percent}}% completado",
+      "label.errorAlert.required": "¡Este campo es obligatorio!",
+      "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
+      "label.errorAlert.email": "¡Correo electrónico no válido!",
+      "label.submitBtn": "Enviar"
+    }
+  },
+  "score_ranges": [
+    {
+      "min_score": 0,
+      "max_score": 3.4,
+      "event_type_id": null
+    },
+    {
+      "min_score": 3.5,
+      "max_score": 100,
+      "event_type_id": null
+    }
+  ]
+}
