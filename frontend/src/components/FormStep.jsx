@@ -1,27 +1,51 @@
-import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
+import React, { useState, useEffect } from 'react'
 import { isValidPhoneNumber } from 'libphonenumber-js'
-import PhoneField from './PhoneField'
+import TextField from './form-engine/fields/TextField'
+import EmailField from './form-engine/fields/EmailField'
+import LongTextField from './form-engine/fields/LongTextField'
+import MultipleChoice from './form-engine/fields/MultipleChoice'
+import PhoneField from './form-engine/fields/PhoneField'
+import NavigationControls from './form-engine/NavigationControls'
 
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const FIELD_COMPONENTS = {
+  'short-text': TextField,
+  'email': EmailField,
+  'long-text': LongTextField,
+  'multiple-choice': MultipleChoice,
+  'phone-number': PhoneField,
+}
 
-const FormStep = forwardRef(function FormStep(
-  { block, value, onChange, onNext, messages },
-  ref
-) {
+export default function FormStep({
+  block,
+  value,
+  onChange,
+  onNext,
+  onBack,
+  messages,
+  stepNumber,
+  isFirst,
+  isLast,
+}) {
   const [fieldError, setFieldError] = useState('')
-  const inputRef = useRef(null)
 
   useEffect(() => {
     setFieldError('')
-    const { name } = block
-    if (name !== 'phone-number' && name !== 'multiple-choice' && name !== 'welcome-screen') {
-      inputRef.current?.focus()
-    }
   }, [block.id])
 
+  // Normalize the block into the shape the field components expect
+  const field = {
+    id: block.id,
+    type: block.name,
+    label: block.attributes?.label,
+    description: block.attributes?.description,
+    required: block.attributes?.required,
+    placeholder: block.attributes?.placeholder,
+    choices: block.attributes?.choices,
+    buttonText: block.attributes?.buttonText,
+  }
+
   const validate = () => {
-    if (block.name === 'welcome-screen') return true
-    const req = block.attributes?.required
+    const req = field.required
 
     if (block.name === 'phone-number') {
       if (!value?.trim()) {
@@ -55,108 +79,60 @@ const FormStep = forwardRef(function FormStep(
     return true
   }
 
-  // Exposed to Funnel via ref — called when the bottom ↓ button is pressed
-  useImperativeHandle(ref, () => ({
-    validateAndGetValue() {
-      if (!validate()) return null
-      return value ?? ''
-    },
-  }), [value, block.id])
+  // Validate then advance (OK button / Enter / phone Enter)
+  const handleOk = () => {
+    if (validate()) onNext(value)
+  }
 
+  // Enter advances; Shift+Enter is a newline inside long-text
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && block.name !== 'long-text') {
-      e.preventDefault()
-      const result = validate()
-      if (result) onNext(value)
-    }
+    if (e.key !== 'Enter' || e.shiftKey) return
+    e.preventDefault()
+    handleOk()
   }
 
-  const handleChoiceSelect = (choiceValue) => {
-    onChange(choiceValue)
-    setTimeout(() => onNext(choiceValue), 150)
+  const handleFieldChange = (val) => {
+    onChange(val)
+    setFieldError('')
   }
+
+  const FieldComponent = FIELD_COMPONENTS[block.name]
 
   return (
-    <div className="block-card">
-      <div className="block-label">{block.attributes.label}</div>
+    <div className="max-w-3xl mx-auto flex flex-col justify-center min-h-[50vh]">
+      <div className="mb-8">
+        <h2 className="text-black text-2xl md:text-[32px] font-semibold leading-[1.3]">
+          {stepNumber}. {field.label} {field.required && <span className="text-red-500">*</span>}
+        </h2>
+        {field.description && (
+          <p className="text-gray-500 text-base mt-3">{field.description}</p>
+        )}
+      </div>
 
-      {block.attributes.description && (
-        <div className="block-description">{block.attributes.description}</div>
-      )}
-
-      {block.name === 'short-text' && (
-        <input
-          ref={inputRef}
-          type="text"
-          className="field-input"
+      {FieldComponent ? (
+        <FieldComponent
+          field={field}
           value={value || ''}
-          onChange={e => { onChange(e.target.value); setFieldError('') }}
-          onKeyDown={handleKeyDown}
-          placeholder={block.attributes.placeholder || ''}
-        />
-      )}
-
-      {block.name === 'email' && (
-        <input
-          ref={inputRef}
-          type="email"
-          className="field-input"
-          value={value || ''}
-          onChange={e => { onChange(e.target.value); setFieldError('') }}
-          onKeyDown={handleKeyDown}
-          placeholder={block.attributes.placeholder || ''}
-        />
-      )}
-
-      {block.name === 'phone-number' && (
-        <PhoneField
-          value={value || ''}
-          onChange={v => { onChange(v); setFieldError('') }}
           error={fieldError}
+          onChange={handleFieldChange}
           onKeyDown={handleKeyDown}
+          onNext={block.name === 'multiple-choice' ? onNext : handleOk}
         />
+      ) : (
+        <p className="text-gray-900">Tipo de campo desconocido: {block.name}</p>
       )}
 
-      {block.name === 'multiple-choice' && (
-        <ul className="choices-list">
-          {block.attributes.choices.map((choice, i) => (
-            <li
-              key={choice.value}
-              className={`choice-item${value === choice.value ? ' selected' : ''}`}
-              onClick={() => handleChoiceSelect(choice.value)}
-            >
-              <span className="choice-letter">{LETTERS[i]}</span>
-              {choice.label}
-            </li>
-          ))}
-        </ul>
+      {fieldError && (
+        <p className="text-red-500 text-sm mt-3">{fieldError}</p>
       )}
 
-      {block.name === 'long-text' && (
-        <textarea
-          ref={inputRef}
-          className="long-text-input"
-          value={value || ''}
-          onChange={e => { onChange(e.target.value); setFieldError('') }}
-          placeholder={block.attributes.placeholder || ''}
-          rows={4}
-        />
-      )}
-
-      {fieldError && block.name !== 'phone-number' && (
-        <div className="field-error">{fieldError}</div>
-      )}
-
-      {/* Welcome screen keeps its inline CTA — bottom nav is not shown for it */}
-      {block.name === 'welcome-screen' && (
-        <div className="welcome-nav">
-          <button className="btn-comenzar" type="button" onClick={() => onNext(null)}>
-            {block.attributes.buttonText || 'Comenzar'}
-          </button>
-        </div>
-      )}
+      <NavigationControls
+        isFirst={isFirst}
+        isLast={isLast}
+        isSubmitting={false}
+        onOk={handleOk}
+        onBack={onBack}
+      />
     </div>
   )
-})
-
-export default FormStep
+}

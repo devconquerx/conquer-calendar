@@ -22,6 +22,9 @@ export default defineConfig({
     port: 5173,
     // Allow HMR requests from Django's origin (localhost:8002 in local dev)
     cors: true,
+    // Make JS-imported asset URLs absolute (http://localhost:5173/...) so they
+    // resolve to the Vite dev server instead of Django's origin (8002) in dev.
+    origin: 'http://localhost:5173',
     hmr: {
       host: 'localhost',
       port: 5173,
