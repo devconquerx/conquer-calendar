@@ -13,6 +13,7 @@
 #
 # Uso:
 #   ./deploy.sh                 # despliegue interactivo (pide confirmación)
+#   sh deploy.sh                # también vale: se relanza solo con bash
 #   ./deploy.sh -y              # sin confirmación
 #   ./deploy.sh --no-frontend   # no recompila el frontend (usa el dist actual)
 #   ./deploy.sh -m "mensaje"    # mensaje de commit personalizado
@@ -26,6 +27,13 @@
 #   IMAGE        conquer_calendario_production_django
 #   HEALTH_HOST  calendar.conquerx.com
 #
+
+# El script usa características de bash (pipefail, [[ ]], trap ERR). Si lo
+# invocan con `sh deploy.sh` (dash), se relanza a sí mismo con bash.
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+
 set -Eeuo pipefail
 
 # ─────────────────────────── Config ───────────────────────────
