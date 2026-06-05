@@ -247,9 +247,9 @@ def _candidatos_para_slot(event_type, inicio_utc):
     hosts = _obtener_hosts_pool(event_type)
     if not hosts:
         return []
-    fecha_local = inicio_utc.astimezone(ZoneInfo(hosts[0].timezone)).date()
     candidatos = []
     for host in hosts:
+        fecha_local = inicio_utc.astimezone(ZoneInfo(host.timezone)).date()
         slots_host = _calcular_slots_para_host(event_type, host, fecha_local, fecha_local)
         if inicio_utc in slots_host:
             candidatos.append(host)
