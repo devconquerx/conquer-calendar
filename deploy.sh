@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
 #
-# deploy.sh — Despliegue a producción de conquer-calendar desde local.
+# deploy.sh — Despliegue a producción de conquer-calendar.
 #
-# Flujo (mínimo tiempo de caída):
-#   LOCAL : compila el frontend (Vite), commitea dist + código, push a la rama.
-#   PROD  : git reset a origin/<rama> → build de la imagen (sin downtime, el
-#           contenedor viejo sigue sirviendo) → migraciones y collectstatic
-#           one-off con la imagen nueva → swap rápido (up -d) → healthcheck.
-#           Si el healthcheck falla, hace ROLLBACK automático a la imagen previa.
+# Modelo: TODO ocurre en el server. Localmente este script no compila, no
+# commitea ni pushea: solo se conecta por SSH y despliega lo que ya esté en
+# origin/<rama>. (Tú pusheas tu código con tu flujo normal de git.)
 #
-# Prod NO tiene Node: el frontend se compila aquí y el dist va commiteado.
+# Flujo en PROD (mínimo tiempo de caída):
+#   git fetch + reset --hard a origin/<rama>
+#   → docker build (la imagen compila el frontend con Node en una etapa de
+#     build; el server NO necesita Node ni un dist commiteado)
+#   → migraciones + collectstatic one-off con la imagen nueva
+#   → swap rápido (up -d) → healthcheck
+#   → ROLLBACK automático a la imagen previa si el healthcheck falla.
 #
 # Uso:
-#   ./deploy.sh                 # despliegue interactivo (pide confirmación)
-#   sh deploy.sh                # también vale: se relanza solo con bash
-#   ./deploy.sh -y              # sin confirmación
-#   ./deploy.sh --no-frontend   # no recompila el frontend (usa el dist actual)
-#   ./deploy.sh -m "mensaje"    # mensaje de commit personalizado
+#   ./deploy.sh        # despliegue interactivo (pide confirmación)
+#   sh deploy.sh       # también vale: se relanza solo con bash
+#   ./deploy.sh -y     # sin confirmación
 #
 # Config por variables de entorno (con sus valores por defecto):
 #   DEPLOY_SSH   root@167.172.146.251
@@ -28,8 +29,8 @@
 #   HEALTH_HOST  calendar.conquerx.com
 #
 
-# El script usa características de bash (pipefail, [[ ]], trap ERR). Si lo
-# invocan con `sh deploy.sh` (dash), se relanza a sí mismo con bash.
+# Usa características de bash. Si lo invocan con `sh deploy.sh` (dash), se
+# relanza a sí mismo con bash.
 if [ -z "${BASH_VERSION:-}" ]; then
   exec bash "$0" "$@"
 fi
@@ -47,24 +48,18 @@ IMAGE="${IMAGE:-conquer_calendario_production_django}"
 HEALTH_HOST="${HEALTH_HOST:-calendar.conquerx.com}"
 HEALTH_PATH="${HEALTH_PATH:-/health/}"
 HEALTH_RETRIES="${HEALTH_RETRIES:-30}"
-FRONTEND_DIR="frontend"
 
 AUTO_YES="${AUTO_YES:-0}"
-DO_FRONTEND=1
-COMMIT_MSG=""
 
 # ─────────────────────────── Flags ────────────────────────────
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -y|--yes)         AUTO_YES=1 ;;
-    --no-frontend)    DO_FRONTEND=0 ;;
-    -m|--message)     shift; COMMIT_MSG="${1:-}" ;;
-    -h|--help)        grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -y|--yes)   AUTO_YES=1 ;;
+    -h|--help)  grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Flag desconocido: $1" >&2; exit 2 ;;
   esac
   shift
 done
-COMMIT_MSG="${COMMIT_MSG:-deploy: $(date +%Y-%m-%d_%H-%M-%S)}"
 
 # ─────────────────────────── Helpers ──────────────────────────
 c_blue=$'\033[1;34m'; c_grn=$'\033[1;32m'; c_red=$'\033[1;31m'; c_yel=$'\033[1;33m'; c_off=$'\033[0m'
@@ -72,7 +67,7 @@ log()  { echo "${c_blue}▶${c_off} $*"; }
 ok()   { echo "${c_grn}✓${c_off} $*"; }
 warn() { echo "${c_yel}!${c_off} $*"; }
 die()  { echo "${c_red}✗ $*${c_off}" >&2; exit 1; }
-trap 'die "Falló en la línea $LINENO. Prod NO fue modificado si el fallo fue en la fase local/build."' ERR
+trap 'die "Falló en la línea $LINENO."' ERR
 
 confirm() {
   [[ "$AUTO_YES" == "1" ]] && return 0
@@ -80,57 +75,15 @@ confirm() {
   [[ "$ans" =~ ^[yY]$ ]] || die "Cancelado por el usuario."
 }
 
-# Raíz del repo (donde está este script)
-cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# ───────────────────── Fase LOCAL: validaciones ────────────────
-log "Validando estado local…"
-command -v git >/dev/null || die "git no está instalado."
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "No es un repo git."
-
-CUR_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-[[ "$CUR_BRANCH" == "$BRANCH" ]] || die "Estás en '$CUR_BRANCH' pero se despliega '$BRANCH'. Haz checkout/merge a '$BRANCH' primero (o exporta BRANCH=$CUR_BRANCH)."
-
-# ───────────────────── Fase LOCAL: build frontend ─────────────
-if [[ "$DO_FRONTEND" == "1" ]]; then
-  command -v npm >/dev/null || die "npm no está instalado (necesario para compilar el frontend)."
-  log "Compilando frontend (Vite)…"
-  if [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
-    log "Instalando dependencias del frontend (npm ci)…"
-    ( cd "$FRONTEND_DIR" && npm ci )
-  fi
-  ( cd "$FRONTEND_DIR" && npm run build )
-  ok "Frontend compilado."
-else
-  warn "Saltando build del frontend (--no-frontend). Se usará el dist actual."
-fi
-
-# ───────────────────── Fase LOCAL: commit + push ──────────────
-log "Preparando commit (código + dist compilado)…"
-git add -u                                  # cambios de archivos YA versionados
-git add -f "$FRONTEND_DIR/dist"             # dist está en .gitignore: se fuerza
-
-if git diff --cached --quiet; then
-  warn "No hay cambios nuevos para commitear."
-else
-  git commit -m "$COMMIT_MSG"
-  ok "Commit creado: $COMMIT_MSG"
-fi
-
-log "Push a $REMOTE/$BRANCH…"
-git push "$REMOTE" "$BRANCH"
-LOCAL_SHA="$(git rev-parse --short HEAD)"
-ok "Push hecho (HEAD=$LOCAL_SHA)."
-
-# ───────────────────── Confirmación de PROD ───────────────────
-echo
+# ───────────────────── Confirmación ───────────────────────────
 echo "────────────────────────────────────────────"
 echo "  DESPLIEGUE A PRODUCCIÓN"
 echo "  SSH     : $DEPLOY_SSH"
 echo "  Dir     : $REMOTE_DIR"
-echo "  Rama    : $BRANCH  →  $LOCAL_SHA"
-echo "  Compose : $COMPOSE_FILE ($SERVICE)"
+echo "  Rama    : $REMOTE/$BRANCH (lo que esté pusheado)"
+echo "  Compose : $COMPOSE_FILE"
 echo "────────────────────────────────────────────"
+warn "Se despliega lo que ya esté en $REMOTE/$BRANCH. Asegúrate de haber pusheado tus cambios."
 confirm "¿Continuar con el despliegue a PROD?"
 
 # ───────────────────── Fase REMOTA ────────────────────────────
@@ -153,21 +106,21 @@ say "Código en: $(git rev-parse --short HEAD)"
 PREV_IMG_ID="$(docker images -q "$IMAGE" | head -1 || true)"
 say "Imagen previa: ${PREV_IMG_ID:-<ninguna>}"
 
-# 1) Build de la nueva imagen (instala deps de prod). El contenedor viejo
-#    sigue corriendo → SIN downtime durante esta etapa (la más larga).
-say "Construyendo imagen nueva…"
-dc build "$SERVICE"
+# 1) Build de la nueva imagen (compila el frontend con Node + instala deps de
+#    prod). El contenedor viejo sigue corriendo → SIN downtime en esta etapa.
+say "Construyendo imagen nueva (incluye build del frontend)…"
+dc build
 
 # 2) Migraciones + estáticos one-off con la imagen nueva, mientras el viejo
-#    sigue sirviendo. Así el arranque del contenedor nuevo es casi instantáneo.
+#    sigue sirviendo.
 say "Aplicando migraciones…"
 dc run --rm "$SERVICE" python manage.py migrate --noinput
 say "Recolectando estáticos…"
 dc run --rm "$SERVICE" python manage.py collectstatic --noinput
 
-# 3) Swap rápido al contenedor nuevo (única ventana de caída, ~segundos).
-say "Reiniciando contenedor…"
-dc up -d "$SERVICE"
+# 3) Swap rápido a los contenedores nuevos (única ventana de caída, ~segundos).
+say "Reiniciando contenedores…"
+dc up -d --remove-orphans
 
 # 4) Healthcheck
 say "Verificando salud…"
@@ -183,7 +136,7 @@ if [ "$healthy" != "1" ]; then
   if [ -n "$PREV_IMG_ID" ]; then
     say "Haciendo ROLLBACK a la imagen previa ($PREV_IMG_ID)…"
     docker tag "$PREV_IMG_ID" "$IMAGE"
-    dc up -d "$SERVICE"
+    dc up -d --remove-orphans
     say "Rollback aplicado. Revisa los logs:"
   fi
   dc logs --tail=60 "$SERVICE" || true
@@ -191,7 +144,6 @@ if [ "$healthy" != "1" ]; then
 fi
 
 say "✓ Healthcheck OK."
-# Limpieza de imágenes colgantes (no toca la previa si hubo rollback porque salimos antes).
 docker image prune -f >/dev/null 2>&1 || true
 say "✓ Despliegue completado."
 REMOTE
