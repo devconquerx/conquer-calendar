@@ -277,7 +277,21 @@
       "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
       "label.errorAlert.email": "¡Correo electrónico no válido!",
       "label.submitBtn": "Enviar"
-    }
+    },
+    "welcome": {
+      "title": "La persona promedio que aplicó el método que estás a punto de descubrir, <strong>consiguió los siguientes resultados</strong> tras 7 semanas de aprendizaje",
+      "bullets": [
+        "Un ingreso promedio de <strong>3,773 euros al mes*</strong> operando en los mercados financieros",
+        "Reducir al <strong>0%</strong> la probabilidad de perder dinero invirtiendo*, gracias a un nuevo tipo de trading que no requiere de arriesgar tu propio capital",
+        "Y poder construir a largo plazo una cartera en acciones, fondos, e inmuebles, que le permite crear una <strong>futura libertad financiera</strong>"
+      ],
+      "subtitle": "Vídeo gratis de 15 minutos",
+      "buttonText": "Ver vídeo gratis",
+      "description": "¡Atención! Este método no requiere de conocimientos previos. Si quieres descubrir de forma inmediata el método, rellena el formulario de abajo y haz click en \"VER VÍDEO GRATIS\""
+    },
+    "vslVideoUrls": [
+      "https://vslconquerx.b-cdn.net/fi/vsl-cf-2025-compress.mp4"
+    ]
   },
   "score_ranges": [
     {

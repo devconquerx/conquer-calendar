@@ -247,7 +247,34 @@
         "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4"
       ],
       "buttonPercent": 75
-    }
+    },
+    "landing": {
+      "title": "Consigue un <strong>puesto de trabajo</strong> remoto e <strong>incrementa tu salario un 71%</strong> respecto a tu actual empleo, aprendiendo en 12 meses una profesión tecnológica con un <strong>98,7% de empleabilidad.</strong>",
+      "bullets": [
+        "<strong>Tu trabajo no te llena,</strong> y quieres un cambio profesional que te permita evolucionar aprendiendo una profesión de futuro.",
+        "Los precios de la comida, luz, alquiler, combustible, etc., <strong>no paran de subir</strong>, y necesitas una profesión con mejores salarios.",
+        "Descubre una nueva vía para tener más libertad, tiempo para ti y tu familia gracias al trabajo remoto."
+      ],
+      "subtitle": "Vídeo gratis de 15 minutos",
+      "buttonText": "Ver vídeo gratis",
+      "disclaimer": "* El curso y la clase son únicamente educativos e informativos. No constituyen asesoramiento financiero ni laboral. Los resultados no están garantizados y pueden variar según cada persona.",
+      "instructor": {
+        "name": "Bienvenido Sáez",
+        "role": "Director de Educación Tecnológica en Conquer Blocks.",
+        "imageUrl": "https://cdn.prod.website-files.com/63c2c7b1f3d9c51c32335fb0/66506bf3656479db9e7361e9_bienvenido-cuadrado.avif",
+        "description": "Con el método que te presentará en el vídeo gratis, ha ayudado a más de 6.000 personas a aprender una <strong>nueva profesión con la que cambiar sus vidas por completo</strong>."
+      },
+      "description": "... aunque no tengas conocimientos previos de tecnología, ni te consideres una persona técnica"
+    },
+    "welcome": {
+      "title": "Sesión de Consultoría | Desarrollo Full Stack",
+      "buttonText": "Comenzar",
+      "description": "Déjanos saber un poco más acerca de ti antes de continuar. Este formulario solo te llevará 20 segundos y, al final del mismo, te mostraremos nuestro calendario para agendar una cita."
+    },
+    "vslVideoUrls": [
+      "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4",
+      "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4"
+    ]
   },
   "score_ranges": [
     {

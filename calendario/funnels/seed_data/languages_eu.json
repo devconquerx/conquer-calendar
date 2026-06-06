@@ -232,7 +232,21 @@
       "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
       "label.errorAlert.email": "¡Correo electrónico no válido!",
       "label.submitBtn": "Enviar"
-    }
+    },
+    "welcome": {
+      "title": "Aprende a <strong>hablar inglés fluido</strong> y a entender a los nativos estés donde estés, con un método dinámico que te <strong>garantiza un nivel B2</strong> en 90 días",
+      "bullets": [
+        "<strong>Gana más dinero</strong>: según el INE, hablar inglés aumentará tu salario un 32% en tu próximo trabajo",
+        "Pasa de la inseguridad a la <strong>confianza absoluta</strong> a la hora de tener una conversación en inglés",
+        "Descubre un método que, a diferencia de la enseñanza tradicional, te mantiene <strong>enganchado</strong> al aprendizaje y te aporta seguridad a la hora de expresarte. <strong>¡Adiós bloqueos!</strong>"
+      ],
+      "subtitle": "Vídeo gratis de 15 minutos",
+      "buttonText": "Ver vídeo gratis",
+      "description": "... sin importar tu edad, el nivel del que partas, y sin tener que asistir a aburridas clases presenciales, ya es hora de que disfrutes del aprendizaje del inglés y obtengas resultados reales."
+    },
+    "vslVideoUrls": [
+      "https://VSLConquerx.b-cdn.net/conquerlanguages/vsl-cl-original-v1-compress.mp4"
+    ]
   },
   "score_ranges": [
     {
