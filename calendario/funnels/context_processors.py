@@ -43,5 +43,9 @@ def get_pixel_ids(escuela):
 
 
 def pixel_ids(request):
-    """Defaults para que las variables existan en todos los templates."""
-    return {'pixel_ids': {}, 'app_base_path': ''}
+    """Defaults para que las variables existan en todos los templates.
+
+    app_base_path lo fija AppBasePathMiddleware cuando el funnel se sirve bajo
+    un prefijo (p.ej. /preview); por defecto '' (servido en la raíz).
+    """
+    return {'pixel_ids': {}, 'app_base_path': getattr(request, 'app_base_path', '')}

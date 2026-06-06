@@ -68,6 +68,7 @@ SITE_ID = 1
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'calendario.users.middleware.StripTrailingDotHostMiddleware',
+    'calendario.funnels.middleware.AppBasePathMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
@@ -237,6 +238,13 @@ FUNNEL_HOST_ESCUELA = env.dict('CALENDARIO_FUNNEL_HOST_ESCUELA', default={
     'conquerfinance.com': 'conquer-finance',
     'www.conquerfinance.com': 'conquer-finance',
 })
+
+# Prefijos de path bajo los que el funnel público también puede servirse,
+# además de en la raíz (p.ej. /preview para pruebas detrás de Cloudflare ante
+# Webflow en conquerblocks.com). AppBasePathMiddleware los detecta, los retira
+# de PATH_INFO y los expone en request.app_base_path; las vistas anteponen ese
+# prefijo a sus URLs de navegación. Vacío = el funnel solo se sirve en la raíz.
+FUNNEL_BASE_PATHS = env.list('CALENDARIO_FUNNEL_BASE_PATHS', default=['/preview'])
 
 # CRM webhook (Make)
 CRM_WEBHOOK_URL = env.str('CRM_WEBHOOK_URL', default='')

@@ -201,11 +201,24 @@ PRODUCTO_A_ESCUELA = {
 PRODUCTO_POR_ESCUELA = {v: k for k, v in PRODUCTO_A_ESCUELA.items()}
 
 
-def stepform_url(escuela, region):
-    """URL pública canónica del StepForm: /agenda/<producto>/<region>/."""
+def _base_path(request):
+    """Prefijo de path bajo el que se sirve el funnel (p.ej. /preview), o ''.
+
+    Lo fija AppBasePathMiddleware. Las URLs de navegación que emiten las vistas
+    lo anteponen para que el flujo encadenado permanezca dentro del prefijo.
+    """
+    return getattr(request, 'app_base_path', '')
+
+
+def stepform_url(escuela, region, base=''):
+    """URL pública canónica del StepForm: /agenda/<producto>/<region>/.
+
+    `base` antepone un prefijo de path (p.ej. /preview) para mantener la
+    navegación dentro del prefijo cuando el funnel se sirve detrás de él.
+    """
     producto = PRODUCTO_POR_ESCUELA.get(escuela)
     if producto and region:
-        return f'/agenda/{producto}/{region}/'
+        return f'{base}/agenda/{producto}/{region}/'
     return ''
 
 
@@ -229,8 +242,8 @@ class FunnelAgendaView(View):
                 'funnel': funnel,
                 'slug': funnel.slug,
                 'pixel_ids': get_pixel_ids(funnel.escuela),
-                'confirmation_url': confirmacion_url(funnel.escuela, funnel.region),
-                'app_base_path': '',
+                'confirmation_url': confirmacion_url(funnel.escuela, funnel.region, base=_base_path(request)),
+                'app_base_path': _base_path(request),
             },
         )
 
@@ -253,18 +266,18 @@ def _escuela_por_host(request):
 
 # URLs de la página de video por marca. blocks lleva la escuela en el path; el
 # resto comparte la ruta raíz y se resuelve por dominio (Host).
-def _video_url(escuela, region):
+def _video_url(escuela, region, base=''):
     if escuela == 'conquer-blocks':
-        return f'/conquer-blocks/video-clase-{region}/'
-    return f'/video-clase-{region}/'
+        return f'{base}/conquer-blocks/video-clase-{region}/'
+    return f'{base}/video-clase-{region}/'
 
 
 # URL de la página de confirmación de llamada por marca (misma convención que la
 # de video). blocks lleva la escuela en el path; el resto se resuelve por Host.
-def confirmacion_url(escuela, region):
+def confirmacion_url(escuela, region, base=''):
     if escuela == 'conquer-blocks':
-        return f'/conquer-blocks/confirmacion-llamada-{region}/'
-    return f'/confirmacion-llamada-{region}/'
+        return f'{base}/conquer-blocks/confirmacion-llamada-{region}/'
+    return f'{base}/confirmacion-llamada-{region}/'
 
 
 # URLs de video por defecto si el FunnelForm.config no trae 'video' (fail-safe).
@@ -300,9 +313,9 @@ class FunnelClaseView(View):
         # configurada; si no, directo al StepForm (/agenda/<producto>/<region>/).
         cfg = funnel.config or {}
         if cfg.get('video') or funnel.escuela in _VIDEO_DEFAULTS:
-            next_url = _video_url(funnel.escuela, funnel.region)
+            next_url = _video_url(funnel.escuela, funnel.region, base=_base_path(request))
         else:
-            next_url = stepform_url(funnel.escuela, funnel.region)
+            next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request))
         return render(
             request,
             'pages/public/funnel/landing.html',
@@ -313,7 +326,7 @@ class FunnelClaseView(View):
                 'next_url': next_url,
                 'landing_config': funnel.config or {},
                 'pixel_ids': get_pixel_ids(funnel.escuela),
-                'app_base_path': '',
+                'app_base_path': _base_path(request),
             },
         )
 
@@ -341,7 +354,7 @@ class FunnelVideoView(View):
         if not video_cfg.get('video'):
             video_cfg['video'] = _VIDEO_DEFAULTS.get(funnel.escuela, {})
         # Siguiente etapa tras el video: el StepForm (/agenda/<producto>/<region>/).
-        next_url = stepform_url(funnel.escuela, funnel.region)
+        next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request))
         return render(
             request,
             'pages/public/funnel/video.html',
@@ -351,7 +364,7 @@ class FunnelVideoView(View):
                 'next_url': next_url,
                 'video_config': video_cfg,
                 'pixel_ids': get_pixel_ids(funnel.escuela),
-                'app_base_path': '',
+                'app_base_path': _base_path(request),
             },
         )
 
@@ -390,6 +403,6 @@ class FunnelConfirmationView(View):
                 'slug': funnel.slug if funnel else '',
                 'region': region or (funnel.region if funnel else ''),
                 'pixel_ids': get_pixel_ids(escuela),
-                'app_base_path': '',
+                'app_base_path': _base_path(request),
             },
         )
