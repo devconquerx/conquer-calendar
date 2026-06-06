@@ -2,8 +2,9 @@ import json
 import logging
 from datetime import datetime, timezone as dt_timezone
 
+from django.conf import settings
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.dateparse import parse_datetime
 from django.views import View
@@ -207,6 +208,7 @@ PRODUCTO_A_ESCUELA = {
     'proptrading': 'conquer-finance',
     'english': 'conquer-languages',
 }
+PRODUCTO_POR_ESCUELA = {v: k for k, v in PRODUCTO_A_ESCUELA.items()}
 
 
 class FunnelAgendaView(View):
@@ -228,6 +230,57 @@ class FunnelAgendaView(View):
             {
                 'funnel': funnel,
                 'slug': funnel.slug,
+                'pixel_ids': get_pixel_ids(funnel.escuela),
+                'app_base_path': '',
+            },
+        )
+
+
+def _escuela_por_host(request):
+    """Resuelve la escuela según el dominio (Host) usando settings.FUNNEL_HOST_ESCUELA.
+
+    En dev (DEBUG) permite forzarla con ?escuela=conquer-languages para poder
+    probar en localhost.
+    """
+    host = request.get_host().split(':')[0].lower().strip()
+    mapping = getattr(settings, 'FUNNEL_HOST_ESCUELA', {}) or {}
+    escuela = mapping.get(host)
+    if not escuela and host.startswith('www.'):
+        escuela = mapping.get(host[4:])
+    if not escuela and settings.DEBUG:
+        escuela = request.GET.get('escuela')
+    return escuela
+
+
+class FunnelClaseView(View):
+    """GET de las landings de registro de lead:
+
+      - /conquer-blocks/clase-online-gratuita-<region>/  → escuela fija en el path
+      - /clase-online-gratuita-<region>/                 → escuela resuelta por Host
+        (conquerlanguages.* → conquer-languages, conquerfinance.* → conquer-finance)
+    """
+
+    def get(self, request, region, escuela=None):
+        if escuela is None:
+            escuela = _escuela_por_host(request)
+        if not escuela:
+            raise Http404('No se pudo resolver la escuela para este dominio.')
+        funnel = get_object_or_404(
+            FunnelForm, escuela=escuela, region=region, activo=True
+        )
+        from .context_processors import get_pixel_ids
+        # Siguiente etapa tras la landing. De momento el StepForm; cuando exista
+        # la página de video, será /<...>/video-clase-<region>/.
+        next_url = f'/f/{funnel.slug}/'
+        return render(
+            request,
+            'pages/public/funnel/landing.html',
+            {
+                'funnel': funnel,
+                'slug': funnel.slug,
+                'program': PRODUCTO_POR_ESCUELA.get(funnel.escuela, ''),
+                'next_url': next_url,
+                'landing_config': funnel.config or {},
                 'pixel_ids': get_pixel_ids(funnel.escuela),
                 'app_base_path': '',
             },

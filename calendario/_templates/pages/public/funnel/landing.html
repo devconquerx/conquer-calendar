@@ -1,0 +1,78 @@
+{% load django_vite %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ funnel.nombre }} — Conquer</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">
+
+  {% if pixel_ids.ga4 %}
+  <!-- Google tag (gtag.js) — GA4 + Google Ads -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ pixel_ids.ga4 }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '{{ pixel_ids.ga4 }}', { send_page_view: true });
+  </script>
+  {% endif %}
+
+  {% if pixel_ids.meta %}
+  <!-- Meta Pixel -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '{{ pixel_ids.meta }}');
+    fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id={{ pixel_ids.meta }}&ev=PageView&noscript=1" /></noscript>
+  {% endif %}
+
+  {% if pixel_ids.tiktok %}
+  <!-- TikTok Pixel -->
+  <script>
+    !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
+    ttq.methods=["page","track","identify","instances","debug","on","off",
+    "once","ready","alias","group","enableCookie","disableCookie","holdConsent",
+    "revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=
+    function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};
+    for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
+    ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;
+    n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){
+    var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;
+    ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},
+    ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};
+    var a=document.createElement("script");a.type="text/javascript",
+    a.async=!0,a.src=r+"?sdkid="+e+"&lib="+t;
+    var s=document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(a,s)}}(window,document,"ttq");
+    ttq.load('{{ pixel_ids.tiktok }}');
+    ttq.page();
+  </script>
+  {% endif %}
+
+  {% vite_hmr_client %}
+  {% vite_react_refresh %}
+  {% vite_asset 'src/landing.jsx' %}
+</head>
+<body>
+  {{ landing_config|json_script:"landing-config" }}
+  <div id="landing-root"
+       data-slug="{{ slug }}"
+       data-escuela="{{ funnel.escuela }}"
+       data-region="{{ funnel.region }}"
+       data-program="{{ program }}"
+       data-next-url="{{ next_url }}"
+       data-csrf="{{ csrf_token }}"></div>
+</body>
+</html>

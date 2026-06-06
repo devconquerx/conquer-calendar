@@ -8,6 +8,32 @@ logger = logging.getLogger(__name__)
 
 COOLDOWN_MINUTES = 30
 
+# Mínimo esperado por hora (UTC). Si el conteo de la última hora cae por debajo
+# → alerta de volumen degradado. (Réplica de funnels; ajustar a datos reales.)
+HOURLY_MIN_LEADS = {
+    0: 25, 1: 30, 2: 30, 3: 25, 4: 20,
+    5: 15, 6: 15, 7: 15, 8: 10, 9: 15,
+    10: 15, 11: 30, 12: 40, 13: 40, 14: 40,
+    15: 40, 16: 35, 17: 35, 18: 25, 19: 35,
+    20: 35, 21: 35, 22: 30, 23: 35,
+}
+
+HOURLY_MIN_PRELLAMADAS = {
+    0: 5, 1: 5, 2: 5, 3: 5, 4: 4,
+    5: 4, 6: 4, 7: 3, 8: 3, 9: 3,
+    10: 4, 11: 5, 12: 8, 13: 10, 14: 10,
+    15: 10, 16: 8, 17: 10, 18: 10, 19: 8,
+    20: 8, 21: 8, 22: 8, 23: 8,
+}
+
+HOURLY_MIN_RESERVAS = {
+    0: 2, 1: 2, 2: 2, 3: 2, 4: 2,
+    5: 1, 6: 1, 7: 1, 8: 1, 9: 2,
+    10: 2, 11: 2, 12: 3, 13: 3, 14: 3,
+    15: 3, 16: 3, 17: 3, 18: 3, 19: 2,
+    20: 2, 21: 2, 22: 2, 23: 2,
+}
+
 
 def _should_alert(metric):
     """Respeta cooldown: True si no se mandó alerta de esta métrica en los últimos COOLDOWN_MINUTES."""
@@ -81,6 +107,29 @@ def check_funnel_health():
             )
         else:
             logger.info('[Monitoring] %s OK: %d en %d min', metric, count, minutes)
+
+    # ── Chequeos de volumen horario (por debajo del mínimo = degradado) ──
+    hour = now.hour
+    hourly_cutoff = now - timedelta(hours=1)
+    hourly_checks = [
+        ('leads_low', Lead, 'created', HOURLY_MIN_LEADS),
+        ('prellamadas_low', Prellamada, 'creado_en', HOURLY_MIN_PRELLAMADAS),
+        ('reservas_low', Reserva, 'fecha_creacion', HOURLY_MIN_RESERVAS),
+    ]
+    for metric, model, field, thresholds in hourly_checks:
+        count = model.objects.filter(**{f'{field}__gte': hourly_cutoff}).count()
+        expected_min = thresholds.get(hour, 10)
+        if count < expected_min:
+            _record_and_send(
+                metric,
+                f'{model.__name__} por debajo del mínimo ({count}/{expected_min})',
+                f'{model.__name__} en la última hora: {count} (mínimo esperado: {expected_min} '
+                f'para las {hour}:00 UTC).\n'
+                f'Puede indicar problemas con ads, landing pages o APIs.\n'
+                f'Hora del check: {now:%Y-%m-%d %H:%M:%S UTC}',
+            )
+        else:
+            logger.info('[Monitoring] %s OK: %d (min=%d) hora %d', metric, count, expected_min, hour)
 
     # Salud de tareas Celery: leads sin crm_done creados hace 5-60 min
     stale_cutoff = now - timedelta(minutes=60)

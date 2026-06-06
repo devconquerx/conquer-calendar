@@ -226,6 +226,18 @@ CACHES = {
     }
 }
 
+# Mapa Host (dominio) → escuela, para resolver las rutas públicas raíz
+# /clase-online-gratuita-<region>/ de languages y finance (que comparten path).
+# Override por env: CALENDARIO_FUNNEL_HOST_ESCUELA="dominio=escuela,dominio2=escuela2"
+FUNNEL_HOST_ESCUELA = env.dict('CALENDARIO_FUNNEL_HOST_ESCUELA', default={
+    'conquerblocks.com': 'conquer-blocks',
+    'www.conquerblocks.com': 'conquer-blocks',
+    'conquerlanguages.com': 'conquer-languages',
+    'www.conquerlanguages.com': 'conquer-languages',
+    'conquerfinance.com': 'conquer-finance',
+    'www.conquerfinance.com': 'conquer-finance',
+})
+
 # CRM webhook (Make)
 CRM_WEBHOOK_URL = env.str('CRM_WEBHOOK_URL', default='')
 CRM_WEBHOOK_API_KEY = env.str('CRM_WEBHOOK_API_KEY', default='')
