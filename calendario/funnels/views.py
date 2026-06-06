@@ -229,6 +229,7 @@ class FunnelAgendaView(View):
                 'funnel': funnel,
                 'slug': funnel.slug,
                 'pixel_ids': get_pixel_ids(funnel.escuela),
+                'confirmation_url': confirmacion_url(funnel.escuela, funnel.region),
                 'app_base_path': '',
             },
         )
@@ -256,6 +257,14 @@ def _video_url(escuela, region):
     if escuela == 'conquer-blocks':
         return f'/conquer-blocks/video-clase-{region}/'
     return f'/video-clase-{region}/'
+
+
+# URL de la página de confirmación de llamada por marca (misma convención que la
+# de video). blocks lleva la escuela en el path; el resto se resuelve por Host.
+def confirmacion_url(escuela, region):
+    if escuela == 'conquer-blocks':
+        return f'/conquer-blocks/confirmacion-llamada-{region}/'
+    return f'/confirmacion-llamada-{region}/'
 
 
 # URLs de video por defecto si el FunnelForm.config no trae 'video' (fail-safe).
@@ -342,6 +351,45 @@ class FunnelVideoView(View):
                 'next_url': next_url,
                 'video_config': video_cfg,
                 'pixel_ids': get_pixel_ids(funnel.escuela),
+                'app_base_path': '',
+            },
+        )
+
+
+class FunnelConfirmationView(View):
+    """GET de la página de confirmación de llamada (tras agendar en Calendly):
+
+      - /conquer-blocks/confirmacion-llamada[-<region>]/  → escuela fija en el path
+      - /confirmacion-llamada[-<region>]/                 → escuela resuelta por Host
+
+    No depende de un FunnelForm concreto: solo necesita la escuela para el tema
+    (conquerblocks) y los pixeles. Si la región viene en la URL se usa para
+    resolver el funnel (título/pixeles); si no, se toma cualquiera activo de la
+    escuela. Equivale a la ruta `confirmation` del funnel de Django.
+    """
+
+    def get(self, request, region=None, escuela=None):
+        if escuela is None:
+            escuela = _escuela_por_host(request)
+        if not escuela:
+            raise Http404('No se pudo resolver la escuela para este dominio.')
+        funnel = None
+        if region:
+            funnel = FunnelForm.objects.filter(
+                escuela=escuela, region=region, activo=True
+            ).first()
+        if funnel is None:
+            funnel = FunnelForm.objects.filter(escuela=escuela, activo=True).first()
+        from .context_processors import get_pixel_ids
+        return render(
+            request,
+            'pages/public/funnel/confirmation.html',
+            {
+                'funnel': funnel,
+                'escuela': escuela,
+                'slug': funnel.slug if funnel else '',
+                'region': region or (funnel.region if funnel else ''),
+                'pixel_ids': get_pixel_ids(escuela),
                 'app_base_path': '',
             },
         )

@@ -7,9 +7,10 @@ const container = document.getElementById('funnel-root')
 const slug = container.dataset.slug
 const csrf = container.dataset.csrf
 const escuela = container.dataset.escuela || ''
+const confirmationUrl = container.dataset.confirmationUrl || ''
 
 createRoot(container).render(
   <TrackingProvider>
-    <Funnel slug={slug} csrf={csrf} escuela={escuela} />
+    <Funnel slug={slug} csrf={csrf} escuela={escuela} confirmationUrl={confirmationUrl} />
   </TrackingProvider>
 )

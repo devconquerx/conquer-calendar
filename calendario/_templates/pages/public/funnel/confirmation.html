@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ funnel.nombre }} — Conquer</title>
+  <title>{{ funnel.nombre|default:"Llamada reservada" }} — Conquer</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">
 
   {% if pixel_ids.ga4 %}
   <!-- Google tag (gtag.js) — GA4 + Google Ads -->
@@ -59,9 +63,13 @@
 
   {% vite_hmr_client %}
   {% vite_react_refresh %}
-  {% vite_asset 'src/main.jsx' %}
+  {% vite_asset 'src/confirmation.jsx' %}
 </head>
 <body>
-  <div id="funnel-root" data-slug="{{ slug }}" data-csrf="{{ csrf_token }}" data-escuela="{{ funnel.escuela }}" data-confirmation-url="{{ confirmation_url }}"></div>
+  <div id="confirmation-root"
+       data-slug="{{ slug }}"
+       data-escuela="{{ escuela }}"
+       data-region="{{ region }}"
+       data-csrf="{{ csrf_token }}"></div>
 </body>
 </html>

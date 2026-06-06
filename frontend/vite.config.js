@@ -18,6 +18,7 @@ export default defineConfig({
         main: resolve(__dirname, 'src/main.jsx'),
         landing: resolve(__dirname, 'src/landing.jsx'),
         video: resolve(__dirname, 'src/video.jsx'),
+        confirmation: resolve(__dirname, 'src/confirmation.jsx'),
       },
     },
   },

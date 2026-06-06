@@ -62,5 +62,23 @@ export default {
     },
   },
 
+  // Tokens de la página de confirmación de llamada (port de funnels).
+  confirmation: {
+    heroBg: 'bg-gradient-to-b from-gray-50 to-white',
+    felicidades: 'text-teal-500',
+    importantBanner: 'bg-gradient-to-r from-teal-400 to-emerald-400',
+    stepLabel: 'text-gray-400',
+    stepTitle: 'text-gray-900',
+    bodyText: 'text-gray-600',
+    bodyTextStrong: '[&_strong]:text-gray-900',
+    reminderBg: 'bg-gray-100',
+    altSectionBg: 'bg-gray-50',
+    videoBorder: 'border-gray-200',
+    videoShadow: 'shadow-lg',
+    svgAccent: '#73b9c7',
+    svgDark: '#121231',
+    footer: { text: 'text-gray-400' },
+  },
+
   cssVars: {},
 }

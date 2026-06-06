@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { fetchConfig, postResolver, registerLead } from './api'
 import useTracking from './hooks/useTracking'
-import { fireAllLead, fireAllSchedule } from './lib/pixelEvents'
+import { fireAllLead } from './lib/pixelEvents'
 import FormStep from './components/FormStep'
 import Calendar from './components/Calendar'
 import BookingDetails from './components/BookingDetails'
 import CalendlyEmbed from './components/CalendlyEmbed'
+import Confirmation from './components/Confirmation'
 import RejectScreen from './components/RejectScreen'
 import { buildCalendlyParams, buildCalendlyUrl, getYearMonthForCalendly } from './lib/calendly'
 import ProgressBar from './components/form-engine/ProgressBar'
@@ -15,7 +16,7 @@ import { getPrefillRespuestas } from './lib/prefillParams'
 import { getTheme, ThemeContext } from './themes'
 import './funnel.css'
 
-export default function Funnel({ slug, escuela: escuelaProp = '' }) {
+export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUrl = '' }) {
   const tracking = useTracking()
   const leadRegisteredRef = useRef(false)
   // schedule_event_id del recorrido: se genera una vez al montar y se reutiliza
@@ -113,19 +114,26 @@ export default function Funnel({ slug, escuela: escuelaProp = '' }) {
     setCurrentIndex(i => Math.max(0, i - 1))
   }
 
-  // Al agendar en Calendly: dispara el evento Schedule en todas las plataformas
-  // (equivalente a la página de Confirmación del funnel de Django). Usa el mismo
-  // event_id del recorrido + el schedule_event_id generado al montar + el UUID
-  // del evento de Calendly.
-  const handleCalendlyScheduled = useCallback((uuid) => {
-    fireAllSchedule({
-      eventId: tracking.eventId,
-      journeyId: tracking.journeyId,
-      schoolSlug: escuelaProp || escuela,
-      calendlyEventUuid: uuid || '',
-      scheduleEventId,
-    })
-  }, [tracking.eventId, tracking.journeyId, escuelaProp, escuela, scheduleEventId])
+  // Al agendar en Calendly: navega a la página de Confirmación (equivalente al
+  // router.visit del funnel de Django). El evento Schedule en todas las
+  // plataformas lo dispara <Confirmation> al montar (igual que funnels), leyendo
+  // el UUID de Calendly y el schedule_event_id desde localStorage. Propagamos
+  // event_id/journey_id por la URL para que la página de confirmación (otro entry)
+  // conserve el mismo recorrido de tracking.
+  const handleCalendlyScheduled = useCallback(() => {
+    if (confirmationUrl) {
+      const sep = confirmationUrl.includes('?') ? '&' : '?'
+      const qs = new URLSearchParams({
+        event_id: tracking.eventId,
+        journey_id: tracking.journeyId,
+      }).toString()
+      window.location.href = `${confirmationUrl}${sep}${qs}`
+      return
+    }
+    // Fallback: render in-SPA si el backend no proporcionó la URL.
+    setPhase('confirmation')
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [confirmationUrl, tracking.eventId, tracking.journeyId])
 
   const submitResolver = async (finalRespuestas) => {
     setPhase('resolving')
@@ -193,6 +201,10 @@ export default function Funnel({ slug, escuela: escuelaProp = '' }) {
   }
   if (phase === 'resolving') {
     return <div className="loading-wrap" style={pageStyle}>Procesando tus respuestas...</div>
+  }
+
+  if (phase === 'confirmation') {
+    return <Confirmation escuela={escuelaProp || escuela} slug={slug} />
   }
 
   if (phase === 'outcome') {

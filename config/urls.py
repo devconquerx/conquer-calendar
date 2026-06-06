@@ -7,7 +7,9 @@ from django.http import JsonResponse
 from django.views.generic import RedirectView
 
 from calendario.users.views import MagicLoginView, MagicLoginStopView
-from calendario.funnels.views import FunnelAgendaView, FunnelClaseView, FunnelVideoView
+from calendario.funnels.views import (
+    FunnelAgendaView, FunnelClaseView, FunnelVideoView, FunnelConfirmationView,
+)
 
 
 def health(request):
@@ -52,6 +54,16 @@ urlpatterns = [
     re_path(
         r'^video-clase-(?P<region>latam|eu|us)/?$',
         FunnelVideoView.as_view(), name='video_host',
+    ),
+    # Página de confirmación de llamada (tras agendar). La región es opcional para
+    # admitir la URL histórica /conquer-blocks/confirmacion-llamada/.
+    re_path(
+        r'^conquer-blocks/confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',
+        FunnelConfirmationView.as_view(), {'escuela': 'conquer-blocks'}, name='confirmacion_blocks',
+    ),
+    re_path(
+        r'^confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',
+        FunnelConfirmationView.as_view(), name='confirmacion_host',
     ),
     re_path(
         r'^(?P<user_slug>[-a-zA-Z0-9_.]+)/(?P<event_type_slug>[-a-zA-Z0-9_]+)/',
