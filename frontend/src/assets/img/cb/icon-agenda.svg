@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 97 107">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+        filter: url(#drop-shadow-1);
+      }
+    </style>
+    <filter id="drop-shadow-1" x="0" y="0" width="97" height="107" filterUnits="userSpaceOnUse">
+      <feOffset dx="2" dy="2"/>
+      <feGaussianBlur result="blur" stdDeviation="2"/>
+      <feFlood flood-color="#000" flood-opacity=".35"/>
+      <feComposite in2="blur" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+  </defs>
+  <g id="Content">
+    <g>
+      <polygon class="cls-1" points="13.56 98.07 13.56 88.29 4.59 88.29 4.59 4.15 74.88 4.15 74.88 11.5 83.84 11.5 83.84 20.91 88.33 20.91 88.33 78.11 83.84 78.11 83.84 98.07 13.56 98.07"/>
+      <g>
+        <rect x="20.22" y="54.78" width="36.18" height="4.07"/>
+        <rect x="20.22" y="64.56" width="19.31" height="4.07"/>
+        <path d="M84.15,34.37v-9.29h-4.48v-9.41h-8.96v-7.33H8.77v75.79h8.96v9.78h61.94v-19.97h4.48v-9.29h-4.48v-3.91h4.48v-9.29h-4.48v-3.87h4.48v-9.29h-4.48v-3.91h4.48ZM75.6,19.74v5.34h-4.89v-5.34h4.89ZM12.88,12.4h53.75v12.67h-2.81l-4.65,4.65,4.65,4.65h2.81v17.07h-2.81l-4.65,4.65,4.65,4.65h2.81v19.31H12.88V12.4ZM75.6,89.83H21.81v-5.7h48.9v-10.19h4.89v15.89ZM75.6,64.64h-4.89v-3.91h4.89v3.91ZM75.6,51.44h-4.89v-3.87h4.89v3.87ZM75.6,38.28h-4.89v-3.91h4.89v3.91Z"/>
+        <rect x="20.22" y="45" width="36.18" height="4.07"/>
+        <rect x="20.22" y="35.22" width="36.18" height="4.07"/>
+        <rect x="20.22" y="25.44" width="36.18" height="4.07"/>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -200,12 +200,14 @@
       {
         "min_score": 2,
         "max_score": 2.9,
-        "event_type_slug": "consultoria-blocks-latam-bajo"
+        "event_type_slug": "consultoria-blocks-latam-bajo",
+        "calendly_url": "https://calendly.com/d/cqy7-kcx-jmc/sesion-de-consultoria-conquer-blocks-latam"
       },
       {
         "min_score": 3,
         "max_score": 100,
-        "event_type_slug": "consultoria-blocks-latam-alto"
+        "event_type_slug": "consultoria-blocks-latam-alto",
+        "calendly_url": "https://calendly.com/d/cnh3-q3p-mw5/sesion-de-consultoria-conquer-blocks-latam"
       }
     ],
     "cancel_screen": {
@@ -245,6 +247,13 @@
       "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
       "label.errorAlert.email": "¡Correo electrónico no válido!",
       "label.submitBtn": "Enviar"
+    },
+    "video": {
+      "videoUrls": [
+        "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4",
+        "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4"
+      ],
+      "buttonPercent": 75
     }
   },
   "score_ranges": [

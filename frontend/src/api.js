@@ -32,3 +32,38 @@ export async function postReservar(slug, data) {
   })
   return res.json()
 }
+
+/**
+ * Registra el lead (nombre+email+tracking) en el backend apenas se captura el
+ * email. Fire-and-forget: dispara las tareas Celery del lado lead. Nunca
+ * bloquea ni rompe el flujo del formulario.
+ */
+export function registerLead(payload) {
+  fetch('/f/api/lead/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrf(),
+    },
+    body: JSON.stringify(payload),
+  }).catch((err) => {
+    console.error('[API] Error registering lead:', err)
+  })
+}
+
+/**
+ * Reporta el progreso de visualización del video (cada 10%) al backend, que
+ * actualiza el Lead. Fire-and-forget: nunca bloquea ni rompe la reproducción.
+ */
+export function sendVideoProgressToBackend({ email, percent, school, region }) {
+  fetch('/f/api/video-progress/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrf(),
+    },
+    body: JSON.stringify({ email, percent, school, region }),
+  }).catch((err) => {
+    console.error('[API] Error sending video progress:', err)
+  })
+}

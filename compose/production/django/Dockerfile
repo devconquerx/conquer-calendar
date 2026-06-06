@@ -39,6 +39,12 @@ RUN sed -i 's/\r$//' /entrypoint && chmod +x /entrypoint
 COPY ./compose/production/django/start /start
 RUN sed -i 's/\r$//' /start && chmod +x /start
 
+COPY ./compose/production/django/start-celeryworker /start-celeryworker
+RUN sed -i 's/\r$//' /start-celeryworker && chmod +x /start-celeryworker
+
+COPY ./compose/production/django/start-celerybeat /start-celerybeat
+RUN sed -i 's/\r$//' /start-celerybeat && chmod +x /start-celerybeat
+
 WORKDIR /app
 
 COPY . /app

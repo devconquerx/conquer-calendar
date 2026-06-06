@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { postReservar } from '../api'
+import useTracking from '../hooks/useTracking'
+import { fireAllSchedule } from '../lib/pixelEvents'
 
 function LeftPanel({ eventoInfo }) {
   return (
@@ -28,7 +30,8 @@ function LeftPanel({ eventoInfo }) {
   )
 }
 
-export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaToken, funnelSlug, onBack }) {
+export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaToken, funnelSlug, escuela = '', onBack }) {
+  const tracking = useTracking()
   const [nombre, setNombre] = useState(prefill?.nombre || '')
   const [email, setEmail] = useState(prefill?.email || '')
   const [telefono, setTelefono] = useState(prefill?.telefono || '')
@@ -55,6 +58,14 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
         notas: notas.trim(),
       })
       if (result.ok) {
+        // Dispara el evento Schedule en todas las plataformas antes del redirect
+        fireAllSchedule({
+          eventId: tracking.eventId,
+          journeyId: tracking.journeyId,
+          schoolSlug: escuela,
+          calendlyEventUuid: '',
+          scheduleEventId: (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_schedule_event_id')) || '',
+        })
         window.location.href = `/r/${result.confirmacion_token}/`
       } else {
         setError(result.mensaje || 'Error al crear la reserva. Inténtalo de nuevo.')

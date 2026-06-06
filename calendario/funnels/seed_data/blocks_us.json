@@ -259,7 +259,8 @@
       {
         "min_score": 0,
         "max_score": 100,
-        "event_type_slug": "consultoria-blocks-us"
+        "event_type_slug": "consultoria-blocks-us",
+        "calendly_url": "https://calendly.com/d/crft-6hj-zmm/sesion-de-consultoria-conquer-blocks-us"
       }
     ],
     "cancel_screen": {
@@ -299,6 +300,13 @@
       "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
       "label.errorAlert.email": "¡Correo electrónico no válido!",
       "label.submitBtn": "Enviar"
+    },
+    "video": {
+      "videoUrls": [
+        "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4",
+        "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4"
+      ],
+      "buttonPercent": 75
     }
   },
   "score_ranges": [

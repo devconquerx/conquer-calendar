@@ -179,26 +179,36 @@ def resolver_outcome(funnel, respuestas):
         resultado.update(resultado='rechazado', motivo='sin_rangos')
         return resultado
 
+    # Destino del rango. Modo actual (fiel a producción): URL de Calendly por
+    # rango (`calendly_url`/`url`). Modo futuro (calendario propio, aún no usado):
+    # `EventType` local por slug/id. Basta con uno de los dos para no rechazar.
+    calendly_url = rango.get('calendly_url') or rango.get('url') or ''
+
+    event_type_slug = rango.get('event_type_slug')
     event_type_id = rango.get('event_type_id')
-    event_type = (
-        EventType.objects.filter(id=event_type_id, activo=True)
-        .select_related('host')
-        .first()
-    ) if event_type_id else None
-    if event_type is None:
+    qs = EventType.objects.filter(activo=True).select_related('host')
+    if event_type_slug:
+        event_type = qs.filter(slug=event_type_slug).first()
+    elif event_type_id:
+        event_type = qs.filter(id=event_type_id).first()
+    else:
+        event_type = None
+
+    if not calendly_url and event_type is None:
         logger.warning(
-            "Funnel %s: event_type_id=%s no existe, está inactivo o es null; "
-            "se trata como rechazo.",
-            funnel.key, event_type_id,
+            "Funnel %s: el rango no tiene calendly_url ni un EventType válido "
+            "(slug=%s, id=%s); se trata como rechazo.",
+            funnel.key, event_type_slug, event_type_id,
         )
-        resultado.update(resultado='rechazado', motivo='event_type_inexistente')
+        resultado.update(resultado='rechazado', motivo='sin_destino')
         return resultado
 
     resultado.update(
         resultado='calendario',
         motivo='ok',
-        event_type_slug=event_type.slug,
-        host_slug=event_type.host.slug,
-        event_type_id=event_type.id,
+        calendly_url=calendly_url,
+        event_type_slug=event_type.slug if event_type else None,
+        host_slug=event_type.host.slug if event_type else None,
+        event_type_id=event_type.id if event_type else None,
     )
     return resultado

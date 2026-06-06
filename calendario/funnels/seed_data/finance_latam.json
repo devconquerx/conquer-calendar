@@ -200,12 +200,14 @@
       {
         "min_score": 2,
         "max_score": 2.9,
-        "event_type_slug": "consultoria-finance-latam-bajo"
+        "event_type_slug": "consultoria-finance-latam-bajo",
+        "calendly_url": "https://calendly.com/d/cq57-xx7-2kf/sesion-de-consultoria-conquer-finance-latam"
       },
       {
         "min_score": 3,
         "max_score": 100,
-        "event_type_slug": "consultoria-finance-latam-alto"
+        "event_type_slug": "consultoria-finance-latam-alto",
+        "calendly_url": "https://calendly.com/d/3p4-8yy-cdm/sesion-de-consultoria-conquer-finance-latam"
       }
     ],
     "cancel_screen": {

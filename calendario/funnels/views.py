@@ -2,8 +2,9 @@ import json
 import logging
 from datetime import datetime, timezone as dt_timezone
 
+from django.conf import settings
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.dateparse import parse_datetime
 from django.views import View
@@ -70,12 +71,15 @@ class ResolverView(View):
             resultado=outcome['resultado'],
             tracking=tracking,
         )
-        if outcome['resultado'] == 'calendario':
+        # En modo Calendly el rango no resuelve EventType local (queda None); la
+        # Prellamada se guarda igual (el evento se agenda en Calendly).
+        event_type = None
+        if outcome['resultado'] == 'calendario' and outcome.get('event_type_slug'):
             from calendario.event_types.models import EventType
             event_type = EventType.objects.filter(
                 slug=outcome['event_type_slug'], activo=True
             ).first()
-            prellamada_kwargs['event_type'] = event_type
+        prellamada_kwargs['event_type'] = event_type
 
         prellamada = Prellamada.objects.create(**prellamada_kwargs)
 
@@ -97,8 +101,9 @@ class ResolverView(View):
 
         return JsonResponse({
             'resultado': 'calendario',
-            'event_type_slug': outcome['event_type_slug'],
-            'host_slug': outcome['host_slug'],
+            'calendly_url': outcome.get('calendly_url', ''),
+            'event_type_slug': outcome.get('event_type_slug'),
+            'host_slug': outcome.get('host_slug'),
             'evento_info': evento_info,
             'prefill': {
                 'nombre': nombre,
@@ -186,14 +191,6 @@ class ReservarView(View):
         })
 
 
-class FunnelPageView(View):
-    """GET /f/<slug>/ → plantilla mínima (placeholder; React real en Paso 6+)."""
-
-    def get(self, request, slug):
-        funnel = get_object_or_404(FunnelForm, slug=slug, activo=True)
-        return render(request, 'pages/public/funnel/page.html', {'funnel': funnel, 'slug': slug})
-
-
 # Producto (en la URL pública) → escuela (en BD). Las URLs canónicas por marca
 # son /agenda/<producto>/<region>/. Añadir aquí nuevas marcas/productos.
 PRODUCTO_A_ESCUELA = {
@@ -201,6 +198,28 @@ PRODUCTO_A_ESCUELA = {
     'proptrading': 'conquer-finance',
     'english': 'conquer-languages',
 }
+PRODUCTO_POR_ESCUELA = {v: k for k, v in PRODUCTO_A_ESCUELA.items()}
+
+
+def _base_path(request):
+    """Prefijo de path bajo el que se sirve el funnel (p.ej. /preview), o ''.
+
+    Lo fija AppBasePathMiddleware. Las URLs de navegación que emiten las vistas
+    lo anteponen para que el flujo encadenado permanezca dentro del prefijo.
+    """
+    return getattr(request, 'app_base_path', '')
+
+
+def stepform_url(escuela, region, base=''):
+    """URL pública canónica del StepForm: /agenda/<producto>/<region>/.
+
+    `base` antepone un prefijo de path (p.ej. /preview) para mantener la
+    navegación dentro del prefijo cuando el funnel se sirve detrás de él.
+    """
+    producto = PRODUCTO_POR_ESCUELA.get(escuela)
+    if producto and region:
+        return f'{base}/agenda/{producto}/{region}/'
+    return ''
 
 
 class FunnelAgendaView(View):
@@ -215,8 +234,175 @@ class FunnelAgendaView(View):
         funnel = get_object_or_404(
             FunnelForm, escuela=escuela, region=region, activo=True
         )
+        from .context_processors import get_pixel_ids
         return render(
             request,
             'pages/public/funnel/page.html',
-            {'funnel': funnel, 'slug': funnel.slug},
+            {
+                'funnel': funnel,
+                'slug': funnel.slug,
+                'pixel_ids': get_pixel_ids(funnel.escuela),
+                'confirmation_url': confirmacion_url(funnel.escuela, funnel.region, base=_base_path(request)),
+                'app_base_path': _base_path(request),
+            },
+        )
+
+
+def _escuela_por_host(request):
+    """Resuelve la escuela según el dominio (Host) usando settings.FUNNEL_HOST_ESCUELA.
+
+    En dev (DEBUG) permite forzarla con ?escuela=conquer-languages para poder
+    probar en localhost.
+    """
+    host = request.get_host().split(':')[0].lower().strip()
+    mapping = getattr(settings, 'FUNNEL_HOST_ESCUELA', {}) or {}
+    escuela = mapping.get(host)
+    if not escuela and host.startswith('www.'):
+        escuela = mapping.get(host[4:])
+    if not escuela and settings.DEBUG:
+        escuela = request.GET.get('escuela')
+    return escuela
+
+
+# URLs de la página de video por marca. blocks lleva la escuela en el path; el
+# resto comparte la ruta raíz y se resuelve por dominio (Host).
+def _video_url(escuela, region, base=''):
+    if escuela == 'conquer-blocks':
+        return f'{base}/conquer-blocks/video-clase-{region}/'
+    return f'{base}/video-clase-{region}/'
+
+
+# URL de la página de confirmación de llamada por marca (misma convención que la
+# de video). blocks lleva la escuela en el path; el resto se resuelve por Host.
+def confirmacion_url(escuela, region, base=''):
+    if escuela == 'conquer-blocks':
+        return f'{base}/conquer-blocks/confirmacion-llamada-{region}/'
+    return f'{base}/confirmacion-llamada-{region}/'
+
+
+# URLs de video por defecto si el FunnelForm.config no trae 'video' (fail-safe).
+_VIDEO_DEFAULTS = {
+    'conquer-blocks': {
+        'videoUrls': [
+            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4',
+            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4',
+        ],
+        'buttonPercent': 75,
+    },
+}
+
+
+class FunnelClaseView(View):
+    """GET de las landings de registro de lead:
+
+      - /conquer-blocks/clase-online-gratuita-<region>/  → escuela fija en el path
+      - /clase-online-gratuita-<region>/                 → escuela resuelta por Host
+        (conquerlanguages.* → conquer-languages, conquerfinance.* → conquer-finance)
+    """
+
+    def get(self, request, region, escuela=None):
+        if escuela is None:
+            escuela = _escuela_por_host(request)
+        if not escuela:
+            raise Http404('No se pudo resolver la escuela para este dominio.')
+        funnel = get_object_or_404(
+            FunnelForm, escuela=escuela, region=region, activo=True
+        )
+        from .context_processors import get_pixel_ids
+        # Siguiente etapa tras la landing: la página de video si la marca la tiene
+        # configurada; si no, directo al StepForm (/agenda/<producto>/<region>/).
+        cfg = funnel.config or {}
+        if cfg.get('video') or funnel.escuela in _VIDEO_DEFAULTS:
+            next_url = _video_url(funnel.escuela, funnel.region, base=_base_path(request))
+        else:
+            next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request))
+        return render(
+            request,
+            'pages/public/funnel/landing.html',
+            {
+                'funnel': funnel,
+                'slug': funnel.slug,
+                'program': PRODUCTO_POR_ESCUELA.get(funnel.escuela, ''),
+                'next_url': next_url,
+                'landing_config': funnel.config or {},
+                'pixel_ids': get_pixel_ids(funnel.escuela),
+                'app_base_path': _base_path(request),
+            },
+        )
+
+
+class FunnelVideoView(View):
+    """GET de la página de video (VSL), entre la landing y el StepForm:
+
+      - /conquer-blocks/video-clase-<region>/  → escuela fija en el path
+      - /video-clase-<region>/                 → escuela resuelta por Host
+    """
+
+    def get(self, request, region, escuela=None):
+        if escuela is None:
+            escuela = _escuela_por_host(request)
+        if not escuela:
+            raise Http404('No se pudo resolver la escuela para este dominio.')
+        funnel = get_object_or_404(
+            FunnelForm, escuela=escuela, region=region, activo=True
+        )
+        from .context_processors import get_pixel_ids
+        cfg = funnel.config or {}
+        # La config del video (videoUrls + buttonPercent) vive en config['video'];
+        # si falta, usamos los defaults por marca.
+        video_cfg = dict(cfg)
+        if not video_cfg.get('video'):
+            video_cfg['video'] = _VIDEO_DEFAULTS.get(funnel.escuela, {})
+        # Siguiente etapa tras el video: el StepForm (/agenda/<producto>/<region>/).
+        next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request))
+        return render(
+            request,
+            'pages/public/funnel/video.html',
+            {
+                'funnel': funnel,
+                'slug': funnel.slug,
+                'next_url': next_url,
+                'video_config': video_cfg,
+                'pixel_ids': get_pixel_ids(funnel.escuela),
+                'app_base_path': _base_path(request),
+            },
+        )
+
+
+class FunnelConfirmationView(View):
+    """GET de la página de confirmación de llamada (tras agendar en Calendly):
+
+      - /conquer-blocks/confirmacion-llamada[-<region>]/  → escuela fija en el path
+      - /confirmacion-llamada[-<region>]/                 → escuela resuelta por Host
+
+    No depende de un FunnelForm concreto: solo necesita la escuela para el tema
+    (conquerblocks) y los pixeles. Si la región viene en la URL se usa para
+    resolver el funnel (título/pixeles); si no, se toma cualquiera activo de la
+    escuela. Equivale a la ruta `confirmation` del funnel de Django.
+    """
+
+    def get(self, request, region=None, escuela=None):
+        if escuela is None:
+            escuela = _escuela_por_host(request)
+        if not escuela:
+            raise Http404('No se pudo resolver la escuela para este dominio.')
+        funnel = None
+        if region:
+            funnel = FunnelForm.objects.filter(
+                escuela=escuela, region=region, activo=True
+            ).first()
+        if funnel is None:
+            funnel = FunnelForm.objects.filter(escuela=escuela, activo=True).first()
+        from .context_processors import get_pixel_ids
+        return render(
+            request,
+            'pages/public/funnel/confirmation.html',
+            {
+                'funnel': funnel,
+                'escuela': escuela,
+                'slug': funnel.slug if funnel else '',
+                'region': region or (funnel.region if funnel else ''),
+                'pixel_ids': get_pixel_ids(escuela),
+                'app_base_path': _base_path(request),
+            },
         )

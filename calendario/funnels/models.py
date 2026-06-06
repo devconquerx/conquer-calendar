@@ -22,7 +22,7 @@ class FunnelForm(models.Model):
         max_length=80,
         unique=True,
         verbose_name='Slug',
-        help_text='Identificador para la URL /f/<slug>/.',
+        help_text='Identificador interno del funnel (usado en la API /f/api/<slug>/).',
     )
     escuela = models.CharField(
         max_length=40,

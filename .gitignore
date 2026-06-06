@@ -30,6 +30,10 @@ staticfiles/
 calendario-media/
 calendario_logs/
 
+# Backups locales / dumps de BD (no deben ir al repo)
+backups_prod/
+*.sql.gz
+
 # Environments
 .env
 .envs/.local/

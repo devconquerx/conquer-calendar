@@ -6,3 +6,6 @@ class FunnelsConfig(AppConfig):
     name = 'calendario.funnels'
     label = 'funnels'
     verbose_name = 'Funnels'
+
+    def ready(self):
+        from . import signals  # noqa: F401

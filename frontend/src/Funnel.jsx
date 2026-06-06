@@ -1,25 +1,45 @@
-import React, { useState, useEffect } from 'react'
-import { fetchConfig, postResolver } from './api'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { fetchConfig, postResolver, registerLead } from './api'
+import useTracking from './hooks/useTracking'
+import { fireAllLead } from './lib/pixelEvents'
 import FormStep from './components/FormStep'
 import Calendar from './components/Calendar'
 import BookingDetails from './components/BookingDetails'
+import CalendlyEmbed from './components/CalendlyEmbed'
+import Confirmation from './components/Confirmation'
 import RejectScreen from './components/RejectScreen'
+import { buildCalendlyParams, buildCalendlyUrl, getYearMonthForCalendly } from './lib/calendly'
 import ProgressBar from './components/form-engine/ProgressBar'
 import StepTransition from './components/form-engine/StepTransition'
 import WelcomeScreen from './components/form-engine/fields/WelcomeScreen'
+import { getPrefillRespuestas } from './lib/prefillParams'
 import { getTheme, ThemeContext } from './themes'
 import './funnel.css'
 
-export default function Funnel({ slug }) {
+export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUrl = '' }) {
+  const tracking = useTracking()
+  const leadRegisteredRef = useRef(false)
+  // schedule_event_id del recorrido: se genera una vez al montar y se reutiliza
+  // en el utm_term de Calendly y en fireAllSchedule (igual que el funnel de
+  // Django, que lo genera en `trackingParams` al montar el form).
+  const scheduleEventId = useMemo(() => {
+    const id = tracking.generateScheduleEventId()
+    try { localStorage.setItem('cqx_schedule_event_id', id) } catch (_) {}
+    return id
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [blocks, setBlocks] = useState([])
   const [escuela, setEscuela] = useState('')
   const [messages, setMessages] = useState({})
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState('forward')
-  const [respuestas, setRespuestas] = useState({})
+  // Prefill desde el query string que propaga la landing (name/email/phone),
+  // igual que el funnel de Django. Los ids de bloque son name/email/phone.
+  const [respuestas, setRespuestas] = useState(() => getPrefillRespuestas(window.location.search))
   const [phase, setPhase] = useState('loading')
   const [outcome, setOutcome] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
+  const [calendlyUrl, setCalendlyUrl] = useState('')
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
@@ -47,6 +67,31 @@ export default function Funnel({ slug }) {
     setRespuestas(prev => ({ ...prev, [current.id]: value }))
   }
 
+  // Registra el lead (nombre+email+tracking) apenas se captura el email, para
+  // capturarlo aunque abandone antes de agendar (igual que funnels).
+  const maybeRegisterLead = (answers) => {
+    if (leadRegisteredRef.current) return
+    const email = answers.email
+    if (!email) return
+    leadRegisteredRef.current = true
+    registerLead({
+      name: answers.name || '',
+      email,
+      lead_phone: answers.phone || '',
+      escuela: escuelaProp || escuela,
+      funnel: slug,
+      event_id: tracking.eventId,
+      journey_id: tracking.journeyId,
+      user_agent: navigator.userAgent,
+      url: window.location.href,
+      ...tracking.utmParams,
+      ...tracking.clickIds,
+      _fbp: tracking.pixelCookies._fbp || '',
+      _fbc: tracking.pixelCookies._fbc || '',
+      _ttp: tracking.pixelCookies._ttp || '',
+    })
+  }
+
   const handleNext = (value) => {
     if (!current) return
     const updated =
@@ -54,6 +99,7 @@ export default function Funnel({ slug }) {
         ? { ...respuestas, [current.id]: value }
         : { ...respuestas }
     setRespuestas(updated)
+    maybeRegisterLead(updated)
 
     setDirection('forward')
     if (currentIndex < blocks.length - 1) {
@@ -68,10 +114,59 @@ export default function Funnel({ slug }) {
     setCurrentIndex(i => Math.max(0, i - 1))
   }
 
+  // Al agendar en Calendly: navega a la página de Confirmación (equivalente al
+  // router.visit del funnel de Django). El evento Schedule en todas las
+  // plataformas lo dispara <Confirmation> al montar (igual que funnels), leyendo
+  // el UUID de Calendly y el schedule_event_id desde localStorage. Propagamos
+  // event_id/journey_id por la URL para que la página de confirmación (otro entry)
+  // conserve el mismo recorrido de tracking.
+  const handleCalendlyScheduled = useCallback(() => {
+    if (confirmationUrl) {
+      const sep = confirmationUrl.includes('?') ? '&' : '?'
+      const qs = new URLSearchParams({
+        event_id: tracking.eventId,
+        journey_id: tracking.journeyId,
+      }).toString()
+      window.location.href = `${confirmationUrl}${sep}${qs}`
+      return
+    }
+    // Fallback: render in-SPA si el backend no proporcionó la URL.
+    setPhase('confirmation')
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [confirmationUrl, tracking.eventId, tracking.journeyId])
+
   const submitResolver = async (finalRespuestas) => {
     setPhase('resolving')
     try {
-      const result = await postResolver(slug, finalRespuestas)
+      const result = await postResolver(slug, finalRespuestas, tracking.buildFullPayload())
+      // Dispara el evento Lead en todas las plataformas (Meta/Google/GA4/TikTok)
+      fireAllLead({
+        eventId: tracking.eventId,
+        journeyId: tracking.journeyId,
+        email: finalRespuestas.email || '',
+        phone: finalRespuestas.phone || '',
+        name: finalRespuestas.name || '',
+        schoolSlug: escuelaProp || escuela,
+        fbp: tracking.pixelCookies._fbp || '',
+        fbc: tracking.pixelCookies._fbc || '',
+      })
+      // Modo Calendly (fiel a producción): si el rango trae una URL de Calendly,
+      // construye el widget con prefill + UTMs + utm_term de tracking.
+      if (result.resultado === 'calendario' && result.calendly_url) {
+        const body = {
+          lead_name: result.prefill?.nombre || finalRespuestas.name || '',
+          lead_email: result.prefill?.email || finalRespuestas.email || '',
+          lead_phone_number: result.prefill?.telefono || finalRespuestas.phone || '',
+          ...tracking.utmParams,
+        }
+        const params = buildCalendlyParams({
+          body,
+          monthValue: getYearMonthForCalendly(),
+          journeyId: tracking.journeyId,
+          scheduleEventId,
+        })
+        setCalendlyUrl(buildCalendlyUrl(result.calendly_url, params))
+      }
       setOutcome(result)
       setPhase('outcome')
     } catch (e) {
@@ -108,11 +203,19 @@ export default function Funnel({ slug }) {
     return <div className="loading-wrap" style={pageStyle}>Procesando tus respuestas...</div>
   }
 
+  if (phase === 'confirmation') {
+    return <Confirmation escuela={escuelaProp || escuela} slug={slug} />
+  }
+
   if (phase === 'outcome') {
     if (outcome.resultado === 'rechazado') {
       return <RejectScreen cancelScreen={outcome.cancel_screen} />
     }
     if (outcome.resultado === 'calendario') {
+      // Modo Calendly: embebe el widget del rango (no usamos el calendario local aún).
+      if (calendlyUrl) {
+        return <CalendlyEmbed url={calendlyUrl} onScheduled={handleCalendlyScheduled} />
+      }
       if (selectedSlot) {
         return (
           <BookingDetails
@@ -121,6 +224,7 @@ export default function Funnel({ slug }) {
             eventoInfo={outcome.evento_info}
             prellamadaToken={outcome.prellamada_token}
             funnelSlug={slug}
+            escuela={escuelaProp || escuela}
             onBack={() => setSelectedSlot(null)}
           />
         )

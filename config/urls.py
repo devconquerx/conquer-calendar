@@ -7,7 +7,9 @@ from django.http import JsonResponse
 from django.views.generic import RedirectView
 
 from calendario.users.views import MagicLoginView, MagicLoginStopView
-from calendario.funnels.views import FunnelAgendaView
+from calendario.funnels.views import (
+    FunnelAgendaView, FunnelClaseView, FunnelVideoView, FunnelConfirmationView,
+)
 
 
 def health(request):
@@ -33,6 +35,36 @@ urlpatterns = [
     path('f/', include('calendario.funnels.urls')),
     # URLs públicas canónicas por marca/producto (antes del catch-all de booking).
     path('agenda/<slug:producto>/<slug:region>/', FunnelAgendaView.as_view(), name='funnel_agenda'),
+    # Landings de registro de lead: blocks lleva la escuela en el path; languages
+    # y finance comparten la ruta raíz y se resuelven por dominio (Host).
+    re_path(
+        r'^conquer-blocks/clase-online-gratuita-(?P<region>latam|eu|us)/?$',
+        FunnelClaseView.as_view(), {'escuela': 'conquer-blocks'}, name='clase_blocks',
+    ),
+    re_path(
+        r'^clase-online-gratuita-(?P<region>latam|eu|us)/?$',
+        FunnelClaseView.as_view(), name='clase_host',
+    ),
+    # Página de video (VSL), entre la landing y el StepForm. Mismo criterio:
+    # blocks lleva la escuela en el path; el resto se resuelve por dominio.
+    re_path(
+        r'^conquer-blocks/video-clase-(?P<region>latam|eu|us)/?$',
+        FunnelVideoView.as_view(), {'escuela': 'conquer-blocks'}, name='video_blocks',
+    ),
+    re_path(
+        r'^video-clase-(?P<region>latam|eu|us)/?$',
+        FunnelVideoView.as_view(), name='video_host',
+    ),
+    # Página de confirmación de llamada (tras agendar). La región es opcional para
+    # admitir la URL histórica /conquer-blocks/confirmacion-llamada/.
+    re_path(
+        r'^conquer-blocks/confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',
+        FunnelConfirmationView.as_view(), {'escuela': 'conquer-blocks'}, name='confirmacion_blocks',
+    ),
+    re_path(
+        r'^confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',
+        FunnelConfirmationView.as_view(), name='confirmacion_host',
+    ),
     re_path(
         r'^(?P<user_slug>[-a-zA-Z0-9_.]+)/(?P<event_type_slug>[-a-zA-Z0-9_]+)/',
         include('calendario.bookings.urls_public_booking'),
