@@ -115,12 +115,23 @@ def dispatch_schedule_tasks(reserva_id):
     s = build_schedule_ctx(reserva)
     lead = s.lead
 
+    # Tareas de plataformas de ads (condicionadas por la fuente de tráfico). Si no
+    # hay Lead emparejado, se usa el utm_source del tracking como fallback (igual
+    # que funnels), para no perder conversiones de reservas sin Lead.
     if lead:
         if is_from_meta(lead):
             process_schedule_meta_capi.delay(reserva_id)
         if is_from_tiktok(lead):
             process_schedule_tiktok_events.delay(reserva_id)
         if is_from_google(lead):
+            process_schedule_google_ads.delay(reserva_id)
+    else:
+        src = (s.utm_source or '').lower()
+        if src == 'metaads':
+            process_schedule_meta_capi.delay(reserva_id)
+        if 'tiktok' in src:
+            process_schedule_tiktok_events.delay(reserva_id)
+        if src == 'googleads':
             process_schedule_google_ads.delay(reserva_id)
 
     if s.lead_email:
@@ -131,6 +142,7 @@ def dispatch_schedule_tasks(reserva_id):
 
     # CRM directo (sin dual-source de Calendly). Disabled-for-testing por dentro.
     process_schedule_crm.delay(reserva_id)
+    reserva.tags.add('sch_crm_dispatched')
 
     logger.info('Reserva %s: dispatched processing tasks', reserva_id)
 
@@ -158,13 +170,24 @@ def sweep_incomplete_reservas():
         s = build_schedule_ctx(reserva)
         lead = s.lead
 
-        if lead and is_from_meta(lead) and 'sch_meta_capi_done' not in tag_names and 'sch_meta_capi_failed' not in tag_names:
+        # Plataformas de ads: por Lead si existe, si no por utm_source (fallback).
+        if lead:
+            meta_on = is_from_meta(lead)
+            tiktok_on = is_from_tiktok(lead)
+            google_on = is_from_google(lead)
+        else:
+            src = (s.utm_source or '').lower()
+            meta_on = src == 'metaads'
+            tiktok_on = 'tiktok' in src
+            google_on = src == 'googleads'
+
+        if meta_on and 'sch_meta_capi_done' not in tag_names and 'sch_meta_capi_failed' not in tag_names:
             process_schedule_meta_capi.delay(reserva.pk)
             requeued += 1
-        if lead and is_from_tiktok(lead) and 'sch_tiktok_events_done' not in tag_names and 'sch_tiktok_events_failed' not in tag_names:
+        if tiktok_on and 'sch_tiktok_events_done' not in tag_names and 'sch_tiktok_events_failed' not in tag_names:
             process_schedule_tiktok_events.delay(reserva.pk)
             requeued += 1
-        if lead and is_from_google(lead) and 'sch_google_ads_done' not in tag_names and 'sch_google_ads_failed' not in tag_names:
+        if google_on and 'sch_google_ads_done' not in tag_names and 'sch_google_ads_failed' not in tag_names:
             process_schedule_google_ads.delay(reserva.pk)
             requeued += 1
         if s.lead_email and 'sch_activecampaign_done' not in tag_names and 'sch_activecampaign_failed' not in tag_names:
@@ -172,6 +195,13 @@ def sweep_incomplete_reservas():
             requeued += 1
         if s.lead_phone_number and 'sch_respondio_done' not in tag_names and 'sch_respondio_failed' not in tag_names:
             process_schedule_respondio.delay(reserva.pk)
+            requeued += 1
+
+        # CRM ingest: re-encola si no se completó/falló/despachó (parity con funnels).
+        if ('sch_crm_done' not in tag_names and 'sch_crm_failed' not in tag_names
+                and 'sch_crm_dispatched' not in tag_names):
+            process_schedule_crm.delay(reserva.pk)
+            reserva.tags.add('sch_crm_dispatched')
             requeued += 1
 
     logger.info('[Sweep] Checked reservas since %s, requeued %d tasks', cutoff_old, requeued)

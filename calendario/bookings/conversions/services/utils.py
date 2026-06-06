@@ -99,13 +99,17 @@ def build_schedule_ctx(reserva):
     for i in range(1, 7):
         setattr(s, f'q{i}_answer', None)
 
-    # UTMs: del lead si existe.
+    # UTMs: del lead si existe; si no, del tracking de la prellamada (para que el
+    # fallback por utm_source funcione aunque no haya Lead emparejado).
     for f in ('utm_source', 'utm_campaign', 'utm_medium', 'utm_term', 'utm_content',
               'utm_idcampaign', 'utm_adsetid', 'utm_adid'):
-        setattr(s, f, getattr(lead, f, None) if lead else None)
+        val = getattr(lead, f, None) if lead else None
+        if not val:
+            val = tracking.get(f)
+        setattr(s, f, val)
     s.utm_vsl = None
     s.utm_nuturing = None
     s.utm_form_length = None
-    s.utm_form_variant = getattr(lead, 'utm_form_variant', None) if lead else None
+    s.utm_form_variant = (getattr(lead, 'utm_form_variant', None) if lead else None) or tracking.get('utm_form_variant')
 
     return s
