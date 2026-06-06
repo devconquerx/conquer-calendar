@@ -63,8 +63,8 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
           eventId: tracking.eventId,
           journeyId: tracking.journeyId,
           schoolSlug: escuela,
-          email: email.trim(),
-          phone: telefono.trim(),
+          calendlyEventUuid: '',
+          scheduleEventId: (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_schedule_event_id')) || '',
         })
         window.location.href = `/r/${result.confirmacion_token}/`
       } else {

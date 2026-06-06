@@ -6,6 +6,7 @@ from django.utils.html import format_html
 from django_json_widget.widgets import JSONEditorWidget
 
 from .models import FunnelForm, FunnelScoring, Prellamada
+from .views import stepform_url
 
 
 class FunnelFormAdminForm(forms.ModelForm):
@@ -54,9 +55,11 @@ class FunnelFormAdmin(admin.ModelAdmin):
     )
 
     def funnel_url_botones(self, obj):
-        if not obj or not obj.pk or not obj.slug:
+        if not obj or not obj.pk:
             return '—'
-        path = f'/f/{obj.slug}/'
+        path = stepform_url(obj.escuela, obj.region)
+        if not path:
+            return '—'
         btn_style = (
             'display:inline-block;padding:7px 16px;border-radius:4px;font-size:13px;'
             'font-weight:600;cursor:pointer;border:none;'

@@ -78,7 +78,8 @@
       {
         "min_score": 0,
         "max_score": 100,
-        "event_type_slug": "consultoria-especializacion-eu"
+        "event_type_slug": "consultoria-especializacion-eu",
+        "calendly_url": "https://calendly.com/d/cwqr-smg-tbd/especialidad-sesion-de-consultoria-conquer-blocks-eu"
       }
     ],
     "cancel_screen": {

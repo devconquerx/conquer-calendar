@@ -50,3 +50,20 @@ export function registerLead(payload) {
     console.error('[API] Error registering lead:', err)
   })
 }
+
+/**
+ * Reporta el progreso de visualización del video (cada 10%) al backend, que
+ * actualiza el Lead. Fire-and-forget: nunca bloquea ni rompe la reproducción.
+ */
+export function sendVideoProgressToBackend({ email, percent, school, region }) {
+  fetch('/f/api/video-progress/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrf(),
+    },
+    body: JSON.stringify({ email, percent, school, region }),
+  }).catch((err) => {
+    console.error('[API] Error sending video progress:', err)
+  })
+}

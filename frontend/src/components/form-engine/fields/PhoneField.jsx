@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { AsYouType, getExampleNumber } from 'libphonenumber-js'
+import { AsYouType, getExampleNumber, parsePhoneNumber } from 'libphonenumber-js'
 import examples from 'libphonenumber-js/mobile/examples'
 import countries from '../../../data/countries'
 import useGeoLocation from '../../../hooks/useGeoLocation'
@@ -25,11 +25,34 @@ export default function PhoneField({ field, value, onChange, onNext }) {
     if (found) setSelectedCountry(found)
   }, [geoCountryCode, geoLoading])
 
-  // Parse existing value if coming from prefill (E.164 string)
+  // Parse existing value if coming from prefill (E.164 string). Separa el código
+  // de país del número nacional para no duplicar el prefijo al reconstruirlo.
   useEffect(() => {
-    if (value && typeof value === 'string') {
-      const digits = value.replace(/[^\d]/g, '')
-      if (digits) setPhoneNumber(digits)
+    if (!value || typeof value !== 'string') return
+    const e164 = value.startsWith('+') ? value : `+${value.replace(/[^\d]/g, '')}`
+    try {
+      const parsed = parsePhoneNumber(e164)
+      if (parsed) {
+        const found = countries.find((c) => c.iso2 === parsed.country)
+        if (found) {
+          setSelectedCountry(found)
+          setPhoneNumber(parsed.nationalNumber)
+          return
+        }
+        // País detectado no está en nuestra lista: resuelve por prefijo abajo.
+      }
+    } catch (_) {}
+    // Fallback: empareja por el phoneCode más largo que prefije los dígitos.
+    const digits = value.replace(/[^\d]/g, '')
+    const sorted = [...countries].sort(
+      (a, b) => String(b.phoneCode).replace(/\D/g, '').length - String(a.phoneCode).replace(/\D/g, '').length
+    )
+    const match = sorted.find((c) => digits.startsWith(String(c.phoneCode).replace(/\D/g, '')))
+    if (match) {
+      setSelectedCountry(match)
+      setPhoneNumber(digits.slice(String(match.phoneCode).replace(/\D/g, '').length))
+    } else if (digits) {
+      setPhoneNumber(digits)
     }
   }, [])
 

@@ -2,6 +2,8 @@ import json
 import logging
 import re
 
+import requests
+from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -92,3 +94,106 @@ def register_lead(request):
     lead = Lead.objects.create(**fields)
 
     return JsonResponse({'status': 'ok', 'id': lead.id})
+
+
+# Escuela (slug) → campo VSL por marca en el modelo Lead.
+_VSL_FIELD_POR_ESCUELA = {
+    'conquer-blocks': 'vsl_percent_cb',
+    'conquerblocks': 'vsl_percent_cb',
+    'conquer-languages': 'vsl_percent_cl',
+    'conquerlanguages': 'vsl_percent_cl',
+    'conquer-finance': 'vsl_percent_cf',
+    'conquerfinance': 'vsl_percent_cf',
+}
+
+
+@csrf_exempt
+@require_POST
+def video_progress(request):
+    """POST /f/api/video-progress/ — actualiza el % visto del video en el Lead.
+
+    Fire-and-forget desde la página de video (cada 10%). Busca el Lead más
+    reciente por email y guarda el máximo entre el valor actual y el reportado
+    (nunca decrece). Devuelve 200 aunque no haya Lead, para no romper el flujo.
+    """
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    email = (data.get('email') or '').strip()
+    try:
+        percent = int(data.get('percent') or 0)
+    except (TypeError, ValueError):
+        percent = 0
+    school = (data.get('school') or '').strip()
+
+    if not email or percent <= 0:
+        return JsonResponse({'status': 'skipped'})
+
+    percent = max(0, min(percent, 100))
+
+    lead = Lead.objects.filter(email__iexact=email).order_by('-created').first()
+    if lead is None:
+        return JsonResponse({'status': 'no_lead'})
+
+    update_fields = []
+    if percent > (lead.vsl_percentage or 0):
+        lead.vsl_percentage = percent
+        update_fields.append('vsl_percentage')
+
+    brand_field = _VSL_FIELD_POR_ESCUELA.get(school)
+    brand_updated = False
+    if brand_field and percent > (getattr(lead, brand_field) or 0):
+        setattr(lead, brand_field, percent)
+        update_fields.append(brand_field)
+        brand_updated = True
+
+    if update_fields:
+        lead.save(update_fields=update_fields)
+
+    # Reenvía el progreso al CRM (réplica de funnels: reemplaza el webhook de Make).
+    if brand_updated:
+        _patch_vsl_progress_to_crm(email, brand_field, percent)
+
+    return JsonResponse({'status': 'ok'})
+
+
+def _patch_vsl_progress_to_crm(email, vsl_key, percent):
+    """PATCH del progreso de video al CRM ingest (fire-and-forget).
+
+    Fail-safe: si no hay CRM_API_KEY configurada, hace no-op y loguea (no rompe
+    el flujo). Réplica de funnels/apps/leads/views.py:_patch_vsl_progress_to_crm.
+    """
+    api_key = getattr(settings, 'CRM_API_KEY', '')
+    if not api_key:
+        logger.warning('[CRM] No API key configured, skipping vsl-progress PATCH')
+        return
+
+    base_url = getattr(settings, 'CRM_BASE_URL', '').rstrip('/')
+    url = f'{base_url}/api/v1/ingest/lead-register/vsl-progress/'
+
+    payload = {
+        'email': email,
+        'vsl_percent_cb': None,
+        'vsl_percent_cl': None,
+        'vsl_percent_cf': None,
+    }
+    payload[vsl_key] = percent
+
+    try:
+        response = requests.patch(
+            url,
+            json=payload,
+            headers={'X-API-Key': api_key, 'Content-Type': 'application/json'},
+            timeout=10,
+        )
+        if response.status_code in (200, 201):
+            logger.info('[CRM] vsl-progress PATCH ok for %s (%s=%s)', email, vsl_key, percent)
+        else:
+            logger.error(
+                '[CRM] vsl-progress PATCH failed — status=%d response=%s',
+                response.status_code, response.text[:500],
+            )
+    except requests.RequestException as exc:
+        logger.error('[CRM] vsl-progress PATCH error: %s', exc)

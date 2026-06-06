@@ -71,12 +71,15 @@ class ResolverView(View):
             resultado=outcome['resultado'],
             tracking=tracking,
         )
-        if outcome['resultado'] == 'calendario':
+        # En modo Calendly el rango no resuelve EventType local (queda None); la
+        # Prellamada se guarda igual (el evento se agenda en Calendly).
+        event_type = None
+        if outcome['resultado'] == 'calendario' and outcome.get('event_type_slug'):
             from calendario.event_types.models import EventType
             event_type = EventType.objects.filter(
                 slug=outcome['event_type_slug'], activo=True
             ).first()
-            prellamada_kwargs['event_type'] = event_type
+        prellamada_kwargs['event_type'] = event_type
 
         prellamada = Prellamada.objects.create(**prellamada_kwargs)
 
@@ -98,8 +101,9 @@ class ResolverView(View):
 
         return JsonResponse({
             'resultado': 'calendario',
-            'event_type_slug': outcome['event_type_slug'],
-            'host_slug': outcome['host_slug'],
+            'calendly_url': outcome.get('calendly_url', ''),
+            'event_type_slug': outcome.get('event_type_slug'),
+            'host_slug': outcome.get('host_slug'),
             'evento_info': evento_info,
             'prefill': {
                 'nombre': nombre,
@@ -187,20 +191,6 @@ class ReservarView(View):
         })
 
 
-class FunnelPageView(View):
-    """GET /f/<slug>/ → plantilla del funnel (monta React + pixeles base)."""
-
-    def get(self, request, slug):
-        funnel = get_object_or_404(FunnelForm, slug=slug, activo=True)
-        from .context_processors import get_pixel_ids
-        return render(request, 'pages/public/funnel/page.html', {
-            'funnel': funnel,
-            'slug': slug,
-            'pixel_ids': get_pixel_ids(funnel.escuela),
-            'app_base_path': '',
-        })
-
-
 # Producto (en la URL pública) → escuela (en BD). Las URLs canónicas por marca
 # son /agenda/<producto>/<region>/. Añadir aquí nuevas marcas/productos.
 PRODUCTO_A_ESCUELA = {
@@ -209,6 +199,14 @@ PRODUCTO_A_ESCUELA = {
     'english': 'conquer-languages',
 }
 PRODUCTO_POR_ESCUELA = {v: k for k, v in PRODUCTO_A_ESCUELA.items()}
+
+
+def stepform_url(escuela, region):
+    """URL pública canónica del StepForm: /agenda/<producto>/<region>/."""
+    producto = PRODUCTO_POR_ESCUELA.get(escuela)
+    if producto and region:
+        return f'/agenda/{producto}/{region}/'
+    return ''
 
 
 class FunnelAgendaView(View):
@@ -252,6 +250,26 @@ def _escuela_por_host(request):
     return escuela
 
 
+# URLs de la página de video por marca. blocks lleva la escuela en el path; el
+# resto comparte la ruta raíz y se resuelve por dominio (Host).
+def _video_url(escuela, region):
+    if escuela == 'conquer-blocks':
+        return f'/conquer-blocks/video-clase-{region}/'
+    return f'/video-clase-{region}/'
+
+
+# URLs de video por defecto si el FunnelForm.config no trae 'video' (fail-safe).
+_VIDEO_DEFAULTS = {
+    'conquer-blocks': {
+        'videoUrls': [
+            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4',
+            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4',
+        ],
+        'buttonPercent': 75,
+    },
+}
+
+
 class FunnelClaseView(View):
     """GET de las landings de registro de lead:
 
@@ -269,9 +287,13 @@ class FunnelClaseView(View):
             FunnelForm, escuela=escuela, region=region, activo=True
         )
         from .context_processors import get_pixel_ids
-        # Siguiente etapa tras la landing. De momento el StepForm; cuando exista
-        # la página de video, será /<...>/video-clase-<region>/.
-        next_url = f'/f/{funnel.slug}/'
+        # Siguiente etapa tras la landing: la página de video si la marca la tiene
+        # configurada; si no, directo al StepForm (/agenda/<producto>/<region>/).
+        cfg = funnel.config or {}
+        if cfg.get('video') or funnel.escuela in _VIDEO_DEFAULTS:
+            next_url = _video_url(funnel.escuela, funnel.region)
+        else:
+            next_url = stepform_url(funnel.escuela, funnel.region)
         return render(
             request,
             'pages/public/funnel/landing.html',
@@ -281,6 +303,44 @@ class FunnelClaseView(View):
                 'program': PRODUCTO_POR_ESCUELA.get(funnel.escuela, ''),
                 'next_url': next_url,
                 'landing_config': funnel.config or {},
+                'pixel_ids': get_pixel_ids(funnel.escuela),
+                'app_base_path': '',
+            },
+        )
+
+
+class FunnelVideoView(View):
+    """GET de la página de video (VSL), entre la landing y el StepForm:
+
+      - /conquer-blocks/video-clase-<region>/  → escuela fija en el path
+      - /video-clase-<region>/                 → escuela resuelta por Host
+    """
+
+    def get(self, request, region, escuela=None):
+        if escuela is None:
+            escuela = _escuela_por_host(request)
+        if not escuela:
+            raise Http404('No se pudo resolver la escuela para este dominio.')
+        funnel = get_object_or_404(
+            FunnelForm, escuela=escuela, region=region, activo=True
+        )
+        from .context_processors import get_pixel_ids
+        cfg = funnel.config or {}
+        # La config del video (videoUrls + buttonPercent) vive en config['video'];
+        # si falta, usamos los defaults por marca.
+        video_cfg = dict(cfg)
+        if not video_cfg.get('video'):
+            video_cfg['video'] = _VIDEO_DEFAULTS.get(funnel.escuela, {})
+        # Siguiente etapa tras el video: el StepForm (/agenda/<producto>/<region>/).
+        next_url = stepform_url(funnel.escuela, funnel.region)
+        return render(
+            request,
+            'pages/public/funnel/video.html',
+            {
+                'funnel': funnel,
+                'slug': funnel.slug,
+                'next_url': next_url,
+                'video_config': video_cfg,
                 'pixel_ids': get_pixel_ids(funnel.escuela),
                 'app_base_path': '',
             },

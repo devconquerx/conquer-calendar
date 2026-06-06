@@ -185,12 +185,14 @@
       {
         "min_score": 0,
         "max_score": 3.4,
-        "event_type_slug": "consultoria-languages-eu-bajo"
+        "event_type_slug": "consultoria-languages-eu-bajo",
+        "calendly_url": "https://calendly.com/d/crf7-dtd-7gd/sesion-de-consultoria-conquer-languages-eu"
       },
       {
         "min_score": 3.5,
         "max_score": 100,
-        "event_type_slug": "consultoria-languages-eu-alto"
+        "event_type_slug": "consultoria-languages-eu-alto",
+        "calendly_url": "https://calendly.com/d/cmyh-qnj-z8x/sesion-de-consultoria-conquer-languages-eu"
       }
     ],
     "cancel_screen": {

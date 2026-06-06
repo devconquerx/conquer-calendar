@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect, useCallback, useMemo } from 'react'
-import { generateEventId, getOrCreateJourneyId, generateScheduleEventId } from '../../lib/trackingIds'
+import { generateEventId, getOrCreateEventId, getOrCreateJourneyId, generateScheduleEventId } from '../../lib/trackingIds'
 import { getPixelCookies } from '../../lib/cookies'
 import { getUtmParams, getClickIds, buildTrackingPayload } from '../../lib/utmParams'
 import { pushToDataLayer } from '../../lib/pixelEvents'
@@ -7,7 +7,7 @@ import { pushToDataLayer } from '../../lib/pixelEvents'
 export const TrackingContext = createContext(null)
 
 export default function TrackingProvider({ children }) {
-  const [eventId] = useState(() => generateEventId())
+  const [eventId] = useState(() => getOrCreateEventId())
   const [journeyId] = useState(() => getOrCreateJourneyId())
   const [utmParams] = useState(() => getUtmParams())
   const [clickIds] = useState(() => getClickIds())

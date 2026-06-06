@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views.generic import RedirectView
 
 from calendario.users.views import MagicLoginView, MagicLoginStopView
-from calendario.funnels.views import FunnelAgendaView, FunnelClaseView
+from calendario.funnels.views import FunnelAgendaView, FunnelClaseView, FunnelVideoView
 
 
 def health(request):
@@ -42,6 +42,16 @@ urlpatterns = [
     re_path(
         r'^clase-online-gratuita-(?P<region>latam|eu|us)/?$',
         FunnelClaseView.as_view(), name='clase_host',
+    ),
+    # Página de video (VSL), entre la landing y el StepForm. Mismo criterio:
+    # blocks lleva la escuela en el path; el resto se resuelve por dominio.
+    re_path(
+        r'^conquer-blocks/video-clase-(?P<region>latam|eu|us)/?$',
+        FunnelVideoView.as_view(), {'escuela': 'conquer-blocks'}, name='video_blocks',
+    ),
+    re_path(
+        r'^video-clase-(?P<region>latam|eu|us)/?$',
+        FunnelVideoView.as_view(), name='video_host',
     ),
     re_path(
         r'^(?P<user_slug>[-a-zA-Z0-9_.]+)/(?P<event_type_slug>[-a-zA-Z0-9_]+)/',

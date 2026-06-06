@@ -1,29 +1,44 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { fetchConfig, postResolver, registerLead } from './api'
 import useTracking from './hooks/useTracking'
-import { fireAllLead } from './lib/pixelEvents'
+import { fireAllLead, fireAllSchedule } from './lib/pixelEvents'
 import FormStep from './components/FormStep'
 import Calendar from './components/Calendar'
 import BookingDetails from './components/BookingDetails'
+import CalendlyEmbed from './components/CalendlyEmbed'
 import RejectScreen from './components/RejectScreen'
+import { buildCalendlyParams, buildCalendlyUrl, getYearMonthForCalendly } from './lib/calendly'
 import ProgressBar from './components/form-engine/ProgressBar'
 import StepTransition from './components/form-engine/StepTransition'
 import WelcomeScreen from './components/form-engine/fields/WelcomeScreen'
+import { getPrefillRespuestas } from './lib/prefillParams'
 import { getTheme, ThemeContext } from './themes'
 import './funnel.css'
 
 export default function Funnel({ slug, escuela: escuelaProp = '' }) {
   const tracking = useTracking()
   const leadRegisteredRef = useRef(false)
+  // schedule_event_id del recorrido: se genera una vez al montar y se reutiliza
+  // en el utm_term de Calendly y en fireAllSchedule (igual que el funnel de
+  // Django, que lo genera en `trackingParams` al montar el form).
+  const scheduleEventId = useMemo(() => {
+    const id = tracking.generateScheduleEventId()
+    try { localStorage.setItem('cqx_schedule_event_id', id) } catch (_) {}
+    return id
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [blocks, setBlocks] = useState([])
   const [escuela, setEscuela] = useState('')
   const [messages, setMessages] = useState({})
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState('forward')
-  const [respuestas, setRespuestas] = useState({})
+  // Prefill desde el query string que propaga la landing (name/email/phone),
+  // igual que el funnel de Django. Los ids de bloque son name/email/phone.
+  const [respuestas, setRespuestas] = useState(() => getPrefillRespuestas(window.location.search))
   const [phase, setPhase] = useState('loading')
   const [outcome, setOutcome] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
+  const [calendlyUrl, setCalendlyUrl] = useState('')
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
@@ -98,6 +113,20 @@ export default function Funnel({ slug, escuela: escuelaProp = '' }) {
     setCurrentIndex(i => Math.max(0, i - 1))
   }
 
+  // Al agendar en Calendly: dispara el evento Schedule en todas las plataformas
+  // (equivalente a la página de Confirmación del funnel de Django). Usa el mismo
+  // event_id del recorrido + el schedule_event_id generado al montar + el UUID
+  // del evento de Calendly.
+  const handleCalendlyScheduled = useCallback((uuid) => {
+    fireAllSchedule({
+      eventId: tracking.eventId,
+      journeyId: tracking.journeyId,
+      schoolSlug: escuelaProp || escuela,
+      calendlyEventUuid: uuid || '',
+      scheduleEventId,
+    })
+  }, [tracking.eventId, tracking.journeyId, escuelaProp, escuela, scheduleEventId])
+
   const submitResolver = async (finalRespuestas) => {
     setPhase('resolving')
     try {
@@ -113,6 +142,23 @@ export default function Funnel({ slug, escuela: escuelaProp = '' }) {
         fbp: tracking.pixelCookies._fbp || '',
         fbc: tracking.pixelCookies._fbc || '',
       })
+      // Modo Calendly (fiel a producción): si el rango trae una URL de Calendly,
+      // construye el widget con prefill + UTMs + utm_term de tracking.
+      if (result.resultado === 'calendario' && result.calendly_url) {
+        const body = {
+          lead_name: result.prefill?.nombre || finalRespuestas.name || '',
+          lead_email: result.prefill?.email || finalRespuestas.email || '',
+          lead_phone_number: result.prefill?.telefono || finalRespuestas.phone || '',
+          ...tracking.utmParams,
+        }
+        const params = buildCalendlyParams({
+          body,
+          monthValue: getYearMonthForCalendly(),
+          journeyId: tracking.journeyId,
+          scheduleEventId,
+        })
+        setCalendlyUrl(buildCalendlyUrl(result.calendly_url, params))
+      }
       setOutcome(result)
       setPhase('outcome')
     } catch (e) {
@@ -154,6 +200,10 @@ export default function Funnel({ slug, escuela: escuelaProp = '' }) {
       return <RejectScreen cancelScreen={outcome.cancel_screen} />
     }
     if (outcome.resultado === 'calendario') {
+      // Modo Calendly: embebe el widget del rango (no usamos el calendario local aún).
+      if (calendlyUrl) {
+        return <CalendlyEmbed url={calendlyUrl} onScheduled={handleCalendlyScheduled} />
+      }
       if (selectedSlot) {
         return (
           <BookingDetails

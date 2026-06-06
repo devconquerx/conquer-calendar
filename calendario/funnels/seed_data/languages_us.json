@@ -224,7 +224,8 @@
       {
         "min_score": 0,
         "max_score": 100,
-        "event_type_slug": "consultoria-languages-us"
+        "event_type_slug": "consultoria-languages-us",
+        "calendly_url": "https://calendly.com/d/cqp7-z7c-bg4/sesion-de-consultoria-conquer-languages-us"
       }
     ],
     "cancel_screen": {

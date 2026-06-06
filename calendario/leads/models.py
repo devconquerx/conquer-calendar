@@ -33,6 +33,13 @@ class Lead(models.Model):
     setter_notes = models.TextField(null=True, blank=True, help_text='Notas del Setter')
     is_form_vsl_processed = models.BooleanField(default=False, db_index=True)
 
+    # Progreso de visualización del video (VSL), por marca + genérico. Se actualiza
+    # desde la página de video cada 10% (nunca decrece).
+    vsl_percentage = models.IntegerField(default=0, help_text='% máximo visto del video (genérico)')
+    vsl_percent_cb = models.IntegerField(default=0, help_text='% video Conquer Blocks')
+    vsl_percent_cl = models.IntegerField(default=0, help_text='% video Conquer Languages')
+    vsl_percent_cf = models.IntegerField(default=0, help_text='% video Conquer Finance')
+
     # UTMs
     utm_source = models.CharField(max_length=255, null=True, blank=True)
     utm_campaign = models.CharField(max_length=255, null=True, blank=True)

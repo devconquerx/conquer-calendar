@@ -236,7 +236,8 @@
       {
         "min_score": 0,
         "max_score": 100,
-        "event_type_slug": "consultoria-finance-us"
+        "event_type_slug": "consultoria-finance-us",
+        "calendly_url": "https://calendly.com/d/3q2-8bx-c98/sesion-de-consultoria-conquer-finance-us"
       }
     ],
     "cancel_screen": {

@@ -78,7 +78,8 @@
       {
         "min_score": 0,
         "max_score": 100,
-        "event_type_slug": "consultoria-especializacion-latam"
+        "event_type_slug": "consultoria-especializacion-latam",
+        "calendly_url": "https://calendly.com/d/cwqp-6p4-b48/especialidad-sesion-conquer-blocks-latam"
       }
     ],
     "cancel_screen": {

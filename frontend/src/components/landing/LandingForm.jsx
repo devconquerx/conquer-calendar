@@ -230,7 +230,9 @@ export default function LandingForm({ program, region, formConfig, school, nextU
     params.set('event_id', eventId)
     params.set('journey_id', journeyId)
 
-    const dest = nextUrl || (funnelSlug ? `/f/${funnelSlug}/` : window.location.pathname)
+    // Siguiente etapa: la da el backend (data-next-url). Fallback a la URL
+    // canónica del StepForm /agenda/<producto>/<region>/ si no viniera.
+    const dest = nextUrl || (program && region ? `/agenda/${program}/${region}/` : window.location.pathname)
     window.location.href = `${dest}?${params.toString()}`
   }
 

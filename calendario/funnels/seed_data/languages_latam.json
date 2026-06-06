@@ -189,12 +189,14 @@
       {
         "min_score": 2,
         "max_score": 2.9,
-        "event_type_slug": "consultoria-languages-latam-bajo"
+        "event_type_slug": "consultoria-languages-latam-bajo",
+        "calendly_url": "https://calendly.com/d/cny6-z8m-gy7/sesion-de-consultoria-conquer-languages-latam"
       },
       {
         "min_score": 3,
         "max_score": 100,
-        "event_type_slug": "consultoria-languages-latam-alto"
+        "event_type_slug": "consultoria-languages-latam-alto",
+        "calendly_url": "https://calendly.com/d/cqpw-xd6-x4b/sesion-de-consultoria-conquer-languages-latam"
       }
     ],
     "cancel_screen": {
