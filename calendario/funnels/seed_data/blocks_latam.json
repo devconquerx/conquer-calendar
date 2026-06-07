@@ -200,14 +200,12 @@
       {
         "min_score": 2,
         "max_score": 2.9,
-        "event_type_slug": "consultoria-blocks-latam-bajo",
-        "calendly_url": "https://calendly.com/d/cqy7-kcx-jmc/sesion-de-consultoria-conquer-blocks-latam"
+        "event_type_id": null
       },
       {
         "min_score": 3,
         "max_score": 100,
-        "event_type_slug": "consultoria-blocks-latam-alto",
-        "calendly_url": "https://calendly.com/d/cnh3-q3p-mw5/sesion-de-consultoria-conquer-blocks-latam"
+        "event_type_id": null
       }
     ],
     "cancel_screen": {
@@ -248,13 +246,6 @@
       "label.errorAlert.email": "¡Correo electrónico no válido!",
       "label.submitBtn": "Enviar"
     },
-    "video": {
-      "videoUrls": [
-        "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4",
-        "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4"
-      ],
-      "buttonPercent": 75
-    },
     "landing": {
       "title": "La persona promedio que aprendió la profesión que estás a punto de descubrir, consiguió un <strong><em>puesto de trabajo en remoto</em></strong> y con un salario de más de <strong>3000 dólares al mes</strong>",
       "bullets": [
@@ -277,11 +268,7 @@
       "title": "Sesión de Consultoría | Desarrollo Full Stack",
       "buttonText": "Comenzar",
       "description": "Déjanos saber un poco más acerca de ti antes de continuar. Este formulario solo te llevará 20 segundos y, al final del mismo, te mostraremos nuestro calendario para agendar una cita."
-    },
-    "vslVideoUrls": [
-      "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4",
-      "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4"
-    ]
+    }
   },
   "score_ranges": [
     {

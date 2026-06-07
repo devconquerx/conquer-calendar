@@ -280,16 +280,8 @@ def confirmacion_url(escuela, region, base=''):
     return f'{base}/confirmacion-llamada-{region}/'
 
 
-# URLs de video por defecto si el FunnelForm.config no trae 'video' (fail-safe).
-_VIDEO_DEFAULTS = {
-    'conquer-blocks': {
-        'videoUrls': [
-            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4',
-            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4',
-        ],
-        'buttonPercent': 75,
-    },
-}
+# Defaults de video por marca — vacío mientras la página de video esté desactivada.
+_VIDEO_DEFAULTS = {}
 
 
 class FunnelClaseView(View):

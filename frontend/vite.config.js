@@ -25,15 +25,20 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    // Allow HMR requests from Django's origin (localhost:8002 in local dev)
     cors: true,
-    // Make JS-imported asset URLs absolute (http://localhost:5173/...) so they
-    // resolve to the Vite dev server instead of Django's origin (8002) in dev.
     origin: 'http://localhost:5173',
     hmr: {
       host: 'localhost',
       port: 5173,
       protocol: 'ws',
+    },
+    proxy: {
+      '/f/': 'http://localhost:8002',
+      '/agenda/': 'http://localhost:8002',
+      '/panel/': 'http://localhost:8002',
+      '/r/': 'http://localhost:8002',
+      '/e/': 'http://localhost:8002',
+      '/accounts/': 'http://localhost:8002',
     },
   },
 })

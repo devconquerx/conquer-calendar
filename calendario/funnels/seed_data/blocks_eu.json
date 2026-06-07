@@ -193,14 +193,12 @@
       {
         "min_score": 0,
         "max_score": 3.4,
-        "event_type_slug": "consultoria-blocks-eu-bajo",
-        "calendly_url": "https://calendly.com/d/cm8m-fpp-7sc/sesion-de-consultoria-conquer-blocks-eu"
+        "event_type_id": null
       },
       {
         "min_score": 3.5,
         "max_score": 100,
-        "event_type_slug": "consultoria-blocks-eu-alto",
-        "calendly_url": "https://calendly.com/d/cqv6-8dc-tyr/sesion-de-consultoria-conquer-blocks-eu"
+        "event_type_id": null
       }
     ],
     "cancel_screen": {
@@ -241,13 +239,6 @@
       "label.errorAlert.email": "¡Correo electrónico no válido!",
       "label.submitBtn": "Enviar"
     },
-    "video": {
-      "videoUrls": [
-        "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4",
-        "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4"
-      ],
-      "buttonPercent": 75
-    },
     "landing": {
       "title": "Consigue un <strong>puesto de trabajo</strong> remoto e <strong>incrementa tu salario un 71%</strong> respecto a tu actual empleo, aprendiendo en 12 meses una profesión tecnológica con un <strong>98,7% de empleabilidad.</strong>",
       "bullets": [
@@ -270,11 +261,7 @@
       "title": "Sesión de Consultoría | Desarrollo Full Stack",
       "buttonText": "Comenzar",
       "description": "Déjanos saber un poco más acerca de ti antes de continuar. Este formulario solo te llevará 20 segundos y, al final del mismo, te mostraremos nuestro calendario para agendar una cita."
-    },
-    "vslVideoUrls": [
-      "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4",
-      "https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4"
-    ]
+    }
   },
   "score_ranges": [
     {

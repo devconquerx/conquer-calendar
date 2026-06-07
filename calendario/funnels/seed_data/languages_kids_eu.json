@@ -146,7 +146,7 @@
       {
         "min_score": 0,
         "max_score": 100,
-        "event_type_slug": "consultoria-languages-kids-eu"
+        "event_type_id": null
       }
     ],
     "cancel_screen": {

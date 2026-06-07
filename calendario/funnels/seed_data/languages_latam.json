@@ -189,14 +189,12 @@
       {
         "min_score": 2,
         "max_score": 2.9,
-        "event_type_slug": "consultoria-languages-latam-bajo",
-        "calendly_url": "https://calendly.com/d/cny6-z8m-gy7/sesion-de-consultoria-conquer-languages-latam"
+        "event_type_id": null
       },
       {
         "min_score": 3,
         "max_score": 100,
-        "event_type_slug": "consultoria-languages-latam-alto",
-        "calendly_url": "https://calendly.com/d/cqpw-xd6-x4b/sesion-de-consultoria-conquer-languages-latam"
+        "event_type_id": null
       }
     ],
     "cancel_screen": {
@@ -247,10 +245,7 @@
       "subtitle": "Vídeo gratis de 15 minutos",
       "buttonText": "Ver vídeo gratis",
       "description": "... sin importar tu edad, el nivel del que partas, y sin tener que asistir a aburridas clases presenciales, ya es hora de que disfrutes del aprendizaje del inglés y obtengas resultados reales."
-    },
-    "vslVideoUrls": [
-      "https://VSLConquerx.b-cdn.net/conquerlanguages/vsl-cl-original-v1-compress.mp4"
-    ]
+    }
   },
   "score_ranges": [
     {

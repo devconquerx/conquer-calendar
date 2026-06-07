@@ -64,3 +64,6 @@ prod_dump.json
 prod_dump_backup_*.json
 prod_backup_previo.json
 prod_restore/
+
+# Credenciales reales de Google service account (solo en local y en /etc/conquer/ en prod)
+compose/local/google/credentials.placeholder.json

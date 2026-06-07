@@ -236,8 +236,7 @@
       {
         "min_score": 0,
         "max_score": 100,
-        "event_type_slug": "consultoria-finance-us",
-        "calendly_url": "https://calendly.com/d/3q2-8bx-c98/sesion-de-consultoria-conquer-finance-us"
+        "event_type_id": null
       }
     ],
     "cancel_screen": {
@@ -288,10 +287,7 @@
       "subtitle": "Vídeo gratis de 15 minutos",
       "buttonText": "Ver vídeo gratis",
       "description": "¡Atención! Este método no requiere de conocimientos previos. Si quieres descubrir de forma inmediata el método, rellena el formulario de abajo y haz click en \"VER VÍDEO GRATIS\""
-    },
-    "vslVideoUrls": [
-      "https://vslconquerx.b-cdn.net/fi/vsl-cf-2025-compress.mp4"
-    ]
+    }
   },
   "score_ranges": [
     {

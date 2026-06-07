@@ -55,8 +55,55 @@ function LeftPanel({ eventoInfo }) {
   )
 }
 
+function tzLabel(tz, now) {
+  const city = tz.split('/').pop().replace(/_/g, ' ')
+  try {
+    const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: tz, hour12: false })
+    return `${city} (${time})`
+  } catch { return city }
+}
+
+function TzCombo({ tz, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [now, setNow] = useState(() => new Date())
+  const inputRef = React.useRef(null)
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(t)
+  }, [])
+
+  let zones = []
+  try { zones = Intl.supportedValuesOf('timeZone') } catch { zones = [tz] }
+  const filtered = query
+    ? zones.filter(z => z.toLowerCase().includes(query.toLowerCase()))
+    : zones
+
+  return (
+    <div className="bk-tz-combo" style={{ position: 'relative' }}>
+      <button type="button" className="bk-tz-display-btn" onClick={() => { setOpen(o => !o); setTimeout(() => inputRef.current?.focus(), 50) }}>
+        <span style={{ fontSize: '14px', color: '#1a1a2e' }}>{tzLabel(tz, now)}</span>
+        <span style={{ fontSize: '8px', color: '#8a8a8a', marginLeft: 4 }}>▼</span>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, minWidth: 260, maxWidth: 320, maxHeight: 280, overflowY: 'auto', background: '#fff', border: '1px solid #e2e5e9', borderRadius: 6, boxShadow: '0 -4px 14px rgba(0,0,0,.10)', zIndex: 100 }}>
+          <div style={{ padding: '8px 10px', borderBottom: '1px solid #e2e5e9' }}>
+            <input ref={inputRef} type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar zona…" style={{ width: '100%', border: '1px solid #e2e5e9', borderRadius: 4, padding: '5px 8px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} onBlur={() => setTimeout(() => setOpen(false), 150)} />
+          </div>
+          {filtered.slice(0, 120).map(z => (
+            <div key={z} onMouseDown={e => { e.preventDefault(); onChange(z); setOpen(false); setQuery('') }} style={{ padding: '7px 12px', fontSize: 12.5, cursor: 'pointer', background: z === tz ? '#e8f0fe' : undefined, color: z === tz ? '#0069ff' : '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {z}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSelected }) {
-  const [tz] = useState(detectTZ)
+  const [tz, setTz] = useState(detectTZ)
   const [mes, setMes] = useState(currentMonthStr)
   const [slotsData, setSlotsData] = useState(null)
   const [loadingMes, setLoadingMes] = useState(false)
@@ -167,7 +214,7 @@ export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSe
                     <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
                     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                   </svg>
-                  <span style={{ fontSize: '14px', color: '#1a1a2e' }}>{tz}</span>
+                  <TzCombo tz={tz} onChange={tz => { setTz(tz); setSelectedDate(null); }} />
                 </div>
               </div>
             </div>

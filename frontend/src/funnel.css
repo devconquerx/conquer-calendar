@@ -260,7 +260,7 @@ body { background: #fff; }
   overflow: hidden;
   transition: max-width .35s cubic-bezier(.4,0,.2,1);
 }
-.bk-card.has-slots { max-width: 1060px; }
+.bk-card.has-slots { max-width: 1060px; height: 560px; }
 
 .bk-left {
   flex: 1 1 0;
