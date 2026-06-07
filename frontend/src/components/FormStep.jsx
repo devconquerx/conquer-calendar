@@ -132,6 +132,7 @@ export default function FormStep({
         isSubmitting={false}
         onOk={handleOk}
         onBack={onBack}
+        messages={messages}
       />
     </div>
   )

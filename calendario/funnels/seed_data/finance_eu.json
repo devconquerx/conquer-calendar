@@ -237,7 +237,11 @@
       "label.errorAlert.required": "¡Este campo es obligatorio!",
       "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
       "label.errorAlert.email": "¡Correo electrónico no válido!",
-      "label.submitBtn": "Enviar"
+      "label.submitBtn": "Enviar",
+      "label.button.back": "Anterior",
+      "label.button.submit": "Enviar",
+      "label.button.submitting": "Enviando...",
+      "label.button.enterHint": "presiona"
     },
     "welcome": {
       "title": "La persona promedio que aplicó el método que estás a punto de descubrir, <strong>consiguió los siguientes resultados</strong> tras 7 semanas de aprendizaje",

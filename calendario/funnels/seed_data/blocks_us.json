@@ -298,7 +298,11 @@
       "label.errorAlert.required": "¡Este campo es obligatorio!",
       "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
       "label.errorAlert.email": "¡Correo electrónico no válido!",
-      "label.submitBtn": "Enviar"
+      "label.submitBtn": "Enviar",
+      "label.button.back": "Anterior",
+      "label.button.submit": "Enviar",
+      "label.button.submitting": "Enviando...",
+      "label.button.enterHint": "presiona"
     },
     "landing": {
       "title": "Consigue un <strong>puesto de trabajo remoto</strong> y con un <strong>sueldo de más de $10,000 mensuales</strong>, aprendiendo en <strong>12 meses</strong> una profesión tecnológica con <strong>100% de empleabilidad</strong>",

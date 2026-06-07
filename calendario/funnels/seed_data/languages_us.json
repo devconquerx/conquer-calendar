@@ -263,7 +263,11 @@
       "label.errorAlert.required": "¡Este campo es obligatorio!",
       "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
       "label.errorAlert.email": "¡Correo electrónico no válido!",
-      "label.submitBtn": "Enviar"
+      "label.submitBtn": "Enviar",
+      "label.button.back": "Anterior",
+      "label.button.submit": "Enviar",
+      "label.button.submitting": "Enviando...",
+      "label.button.enterHint": "presiona"
     },
     "welcome": {
       "title": "Aprende a <strong>hablar inglés fluido</strong> y a entender a los nativos estés donde estés, con un método dinámico que te <strong>garantiza un nivel B2</strong> en 90 días",

@@ -237,7 +237,11 @@
       "label.errorAlert.required": "¡Este campo es obligatorio!",
       "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
       "label.errorAlert.email": "¡Correo electrónico no válido!",
-      "label.submitBtn": "Enviar"
+      "label.submitBtn": "Enviar",
+      "label.button.back": "Anterior",
+      "label.button.submit": "Enviar",
+      "label.button.submitting": "Enviando...",
+      "label.button.enterHint": "presiona"
     },
     "landing": {
       "title": "Consigue un <strong>puesto de trabajo</strong> remoto e <strong>incrementa tu salario un 71%</strong> respecto a tu actual empleo, aprendiendo en 12 meses una profesión tecnológica con un <strong>98,7% de empleabilidad.</strong>",

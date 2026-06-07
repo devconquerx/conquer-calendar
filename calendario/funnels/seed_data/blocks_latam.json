@@ -244,7 +244,11 @@
       "label.errorAlert.required": "¡Este campo es obligatorio!",
       "label.errorAlert.selectionRequired": "¡Por favor haz al menos una selección!",
       "label.errorAlert.email": "¡Correo electrónico no válido!",
-      "label.submitBtn": "Enviar"
+      "label.submitBtn": "Enviar",
+      "label.button.back": "Anterior",
+      "label.button.submit": "Enviar",
+      "label.button.submitting": "Enviando...",
+      "label.button.enterHint": "presiona"
     },
     "landing": {
       "title": "La persona promedio que aprendió la profesión que estás a punto de descubrir, consiguió un <strong><em>puesto de trabajo en remoto</em></strong> y con un salario de más de <strong>3000 dólares al mes</strong>",
