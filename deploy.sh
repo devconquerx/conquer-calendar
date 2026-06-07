@@ -115,10 +115,13 @@ dc up -d redis
 
 # 2) Migraciones + estáticos one-off con la imagen nueva, mientras el viejo
 #    sigue sirviendo.
+# `dc run` sin -T y con stdin heredado se COME el resto de este script
+# (el heredoc llega por stdin), saltándose el swap y el healthcheck. Con -T y
+# </dev/null no toca el stdin del script.
 say "Aplicando migraciones…"
-dc run --rm "$SERVICE" python manage.py migrate --noinput
+dc run --rm -T "$SERVICE" python manage.py migrate --noinput </dev/null
 say "Recolectando estáticos…"
-dc run --rm "$SERVICE" python manage.py collectstatic --noinput
+dc run --rm -T "$SERVICE" python manage.py collectstatic --noinput </dev/null
 
 # 3) Swap a los contenedores nuevos. Con build por bake la imagen queda como
 #    manifest-list y `up --force-recreate` no siempre la adopta (deja corriendo
