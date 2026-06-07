@@ -7,7 +7,7 @@
 # origin/<rama>. (Tú pusheas tu código con tu flujo normal de git.)
 #
 # Flujo en PROD (mínimo tiempo de caída):
-#   git fetch + reset --hard a origin/<rama>
+#   git pull origin/<rama>
 #   → docker build (la imagen compila el frontend con Node en una etapa de
 #     build; el server NO necesita Node ni un dist commiteado)
 #   → migraciones + collectstatic one-off con la imagen nueva
@@ -96,10 +96,8 @@ say() { echo "  [prod] $*"; }
 cd "$REMOTE_DIR"
 dc() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
-say "Actualizando código (reset duro a $REMOTE/$BRANCH)…"
-git fetch "$REMOTE" "$BRANCH"
-git checkout "$BRANCH"
-git reset --hard "$REMOTE/$BRANCH"
+say "Actualizando código (git pull $REMOTE/$BRANCH)…"
+git pull "$REMOTE" "$BRANCH"
 say "Código en: $(git rev-parse --short HEAD)"
 
 # Imagen actual (para rollback). Puede estar vacío en el primer deploy.
