@@ -21,6 +21,10 @@ wheels/
 .installed.cfg
 *.egg
 
+# El patrón lib/ de arriba (packaging Python) NO debe ignorar el código fuente
+# del frontend (frontend/src/lib/*: trackingIds, calendly, pixelEvents, etc.).
+!frontend/src/lib/
+
 # Django
 *.log
 local_settings.py
