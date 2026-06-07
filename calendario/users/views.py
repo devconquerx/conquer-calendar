@@ -71,14 +71,40 @@ class PanelDashboardView(RequierePermisoMixin, TemplateView):
         hoy_inicio = now.replace(hour=0, minute=0, second=0, microsecond=0)
         semana_inicio = hoy_inicio - timedelta(days=hoy_inicio.weekday())
         es_admin = user.tiene_permiso('reservas.ver_todas')
+        es_supervisor = not es_admin and user.tiene_permiso('usuarios.editar_grupo')
+
+        if es_supervisor:
+            from calendario.grupos.models import GrupoXUsuario
+            miembros_ids = list(
+                GrupoXUsuario.objects.filter(
+                    grupo__membresias__usuario=user,
+                    grupo__membresias__es_supervisor=True,
+                ).values_list('usuario_id', flat=True).distinct()
+            )
 
         confirmadas = Reserva.objects.filter(estado=Reserva.Estado.CONFIRMADA)
-        if not es_admin:
+        if es_admin:
+            pass
+        elif es_supervisor:
+            confirmadas = confirmadas.filter(host_id__in=miembros_ids)
+        else:
             confirmadas = confirmadas.filter(host=user)
+
+        if es_admin:
+            event_types_activos = EventType.objects.filter(activo=True).count()
+        elif es_supervisor:
+            event_types_activos = EventType.objects.filter(
+                activo=True, hosts_pool__host_id__in=miembros_ids
+            ).distinct().count()
+        else:
+            event_types_activos = EventType.objects.filter(
+                activo=True, hosts_pool__host=user
+            ).distinct().count()
 
         ctx.update({
             'page_title': 'Dashboard',
             'es_admin': es_admin,
+            'es_supervisor': es_supervisor,
             'reservas_hoy': confirmadas.filter(
                 inicio_utc__gte=hoy_inicio,
                 inicio_utc__lt=hoy_inicio + timedelta(days=1),
@@ -87,10 +113,7 @@ class PanelDashboardView(RequierePermisoMixin, TemplateView):
                 inicio_utc__gte=semana_inicio,
                 inicio_utc__lt=semana_inicio + timedelta(days=7),
             ).count(),
-            'event_types_activos': (
-                EventType.objects.filter(activo=True).count() if es_admin
-                else EventType.objects.filter(activo=True, hosts_pool__host=user).distinct().count()
-            ),
+            'event_types_activos': event_types_activos,
             'hosts_activos': User.objects.filter(is_active=True).count() if es_admin else None,
             'proximas_reservas': (
                 confirmadas

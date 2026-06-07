@@ -64,6 +64,10 @@ class EventTypeListView(RequierePermisoMixin, ListView):
             EventTypeXHost.objects.filter(host=self.request.user)
             .values_list('event_type_id', flat=True)
         )
+        ctx['es_supervisor'] = (
+            not self.request.user.es_admin
+            and self.request.user.tiene_permiso('usuarios.editar_grupo')
+        )
         if self.request.user.es_admin:
             ctx['organizadores_disponibles'] = list(
                 User.objects.filter(is_active=True, roles_asignados__rol__nombre='host')
@@ -72,6 +76,20 @@ class EventTypeListView(RequierePermisoMixin, ListView):
             ctx['creadores_disponibles'] = list(
                 User.objects.filter(is_active=True, event_types__isnull=False)
                 .distinct().order_by('first_name', 'last_name', 'username')
+            )
+        elif self.request.user.tiene_permiso('usuarios.editar_grupo'):
+            from calendario.grupos.utils import miembros_de_mis_grupos
+            miembros_ids = miembros_de_mis_grupos(self.request.user)
+            miembros_ids_con_supervisor = miembros_ids + [self.request.user.pk]
+            ctx['organizadores_disponibles'] = list(
+                User.objects.filter(is_active=True, pk__in=miembros_ids_con_supervisor)
+                .distinct().order_by('first_name', 'last_name', 'username')
+            )
+            ctx['creadores_disponibles'] = list(
+                User.objects.filter(
+                    is_active=True, pk__in=miembros_ids_con_supervisor,
+                    event_types__isnull=False,
+                ).distinct().order_by('first_name', 'last_name', 'username')
             )
         return ctx
 
