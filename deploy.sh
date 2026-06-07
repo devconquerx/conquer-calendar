@@ -120,10 +120,13 @@ dc run --rm "$SERVICE" python manage.py migrate --noinput
 say "Recolectando estáticos…"
 dc run --rm "$SERVICE" python manage.py collectstatic --noinput
 
-# 3) Swap rápido a los contenedores nuevos: django + celeryworker + celerybeat
-#    (todos comparten la imagen $IMAGE). Única ventana de caída, ~segundos.
+# 3) Swap a los contenedores nuevos. Con build por bake la imagen queda como
+#    manifest-list y `up --force-recreate` no siempre la adopta (deja corriendo
+#    el contenedor viejo). Por eso recreamos de forma explícita: parar+quitar y
+#    levantar de nuevo desde la imagen recién construida. Caída de ~segundos.
 say "Reiniciando contenedores (django + celery worker/beat)…"
-dc up -d --force-recreate --remove-orphans
+dc rm -sf django celeryworker celerybeat
+dc up -d --remove-orphans
 
 # 4) Healthcheck
 say "Verificando salud…"
@@ -139,7 +142,8 @@ if [ "$healthy" != "1" ]; then
   if [ -n "$PREV_IMG_ID" ]; then
     say "Haciendo ROLLBACK a la imagen previa ($PREV_IMG_ID)…"
     docker tag "$PREV_IMG_ID" "$IMAGE"
-    dc up -d --force-recreate --remove-orphans
+    dc rm -sf django celeryworker celerybeat
+    dc up -d --remove-orphans
     say "Rollback aplicado. Revisa los logs:"
   fi
   dc logs --tail=60 "$SERVICE" || true
