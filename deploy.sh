@@ -125,7 +125,7 @@ dc run --rm "$SERVICE" python manage.py collectstatic --noinput
 # 3) Swap rápido a los contenedores nuevos: django + celeryworker + celerybeat
 #    (todos comparten la imagen $IMAGE). Única ventana de caída, ~segundos.
 say "Reiniciando contenedores (django + celery worker/beat)…"
-dc up -d --remove-orphans
+dc up -d --force-recreate --remove-orphans
 
 # 4) Healthcheck
 say "Verificando salud…"
@@ -141,7 +141,7 @@ if [ "$healthy" != "1" ]; then
   if [ -n "$PREV_IMG_ID" ]; then
     say "Haciendo ROLLBACK a la imagen previa ($PREV_IMG_ID)…"
     docker tag "$PREV_IMG_ID" "$IMAGE"
-    dc up -d --remove-orphans
+    dc up -d --force-recreate --remove-orphans
     say "Rollback aplicado. Revisa los logs:"
   fi
   dc logs --tail=60 "$SERVICE" || true
