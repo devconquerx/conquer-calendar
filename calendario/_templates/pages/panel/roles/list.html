@@ -6,7 +6,7 @@
 <div class="card">
     <div class="card-header border-0 pt-6">
         <div class="card-title">
-            <h3 class="fw-bold mb-0">Roles</h3>
+            <h3 class="fw-medium mb-0">Roles</h3>
         </div>
         <div class="card-toolbar">
             {% if 'roles.crear' in PERMISOS_USUARIO %}
@@ -32,7 +32,7 @@
                     {% for rol in roles %}
                     <tr>
                         <td>
-                            <span class="text-gray-800 fw-bold">{{ rol.nombre }}</span>
+                            <span class="text-gray-800 fw-medium">{{ rol.nombre }}</span>
                         </td>
                         <td class="text-gray-600">{{ rol.descripcion|default:"—" }}</td>
                         <td class="text-center">

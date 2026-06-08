@@ -7,7 +7,7 @@
 <div class="card">
     <div class="card-header border-0 pt-6">
         <div class="card-title">
-            <h3 class="fw-bold mb-0">{{ titulo }}</h3>
+            <h3 class="fw-medium mb-0">{{ titulo }}</h3>
         </div>
     </div>
 
@@ -70,7 +70,7 @@
                     <tr>
                         <td>
                             {% timezone "UTC" %}
-                            <span class="text-gray-800 fw-bold d-block">{{ r.inicio_utc|date:"d/m/Y" }}</span>
+                            <span class="text-gray-800 fw-medium d-block">{{ r.inicio_utc|date:"d/m/Y" }}</span>
                             <span class="text-muted fs-7">
                                 {{ r.inicio_utc|date:"H:i" }} UTC
                                 <button type="button"
@@ -90,7 +90,7 @@
                         </td>
                         <td class="text-gray-700 fw-semibold">{{ r.host.nombre_display }}</td>
                         <td class="text-gray-600">{{ r.event_type.nombre }}</td>
-                        <td class="text-gray-800 fw-semibold">{{ r.nombre_invitado }}</td>
+                        <td class="text-gray-800 fw-medium">{{ r.nombre_invitado }}</td>
                         <td class="text-gray-600">{{ r.email_invitado }}</td>
                         <td class="text-center">
                             {% if r.estado == 'confirmada' %}

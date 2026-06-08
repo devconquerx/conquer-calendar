@@ -6,7 +6,7 @@
 <div class="card">
     <div class="card-header border-0 pt-6">
         <div class="card-title">
-            <h3 class="fw-bold mb-0">Usuarios</h3>
+            <h3 class="fw-medium mb-0">Usuarios</h3>
         </div>
         <div class="card-toolbar gap-2">
             {% if 'usuarios.crear' in PERMISOS_USUARIO %}
@@ -109,7 +109,7 @@
                             </td>
                             {% endif %}
                             <td>
-                                <a href="{% url 'panel_usuarios:usuario_update' usuario.pk %}" class="text-gray-800 fw-semibold fs-7 text-hover-primary">{{ usuario.email }}</a>
+                                <a href="{% url 'panel_usuarios:usuario_update' usuario.pk %}" class="text-gray-800 fw-medium fs-7 text-hover-primary">{{ usuario.email }}</a>
                             </td>
                             <td class="text-gray-600 fs-7">{{ usuario.nombre_display }}</td>
                             <td>

@@ -7,7 +7,7 @@
 <div class="card mb-8">
     <div class="card-header border-0 pt-6">
         <div class="card-title">
-            <h3 class="fw-bold mb-0">Grupos</h3>
+            <h3 class="fw-medium mb-0">Grupos</h3>
         </div>
         <div class="card-toolbar">
             {% if 'grupos.crear' in PERMISOS_USUARIO %}
@@ -33,7 +33,7 @@
                 <tbody>
                     {% for grupo in grupos %}
                     <tr>
-                        <td class="fw-semibold text-gray-800">{{ grupo.nombre }}</td>
+                        <td class="fw-medium text-gray-800">{{ grupo.nombre }}</td>
                         <td class="text-center">
                             <span class="badge badge-light fw-semibold">{{ grupo.membresias.all|length }}</span>
                         </td>
@@ -101,7 +101,7 @@
 <div class="card mb-6" id="grupo-{{ grupo.pk }}">
     <div class="card-header border-0 pt-6 pb-0">
         <div class="card-title flex-column">
-            <h4 class="fw-bold mb-1">{{ grupo.nombre }}</h4>
+            <h4 class="fw-medium mb-1">{{ grupo.nombre }}</h4>
             {% if grupo.descripcion %}
             <span class="text-muted fs-7">{{ grupo.descripcion }}</span>
             {% endif %}

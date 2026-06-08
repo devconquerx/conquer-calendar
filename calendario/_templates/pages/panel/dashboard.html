@@ -19,7 +19,7 @@
                         <i class="bi bi-calendar-check text-primary fs-3"></i>
                     </span>
                 </div>
-                <div class="fs-2hx fw-bold text-dark">{{ reservas_hoy }}</div>
+                <div class="fs-2hx fw-medium text-dark">{{ reservas_hoy }}</div>
             </div>
         </div>
     </div>
@@ -35,7 +35,7 @@
                         <i class="bi bi-calendar-week text-success fs-3"></i>
                     </span>
                 </div>
-                <div class="fs-2hx fw-bold text-dark">{{ reservas_semana }}</div>
+                <div class="fs-2hx fw-medium text-dark">{{ reservas_semana }}</div>
             </div>
         </div>
     </div>
@@ -51,7 +51,7 @@
                         <i class="bi bi-calendar2-event text-info fs-3"></i>
                     </span>
                 </div>
-                <div class="fs-2hx fw-bold text-dark">{{ event_types_activos }}</div>
+                <div class="fs-2hx fw-medium text-dark">{{ event_types_activos }}</div>
             </div>
         </div>
     </div>
@@ -66,7 +66,7 @@
                     </span>
                 </div>
                 {% if es_admin %}
-                <div class="fs-2hx fw-bold text-dark">{{ hosts_activos }}</div>
+                <div class="fs-2hx fw-medium text-dark">{{ hosts_activos }}</div>
                 {% else %}
                 <div class="fs-6 text-muted fw-semibold mt-2">Solo visible para administradores</div>
                 {% endif %}
@@ -80,7 +80,7 @@
 <!--begin::Próximas reservas-->
 <div class="card border-0 shadow-sm">
     <div class="card-header border-0 pt-5">
-        <h3 class="card-title fw-bold text-dark">
+        <h3 class="card-title fw-medium text-dark">
             {% if es_admin %}Próximas reservas{% elif es_supervisor %}Próximas reservas del grupo{% else %}Mis próximas reservas{% endif %}
         </h3>
         <div class="card-toolbar">
