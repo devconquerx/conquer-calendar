@@ -43,6 +43,10 @@ urlpatterns = [
         FunnelClaseView.as_view(), {'escuela': 'conquer-blocks'}, name='clase_blocks',
     ),
     re_path(
+        r'^conquer-legal/clase-online-gratuita-(?P<region>latam|eu|us)/?$',
+        FunnelClaseView.as_view(), {'escuela': 'conquer-legal'}, name='clase_legal',
+    ),
+    re_path(
         r'^clase-online-gratuita-(?P<region>latam|eu|us)/?$',
         FunnelClaseView.as_view(), name='clase_host',
     ),
@@ -53,6 +57,10 @@ urlpatterns = [
         FunnelVideoView.as_view(), {'escuela': 'conquer-blocks'}, name='video_blocks',
     ),
     re_path(
+        r'^conquer-legal/video-clase-(?P<region>latam|eu|us)/?$',
+        FunnelVideoView.as_view(), {'escuela': 'conquer-legal'}, name='video_legal',
+    ),
+    re_path(
         r'^video-clase-(?P<region>latam|eu|us)/?$',
         FunnelVideoView.as_view(), name='video_host',
     ),
@@ -61,6 +69,10 @@ urlpatterns = [
     re_path(
         r'^conquer-blocks/confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',
         FunnelConfirmationView.as_view(), {'escuela': 'conquer-blocks'}, name='confirmacion_blocks',
+    ),
+    re_path(
+        r'^conquer-legal/confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',
+        FunnelConfirmationView.as_view(), {'escuela': 'conquer-legal'}, name='confirmacion_legal',
     ),
     re_path(
         r'^confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',

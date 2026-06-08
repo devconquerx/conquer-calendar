@@ -265,19 +265,22 @@ def _escuela_por_host(request):
     return escuela
 
 
-# URLs de la página de video por marca. blocks lleva la escuela en el path; el
-# resto comparte la ruta raíz y se resuelve por dominio (Host).
+# Escuelas que llevan la escuela en el PATH (p.ej. /conquer-blocks/...). El resto
+# comparte la ruta raíz y se resuelve por dominio (Host).
+_ESCUELAS_RUTA_PATH = ('conquer-blocks', 'conquer-legal')
+
+
+# URLs de la página de video por marca.
 def _video_url(escuela, region, base=''):
-    if escuela == 'conquer-blocks':
-        return f'{base}/conquer-blocks/video-clase-{region}/'
+    if escuela in _ESCUELAS_RUTA_PATH:
+        return f'{base}/{escuela}/video-clase-{region}/'
     return f'{base}/video-clase-{region}/'
 
 
-# URL de la página de confirmación de llamada por marca (misma convención que la
-# de video). blocks lleva la escuela en el path; el resto se resuelve por Host.
+# URL de la página de confirmación de llamada por marca (misma convención).
 def confirmacion_url(escuela, region, base=''):
-    if escuela == 'conquer-blocks':
-        return f'{base}/conquer-blocks/confirmacion-llamada-{region}/'
+    if escuela in _ESCUELAS_RUTA_PATH:
+        return f'{base}/{escuela}/confirmacion-llamada-{region}/'
     return f'{base}/confirmacion-llamada-{region}/'
 
 
