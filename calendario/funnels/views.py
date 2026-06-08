@@ -280,8 +280,25 @@ def confirmacion_url(escuela, region, base=''):
     return f'{base}/confirmacion-llamada-{region}/'
 
 
-# Defaults de video por marca — vacío mientras la página de video esté desactivada.
-_VIDEO_DEFAULTS = {}
+# URLs de video por defecto si el FunnelForm.config no trae 'video' (fail-safe).
+_VIDEO_DEFAULTS = {
+    'conquer-blocks': {
+        'videoUrls': [
+            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4',
+            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4',
+        ],
+        'buttonPercent': 75,
+    },
+    # Conquer Legal aún no tiene VSL propia: reutiliza el vídeo de conquer-blocks
+    # como plantilla temporal para que la landing encadene a la página de vídeo.
+    'conquer-legal': {
+        'videoUrls': [
+            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4',
+            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4',
+        ],
+        'buttonPercent': 75,
+    },
+}
 
 
 class FunnelClaseView(View):

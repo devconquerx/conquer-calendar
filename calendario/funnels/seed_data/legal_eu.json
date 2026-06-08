@@ -205,6 +205,29 @@
       "label.button.submit": "Enviar",
       "label.button.submitting": "Enviando...",
       "label.button.enterHint": "presiona"
+    },
+    "landing": {
+      "title": "Estructura la legalidad de tu empresa para acelerar tus acuerdos comerciales y tomar decisiones con <strong>total autonomía operativa</strong>",
+      "bullets": [
+        "<strong>Sientes que la legalidad frena tu crecimiento</strong>, y necesitas un marco ágil que te permita crecer a la velocidad que exige el mercado.",
+        "Tu equipo depende constantemente de validaciones externas y abogados tradicionales por horas, lo que ralentiza tus operaciones diarias y resta agilidad a tu capacidad de ejecución.",
+        "<strong>Delegar operaciones críticas es arriesgado</strong>, por miedo a un error estructural, asumiendo tú mismo la carga de revisar contratos en lugar de centrarte puramente en escalar la rentabilidad del negocio."
+      ],
+      "subtitle": "Vídeo exclusivo de 15 minutos",
+      "buttonText": "Ver vídeo",
+      "disclaimer": "* La clase y los materiales compartidos son únicamente educativos e informativos. No constituyen asesoramiento legal vinculante hasta la formalización contractual del servicio. Los resultados óptimos varían según la situación y madurez estructural de cada compañía. Puedes contactarnos enviándonos un email a contacto@conquerlegal.com",
+      "instructor": {
+        "name": "Ignacio",
+        "role": "Director Jurídico en Conquer Legal.",
+        "imageUrl": "https://cdn.prod.website-files.com/6a073366a754c9ee20607db8/6a074c52a75edae5e788b18c_343038e41046031b79e86982644e9de6_Ignacio.avif",
+        "description": "Con más de <strong>20 años de trayectoria</strong> blindando y estructurando más de 150 empresas internacionales de alto nivel."
+      },
+      "description": "... sin depender de despachos tradicionales lentos ni lidiar con tecnicismos burocráticos incomprensibles."
+    },
+    "welcome": {
+      "title": "Sesión de Consultoría | Conquer Legal",
+      "buttonText": "Comenzar",
+      "description": "Déjanos saber un poco más acerca de ti antes de continuar. Este formulario solo te llevará 20 segundos y, al final del mismo, te mostraremos nuestro calendario para agendar una cita."
     }
   },
   "score_ranges": [
