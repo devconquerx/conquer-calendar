@@ -30,7 +30,7 @@ export default function WelcomeScreen({ field, onNext }) {
               height: 'calc(100% + 16px)',
             }}
           />
-          <span className="relative z-10">
+          <span className="relative z-10" style={{ marginLeft: '-17px' }}>
             {field.buttonText || 'Comenzar'}
           </span>
         </button>
