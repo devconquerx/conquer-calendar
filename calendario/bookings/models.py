@@ -250,6 +250,50 @@ class ConfigCorreoGrupo(models.Model):
         return f'Config correo — {self.grupo.nombre}'
 
 
+class ConfigCorreoMiembroGrupo(models.Model):
+    """Config de correo por miembro dentro de un grupo — sobreescribe la config del grupo para ese usuario."""
+    grupo = models.ForeignKey(
+        'grupos.Grupo',
+        on_delete=models.CASCADE,
+        related_name='configs_correo_miembro',
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='configs_correo_grupo',
+    )
+    plantilla_confirmacion_host = models.ForeignKey(
+        PlantillaCorreo,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        verbose_name='Correo al host',
+    )
+    plantilla_confirmacion_inv = models.ForeignKey(
+        PlantillaCorreo,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        verbose_name='Correo al invitado',
+    )
+    plantilla_recordatorio = models.ForeignKey(
+        PlantillaCorreo,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        verbose_name='Plantilla de recordatorio',
+    )
+
+    class Meta:
+        db_table = 'config_correo_miembro_grupo'
+        unique_together = [('grupo', 'usuario')]
+        verbose_name = 'Configuración de correo por miembro'
+        verbose_name_plural = 'Configuraciones de correo por miembro'
+
+    def __str__(self):
+        return f'Config correo — {self.usuario} en {self.grupo.nombre}'
+
+
 class LogCorreo(models.Model):
     class Tipo(models.TextChoices):
         CONFIRMACION_HOST = 'confirmacion_host', 'Confirmación host'

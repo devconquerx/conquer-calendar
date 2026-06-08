@@ -145,9 +145,8 @@
             Estas plantillas aplican a todos los miembros del grupo.
             Si un tipo de evento tiene su propia configuración de correo, esa tiene prioridad.
         </p>
-        <form method="post">
+        <form method="post" id="correos-form">
             {% csrf_token %}
-            <input type="hidden" name="_form_type" value="correos">
 
             <div class="fv-row mb-6">
                 <label class="form-label fw-semibold">{{ correo_form.plantilla_confirmacion_host.label }}</label>
@@ -166,7 +165,7 @@
                 {% endif %}
             </div>
 
-            <div class="fv-row mb-8">
+            <div class="fv-row mb-6">
                 <label class="form-label fw-semibold">{{ correo_form.plantilla_recordatorio.label }}</label>
                 {{ correo_form.plantilla_recordatorio }}
                 {% if correo_form.plantilla_recordatorio.errors %}
@@ -174,10 +173,205 @@
                 {% endif %}
             </div>
 
+            <div class="separator separator-dashed my-6"></div>
+
+            {# ── Selector de miembros para aplicar correos ── #}
+            <div class="fv-row mb-4">
+                <label class="form-label fw-semibold d-flex align-items-center justify-content-between">
+                    <span>Aplicar a miembros</span>
+                    <span class="text-muted fs-7" id="apl-counter">0 seleccionados</span>
+                </label>
+                <div class="text-muted fs-7 mb-3">
+                    Selecciona los miembros a los que quieres aplicar estas plantillas. Los demás quedan sin cambios.
+                </div>
+                <div id="apl-selected-list" class="d-flex flex-wrap gap-2 mb-3"></div>
+                <div id="apl-hidden-inputs"></div>
+                <div id="apl-error" class="text-warning fs-7 mb-2 d-none">
+                    <i class="ki-outline ki-information-5 fs-6"></i> No hay cambios que ejecutar. Selecciona al menos un miembro.
+                </div>
+
+                <div class="position-relative" id="apl-picker-wrapper">
+                    <button type="button" class="btn btn-sm btn-light-primary" id="apl-picker-trigger">
+                        <i class="ki-outline ki-plus fs-4"></i> Añadir miembro
+                    </button>
+                    <div id="apl-picker-popover" class="card shadow-lg position-absolute d-none"
+                         style="top:100%;left:0;margin-top:.5rem;width:360px;z-index:1050;">
+                        <div class="card-body p-4">
+                            <div class="position-relative mb-3">
+                                <i class="ki-outline ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+                                <input type="text" id="apl-search"
+                                       class="form-control form-control-solid ps-10"
+                                       placeholder="Buscar miembro" autocomplete="off"/>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3 fs-7">
+                                <label class="form-check form-check-custom form-check-sm m-0">
+                                    <input type="checkbox" id="apl-select-all" class="form-check-input"/>
+                                    <span class="form-check-label ms-2 fw-semibold text-primary">Seleccionar todo</span>
+                                </label>
+                                <a href="#" id="apl-clear-all" class="text-muted text-hover-danger">
+                                    <i class="ki-outline ki-cross-circle fs-5"></i> Borrar todo
+                                </a>
+                            </div>
+                            <div id="apl-list" class="overflow-auto" style="max-height:280px;">
+                                {% for m in miembros_grupo %}
+                                <label class="d-flex align-items-center gap-3 py-2 px-2 cursor-pointer apl-row"
+                                       data-id="{{ m.id }}"
+                                       data-search="{{ m.nombre|lower }} {{ m.email|lower }}">
+                                    <input type="checkbox" class="form-check-input apl-cb" value="{{ m.id }}"/>
+                                    {% if m.avatar %}
+                                    <img src="{{ m.avatar }}" class="rounded-circle" width="36" height="36" alt=""/>
+                                    {% else %}
+                                    <span class="hosts-avatar">{{ m.iniciales }}</span>
+                                    {% endif %}
+                                    <span class="flex-grow-1">
+                                        <span class="d-block fw-semibold text-gray-800">{{ m.nombre }}</span>
+                                        <span class="d-block text-muted fs-7">{{ m.email }}</span>
+                                    </span>
+                                </label>
+                                {% empty %}
+                                <div class="text-muted text-center py-4 fs-7">Este grupo no tiene miembros.</div>
+                                {% endfor %}
+                                <div id="apl-empty" class="text-muted text-center py-4 d-none fs-7">Sin resultados.</div>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2 pt-3 mt-3 border-top">
+                                <button type="button" class="btn btn-light btn-sm" id="apl-cancel">Cancelar</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="apl-apply">Aplicar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{ miembros_grupo|json_script:"apl-data" }}
+
             <div class="pt-4 border-top">
-                <button type="submit" class="btn btn-primary">Guardar correos</button>
+                <button type="submit" name="_form_type" value="aplicar_correos" class="btn btn-primary" id="apl-submit-btn">Aplicar</button>
             </div>
         </form>
+
+<script>
+(function () {
+    var items = JSON.parse(document.getElementById('apl-data').textContent);
+    var byId  = {};
+    items.forEach(function (m) { byId[String(m.id)] = m; });
+
+    var committed = new Set();
+
+    var trigger      = document.getElementById('apl-picker-trigger');
+    var popover      = document.getElementById('apl-picker-popover');
+    var searchEl     = document.getElementById('apl-search');
+    var listEl       = document.getElementById('apl-list');
+    var emptyEl      = document.getElementById('apl-empty');
+    var applyBtn     = document.getElementById('apl-apply');
+    var cancelBtn    = document.getElementById('apl-cancel');
+    var selectAllCb  = document.getElementById('apl-select-all');
+    var clearAllLink = document.getElementById('apl-clear-all');
+    var chipsEl      = document.getElementById('apl-selected-list');
+    var hiddenEl     = document.getElementById('apl-hidden-inputs');
+    var counterEl    = document.getElementById('apl-counter');
+    var errorEl      = document.getElementById('apl-error');
+    var submitBtn    = document.getElementById('apl-submit-btn');
+
+    function renderChips() {
+        chipsEl.innerHTML = '';
+        hiddenEl.innerHTML = '';
+        committed.forEach(function (id) {
+            var m = byId[id];
+            if (!m) return;
+            var chip = document.createElement('span');
+            chip.className = 'badge badge-light-primary d-flex align-items-center gap-1 fs-7 fw-semibold py-2 px-3';
+            chip.innerHTML = '<span>' + m.nombre + '</span>'
+                + '<button type="button" class="btn-close btn-close-sm ms-1" data-id="' + id + '" style="font-size:.55rem;"></button>';
+            chipsEl.appendChild(chip);
+            var inp = document.createElement('input');
+            inp.type = 'hidden'; inp.name = 'aplicar_miembros'; inp.value = id;
+            hiddenEl.appendChild(inp);
+        });
+        counterEl.textContent = committed.size + ' seleccionado' + (committed.size !== 1 ? 's' : '');
+    }
+
+    chipsEl.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-id]');
+        if (btn) { committed.delete(btn.dataset.id); renderChips(); }
+    });
+
+    function visibleCbs() {
+        return Array.from(listEl.querySelectorAll('.apl-row')).filter(function (r) {
+            return r.style.display !== 'none';
+        }).map(function (r) { return r.querySelector('.apl-cb'); });
+    }
+
+    function syncSelectAll() {
+        var cbs = visibleCbs();
+        selectAllCb.checked = cbs.length > 0 && cbs.every(function (cb) { return cb.checked; });
+    }
+
+    function openPopover() {
+        searchEl.value = '';
+        filterList('');
+        listEl.querySelectorAll('.apl-cb').forEach(function (cb) {
+            cb.checked = committed.has(cb.value);
+        });
+        syncSelectAll();
+        popover.classList.remove('d-none');
+        searchEl.focus();
+    }
+
+    function closePopover() { popover.classList.add('d-none'); }
+
+    function filterList(q) {
+        var rows = listEl.querySelectorAll('.apl-row');
+        var any = false;
+        rows.forEach(function (row) {
+            var match = !q || row.dataset.search.includes(q.toLowerCase());
+            row.style.display = match ? '' : 'none';
+            if (match) any = true;
+        });
+        emptyEl.classList.toggle('d-none', any);
+        syncSelectAll();
+    }
+
+    selectAllCb.addEventListener('change', function () {
+        visibleCbs().forEach(function (cb) { cb.checked = selectAllCb.checked; });
+    });
+
+    clearAllLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        listEl.querySelectorAll('.apl-cb').forEach(function (cb) { cb.checked = false; });
+        selectAllCb.checked = false;
+    });
+
+    listEl.addEventListener('change', function () { syncSelectAll(); });
+
+    trigger.addEventListener('click', function (e) { e.stopPropagation(); openPopover(); });
+    searchEl.addEventListener('input', function () { filterList(this.value); });
+    cancelBtn.addEventListener('click', closePopover);
+
+    applyBtn.addEventListener('click', function () {
+        listEl.querySelectorAll('.apl-cb').forEach(function (cb) {
+            if (cb.checked) committed.add(cb.value); else committed.delete(cb.value);
+        });
+        renderChips();
+        closePopover();
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!popover.contains(e.target) && e.target !== trigger) closePopover();
+    });
+
+    submitBtn.addEventListener('click', function (e) {
+        if (committed.size === 0) {
+            e.preventDefault();
+            errorEl.classList.remove('d-none');
+            errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            errorEl.classList.add('d-none');
+        }
+    });
+
+    renderChips();
+})();
+</script>
     </div>
 </div>
 

@@ -8,7 +8,7 @@ from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
 
 from calendario.permisos.mixins import RequierePermisoMixin
-from calendario.bookings.models import ConfigCorreoGrupo
+from calendario.bookings.models import ConfigCorreoGrupo, ConfigCorreoMiembroGrupo
 
 from .forms import ConfigCorreoGrupoForm, GrupoForm, GrupoMiembrosForm, GrupoPermisosForm, _usuarios_activos_context, _supervisores_disponibles_context
 from .models import Grupo, GrupoXUsuario
@@ -125,17 +125,37 @@ class GrupoPermisosView(LoginRequiredMixin, UpdateView):
             raise PermissionDenied('No tienes permisos para editar este grupo.')
         return super().dispatch(request, *args, **kwargs)
 
+    def _miembros_grupo_context(self):
+        return [
+            {
+                'id': m.usuario.pk,
+                'nombre': m.usuario.get_full_name() or m.usuario.username,
+                'email': m.usuario.email,
+                'avatar': m.usuario.avatar_url or '',
+                'iniciales': (
+                    (m.usuario.first_name[:1] + m.usuario.last_name[:1]).upper()
+                    or m.usuario.username[:2].upper()
+                ),
+            }
+            for m in self.object.membresias.select_related('usuario').order_by(
+                'usuario__first_name', 'usuario__last_name'
+            )
+        ]
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['grupo'] = self.object
         config, _ = ConfigCorreoGrupo.objects.get_or_create(grupo=self.object)
         ctx['correo_form'] = ConfigCorreoGrupoForm(instance=config)
+        ctx['miembros_grupo'] = self._miembros_grupo_context()
         return ctx
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         if request.POST.get('_form_type') == 'correos':
             return self._handle_correos(request)
+        if request.POST.get('_form_type') == 'aplicar_correos':
+            return self._handle_aplicar_correos(request)
         return super().post(request, *args, **kwargs)
 
     def _handle_correos(self, request):
@@ -146,9 +166,57 @@ class GrupoPermisosView(LoginRequiredMixin, UpdateView):
             form.save()
             messages.success(request, f'Correos del grupo "{self.object.nombre}" actualizados.')
             return redirect(request.path)
-        # Re-render con errores en el form de correos
         permisos_form = self.get_form()
         return self.render_to_response(self.get_context_data(form=permisos_form, correo_form=form))
+
+    def _handle_aplicar_correos(self, request):
+        from django.shortcuts import redirect
+        from calendario.bookings.models import PlantillaCorreo
+
+        def _get_plantilla(field_name):
+            pk = request.POST.get(field_name)
+            if pk:
+                try:
+                    return PlantillaCorreo.objects.get(pk=pk)
+                except PlantillaCorreo.DoesNotExist:
+                    pass
+            return None
+
+        miembro_ids = []
+        for v in request.POST.getlist('aplicar_miembros'):
+            try:
+                miembro_ids.append(int(v))
+            except (ValueError, TypeError):
+                pass
+
+        if not miembro_ids:
+            messages.error(request, 'Debes seleccionar al menos un miembro.')
+            return redirect(request.path)
+
+        plantilla_host = _get_plantilla('plantilla_confirmacion_host')
+        plantilla_inv = _get_plantilla('plantilla_confirmacion_inv')
+        plantilla_rec = _get_plantilla('plantilla_recordatorio')
+
+        miembros_validos = list(
+            self.object.membresias.filter(usuario_id__in=miembro_ids).values_list('usuario_id', flat=True)
+        )
+
+        for uid in miembros_validos:
+            ConfigCorreoMiembroGrupo.objects.update_or_create(
+                grupo=self.object,
+                usuario_id=uid,
+                defaults={
+                    'plantilla_confirmacion_host': plantilla_host,
+                    'plantilla_confirmacion_inv': plantilla_inv,
+                    'plantilla_recordatorio': plantilla_rec,
+                },
+            )
+
+        messages.success(
+            request,
+            f'Correos aplicados a {len(miembros_validos)} miembro(s) del grupo "{self.object.nombre}".',
+        )
+        return redirect(request.path)
 
     def form_valid(self, form):
         response = super().form_valid(form)

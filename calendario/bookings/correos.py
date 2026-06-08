@@ -40,7 +40,23 @@ def resolver_config(reserva, tipo_correo):
     except Exception:
         pass
 
-    # 2. Config del grupo del host
+    # 2. Config por miembro dentro del grupo
+    try:
+        from .models import ConfigCorreoMiembroGrupo
+        for membresia in reserva.host.membresias_grupo.all():
+            try:
+                cfg_miembro = ConfigCorreoMiembroGrupo.objects.get(
+                    grupo=membresia.grupo, usuario=reserva.host
+                )
+                plantilla = getattr(cfg_miembro, f'plantilla_{tipo_correo}', None)
+                if plantilla and plantilla.activa:
+                    return plantilla, cfg_miembro
+            except ConfigCorreoMiembroGrupo.DoesNotExist:
+                continue
+    except Exception:
+        pass
+
+    # 3. Config del grupo del host
     try:
         for membresia in reserva.host.membresias_grupo.select_related('grupo__config_correo').all():
             try:
@@ -53,7 +69,7 @@ def resolver_config(reserva, tipo_correo):
     except Exception:
         pass
 
-    # 3. Config global por defecto
+    # 4. Config global por defecto
     try:
         from .models import ConfigCorreoDefault
         config_default = ConfigCorreoDefault.get()
