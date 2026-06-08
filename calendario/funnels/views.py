@@ -198,6 +198,7 @@ PRODUCTO_A_ESCUELA = {
     'proptrading': 'conquer-finance',
     'english': 'conquer-languages',
     'legal': 'conquer-legal',
+    'kids': 'conquer-languages-kids',
 }
 PRODUCTO_POR_ESCUELA = {v: k for k, v in PRODUCTO_A_ESCUELA.items()}
 
@@ -419,3 +420,36 @@ class FunnelConfirmationView(View):
                 'app_base_path': _base_path(request),
             },
         )
+
+
+class FunnelStatusView(View):
+    """Panel de estado de los funnels.
+
+    Lista cada escuela×región registrada con su estado (activo, ¿tiene landing?,
+    ¿welcome?, ¿vídeo?) y enlaces directos a su landing, página de vídeo y
+    StepForm. Herramienta interna para ver de un vistazo qué tiene implementado
+    cada funnel. Disponible en /funnels/ (y vía el proxy en /preview/funnels/).
+    """
+
+    def get(self, request):
+        base = _base_path(request)
+        filas = []
+        for f in FunnelForm.objects.all().order_by('escuela', 'region'):
+            cfg = f.config or {}
+            tiene_video = bool(cfg.get('video')) or f.escuela in _VIDEO_DEFAULTS
+            filas.append({
+                'escuela': f.escuela,
+                'region': f.region,
+                'nombre': f.nombre,
+                'activo': f.activo,
+                'has_landing': 'landing' in cfg,
+                'has_welcome': 'welcome' in cfg,
+                'has_video': tiene_video,
+                'landing_url': f'{base}/{f.escuela}/clase-online-gratuita-{f.region}/',
+                'video_url': f'{base}/{f.escuela}/video-clase-{f.region}/',
+                'stepform_url': stepform_url(f.escuela, f.region, base=base) or '',
+            })
+        return render(request, 'pages/public/funnel/status.html', {
+            'filas': filas,
+            'app_base_path': base,
+        })

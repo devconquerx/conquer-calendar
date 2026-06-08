@@ -9,7 +9,7 @@ from django.views.generic import RedirectView
 from calendario.users.views import MagicLoginView, MagicLoginStopView
 from calendario.funnels.views import (
     FunnelAgendaView, FunnelClaseView, FunnelConfirmationView,
-    FunnelVideoView,
+    FunnelVideoView, FunnelStatusView,
 )
 
 
@@ -34,31 +34,26 @@ urlpatterns = [
     path('r/', include('calendario.bookings.urls_public_token')),
     path('e/<slug:slug_equipo>/', include('calendario.bookings.urls_public_team')),
     path('f/', include('calendario.funnels.urls')),
+    # Panel interno de estado de los funnels (lista escuelas + enlaces).
+    path('funnels/', FunnelStatusView.as_view(), name='funnel_status'),
     # URLs públicas canónicas por marca/producto (antes del catch-all de booking).
     path('agenda/<slug:producto>/<slug:region>/', FunnelAgendaView.as_view(), name='funnel_agenda'),
-    # Landings de registro de lead: blocks lleva la escuela en el path; languages
-    # y finance comparten la ruta raíz y se resuelven por dominio (Host).
+    # Landings de registro de lead. Cualquier escuela puede servirse por path
+    # (/conquer-<marca>/clase-online-gratuita-<region>/); además languages y
+    # finance comparten la ruta raíz y se resuelven por dominio (Host).
     re_path(
-        r'^conquer-blocks/clase-online-gratuita-(?P<region>latam|eu|us)/?$',
-        FunnelClaseView.as_view(), {'escuela': 'conquer-blocks'}, name='clase_blocks',
-    ),
-    re_path(
-        r'^conquer-legal/clase-online-gratuita-(?P<region>latam|eu|us)/?$',
-        FunnelClaseView.as_view(), {'escuela': 'conquer-legal'}, name='clase_legal',
+        r'^(?P<escuela>conquer-[a-z-]+)/clase-online-gratuita-(?P<region>latam|eu|us)/?$',
+        FunnelClaseView.as_view(), name='clase_escuela',
     ),
     re_path(
         r'^clase-online-gratuita-(?P<region>latam|eu|us)/?$',
         FunnelClaseView.as_view(), name='clase_host',
     ),
-    # Página de video (VSL), entre la landing y el StepForm. blocks lleva la
-    # escuela en el path; el resto se resuelve por dominio (Host).
+    # Página de video (VSL), entre la landing y el StepForm. Por path para
+    # cualquier escuela; por Host en la ruta raíz.
     re_path(
-        r'^conquer-blocks/video-clase-(?P<region>latam|eu|us)/?$',
-        FunnelVideoView.as_view(), {'escuela': 'conquer-blocks'}, name='video_blocks',
-    ),
-    re_path(
-        r'^conquer-legal/video-clase-(?P<region>latam|eu|us)/?$',
-        FunnelVideoView.as_view(), {'escuela': 'conquer-legal'}, name='video_legal',
+        r'^(?P<escuela>conquer-[a-z-]+)/video-clase-(?P<region>latam|eu|us)/?$',
+        FunnelVideoView.as_view(), name='video_escuela',
     ),
     re_path(
         r'^video-clase-(?P<region>latam|eu|us)/?$',
@@ -67,12 +62,8 @@ urlpatterns = [
     # Página de confirmación de llamada (tras agendar). La región es opcional para
     # admitir la URL histórica /conquer-blocks/confirmacion-llamada/.
     re_path(
-        r'^conquer-blocks/confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',
-        FunnelConfirmationView.as_view(), {'escuela': 'conquer-blocks'}, name='confirmacion_blocks',
-    ),
-    re_path(
-        r'^conquer-legal/confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',
-        FunnelConfirmationView.as_view(), {'escuela': 'conquer-legal'}, name='confirmacion_legal',
+        r'^(?P<escuela>conquer-[a-z-]+)/confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',
+        FunnelConfirmationView.as_view(), name='confirmacion_escuela',
     ),
     re_path(
         r'^confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',

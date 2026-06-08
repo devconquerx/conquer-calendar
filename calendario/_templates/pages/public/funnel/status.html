@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Estado de funnels · ConquerX</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0; padding: 2rem 1.25rem; background: #0f1115; color: #e7e9ee;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
+    p.sub { margin: 0 0 1.5rem; color: #9aa0ad; font-size: .9rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { padding: .6rem .65rem; text-align: left; border-bottom: 1px solid #232733; }
+    th { color: #9aa0ad; font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+    tr:hover td { background: #161922; }
+    .esc { font-weight: 600; }
+    .reg { color: #9aa0ad; text-transform: uppercase; font-size: .78rem; }
+    .badge { display: inline-block; min-width: 1.4rem; text-align: center; padding: .1rem .45rem; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+    .ok { background: #16361f; color: #4ade80; }
+    .no { background: #2a2e3a; color: #6b7280; }
+    .off { background: #3a1f23; color: #f87171; }
+    a.link { color: #60a5fa; text-decoration: none; margin-right: .1rem; }
+    a.link:hover { text-decoration: underline; }
+    a.muted { color: #4b5563; pointer-events: none; }
+    .legend { margin-top: 1.25rem; color: #6b7280; font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Estado de funnels</h1>
+    <p class="sub">{{ filas|length }} funnels registrados · enlaces directos a landing, vídeo y StepForm de cada escuela.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Escuela</th>
+          <th>Región</th>
+          <th>Activo</th>
+          <th>Landing</th>
+          <th>Welcome</th>
+          <th>Vídeo</th>
+          <th>Enlaces</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in filas %}
+        <tr>
+          <td class="esc">{{ f.escuela }}</td>
+          <td class="reg">{{ f.region }}</td>
+          <td>{% if f.activo %}<span class="badge ok">on</span>{% else %}<span class="badge off">off</span>{% endif %}</td>
+          <td>{% if f.has_landing %}<span class="badge ok">✓</span>{% else %}<span class="badge no">·</span>{% endif %}</td>
+          <td>{% if f.has_welcome %}<span class="badge ok">✓</span>{% else %}<span class="badge no">·</span>{% endif %}</td>
+          <td>{% if f.has_video %}<span class="badge ok">✓</span>{% else %}<span class="badge no">·</span>{% endif %}</td>
+          <td>
+            <a class="link" href="{{ f.landing_url }}" target="_blank" rel="noopener">landing</a> ·
+            <a class="link" href="{{ f.video_url }}" target="_blank" rel="noopener">vídeo</a> ·
+            {% if f.stepform_url %}<a class="link" href="{{ f.stepform_url }}" target="_blank" rel="noopener">stepform</a>{% else %}<span class="link muted">stepform</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="legend">✓ implementado · · pendiente · "stepform" en gris = falta mapeo de producto para esa escuela.</p>
+  </div>
+</body>
+</html>
