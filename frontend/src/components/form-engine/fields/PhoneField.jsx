@@ -3,7 +3,6 @@ import { AsYouType, getExampleNumber, parsePhoneNumber } from 'libphonenumber-js
 import examples from 'libphonenumber-js/mobile/examples'
 import countries from '../../../data/countries'
 import useGeoLocation from '../../../hooks/useGeoLocation'
-import paperboardTexture from '../../../assets/img/cb/paperboard-texture.avif'
 
 const getFlagUrl = (iso2) => `https://flagcdn.com/w40/${iso2?.toLowerCase()}.png`
 
@@ -143,41 +142,19 @@ export default function PhoneField({ field, value, onChange, onNext }) {
 
   return (
     <div>
-      <div className="flex gap-2">
-        {/* Country selector */}
-        <div className="relative" ref={dropdownRef}>
+      <div className="flex items-end gap-8">
+        {/* Prefix — clickable to open country selector */}
+        <div className="relative flex-shrink-0" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="relative flex items-center gap-2 border border-[#BBB49B] rounded-lg px-4 py-4 text-black text-xl hover:border-[#F97316]/50 transition-colors min-w-[130px] overflow-hidden"
-            style={{
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${paperboardTexture})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              boxShadow: '0px 2px 5px rgba(0,0,0,0.1), 0px 9px 9px rgba(0,0,0,0.09), 0px 20px 12px rgba(0,0,0,0.05), 0px 36px 14px rgba(0,0,0,0.01)',
-            }}
+            className="text-black text-2xl md:text-3xl font-normal bg-transparent outline-none hover:opacity-70 transition-opacity border-b-2 border-black pb-2"
           >
-            {selectedCountry ? (
-              <>
-                <img
-                  src={getFlagUrl(selectedCountry.iso2)}
-                  alt={selectedCountry.iso2}
-                  width="24"
-                  height="16"
-                  className="rounded-sm object-cover"
-                />
-                <span className="text-lg">+{selectedCountry.phoneCode}</span>
-                <svg className="w-4 h-4 text-[#444] ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </>
-            ) : (
-              <span className="text-gray-400 text-sm">País</span>
-            )}
+            {selectedCountry ? `+${selectedCountry.phoneCode}` : '...'}
           </button>
 
           {dropdownOpen && (
-            <div className="absolute top-full left-0 mt-1 w-80 max-h-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
+            <div className="absolute top-full left-0 mt-2 w-80 max-h-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
               <div className="p-2 border-b border-gray-200">
                 <input
                   ref={searchInputRef}
@@ -222,8 +199,19 @@ export default function PhoneField({ field, value, onChange, onNext }) {
           onChange={handlePhoneChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="flex-1 bg-transparent border-b-2 border-black focus:border-black text-black text-2xl md:text-3xl py-4 px-1 outline-none transition-colors placeholder:text-[#aaa]"
+          className="flex-1 bg-transparent text-black text-2xl md:text-3xl outline-none placeholder:text-[#aaa] border-b-2 border-black pb-2"
         />
+
+        {/* Flag on the right */}
+        {selectedCountry && (
+          <img
+            src={getFlagUrl(selectedCountry.iso2)}
+            alt={selectedCountry.iso2}
+            width="48"
+            height="32"
+            className="rounded-sm object-cover flex-shrink-0 mb-1"
+          />
+        )}
       </div>
     </div>
   )

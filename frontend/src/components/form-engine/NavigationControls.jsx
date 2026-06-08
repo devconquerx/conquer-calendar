@@ -21,7 +21,7 @@ export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk
           type="button"
           onClick={onOk}
           disabled={isSubmitting}
-          className="text-[var(--theme-accent-text,#fff)] px-8 py-3 rounded-lg font-semibold hover:brightness-110 transition-all text-sm disabled:opacity-50 flex items-center gap-2"
+          className="group text-[var(--theme-accent-text,#fff)] px-8 py-3 rounded-lg font-semibold hover:brightness-110 transition-all text-sm disabled:opacity-50 flex items-center gap-2"
           style={{ background: 'var(--theme-btn-gradient, var(--theme-accent, #111827))' }}
         >
           {isSubmitting ? (
@@ -36,9 +36,12 @@ export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk
             m['label.button.submit'] || 'Enviar'
           ) : (
             <>
-              {m['label.button.ok'] || 'OK'}
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              {m['label.button.next'] || 'Siguiente'}
+              <svg
+                className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </>
           )}
