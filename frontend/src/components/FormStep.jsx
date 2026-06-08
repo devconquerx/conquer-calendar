@@ -100,9 +100,14 @@ export default function FormStep({
 
   return (
     <div className="max-w-3xl mx-auto flex flex-col justify-center min-h-[50vh]">
-      <div className="mb-8">
-        <h2 className="text-black text-2xl md:text-[32px] font-semibold leading-[1.3]">
-          {stepNumber}. {field.label} {field.required && <span className="text-red-500">*</span>}
+      <div className="mb-10">
+        <h2 className="text-black text-2xl md:text-[27px] font-semibold leading-[1.3]">
+          {stepNumber}
+          <svg className="inline-block mx-2 align-middle" width="14" height="12" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="0" y1="7" x2="14" y2="7" />
+            <polyline points="8,1 14,7 8,13" />
+          </svg>
+          {field.label} {field.required && <span className="text-red-500">*</span>}
         </h2>
         {field.description && (
           <p className="text-gray-500 text-base mt-3">{field.description}</p>

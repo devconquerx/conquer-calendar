@@ -8,6 +8,7 @@ export default function EmailField({ field, value, onChange, onKeyDown }) {
   }, [field.id])
 
   return (
+    <div className="-mt-3">
     <input
       ref={inputRef}
       type="email"
@@ -18,5 +19,6 @@ export default function EmailField({ field, value, onChange, onKeyDown }) {
       className="w-full bg-transparent border-b-2 border-black focus:border-black text-black text-2xl md:text-3xl py-4 px-1 outline-none transition-colors placeholder:text-[#aaa]"
       autoComplete="email"
     />
+    </div>
   )
 }
