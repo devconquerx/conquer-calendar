@@ -31,6 +31,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   const [blocks, setBlocks] = useState([])
   const [escuela, setEscuela] = useState('')
   const [messages, setMessages] = useState({})
+  const [funnelFont, setFunnelFont] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState('forward')
   // Prefill desde el query string que propaga la landing (name/email/phone),
@@ -48,6 +49,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
         setBlocks(data.blocks || [])
         setEscuela(data.escuela || '')
         setMessages(data.messages || {})
+        setFunnelFont(data.theme?.font || '')
         setPhase('form')
       })
       .catch(e => {
@@ -188,10 +190,25 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [phase, current])
 
+  useEffect(() => {
+    if (!funnelFont) return
+    const id = `gfont-${funnelFont.replace(/\s+/g, '-').toLowerCase()}`
+    if (document.getElementById(id)) return
+    const link = document.createElement('link')
+    link.id = id
+    link.rel = 'stylesheet'
+    link.href = `https://fonts.googleapis.com/css2?family=${funnelFont.replace(/\s+/g, '+')}:wght@300;400;500;600;700&display=swap`
+    document.head.appendChild(link)
+  }, [funnelFont])
+
   // Brand theme (conquerblocks paperboard look, etc.) resolved from escuela,
   // falling back to the funnel slug ('blocks-eu' → conquerblocks).
   const theme = getTheme(escuela, slug)
-  const pageStyle = { ...theme.cssVars, ...theme.page }
+  const pageStyle = {
+    ...theme.cssVars,
+    ...theme.page,
+    ...(funnelFont ? { fontFamily: `'${funnelFont}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif` } : {}),
+  }
 
   if (phase === 'loading') {
     return <div className="loading-wrap">Cargando formulario...</div>
