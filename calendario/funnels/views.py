@@ -197,6 +197,7 @@ PRODUCTO_A_ESCUELA = {
     'fullstack': 'conquer-blocks',
     'proptrading': 'conquer-finance',
     'english': 'conquer-languages',
+    'legal': 'conquer-legal',
 }
 PRODUCTO_POR_ESCUELA = {v: k for k, v in PRODUCTO_A_ESCUELA.items()}
 

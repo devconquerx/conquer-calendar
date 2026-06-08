@@ -9,7 +9,7 @@ from django.views.generic import RedirectView
 from calendario.users.views import MagicLoginView, MagicLoginStopView
 from calendario.funnels.views import (
     FunnelAgendaView, FunnelClaseView, FunnelConfirmationView,
-    # FunnelVideoView,  # página de video (VSL) desactivada temporalmente
+    FunnelVideoView,
 )
 
 
@@ -46,15 +46,16 @@ urlpatterns = [
         r'^clase-online-gratuita-(?P<region>latam|eu|us)/?$',
         FunnelClaseView.as_view(), name='clase_host',
     ),
-    # Página de video (VSL) desactivada temporalmente — descomentar cuando se active.
-    # re_path(
-    #     r'^conquer-blocks/video-clase-(?P<region>latam|eu|us)/?$',
-    #     FunnelVideoView.as_view(), {'escuela': 'conquer-blocks'}, name='video_blocks',
-    # ),
-    # re_path(
-    #     r'^video-clase-(?P<region>latam|eu|us)/?$',
-    #     FunnelVideoView.as_view(), name='video_host',
-    # ),
+    # Página de video (VSL), entre la landing y el StepForm. blocks lleva la
+    # escuela en el path; el resto se resuelve por dominio (Host).
+    re_path(
+        r'^conquer-blocks/video-clase-(?P<region>latam|eu|us)/?$',
+        FunnelVideoView.as_view(), {'escuela': 'conquer-blocks'}, name='video_blocks',
+    ),
+    re_path(
+        r'^video-clase-(?P<region>latam|eu|us)/?$',
+        FunnelVideoView.as_view(), name='video_host',
+    ),
     # Página de confirmación de llamada (tras agendar). La región es opcional para
     # admitir la URL histórica /conquer-blocks/confirmacion-llamada/.
     re_path(
