@@ -39,7 +39,7 @@ export default function MultipleChoice({ field, value, onChange, onNext }) {
   return (
     <div className="flex flex-col gap-2">
       {rows.map((row, rowIdx) => (
-        <div key={rowIdx} className="flex gap-2">
+        <div key={rowIdx} className="flex flex-col md:flex-row gap-2">
           {row.map((choice, colIdx) => {
             const idx = rowIdx * 2 + colIdx
             const isSelected = value === choice.value
@@ -52,7 +52,7 @@ export default function MultipleChoice({ field, value, onChange, onNext }) {
                 type="button"
                 onClick={() => handleSelect(choice.value)}
                 className={`group/choice relative flex items-center justify-between gap-4 text-left p-2 rounded-lg border transition-all duration-200 overflow-hidden ${
-                  isLastOdd ? 'flex-1 max-w-[50%]' : 'flex-1'
+                  isLastOdd ? 'flex-1 md:max-w-[50%]' : 'flex-1'
                 } ${
                   isSelected
                     ? 'border-[#F97316] ring-2 ring-[#F97316]/30'
@@ -75,7 +75,7 @@ export default function MultipleChoice({ field, value, onChange, onNext }) {
                 </span>
 
                 {letter && (
-                  <span className={`relative w-8 h-8 flex items-center justify-center rounded-full border text-base flex-shrink-0 transition-colors ${
+                  <span className={`relative w-8 h-8 hidden md:flex items-center justify-center rounded-full border text-base flex-shrink-0 transition-colors ${
                     isSelected
                       ? 'border-[#F97316] bg-[#F97316] text-white'
                       : 'border-black text-[#444]'

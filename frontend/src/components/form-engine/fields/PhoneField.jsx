@@ -142,13 +142,13 @@ export default function PhoneField({ field, value, onChange, onNext }) {
 
   return (
     <div>
-      <div className="flex items-end gap-8">
+      <div className="flex items-end gap-3 md:gap-8">
         {/* Prefix — clickable to open country selector */}
         <div className="relative flex-shrink-0" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="text-black text-2xl md:text-3xl font-normal bg-transparent outline-none hover:opacity-70 transition-opacity border-b-2 border-black pb-2"
+            className="text-black text-xl md:text-3xl font-normal bg-transparent outline-none hover:opacity-70 transition-opacity border-b-2 border-black pb-2"
           >
             {selectedCountry ? `+${selectedCountry.phoneCode}` : '...'}
           </button>
@@ -199,7 +199,7 @@ export default function PhoneField({ field, value, onChange, onNext }) {
           onChange={handlePhoneChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-black text-2xl md:text-3xl outline-none placeholder:text-[#aaa] border-b-2 border-black pb-2"
+          className="flex-1 min-w-0 bg-transparent text-black text-xl md:text-3xl outline-none placeholder:text-[#aaa] border-b-2 border-black pb-2"
         />
 
         {/* Flag on the right */}
@@ -209,7 +209,7 @@ export default function PhoneField({ field, value, onChange, onNext }) {
             alt={selectedCountry.iso2}
             width="48"
             height="32"
-            className="rounded-sm object-cover flex-shrink-0 mb-1"
+            className="rounded-sm object-cover flex-shrink-0 mb-1 w-8 h-5 md:w-12 md:h-8"
           />
         )}
       </div>

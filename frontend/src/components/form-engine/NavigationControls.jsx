@@ -32,7 +32,7 @@ export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk
         )}
       </button>
       {!isLast && (
-        <span className="text-gray-500 text-sm font-medium">
+        <span className="hidden md:inline text-gray-500 text-sm font-medium">
           {m['label.button.enterHint'] || 'presiona'} <strong className="font-bold">Enter ↵</strong>
         </span>
       )}

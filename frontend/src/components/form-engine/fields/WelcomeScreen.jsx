@@ -43,7 +43,7 @@ export default function WelcomeScreen({ field, onNext }) {
           {field.buttonText || 'Comenzar'}
         </button>
       )}
-      <span className="text-gray-400 text-xs mt-3">
+      <span className="hidden md:inline text-gray-400 text-xs mt-3">
         presiona <strong>Enter ↵</strong>
       </span>
     </div>
