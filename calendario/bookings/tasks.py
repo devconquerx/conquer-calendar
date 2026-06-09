@@ -98,6 +98,19 @@ def process_schedule_crm(self, reserva_id):
     logger.info('Reserva %s: sch_crm_done', reserva_id)
 
 
+@shared_task(**RETRY_POLICY)
+def process_schedule_supabase(self, reserva_id):
+    """Respaldo de la Reserva en Supabase. Independiente del CRM: se ejecuta
+    siempre, aunque el envío al CRM esté desactivado."""
+    from .models import Reserva
+    from .conversions.services import supabase
+
+    reserva = Reserva.objects.get(pk=reserva_id)
+    supabase.push_schedule(reserva)
+    reserva.tags.add('sch_supabase_done')
+    logger.info('Reserva %s: sch_supabase_done', reserva_id)
+
+
 def dispatch_schedule_tasks(reserva_id):
     """Evalúa condiciones y encola las tareas de conversión para una reserva."""
     from .models import Reserva
@@ -111,6 +124,9 @@ def dispatch_schedule_tasks(reserva_id):
         logger.info('Reserva %s: tasks already dispatched, skipping', reserva_id)
         return
     reserva.tags.add('sch_tasks_dispatched')
+
+    # Respaldo en Supabase: siempre, independiente del origen y del CRM.
+    process_schedule_supabase.delay(reserva_id)
 
     s = build_schedule_ctx(reserva)
     lead = s.lead
@@ -169,6 +185,10 @@ def sweep_incomplete_reservas():
         tag_names = set(reserva.tags.names())
         s = build_schedule_ctx(reserva)
         lead = s.lead
+
+        if 'sch_supabase_done' not in tag_names and 'sch_supabase_failed' not in tag_names:
+            process_schedule_supabase.delay(reserva.pk)
+            requeued += 1
 
         # Plataformas de ads: por Lead si existe, si no por utm_source (fallback).
         if lead:

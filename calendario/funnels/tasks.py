@@ -27,3 +27,15 @@ def process_pre_schedule_crm(self, prellamada_id):
     prellamada = Prellamada.objects.select_related('funnel').get(pk=prellamada_id)
     crm_preschedule.push_pre_schedule(prellamada)
     logger.info('Prellamada %s: crm_sent', prellamada_id)
+
+
+@shared_task(**RETRY_POLICY)
+def process_pre_schedule_supabase(self, prellamada_id):
+    """Respaldo de la Prellamada en Supabase. Independiente del CRM: se ejecuta
+    siempre, aunque el envío al CRM esté desactivado."""
+    from .models import Prellamada
+    from . import supabase
+
+    prellamada = Prellamada.objects.select_related('funnel').get(pk=prellamada_id)
+    supabase.push_pre_schedule(prellamada)
+    logger.info('Prellamada %s: supabase_done', prellamada_id)

@@ -115,6 +115,19 @@ def process_crm_send(self, lead_id):
 
 
 @shared_task(**RETRY_POLICY)
+def process_supabase(self, lead_id):
+    """Respaldo del Lead en Supabase. Independiente del CRM: se ejecuta siempre,
+    aunque el envío al CRM esté desactivado."""
+    from calendario.leads.models import Lead
+    from calendario.leads.services import supabase
+
+    lead = Lead.objects.get(pk=lead_id)
+    supabase.push_lead(lead)
+    lead.tags.add('supabase_done')
+    logger.info('Lead %s: supabase_done', lead_id)
+
+
+@shared_task(**RETRY_POLICY)
 def process_welcome_email(self, lead_id):
     from calendario.leads.models import Lead
     from calendario.leads.services import mailgun
@@ -135,6 +148,9 @@ def dispatch_lead_tasks(lead_id):
     from calendario.leads.services.utils import is_from_meta, is_from_tiktok, is_from_google
 
     lead = Lead.objects.get(pk=lead_id)
+
+    # Respaldo en Supabase: siempre, independiente del origen y del CRM.
+    process_supabase.delay(lead_id)
 
     if is_from_meta(lead):
         process_meta_capi.delay(lead_id)
@@ -175,6 +191,10 @@ def sweep_incomplete_leads():
     requeued = 0
     for lead in leads.iterator(chunk_size=200):
         tag_names = set(lead.tags.names())
+
+        if 'supabase_done' not in tag_names and 'supabase_failed' not in tag_names:
+            process_supabase.delay(lead.pk)
+            requeued += 1
 
         if is_from_meta(lead) and 'meta_capi_done' not in tag_names and 'meta_capi_failed' not in tag_names:
             process_meta_capi.delay(lead.pk)

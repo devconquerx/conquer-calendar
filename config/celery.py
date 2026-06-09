@@ -32,6 +32,7 @@ TASK_FAILURE_TAGS = {
     'calendario.leads.tasks.process_activecampaign': ('leads.Lead', 'activecampaign_failed'),
     'calendario.leads.tasks.process_neverbounce': ('leads.Lead', 'neverbounce_failed'),
     'calendario.leads.tasks.process_crm_send': ('leads.Lead', 'crm_failed'),
+    'calendario.leads.tasks.process_supabase': ('leads.Lead', 'supabase_failed'),
     'calendario.leads.tasks.process_welcome_email': ('leads.Lead', 'welcome_email_failed'),
     'calendario.bookings.tasks.process_schedule_meta_capi': ('bookings.Reserva', 'sch_meta_capi_failed'),
     'calendario.bookings.tasks.process_schedule_tiktok_events': ('bookings.Reserva', 'sch_tiktok_events_failed'),
@@ -39,6 +40,7 @@ TASK_FAILURE_TAGS = {
     'calendario.bookings.tasks.process_schedule_activecampaign': ('bookings.Reserva', 'sch_activecampaign_failed'),
     'calendario.bookings.tasks.process_schedule_respondio': ('bookings.Reserva', 'sch_respondio_failed'),
     'calendario.bookings.tasks.process_schedule_crm': ('bookings.Reserva', 'sch_crm_failed'),
+    'calendario.bookings.tasks.process_schedule_supabase': ('bookings.Reserva', 'sch_supabase_failed'),
 }
 
 
