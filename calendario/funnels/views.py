@@ -306,6 +306,12 @@ _VIDEO_DEFAULTS = {
 }
 
 
+# Plantillas de landing por marca (las que no estén aquí usan la landing React).
+_LANDING_TEMPLATE_POR_ESCUELA = {
+    'conquer-languages': 'pages/public/funnel/landing_languages.html',
+}
+
+
 class FunnelClaseView(View):
     """GET de las landings de registro de lead:
 
@@ -330,9 +336,15 @@ class FunnelClaseView(View):
             next_url = _video_url(funnel.escuela, funnel.region, base=_base_path(request))
         else:
             next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request))
+        # Plantilla de landing por marca: languages tiene su propio diseño
+        # (HTML + Tailwind) que replica conquerlanguages.com; el resto usa la
+        # landing React por defecto.
+        template_name = _LANDING_TEMPLATE_POR_ESCUELA.get(
+            funnel.escuela, 'pages/public/funnel/landing.html',
+        )
         return render(
             request,
-            'pages/public/funnel/landing.html',
+            template_name,
             {
                 'funnel': funnel,
                 'slug': funnel.slug,
