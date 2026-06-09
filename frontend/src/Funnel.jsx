@@ -18,9 +18,20 @@ import { getTheme, ThemeContext } from './themes'
 import { useRouter } from './lib/router'
 import './funnel.css'
 
-export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUrl = '' }) {
+export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUrl = '', formConfig = null }) {
   const router = useRouter()
   const tracking = useTracking()
+  // Config del formulario embebida en el shell (funnel-config): cuando está
+  // presente, el StepForm se renderiza al instante sin pedir nada al servidor.
+  // El fetch a /f/api/<slug>/config/ queda solo como fallback (dev standalone,
+  // o si por algún motivo la config no viajó en el HTML).
+  const embedded = formConfig && Array.isArray(formConfig.blocks) ? formConfig : null
+  // Los pasos de contacto (name/email/phone) que llegan válidos por la URL se
+  // ocultan para acortar el formulario (el valor viaja igual en `respuestas`).
+  const filtrarVisibles = (lista) => {
+    const prefill = getPrefillRespuestas(window.location.search)
+    return (lista || []).filter(b => !(prefill[b.id] && validateBlock(b, prefill[b.id])))
+  }
   const leadRegisteredRef = useRef(false)
   // schedule_event_id del recorrido: se genera una vez al montar y se reutiliza
   // en el utm_term de Calendly y en fireAllSchedule (igual que el funnel de
@@ -31,34 +42,27 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     return id
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  const [blocks, setBlocks] = useState([])
-  const [escuela, setEscuela] = useState('')
-  const [messages, setMessages] = useState({})
-  const [funnelFont, setFunnelFont] = useState('')
+  const [blocks, setBlocks] = useState(() => embedded ? filtrarVisibles(embedded.blocks) : [])
+  const [escuela, setEscuela] = useState(embedded ? escuelaProp : '')
+  const [messages, setMessages] = useState(() => embedded?.messages || {})
+  const [funnelFont, setFunnelFont] = useState(() => embedded?.theme?.font || '')
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState('forward')
   // Prefill desde el query string que propaga la landing (name/email/phone),
   // igual que el funnel de Django. Los ids de bloque son name/email/phone.
   const [respuestas, setRespuestas] = useState(() => getPrefillRespuestas(window.location.search))
-  const [phase, setPhase] = useState('loading')
+  const [phase, setPhase] = useState(embedded ? 'form' : 'loading')
   const [outcome, setOutcome] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [calendlyUrl, setCalendlyUrl] = useState('')
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
+    // Con la config embebida ya tenemos los bloques: nada que pedir al servidor.
+    if (embedded) return
     fetchConfig(slug)
       .then(data => {
-        // Los pasos de contacto (name/email/phone) que llegan válidos por la URL
-        // se ocultan para acortar el formulario: el valor viaja igual en
-        // `respuestas` (prefill del useState de arriba) y se envía al resolver.
-        // Si el valor prefijado no pasa la validación del bloque, el paso se
-        // muestra prellenado para que el usuario lo corrija.
-        const prefill = getPrefillRespuestas(window.location.search)
-        const visibleBlocks = (data.blocks || []).filter(
-          b => !(prefill[b.id] && validateBlock(b, prefill[b.id]))
-        )
-        setBlocks(visibleBlocks)
+        setBlocks(filtrarVisibles(data.blocks))
         setEscuela(data.escuela || '')
         setMessages(data.messages || {})
         setFunnelFont(data.theme?.font || '')
@@ -68,6 +72,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
         setLoadError(e.message)
         setPhase('error')
       })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
   const current = blocks[currentIndex]

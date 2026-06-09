@@ -41,5 +41,5 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
     return <Confirmation escuela={escuela} slug={slug} />
   }
 
-  return <Funnel slug={slug} escuela={escuela} />
+  return <Funnel slug={slug} escuela={escuela} formConfig={formConfig} />
 }
