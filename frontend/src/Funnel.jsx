@@ -47,7 +47,16 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   useEffect(() => {
     fetchConfig(slug)
       .then(data => {
-        setBlocks(data.blocks || [])
+        // Los pasos de contacto (name/email/phone) que llegan válidos por la URL
+        // se ocultan para acortar el formulario: el valor viaja igual en
+        // `respuestas` (prefill del useState de arriba) y se envía al resolver.
+        // Si el valor prefijado no pasa la validación del bloque, el paso se
+        // muestra prellenado para que el usuario lo corrija.
+        const prefill = getPrefillRespuestas(window.location.search)
+        const visibleBlocks = (data.blocks || []).filter(
+          b => !(prefill[b.id] && validateBlock(b, prefill[b.id]))
+        )
+        setBlocks(visibleBlocks)
         setEscuela(data.escuela || '')
         setMessages(data.messages || {})
         setFunnelFont(data.theme?.font || '')
