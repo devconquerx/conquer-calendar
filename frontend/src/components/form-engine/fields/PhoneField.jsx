@@ -154,7 +154,7 @@ export default function PhoneField({ field, value, onChange, onNext }) {
           </button>
 
           {dropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-80 max-h-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
+            <div className="absolute top-full left-0 mt-2 w-[calc(90vw-4rem)] max-w-xs max-h-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
               <div className="p-2 border-b border-gray-200">
                 <input
                   ref={searchInputRef}

@@ -296,7 +296,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     <ThemeContext.Provider value={theme}>
       <div className="funnel-wrap" style={pageStyle}>
         <div
-          className="px-8 sm:px-16 py-10 rounded-2xl mx-auto min-h-[80vh]"
+          className="px-4 min-[480px]:px-8 sm:px-16 py-10 rounded-2xl mx-auto min-h-[80vh]"
           style={{
             width: 'calc(90vw - 2rem)',
             backgroundImage: `linear-gradient(var(--theme-form-bg, transparent), var(--theme-form-bg, transparent)), var(--theme-form-texture, none)`,
