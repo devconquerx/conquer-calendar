@@ -109,6 +109,26 @@ export function fireTikTokSubmitForm({ eventId, journeyId, email, phone }) {
 // Unified wrappers — fire ALL platforms with one call
 // ---------------------------------------------------------------------------
 
+/**
+ * Pageview virtual para navegaciones SPA (pushState). El PageView de la carga
+ * inicial lo disparan los scripts base de la plantilla; este se usa al cambiar
+ * de etapa (landing → video → stepform → confirmación) sin recarga.
+ */
+export function fireAllPageView() {
+  if (typeof window.gtag !== 'undefined') {
+    window.gtag('event', 'page_view', {
+      page_location: window.location.href,
+      page_path: window.location.pathname,
+    })
+  }
+  if (typeof window.fbq !== 'undefined') {
+    window.fbq('track', 'PageView')
+  }
+  if (typeof window.ttq !== 'undefined') {
+    window.ttq.page()
+  }
+}
+
 /** Fire Lead/SubmitForm event on all platforms. Used on form submit. */
 export function fireAllLead({ eventId, journeyId, email, phone, name, schoolSlug, fbp, fbc }) {
   setMetaAdvancedMatching({ schoolSlug, email, phone, name })

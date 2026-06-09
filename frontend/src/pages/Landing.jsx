@@ -5,7 +5,7 @@ import { getTheme } from '../themes'
 import { CB_CARD_SHADOW } from '../themes/conquerblocks'
 import { safeHtml } from '../lib/sanitize'
 
-export default function Landing({ school, program, region, formConfig, nextUrl, funnelSlug }) {
+export default function Landing({ school, program, region, formConfig, nextUrl, funnelSlug, videoEnabled = false }) {
   const theme = getTheme(school?.slug)
   const t = theme.landing
   const isCB = theme.id === 'conquerblocks'
@@ -20,7 +20,7 @@ export default function Landing({ school, program, region, formConfig, nextUrl, 
       school={school} program={program} region={region}
       formConfig={formConfig} theme={theme} assets={assets}
       instructor={instructor} disclaimer={disclaimer}
-      nextUrl={nextUrl} funnelSlug={funnelSlug}
+      nextUrl={nextUrl} funnelSlug={funnelSlug} videoEnabled={videoEnabled}
     />
   }
 
@@ -28,7 +28,7 @@ export default function Landing({ school, program, region, formConfig, nextUrl, 
     school={school} program={program} region={region}
     formConfig={formConfig} theme={theme} t={t}
     instructor={instructor} disclaimer={disclaimer}
-    nextUrl={nextUrl} funnelSlug={funnelSlug}
+    nextUrl={nextUrl} funnelSlug={funnelSlug} videoEnabled={videoEnabled}
   />
 }
 
@@ -36,7 +36,7 @@ export default function Landing({ school, program, region, formConfig, nextUrl, 
 /* ═══ ConquerBlocks Landing — réplica de producción en React + Tailwind ═══
    Fondo casi blanco (#FAFAFA) con textura sutil, columna central de 1024px,
    tarjetas planas grises con borde arena, formulario con glow aurora animado. */
-function CBLanding({ school, program, region, formConfig, theme, assets, instructor, disclaimer, nextUrl, funnelSlug }) {
+function CBLanding({ school, program, region, formConfig, theme, assets, instructor, disclaimer, nextUrl, funnelSlug, videoEnabled }) {
   const pageStyle = assets?.paperboardTexture ? {
     backgroundImage: `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url(${assets.paperboardTexture})`,
     backgroundSize: 'cover',
@@ -103,6 +103,7 @@ function CBLanding({ school, program, region, formConfig, theme, assets, instruc
               school={school}
               nextUrl={nextUrl}
               funnelSlug={funnelSlug}
+              videoEnabled={videoEnabled}
             />
           </div>
         </div>
@@ -158,7 +159,7 @@ function CBLanding({ school, program, region, formConfig, theme, assets, instruc
 
 
 /* ═══ Default Theme Landing ═══ */
-function DefaultLanding({ school, program, region, formConfig, theme, t, instructor, disclaimer, nextUrl, funnelSlug }) {
+function DefaultLanding({ school, program, region, formConfig, theme, t, instructor, disclaimer, nextUrl, funnelSlug, videoEnabled }) {
   return (
     <div className={`min-h-screen overflow-x-hidden ${t.bg} relative flex flex-col`}>
       <div className={`absolute inset-0 ${t.dotPattern}`} />
@@ -204,6 +205,7 @@ function DefaultLanding({ school, program, region, formConfig, theme, t, instruc
                   school={school}
                   nextUrl={nextUrl}
                   funnelSlug={funnelSlug}
+                  videoEnabled={videoEnabled}
                 />
               </div>
             </div>

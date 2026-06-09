@@ -4,12 +4,14 @@ import AgendarButton from '../components/vsl/AgendarButton'
 import { getTheme } from '../themes'
 import { sendVideoProgressToBackend } from '../api'
 import { safeHtml } from '../lib/sanitize'
+import { useRouter } from '../lib/router'
 
 /* Página de video (VSL) standalone — entre la landing de lead y el StepForm.
    Muestra el video (autoplay muted + overlays), revela el botón al alcanzar el
    buttonPercent y, al pulsarlo, redirige al StepForm conservando el query string
    (name/email/phone/event_id/journey_id que vienen de la landing). */
 export default function VideoPage({ school, region, formConfig, videoUrls, buttonPercent, nextUrl }) {
+  const router = useRouter()
   const [showButton, setShowButton] = useState(false)
 
   const theme = getTheme(school?.slug)
@@ -36,11 +38,16 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
     [email, school, region]
   )
 
-  // Siguiente etapa: el StepForm. Conserva el query string actual (prefill + tracking).
+  // Siguiente etapa: el StepForm. Conserva el query string actual (prefill +
+  // tracking). En la SPA navega con pushState; fuera de ella, recarga completa.
   const goToStepForm = useCallback(() => {
     const search = window.location.search || ''
+    if (router) {
+      router.navigate('stepform', { search })
+      return
+    }
     window.location.href = `${nextUrl}${search}`
-  }, [nextUrl])
+  }, [router, nextUrl])
 
   const pageStyle = isCB && assets?.paperboardTexture ? {
     backgroundImage: `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url(${assets.paperboardTexture})`,

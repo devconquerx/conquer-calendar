@@ -6,6 +6,7 @@ import useTracking from '../../hooks/useTracking'
 import useGeoLocation from '../../hooks/useGeoLocation'
 import { fireAllLead } from '../../lib/pixelEvents'
 import { registerLead } from '../../api'
+import { useRouter } from '../../lib/router'
 import { autocorrectEmail } from '../../lib/emailCorrection'
 import { getTheme } from '../../themes'
 import countries from '../../data/countries'
@@ -47,7 +48,8 @@ function parseAutofillPhone(rawValue, fallbackCountry) {
   return null
 }
 
-export default function LandingForm({ program, region, formConfig, school, nextUrl = '', funnelSlug = '' }) {
+export default function LandingForm({ program, region, formConfig, school, nextUrl = '', funnelSlug = '', videoEnabled = false }) {
+  const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -230,8 +232,13 @@ export default function LandingForm({ program, region, formConfig, school, nextU
     params.set('event_id', eventId)
     params.set('journey_id', journeyId)
 
-    // Siguiente etapa: la da el backend (data-next-url). Fallback a la URL
-    // canónica del StepForm /agenda/<producto>/<region>/ si no viniera.
+    // Siguiente etapa: video si la marca lo tiene configurado, si no el
+    // StepForm. Dentro de la SPA navegamos con pushState (sin recarga);
+    // fuera de ella (fallback) con recarga completa usando data-next-url.
+    if (router) {
+      router.navigate(videoEnabled ? 'video' : 'stepform', { search: `?${params.toString()}` })
+      return
+    }
     const dest = nextUrl || (program && region ? `/agenda/${program}/${region}/` : window.location.pathname)
     window.location.href = `${dest}?${params.toString()}`
   }

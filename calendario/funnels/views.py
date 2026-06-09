@@ -236,18 +236,7 @@ class FunnelAgendaView(View):
         funnel = get_object_or_404(
             FunnelForm, escuela=escuela, region=region, activo=True
         )
-        from .context_processors import get_pixel_ids
-        return render(
-            request,
-            'pages/public/funnel/page.html',
-            {
-                'funnel': funnel,
-                'slug': funnel.slug,
-                'pixel_ids': get_pixel_ids(funnel.escuela),
-                'confirmation_url': confirmacion_url(funnel.escuela, funnel.region, base=_base_path(request)),
-                'app_base_path': _base_path(request),
-            },
-        )
+        return _spa_render(request, funnel, 'stepform')
 
 
 def _escuela_por_host(request):
@@ -276,6 +265,13 @@ def _video_url(escuela, region, base=''):
     if escuela in _ESCUELAS_RUTA_PATH:
         return f'{base}/{escuela}/video-clase-{region}/'
     return f'{base}/video-clase-{region}/'
+
+
+# URL de la landing de registro de lead por marca (misma convención).
+def _landing_url(escuela, region, base=''):
+    if escuela in _ESCUELAS_RUTA_PATH:
+        return f'{base}/{escuela}/clase-online-gratuita-{region}/'
+    return f'{base}/clase-online-gratuita-{region}/'
 
 
 # URL de la página de confirmación de llamada por marca (misma convención).
@@ -319,11 +315,49 @@ _LANDING_TEMPLATE_POR_ESCUELA = {
 
 
 # Plantillas de la página de vídeo por marca (las que no estén aquí usan la
-# página de vídeo React por defecto, 'video.html'). conquer-languages tiene su
-# propio diseño (HTML + Tailwind + Plyr) que replica conquerlanguages.com.
+# página de vídeo React por defecto, dentro del shell SPA). conquer-languages
+# tiene su propio diseño (HTML + Tailwind + Plyr) que replica
+# conquerlanguages.com.
 _VIDEO_TEMPLATE_POR_ESCUELA = {
     'conquer-languages': 'pages/public/funnel/video_languages.html',
 }
+
+
+def _spa_render(request, funnel, stage, escuela=None, region=None):
+    """Renderiza el shell único de la SPA del funnel en la etapa indicada.
+
+    Todas las etapas (landing → video → stepform → confirmación) comparten
+    plantilla y bundle (src/funnel-spa.jsx): la SPA pinta la pantalla según
+    `stage` y navega entre etapas con pushState usando las URLs canónicas que
+    se pasan aquí. `funnel` puede ser None (confirmación sin funnel activo).
+    """
+    from .context_processors import get_pixel_ids
+    escuela = escuela or (funnel.escuela if funnel else '')
+    region = region or (funnel.region if funnel else '')
+    base = _base_path(request)
+    cfg = dict((funnel.config if funnel else None) or {})
+    if not cfg.get('video') and escuela in _VIDEO_DEFAULTS:
+        cfg['video'] = _VIDEO_DEFAULTS[escuela]
+    return render(
+        request,
+        'pages/public/funnel/spa.html',
+        {
+            'funnel': funnel,
+            'slug': funnel.slug if funnel else '',
+            'escuela': escuela,
+            'region': region,
+            'program': PRODUCTO_POR_ESCUELA.get(escuela, ''),
+            'stage': stage,
+            'funnel_config': cfg,
+            'video_enabled': bool(cfg.get('video')),
+            'landing_url': _landing_url(escuela, region, base=base) if region else '',
+            'video_url': _video_url(escuela, region, base=base) if region else '',
+            'stepform_url': stepform_url(escuela, region, base=base),
+            'confirmation_url': confirmacion_url(escuela, region, base=base) if region else '',
+            'pixel_ids': get_pixel_ids(escuela),
+            'app_base_path': base,
+        },
+    )
 
 
 class FunnelClaseView(View):
@@ -342,6 +376,11 @@ class FunnelClaseView(View):
         funnel = get_object_or_404(
             FunnelForm, escuela=escuela, region=region, activo=True
         )
+        # Marcas con plantilla propia (HTML + Tailwind, p.ej. languages) siguen
+        # el flujo multipágina; el resto entra al shell SPA en la etapa landing.
+        template_name = _LANDING_TEMPLATE_POR_ESCUELA.get(funnel.escuela)
+        if template_name is None:
+            return _spa_render(request, funnel, 'landing')
         from .context_processors import get_pixel_ids
         # Siguiente etapa tras la landing: la página de video si la marca la tiene
         # configurada; si no, directo al StepForm (/agenda/<producto>/<region>/).
@@ -350,12 +389,6 @@ class FunnelClaseView(View):
             next_url = _video_url(funnel.escuela, funnel.region, base=_base_path(request))
         else:
             next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request))
-        # Plantilla de landing por marca: languages tiene su propio diseño
-        # (HTML + Tailwind) que replica conquerlanguages.com; el resto usa la
-        # landing React por defecto.
-        template_name = _LANDING_TEMPLATE_POR_ESCUELA.get(
-            funnel.escuela, 'pages/public/funnel/landing.html',
-        )
         return render(
             request,
             template_name,
@@ -386,6 +419,12 @@ class FunnelVideoView(View):
         funnel = get_object_or_404(
             FunnelForm, escuela=escuela, region=region, activo=True
         )
+        # Marcas con plantilla propia (HTML + Tailwind + Plyr, p.ej. languages)
+        # siguen el flujo multipágina; el resto entra al shell SPA en la etapa
+        # de vídeo.
+        template_name = _VIDEO_TEMPLATE_POR_ESCUELA.get(funnel.escuela)
+        if template_name is None:
+            return _spa_render(request, funnel, 'video')
         from .context_processors import get_pixel_ids
         cfg = funnel.config or {}
         # La config del video (videoUrls + buttonPercent) vive en config['video'];
@@ -395,12 +434,6 @@ class FunnelVideoView(View):
             video_cfg['video'] = _VIDEO_DEFAULTS.get(funnel.escuela, {})
         # Siguiente etapa tras el video: el StepForm (/agenda/<producto>/<region>/).
         next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request))
-        # Plantilla de vídeo por marca: languages tiene su propio diseño
-        # (HTML + Tailwind) que replica conquerlanguages.com; el resto usa la
-        # página de vídeo React por defecto.
-        template_name = _VIDEO_TEMPLATE_POR_ESCUELA.get(
-            funnel.escuela, 'pages/public/funnel/video.html',
-        )
         return render(
             request,
             template_name,
@@ -439,19 +472,7 @@ class FunnelConfirmationView(View):
             ).first()
         if funnel is None:
             funnel = FunnelForm.objects.filter(escuela=escuela, activo=True).first()
-        from .context_processors import get_pixel_ids
-        return render(
-            request,
-            'pages/public/funnel/confirmation.html',
-            {
-                'funnel': funnel,
-                'escuela': escuela,
-                'slug': funnel.slug if funnel else '',
-                'region': region or (funnel.region if funnel else ''),
-                'pixel_ids': get_pixel_ids(escuela),
-                'app_base_path': _base_path(request),
-            },
-        )
+        return _spa_render(request, funnel, 'confirmation', escuela=escuela, region=region)
 
 
 class FunnelStatusView(View):
