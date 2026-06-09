@@ -270,6 +270,10 @@ GOOGLE_ADS_LOGIN_CUSTOMER_ID = env.str('GOOGLE_ADS_LOGIN_CUSTOMER_ID', default='
 # CRM ingest (distinto del webhook de Make de arriba)
 CRM_BASE_URL = env.str('CRM_BASE_URL', default='https://crm.conquerx.com')
 CRM_API_KEY = env.str('CRM_API_KEY', default='')
+# Envío de la Prellamada al CRM ingest. Mientras esté en False, la task hace
+# no-op y el sweep no la reintenta (evita loop). Ponlo en True cuando el CRM esté
+# listo para recibir pre-schedules.
+FUNNELS_PRESCHEDULE_CRM_ENABLED = env.bool('FUNNELS_PRESCHEDULE_CRM_ENABLED', default=False)
 
 # ──────────────────────────────────────────────────────────────────────
 # Supabase — respaldo rodante de lo que se envía al CRM (lead/preschedule/
@@ -315,6 +319,10 @@ CELERY_BEAT_SCHEDULE = {
     'sweep-incomplete-reservas': {
         'task': 'calendario.bookings.tasks.sweep_incomplete_reservas',
         'schedule': 60.0,
+    },
+    'sweep-incomplete-prellamadas': {
+        'task': 'calendario.funnels.tasks.sweep_incomplete_prellamadas',
+        'schedule': 120.0,
     },
     'check-funnel-health': {
         'task': 'calendario.monitoring.tasks.check_funnel_health',

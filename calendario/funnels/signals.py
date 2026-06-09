@@ -10,18 +10,22 @@ logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=Prellamada)
 def on_prellamada_saved(sender, instance, created, **kwargs):
-    """Envía la Prellamada al CRM en cada create/update (réplica de funnels:
-    on_pre_schedule_saved → process_pre_schedule_crm) y la respalda en Supabase
-    una sola vez, al crearla (el upsert por source_id la mantiene idempotente)."""
+    """En cada create/update de la Prellamada re-envía a CRM y Supabase. Ambos
+    hacen upsert (por journey_id / source_id), así convergen al último estado a
+    medida que la prellamada se actualiza (respuestas, reserva vinculada, etc.).
+    Cada task marca su tag `<dest>_done` al terminar; el sweep reencola las que
+    no lo tengan (ni `<dest>_failed`).
+
+    En un update reseteamos los tags de estado a 'pendiente' antes de reencolar:
+    así, si el envío de ESE update falla, la prellamada queda sin `<dest>_done` y
+    el sweep la agarra (no solo las nunca sincronizadas)."""
     from .tasks import process_pre_schedule_crm, process_pre_schedule_supabase
 
-    try:
-        process_pre_schedule_crm.delay(instance.pk)
-    except Exception:
-        logger.exception('No se pudo encolar process_pre_schedule_crm para prellamada %s', instance.pk)
+    if not created:
+        instance.tags.remove('supabase_done', 'supabase_failed', 'crm_done', 'crm_failed')
 
-    if created:
+    for task in (process_pre_schedule_crm, process_pre_schedule_supabase):
         try:
-            process_pre_schedule_supabase.delay(instance.pk)
+            task.delay(instance.pk)
         except Exception:
-            logger.exception('No se pudo encolar process_pre_schedule_supabase para prellamada %s', instance.pk)
+            logger.exception('No se pudo encolar %s para prellamada %s', task.name, instance.pk)

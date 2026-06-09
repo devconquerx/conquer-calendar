@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from taggit.managers import TaggableManager
 
 
 class FunnelForm(models.Model):
@@ -147,6 +148,12 @@ class Prellamada(models.Model):
         help_text='UTM/journey opcional, sin lógica MVP.',
     )
     creado_en = models.DateTimeField(auto_now_add=True)
+
+    # Estado de los procedimientos del signal (CRM / Supabase) vía tags:
+    # `<dest>_done` cuando el envío fue exitoso, `<dest>_failed` cuando agotó
+    # reintentos (lo pone el handler de celery). El sweep reencola las que no
+    # tengan `<dest>_done` ni `<dest>_failed`.
+    tags = TaggableManager(blank=True)
 
     class Meta:
         db_table = 'prellamadas'
