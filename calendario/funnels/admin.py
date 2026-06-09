@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -108,19 +109,45 @@ class FunnelScoringAdmin(admin.ModelAdmin):
         return False
 
 
+def _tag_col(done_tag, failed_tag, short_description, gated_setting=None):
+    """Columna tri-estado por tags: ✅ done, ⚠️ failed, ⏳ pendiente, — si el
+    destino está deshabilitado por setting."""
+    def column(self, obj):
+        if gated_setting and not getattr(settings, gated_setting, False):
+            return format_html('<span title="deshabilitado" style="opacity:.4">—</span>')
+        names = {t.name for t in obj.tags.all()}  # usa el prefetch del queryset
+        if done_tag in names:
+            return format_html('✅')
+        if failed_tag in names:
+            return format_html('⚠️')
+        return format_html('⏳')
+    column.short_description = short_description
+    return column
+
+
 @admin.register(Prellamada)
 class PrellamadaAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'email', 'resultado', 'score', 'event_type', 'reserva', 'creado_en')
-    list_filter = ('resultado', 'funnel', 'creado_en')
+    list_display = (
+        'nombre', 'email', 'resultado', 'score', 'event_type', 'reserva',
+        'col_supabase', 'col_crm', 'creado_en',
+    )
+    list_filter = ('resultado', 'funnel', 'creado_en', 'tags')
     search_fields = ('nombre', 'email', 'telefono', 'token')
     date_hierarchy = 'creado_en'
+    exclude = ('tags',)
     readonly_fields = (
         'funnel', 'token', 'nombre', 'email', 'telefono', 'respuestas',
         'score', 'resultado', 'event_type', 'reserva', 'tracking', 'creado_en',
     )
+
+    col_supabase = _tag_col('supabase_done', 'supabase_failed', 'Supabase')
+    col_crm = _tag_col('crm_done', 'crm_failed', 'CRM', gated_setting='FUNNELS_PRESCHEDULE_CRM_ENABLED')
     formfield_overrides = {
         models.JSONField: {'widget': JSONEditorWidget},
     }
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('tags')
 
     def has_add_permission(self, request):
         return False
