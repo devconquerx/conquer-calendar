@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ funnel.nombre|default:"Vídeo clase" }} — Conquer Languages</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Oswald:wght@400;500;600&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+
+  {% if pixel_ids.ga4 %}
+  <!-- Google tag (gtag.js) — GA4 + Google Ads -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ pixel_ids.ga4 }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '{{ pixel_ids.ga4 }}', { send_page_view: true });
+  </script>
+  {% endif %}
+
+  {% if pixel_ids.meta %}
+  <!-- Meta Pixel -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '{{ pixel_ids.meta }}');
+    fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id={{ pixel_ids.meta }}&ev=PageView&noscript=1" /></noscript>
+  {% endif %}
+
+  {% if pixel_ids.tiktok %}
+  <!-- TikTok Pixel -->
+  <script>
+    !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
+    ttq.methods=["page","track","identify","instances","debug","on","off",
+    "once","ready","alias","group","enableCookie","disableCookie","holdConsent",
+    "revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=
+    function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};
+    for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
+    ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;
+    n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){
+    var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;
+    ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},
+    ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};
+    var a=document.createElement("script");a.type="text/javascript",
+    a.async=!0,a.src=r+"?sdkid="+e+"&lib="+t;
+    var s=document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(a,s)}}(window,document,"ttq");
+    ttq.load('{{ pixel_ids.tiktok }}');
+    ttq.page();
+  </script>
+  {% endif %}
+
+  <style>
+    body { font-family: 'Montserrat', Arial, sans-serif; }
+    .font-oswald { font-family: 'Oswald', sans-serif; }
+    .font-mont { font-family: 'Montserrat', sans-serif; }
+    .font-poppins { font-family: 'Poppins', sans-serif; }
+    /* Botón CTA — réplica de conquerlanguages.com (teal pill) */
+    .cta {
+      background: #498ca7;
+      border-radius: 85px;
+      transition: filter .15s ease, transform .1s ease;
+    }
+    .cta:hover { filter: brightness(1.06); }
+    .cta:active { transform: scale(.98); }
+    /* Glow azulado bajo el reproductor (réplica de prod) */
+    .video-glow { box-shadow: 0 2px 20px 6px rgba(127, 193, 255, .28); }
+    /* Plyr: aspecto del player acorde al diseño */
+    .plyr { border-radius: 6px; overflow: hidden; }
+    /* Animación de entrada del botón */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .fade-in-up { animation: fadeInUp .35s ease both; }
+  </style>
+</head>
+<body class="bg-white text-[#333]">
+  {{ video_config|json_script:"video-config" }}
+
+  <main id="video-root"
+        data-slug="{{ slug }}"
+        data-escuela="{{ funnel.escuela }}"
+        data-region="{{ funnel.region }}"
+        data-next-url="{{ next_url }}"
+        data-csrf="{{ csrf_token }}"
+        class="mx-auto w-full max-w-[1024px] px-5 pb-16">
+
+    <!-- Logo -->
+    <header class="flex justify-center pt-[14px] pb-0">
+      <img src="https://cdn.prod.website-files.com/667c1e146a9301215e42beb0/66e8012c137510a8c6a9266f_Logo_Conquer_languages.svg"
+           alt="Conquer Languages" class="w-[200px] h-auto">
+    </header>
+
+    <!-- Eyebrow -->
+    <p class="font-oswald text-center text-[#77b4d8] text-[22px] md:text-[24px] leading-[28px] tracking-[.02em] uppercase mt-[40px]">
+      · Vídeo de 15 minutos ·
+    </p>
+
+    <!-- Headline -->
+    <h1 class="font-mont text-center text-[#333] text-[22px] md:text-[30px] leading-[1.2] font-normal mt-4 max-w-[860px] mx-auto">
+      Descubre el <strong class="font-bold">sistema</strong>
+      <br class="hidden md:block">
+      que te cambiará la manera en la que ves el aprendizaje, y mejor aún, el sistema que te permitirá alcanzar un <strong class="font-bold">nivel B2 de inglés en 90 días</strong> sin presión ni bloqueos.
+    </h1>
+
+    <!-- Reproductor -->
+    <div class="mt-9 mx-auto max-w-[960px]">
+      <div id="video-shell" class="video-glow rounded-[6px] overflow-hidden bg-black relative aspect-video">
+        <video id="vsl-video" playsinline preload="auto" muted class="w-full h-full"></video>
+
+        <!-- Overlay: activar audio (primera visita) -->
+        <div id="unmute-overlay"
+             class="hidden absolute inset-0 z-20 flex items-center justify-center bg-black/60 cursor-pointer">
+          <div class="text-center text-white px-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-14 h-14 mx-auto mb-3 text-white/85" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+            </svg>
+            <p class="font-poppins text-[16px] md:text-[18px] mb-4">El vídeo se está reproduciendo</p>
+            <span class="inline-block bg-white text-black font-poppins font-semibold text-[15px] px-7 py-3 rounded-full">Toca para activar el audio</span>
+          </div>
+        </div>
+
+        <!-- Overlay: volver (visitante recurrente) -->
+        <div id="returning-overlay"
+             class="hidden absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 px-5 text-center">
+          <h2 class="font-poppins font-extrabold text-white text-[24px] md:text-[36px] leading-tight mb-6">Ya habías comenzado a ver este vídeo</h2>
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-10">
+            <button id="btn-continue" type="button" class="flex items-center gap-3 group">
+              <span class="flex items-center justify-center w-[64px] h-[64px] rounded-full border-[3px] border-[#2563eb] text-white group-hover:bg-[#2563eb]/20 transition-colors">
+                <svg class="w-6 h-6 ml-1" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+              <span class="font-poppins text-white text-[15px] md:text-[16px]">¿Continuar donde lo dejaste?</span>
+            </button>
+            <button id="btn-restart" type="button" class="flex items-center gap-3 group">
+              <span class="flex items-center justify-center w-[64px] h-[64px] rounded-full border-[3px] border-[#2563eb] text-white group-hover:bg-[#2563eb]/20 transition-colors">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+              </span>
+              <span class="font-poppins text-white text-[15px] md:text-[16px]">¿Empezar desde el principio?</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA — aparece al alcanzar el buttonPercent -->
+    <div id="cta-wrap" class="hidden justify-center mt-8">
+      <button id="agendar-btn" type="button"
+              class="cta font-mont font-extrabold text-white text-[15px] md:text-[18px] uppercase px-8 md:px-10 py-4 md:py-5">
+        Agendar sesión de consultoría gratuita
+      </button>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-[#70b3c4] text-white">
+    <div class="mx-auto max-w-[1100px] px-5 py-4 flex flex-col sm:flex-row gap-2 justify-between items-center text-[14px]">
+      <span>Copyright @Conquer Languages 2026</span>
+      <nav class="flex gap-5">
+        <a href="#" class="hover:underline">Aviso Legal</a>
+        <a href="#" class="hover:underline">Política de Privacidad</a>
+        <a href="#" class="hover:underline">Política de Cookies</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+  <script>
+    (function () {
+      var root = document.getElementById('video-root');
+      var nextUrl = root.dataset.nextUrl || '/';
+      var escuela = root.dataset.escuela || '';
+      var region = root.dataset.region || '';
+      var csrf = root.dataset.csrf || '';
+
+      var cfg = {};
+      try { cfg = JSON.parse(document.getElementById('video-config').textContent) || {}; } catch (e) {}
+      var video = cfg.video || {};
+      var urls = (video.videoUrls && video.videoUrls.length) ? video.videoUrls : [];
+      var buttonPercent = video.buttonPercent || 75;
+      var videoUrl = urls[0] || '';
+
+      var email = new URLSearchParams(window.location.search).get('email') || '';
+
+      // --- Persistencia del progreso (réplica de VideoPlayer.jsx) ---
+      var STORAGE_KEY = 'vsl_progress';
+      var LEGACY_KEY = 'videolitics';
+
+      function readStored(key) {
+        try {
+          var data = JSON.parse(localStorage.getItem(key) || '{}');
+          if (data && data.video_url === videoUrl) return data;
+        } catch (e) {}
+        return null;
+      }
+      function getStored() {
+        var cur = readStored(STORAGE_KEY);
+        if (cur) return cur;
+        var legacy = readStored(LEGACY_KEY);
+        if (legacy) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy)); } catch (e) {} return legacy; }
+        return null;
+      }
+      function storeProgress(updates) {
+        try {
+          var cur = getStored() || {
+            time: 0, progress_percent: 0, visit_number: 0,
+            unmuted: false, is_returning: false, progress_latest_visit: 0, video_url: videoUrl,
+          };
+          var next = Object.assign({}, cur, updates, { video_url: videoUrl });
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+          localStorage.setItem(LEGACY_KEY, JSON.stringify(next));
+        } catch (e) {}
+      }
+
+      // --- Reporte de progreso al backend (cada 10%) ---
+      function sendVideoProgress(percent) {
+        try {
+          fetch('/f/api/video-progress/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ email: email, percent: percent, school: escuela, region: region }),
+          }).catch(function () {});
+        } catch (e) {}
+      }
+
+      // --- Navegación al StepForm conservando el query string ---
+      function goToStepForm() {
+        var search = window.location.search || '';
+        window.location.href = nextUrl + search;
+      }
+
+      var ctaWrap = document.getElementById('cta-wrap');
+      var buttonShown = false;
+      function showButton() {
+        if (buttonShown) return;
+        buttonShown = true;
+        ctaWrap.classList.remove('hidden');
+        ctaWrap.classList.add('flex', 'fade-in-up');
+      }
+      document.getElementById('agendar-btn').addEventListener('click', goToStepForm);
+
+      if (!videoUrl) return;
+
+      var videoEl = document.getElementById('vsl-video');
+      var unmuteOverlay = document.getElementById('unmute-overlay');
+      var returningOverlay = document.getElementById('returning-overlay');
+
+      var stored = getStored();
+      var isReturning = stored && stored.progress_percent > 0;
+
+      if (isReturning) {
+        storeProgress({ visit_number: (stored.visit_number || 0) + 1, is_returning: true });
+        returningOverlay.classList.remove('hidden');
+        // Los visitantes recurrentes ya ven el botón (igual que en prod)
+        showButton();
+      } else {
+        storeProgress({ visit_number: 1 });
+        unmuteOverlay.classList.remove('hidden');
+      }
+
+      videoEl.src = videoUrl;
+      videoEl.muted = true;
+
+      var player = new Plyr(videoEl, {
+        autoplay: true,
+        muted: true,
+        hideControls: false,
+        controls: ['play', 'mute', 'volume', 'fullscreen'],
+      });
+
+      player.muted = true;
+
+      var milestones = {};
+      player.on('timeupdate', function () {
+        if (!player.duration) return;
+        var percent = (player.currentTime / player.duration) * 100;
+        var cur = getStored();
+        var maxPercent = (cur && cur.progress_percent > percent) ? cur.progress_percent : percent;
+
+        var updates = { time: player.currentTime, progress_percent: maxPercent, unmuted: !player.muted };
+        if (!player.muted) updates.progress_latest_visit = player.currentTime;
+        storeProgress(updates);
+
+        if (percent >= buttonPercent) showButton();
+
+        [10, 20, 30, 40, 50, 60, 70, 80, 90, 100].forEach(function (p) {
+          if (maxPercent >= p && !milestones['p' + p]) {
+            milestones['p' + p] = true;
+            sendVideoProgress(p);
+          }
+        });
+      });
+
+      player.on('ended', function () { goToStepForm(); });
+
+      // Autoplay silenciado (incluso con overlay visible)
+      var pp = player.play();
+      if (pp && pp.catch) pp.catch(function () {});
+
+      // Overlay: activar audio
+      unmuteOverlay.addEventListener('click', function () {
+        unmuteOverlay.classList.add('hidden');
+        player.muted = false;
+        player.restart();
+      });
+
+      // Overlay recurrente: continuar
+      document.getElementById('btn-continue').addEventListener('click', function () {
+        returningOverlay.classList.add('hidden');
+        player.muted = false;
+        player.currentTime = (stored && (stored.progress_latest_visit || stored.time)) || 0;
+        var p = player.play(); if (p && p.catch) p.catch(function () {});
+      });
+
+      // Overlay recurrente: empezar de nuevo
+      document.getElementById('btn-restart').addEventListener('click', function () {
+        returningOverlay.classList.add('hidden');
+        player.restart();
+        player.muted = false;
+        var p = player.play(); if (p && p.catch) p.catch(function () {});
+      });
+    })();
+  </script>
+</body>
+</html>

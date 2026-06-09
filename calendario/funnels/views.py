@@ -303,12 +303,26 @@ _VIDEO_DEFAULTS = {
         ],
         'buttonPercent': 75,
     },
+    'conquer-languages': {
+        'videoUrls': [
+            'https://vslconquerx.b-cdn.net/conquerlanguages/vsl-cl-original-v1-compress.mp4',
+        ],
+        'buttonPercent': 75,
+    },
 }
 
 
 # Plantillas de landing por marca (las que no estén aquí usan la landing React).
 _LANDING_TEMPLATE_POR_ESCUELA = {
     'conquer-languages': 'pages/public/funnel/landing_languages.html',
+}
+
+
+# Plantillas de la página de vídeo por marca (las que no estén aquí usan la
+# página de vídeo React por defecto, 'video.html'). conquer-languages tiene su
+# propio diseño (HTML + Tailwind + Plyr) que replica conquerlanguages.com.
+_VIDEO_TEMPLATE_POR_ESCUELA = {
+    'conquer-languages': 'pages/public/funnel/video_languages.html',
 }
 
 
@@ -381,9 +395,15 @@ class FunnelVideoView(View):
             video_cfg['video'] = _VIDEO_DEFAULTS.get(funnel.escuela, {})
         # Siguiente etapa tras el video: el StepForm (/agenda/<producto>/<region>/).
         next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request))
+        # Plantilla de vídeo por marca: languages tiene su propio diseño
+        # (HTML + Tailwind) que replica conquerlanguages.com; el resto usa la
+        # página de vídeo React por defecto.
+        template_name = _VIDEO_TEMPLATE_POR_ESCUELA.get(
+            funnel.escuela, 'pages/public/funnel/video.html',
+        )
         return render(
             request,
-            'pages/public/funnel/video.html',
+            template_name,
             {
                 'funnel': funnel,
                 'slug': funnel.slug,
