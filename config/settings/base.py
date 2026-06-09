@@ -48,6 +48,7 @@ LOCAL_APPS = [
     'metronic',
     'layout',
 
+    'calendario.core',
     'calendario.users',
     'calendario.permisos',
     'calendario.event_types',
@@ -270,6 +271,22 @@ GOOGLE_ADS_LOGIN_CUSTOMER_ID = env.str('GOOGLE_ADS_LOGIN_CUSTOMER_ID', default='
 CRM_BASE_URL = env.str('CRM_BASE_URL', default='https://crm.conquerx.com')
 CRM_API_KEY = env.str('CRM_API_KEY', default='')
 
+# ──────────────────────────────────────────────────────────────────────
+# Supabase — respaldo rodante de lo que se envía al CRM (lead/preschedule/
+# schedule), vía la REST API (PostgREST) con la secret key del lado servidor.
+# Fail-safe: si SUPABASE_ENABLED=False o falta URL/secret, cada push hace no-op
+# y loguea (el flujo de lead/booking nunca se rompe). Retención corta: una task
+# periódica borra las filas con más de SUPABASE_RETENTION_DAYS días.
+# ──────────────────────────────────────────────────────────────────────
+SUPABASE_ENABLED = env.bool('SUPABASE_ENABLED', default=False)
+SUPABASE_URL = env.str('SUPABASE_URL', default='')  # https://<ref>.supabase.co
+SUPABASE_SECRET_KEY = env.str('SUPABASE_SECRET_KEY', default='')
+SUPABASE_TIMEOUT_SECONDS = env.int('SUPABASE_TIMEOUT_SECONDS', default=15)
+SUPABASE_RETENTION_DAYS = env.int('SUPABASE_RETENTION_DAYS', default=7)
+SUPABASE_TABLE_LEADS = env.str('SUPABASE_TABLE_LEADS', default='leads_backup')
+SUPABASE_TABLE_PRE_SCHEDULES = env.str('SUPABASE_TABLE_PRE_SCHEDULES', default='preschedules_backup')
+SUPABASE_TABLE_SCHEDULES = env.str('SUPABASE_TABLE_SCHEDULES', default='schedules_backup')
+
 # Monitoring / alertas de tasks
 MONITORING_ENABLED = env.bool('MONITORING_ENABLED', default=False)
 MONITORING_MAILGUN_DOMAIN = env.str('MONITORING_MAILGUN_DOMAIN', default='conquerblocks.com')
@@ -302,6 +319,10 @@ CELERY_BEAT_SCHEDULE = {
     'check-funnel-health': {
         'task': 'calendario.monitoring.tasks.check_funnel_health',
         'schedule': 300.0,
+    },
+    'purge-old-supabase-backups': {
+        'task': 'calendario.core.tasks.purge_old_supabase_backups',
+        'schedule': 3600.0,  # cada hora; borra lo más viejo que SUPABASE_RETENTION_DAYS
     },
 }
 
