@@ -1,4 +1,4 @@
-export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk, onBack, messages }) {
+export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk, onBack, messages, hideEnterHint }) {
   const m = messages || {}
   return (
     <div className="flex items-center gap-4 mt-6">
@@ -6,8 +6,31 @@ export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk
         type="button"
         onClick={onOk}
         disabled={isSubmitting}
-        className="group text-[var(--theme-accent-text,#fff)] px-5 py-2 rounded-lg font-semibold hover:brightness-110 transition-all text-base disabled:opacity-50 flex items-center gap-2"
-        style={{ background: 'var(--theme-btn-gradient, var(--theme-accent, #111827))' }}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          background: isSubmitting ? '#e5e5e5' : 'linear-gradient(90deg, #ffbf00, #ff4000)',
+          borderRadius: 0,
+          border: 0,
+          boxShadow: 'none',
+          fontFamily: '"Funnel Display", Arial, sans-serif',
+          fontWeight: 300,
+          color: isSubmitting ? '#8d8d8d' : '#fafafa',
+          lineHeight: 1,
+          cursor: isSubmitting ? 'not-allowed' : 'pointer',
+          paddingLeft: '1.75rem',
+          paddingRight: '1.75rem',
+          paddingTop: '0.75rem',
+          paddingBottom: '0.75rem',
+          fontSize: '1.25rem',
+          transition: 'opacity 0.2s ease',
+          opacity: isSubmitting ? 0.6 : 1,
+          clipPath: 'polygon(97.74% 73.83%, 97.74% 82.56%, 100% 82.56%, 100% 100%, 95.47% 100%, 95.47% 91.28%, 81.5% 91.28%, 81.5% 100%, 19.87% 100%, 19.87% 91.28%, 9.06% 91.28%, 9.06% 100%, 2.26% 100%, 2.26% 80.24%, 0% 80.24%, 0% 26.16%, 2.26% 26.16%, 2.26% 17.44%, 0% 17.44%, 0% 0%, 4.53% 0%, 4.53% 8.72%, 12.82% 8.72%, 12.82% 0%, 72.03% 0%, 72.03% 8.72%, 88.67% 8.72%, 88.67% 0%, 97.74% 0%, 97.74% 8.72%, 100% 8.72%, 100% 73.83%)',
+        }}
+        className="group"
+        onMouseEnter={e => { if (!isSubmitting) e.currentTarget.style.opacity = '0.9' }}
+        onMouseLeave={e => { if (!isSubmitting) e.currentTarget.style.opacity = '1' }}
       >
         {isSubmitting ? (
           <>
@@ -31,7 +54,7 @@ export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk
           </>
         )}
       </button>
-      {!isLast && (
+      {!isLast && !hideEnterHint && (
         <span className="hidden md:inline text-gray-500 text-sm font-medium">
           {m['label.button.enterHint'] || 'presiona'} <strong className="font-bold">Enter ↵</strong>
         </span>

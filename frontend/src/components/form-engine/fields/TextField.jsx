@@ -4,9 +4,7 @@ export default function TextField({ field, value, onChange, onKeyDown }) {
   const inputRef = useRef(null)
 
   useEffect(() => {
-    if (!inputRef.current) return
-    inputRef.current.focus()
-    setTimeout(() => inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)
+    inputRef.current?.focus({ preventScroll: true })
   }, [field.id])
 
   return (

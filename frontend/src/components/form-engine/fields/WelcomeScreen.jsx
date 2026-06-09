@@ -1,9 +1,4 @@
-import { useTheme } from '../../../themes'
-
 export default function WelcomeScreen({ field, onNext }) {
-  const theme = useTheme()
-  const ctaButtonBg = theme.assets?.ctaButtonBg
-
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
       <h1 className="text-gray-900 text-2xl md:text-3xl font-bold mb-4 leading-tight">
@@ -14,35 +9,33 @@ export default function WelcomeScreen({ field, onNext }) {
           {field.description}
         </p>
       )}
-      {ctaButtonBg ? (
-        <button
-          onClick={() => onNext(null)}
-          className="relative px-10 py-3 text-white text-base font-semibold whitespace-nowrap flex items-center justify-center hover:brightness-110 active:scale-[0.98] transition-all overflow-visible"
-        >
-          <img
-            src={ctaButtonBg}
-            alt=""
-            className="absolute pointer-events-none"
-            style={{
-              top: '-8px',
-              left: '-10px',
-              width: 'calc(100% + 20px)',
-              height: 'calc(100% + 16px)',
-            }}
-          />
-          <span className="relative z-10" style={{ marginLeft: '-17px' }}>
-            {field.buttonText || 'Comenzar'}
-          </span>
-        </button>
-      ) : (
-        <button
-          onClick={() => onNext(null)}
-          className="text-[var(--theme-accent-text,#fff)] px-8 py-3 rounded-lg font-semibold hover:brightness-110 transition-all text-lg"
-          style={{ background: 'var(--theme-btn-gradient, var(--theme-accent, #111827))' }}
-        >
-          {field.buttonText || 'Comenzar'}
-        </button>
-      )}
+      <button
+        onClick={() => onNext(null)}
+        style={{
+          display: 'inline-block',
+          background: 'linear-gradient(90deg, #ffbf00, #ff4000)',
+          borderRadius: 0,
+          border: 0,
+          boxShadow: 'none',
+          fontFamily: '"Funnel Display", Arial, sans-serif',
+          fontWeight: 300,
+          color: '#fafafa',
+          lineHeight: 1,
+          textDecoration: 'none',
+          cursor: 'pointer',
+          paddingLeft: '4rem',
+          paddingRight: '4rem',
+          paddingTop: '0.9rem',
+          paddingBottom: '0.9rem',
+          fontSize: '1.25rem',
+          transition: 'opacity 0.2s ease',
+          clipPath: 'polygon(97.74% 73.83%, 97.74% 82.56%, 100% 82.56%, 100% 100%, 95.47% 100%, 95.47% 91.28%, 81.5% 91.28%, 81.5% 100%, 19.87% 100%, 19.87% 91.28%, 9.06% 91.28%, 9.06% 100%, 2.26% 100%, 2.26% 80.24%, 0% 80.24%, 0% 26.16%, 2.26% 26.16%, 2.26% 17.44%, 0% 17.44%, 0% 0%, 4.53% 0%, 4.53% 8.72%, 12.82% 8.72%, 12.82% 0%, 72.03% 0%, 72.03% 8.72%, 88.67% 8.72%, 88.67% 0%, 97.74% 0%, 97.74% 8.72%, 100% 8.72%, 100% 73.83%)',
+        }}
+        onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+      >
+        {field.buttonText || 'Comenzar'}
+      </button>
       <span className="hidden md:inline text-gray-400 text-xs mt-3">
         presiona <strong>Enter ↵</strong>
       </span>

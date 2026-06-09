@@ -9,10 +9,11 @@ import CalendlyEmbed from './components/CalendlyEmbed'
 import Confirmation from './components/Confirmation'
 import RejectScreen from './components/RejectScreen'
 import { buildCalendlyParams, buildCalendlyUrl, getYearMonthForCalendly } from './lib/calendly'
-import ProgressBar from './components/form-engine/ProgressBar'
+import BottomNavBar from './components/form-engine/BottomNavBar'
 import StepTransition from './components/form-engine/StepTransition'
 import WelcomeScreen from './components/form-engine/fields/WelcomeScreen'
 import { getPrefillRespuestas } from './lib/prefillParams'
+import { validateBlock } from './lib/validateBlock'
 import { getTheme, ThemeContext } from './themes'
 import './funnel.css'
 
@@ -63,6 +64,8 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   // Progress counts from block 1 onward (block 0 = welcome screen)
   const totalSteps = blocks.length - 1
   const progress = totalSteps > 0 ? Math.round(((currentIndex) / totalSteps) * 100) : 0
+
+  const currentValueFilled = current ? validateBlock(current, respuestas[current.id] || '') : false
 
   const handleChange = (value) => {
     if (!current) return
@@ -293,7 +296,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     <ThemeContext.Provider value={theme}>
       <div className="funnel-wrap" style={pageStyle}>
         <div
-          className="px-8 sm:px-16 py-10 rounded-2xl overflow-hidden mx-auto min-h-[80vh]"
+          className="px-8 sm:px-16 py-10 rounded-2xl mx-auto min-h-[80vh]"
           style={{
             width: 'calc(90vw - 2rem)',
             backgroundImage: `linear-gradient(var(--theme-form-bg, transparent), var(--theme-form-bg, transparent)), var(--theme-form-texture, none)`,
@@ -303,14 +306,23 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
             boxShadow: 'var(--theme-form-shadow, none)',
           }}
         >
-          {!isWelcome && <ProgressBar progress={progress} />}
-          <div className="mt-8">
+          <div className="mt-8 overflow-hidden min-h-[60vh]">
             <StepTransition stepKey={currentIndex} direction={direction}>
               {renderStep()}
             </StepTransition>
           </div>
         </div>
       </div>
+
+      {phase === 'form' && !isWelcome && (
+        <BottomNavBar
+          progress={progress}
+          onUp={handleBack}
+          onDown={() => handleNext(respuestas[current?.id] || '')}
+          canGoUp={currentIndex > 1}
+          canGoDown={!isLast && currentValueFilled}
+        />
+      )}
     </ThemeContext.Provider>
   )
 }

@@ -57,7 +57,7 @@ export default function PhoneField({ field, value, onChange, onNext }) {
 
   // Focus input
   useEffect(() => {
-    inputRef.current?.focus()
+    inputRef.current?.focus({ preventScroll: true })
   }, [field.id])
 
   // Close dropdown on outside click

@@ -48,7 +48,7 @@ export default function StepTransition({ stepKey, direction, children }) {
 
   return (
     <div
-      className={`transform transition-all duration-300 ease-out ${animClass}`}
+      className={`transform transition-[transform,opacity] duration-300 ease-out ${animClass}`}
     >
       {display}
     </div>

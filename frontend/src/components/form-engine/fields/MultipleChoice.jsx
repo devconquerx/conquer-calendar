@@ -30,64 +30,36 @@ export default function MultipleChoice({ field, value, onChange, onNext }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [choices, handleSelect])
 
-  // Pair choices into rows of 2
-  const rows = []
-  for (let i = 0; i < choices.length; i += 2) {
-    rows.push(choices.slice(i, i + 2))
-  }
-
   return (
-    <div className="flex flex-col gap-2">
-      {rows.map((row, rowIdx) => (
-        <div key={rowIdx} className="flex flex-col md:flex-row gap-2">
-          {row.map((choice, colIdx) => {
-            const idx = rowIdx * 2 + colIdx
-            const isSelected = value === choice.value
-            const letter = KEYS[idx]?.toUpperCase()
-            const isLastOdd = row.length === 1
-
-            return (
-              <button
-                key={choice.value}
-                type="button"
-                onClick={() => handleSelect(choice.value)}
-                className={`group/choice relative flex items-center justify-between gap-4 text-left p-2 rounded-lg border transition-all duration-200 overflow-hidden ${
-                  isLastOdd ? 'flex-1 md:max-w-[50%]' : 'flex-1'
-                } ${
-                  isSelected
-                    ? 'border-[#F97316] ring-2 ring-[#F97316]/30'
-                    : 'border-[#BBB49B] hover:border-[#F97316]/50'
-                }`}
-                style={{
-                  backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${paperboardTexture})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  boxShadow: cbShadow,
-                }}
-              >
-                {/* Hover overlay (CSS-only) + Selected overlay */}
-                <div className={`absolute inset-0 pointer-events-none rounded-lg transition-colors ${
-                  isSelected ? 'bg-black/[0.08]' : 'bg-transparent group-hover/choice:bg-black/[0.06]'
-                }`} />
-
-                <span className="relative text-[#444] text-base md:text-lg leading-[1.5]">
-                  {choice.label}
-                </span>
-
-                {letter && (
-                  <span className={`relative w-8 h-8 hidden md:flex items-center justify-center rounded-full border text-base flex-shrink-0 transition-colors ${
-                    isSelected
-                      ? 'border-[#F97316] bg-[#F97316] text-white'
-                      : 'border-black text-[#444]'
-                  }`}>
-                    {letter}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      ))}
+    <div className="flex flex-col gap-2 w-full">
+      {choices.map((choice) => {
+        const isSelected = value === choice.value
+        return (
+          <button
+            key={choice.value}
+            type="button"
+            onClick={() => handleSelect(choice.value)}
+            className={`group/choice relative flex items-center text-left px-2 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden w-full ${
+              isSelected
+                ? 'border-[#F97316] ring-2 ring-[#F97316]/30'
+                : 'border-[#BBB49B] hover:border-[#F97316]/50'
+            }`}
+            style={{
+              backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${paperboardTexture})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              boxShadow: cbShadow,
+            }}
+          >
+            <div className={`absolute inset-0 pointer-events-none rounded-lg transition-colors ${
+              isSelected ? 'bg-black/[0.08]' : 'bg-transparent group-hover/choice:bg-black/[0.06]'
+            }`} />
+            <span className="relative text-[#444] text-lg md:text-xl leading-[1.5]">
+              {choice.label}
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }

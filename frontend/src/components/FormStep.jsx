@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { isValidPhoneNumber } from 'libphonenumber-js'
+import { validateBlock } from '../lib/validateBlock'
 import TextField from './form-engine/fields/TextField'
 import EmailField from './form-engine/fields/EmailField'
 import LongTextField from './form-engine/fields/LongTextField'
@@ -60,38 +61,20 @@ export default function FormStep({
   }
 
   const validate = () => {
-    const req = field.required
+    if (validateBlock(block, value, messages)) return true
 
     if (block.name === 'phone-number') {
-      if (!value?.trim()) {
-        setFieldError('El teléfono es obligatorio')
-        return false
-      }
-      try {
-        if (!isValidPhoneNumber(value)) {
-          setFieldError('Número inválido. Incluye el código de país (ej: +34 612345678)')
-          return false
-        }
-      } catch {
-        setFieldError('Número inválido. Incluye el código de país (ej: +34 612345678)')
-        return false
-      }
-      return true
-    }
-
-    if (req && !value?.trim()) {
+      setFieldError(
+        !value?.trim()
+          ? 'El teléfono es obligatorio'
+          : 'Número inválido. Incluye el código de país (ej: +34 612345678)'
+      )
+    } else if (block.name === 'email' && value) {
+      setFieldError(messages?.['label.errorAlert.email'] || '¡Correo electrónico no válido!')
+    } else {
       setFieldError(messages?.['label.errorAlert.required'] || '¡Este campo es obligatorio!')
-      return false
     }
-
-    if (block.name === 'email' && value) {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-        setFieldError(messages?.['label.errorAlert.email'] || '¡Correo electrónico no válido!')
-        return false
-      }
-    }
-
-    return true
+    return false
   }
 
   // Validate then advance (OK button / Enter / phone Enter)
@@ -153,6 +136,7 @@ export default function FormStep({
         onOk={handleOk}
         onBack={onBack}
         messages={messages}
+        hideEnterHint={block.name === 'multiple-choice'}
       />
     </div>
   )

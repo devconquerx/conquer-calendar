@@ -4,7 +4,7 @@ export default function EmailField({ field, value, onChange, onKeyDown }) {
   const inputRef = useRef(null)
 
   useEffect(() => {
-    inputRef.current?.focus()
+    inputRef.current?.focus({ preventScroll: true })
   }, [field.id])
 
   return (
