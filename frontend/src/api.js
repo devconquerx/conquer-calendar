@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react'
+
 function getCsrf() {
   return document.getElementById('funnel-root')?.dataset?.csrf || ''
 }
@@ -48,6 +50,7 @@ export function registerLead(payload) {
     body: JSON.stringify(payload),
   }).catch((err) => {
     console.error('[API] Error registering lead:', err)
+    Sentry.captureException(err, { tags: { action: 'registerLead' } })
   })
 }
 
@@ -65,5 +68,6 @@ export function sendVideoProgressToBackend({ email, percent, school, region }) {
     body: JSON.stringify({ email, percent, school, region }),
   }).catch((err) => {
     console.error('[API] Error sending video progress:', err)
+    Sentry.captureException(err, { tags: { action: 'sendVideoProgressToBackend' } })
   })
 }

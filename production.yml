@@ -6,6 +6,10 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/django/Dockerfile
+      args:
+        # Se lee del .env del directorio del compose (/home/conquer-calendar/app/.env).
+        # Vite lo embebe en el bundle del frontend en build time.
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
     image: conquer_calendario_production_django
     restart: unless-stopped
     env_file:

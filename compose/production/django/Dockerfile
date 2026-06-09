@@ -5,6 +5,11 @@
 # ─────────────────────────────────────────────────────────────
 FROM node:20-slim AS frontend
 
+# DSN de Sentry para el frontend; Vite lo embebe en el bundle en build time.
+# Vacío por defecto → Sentry deshabilitado en el bundle.
+ARG VITE_SENTRY_DSN=
+ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
+
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci

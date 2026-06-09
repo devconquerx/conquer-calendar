@@ -1,9 +1,22 @@
 """Production settings."""
 
+import sentry_sdk
+
 from .base import *  # NOQA
 from .base import env
 
 DEBUG = False
+
+# ---------------------------------------------------------------------------
+# Sentry — error tracking + performance monitoring
+# ---------------------------------------------------------------------------
+sentry_sdk.init(
+    dsn=env.str('SENTRY_DSN', default=''),
+    send_default_pii=False,
+    traces_sample_rate=0.2,
+    profiles_sample_rate=0.1,
+    environment=env.str('SENTRY_ENVIRONMENT', default='production'),
+)
 
 ALLOWED_HOSTS = env.list(
     'CALENDARIO_ALLOWED_HOSTS',
