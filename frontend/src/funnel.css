@@ -1,4 +1,7 @@
 /* @import url('https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300;400;500;600;700&display=swap'); */
+/* Montserrat para el CTA pixelado (800) y el badge "Vídeo de 15 minutos" (500),
+   la sans geométrica que más se acerca a la "Termina" de producción */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;

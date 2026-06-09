@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import VideoPlayer from '../components/vsl/VideoPlayer'
 import AgendarButton from '../components/vsl/AgendarButton'
 import { getTheme } from '../themes'
+import { CB_CARD_SHADOW } from '../themes/conquerblocks'
 import { sendVideoProgressToBackend } from '../api'
 import { safeHtml } from '../lib/sanitize'
 import { useRouter } from '../lib/router'
@@ -49,18 +50,25 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
     window.location.href = `${nextUrl}${search}`
   }, [router, nextUrl])
 
-  const pageStyle = isCB && assets?.paperboardTexture ? {
-    backgroundImage: `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url(${assets.paperboardTexture})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundAttachment: 'fixed',
-  } : undefined
+  if (isCB) {
+    return (
+      <CBVideoPage
+        assets={assets}
+        video={video}
+        urls={urls}
+        pct={pct}
+        showButton={showButton}
+        onShowButton={handleShowButton}
+        onProgress={handleProgress}
+        goToStepForm={goToStepForm}
+        theme={theme}
+        school={school}
+      />
+    )
+  }
 
   return (
-    <div
-      className={`min-h-screen overflow-x-hidden relative flex flex-col ${isCB ? 'font-funnel bg-cb-bg text-cb-ink' : 'bg-[#0A0A0A] text-white'}`}
-      style={pageStyle}
-    >
+    <div className="min-h-screen overflow-x-hidden relative flex flex-col bg-[#0A0A0A] text-white">
       <main className="relative z-10 flex-1 w-full max-w-[920px] mx-auto px-5 flex flex-col">
         {/* Logo */}
         {assets?.logo && (
@@ -73,15 +81,13 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
         {(landing.subtitle || landing.title) && (
           <div className="text-center mb-5 animate-fade-in">
             {landing.subtitle && (
-              <p className={`text-sm font-medium uppercase tracking-wide mb-2 ${isCB ? 'bg-gradient-to-r from-[#FF4000] to-[#FFBF00] bg-clip-text text-transparent' : 'text-orange-400'}`}>
+              <p className="text-sm font-medium uppercase tracking-wide mb-2 text-orange-400">
                 {landing.subtitle}
               </p>
             )}
             {landing.title && (
               <h1
-                className={`max-w-[760px] mx-auto text-xl md:text-2xl font-medium leading-[1.15] ${isCB
-                  ? 'text-cb-ink [&_strong]:[background-image:linear-gradient(135deg,#FF4000,#FF9800)] [&_strong]:bg-clip-text [&_strong]:text-transparent [&_em]:not-italic [&_em]:font-bold [&_em]:[-webkit-text-fill-color:#0A0A0A] [&_em]:[background-image:none]'
-                  : 'text-white'}`}
+                className="max-w-[760px] mx-auto text-xl md:text-2xl font-medium leading-[1.15] text-white"
                 dangerouslySetInnerHTML={safeHtml(landing.title)}
               />
             )}
@@ -104,6 +110,149 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
       </main>
 
       <div className="py-10" />
+    </div>
+  )
+}
+
+/* ═══ ConquerBlocks VSL — réplica exacta de producción ═══
+   Cabecera clara (paperboard #FAFAFA) con logo vertical, badge pill y H1;
+   transición de papel rasgado hacia una zona negra con retícula (grid) donde
+   vive el video con glow azul y el CTA pixelado; cierre con otra transición
+   rasgada y footer claro con logo y píxeles decorativos. */
+function CBVideoPage({ assets, video, urls, pct, showButton, onShowButton, onProgress, goToStepForm, theme, school }) {
+  // Textos del hero de la página de video (producción los fija en el shell).
+  const subtitle = video.subtitle || 'Vídeo de 15 minutos'
+  const title = video.title ||
+    'Descubre una nueva profesión con la que asegurar tu futuro económico, tener siempre trabajo, un muy buen salario y no tener un techo en tu carrera profesional'
+
+  // Fondo claro de cabecera/footer: #FAFAFA + velo blanco 40% sobre paperboard.
+  const paperStyle = {
+    backgroundColor: '#FAFAFA',
+    backgroundImage: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.4)), url(${assets.paperboardTexture})`,
+    backgroundSize: 'auto, 50%',
+  }
+  // Badge pill: textura paperboard con velo blanco 60% + sombra en capas.
+  const tagStyle = {
+    backgroundImage: `linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url(${assets.paperboardTexture})`,
+    backgroundSize: 'cover',
+    boxShadow: CB_CARD_SHADOW,
+  }
+  // Zona oscura: negro + velo negro 15% sobre la retícula. `fixed` hace que la
+  // retícula sea UN único fondo anclado al viewport, así las transiciones rasgadas
+  // (transparentes) muestran exactamente la misma retícula que el resto de la zona
+  // oscura, sin banda negra ni costuras (igual que producción, que pone la retícula
+  // en el body y deja transparentes las secciones).
+  const darkStyle = {
+    backgroundColor: '#000',
+    backgroundImage: `linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.15)), url(${assets.gridBackground})`,
+    backgroundAttachment: 'fixed',
+  }
+
+  return (
+    <div className="min-h-screen overflow-x-hidden relative flex flex-col font-funnel">
+      {/* ── Cabecera clara ── */}
+      <header className="relative" style={paperStyle}>
+        {/* Píxeles decorativos laterales */}
+        {assets.pixels?.deco2 && (
+          <>
+            <img src={assets.pixels.deco2} alt="" aria-hidden="true" className="hidden md:block absolute left-0 top-[25px] w-[150px] pointer-events-none select-none" />
+            <img src={assets.pixels.deco2} alt="" aria-hidden="true" className="hidden md:block absolute right-0 top-[101px] w-[150px] pointer-events-none select-none" />
+          </>
+        )}
+        <div className="relative max-w-[1024px] mx-auto px-5 lg:px-0 pt-4">
+          {/* Logo vertical */}
+          <div className="py-4 flex justify-center">
+            <img src={assets.logo} alt={school?.slug || 'Conquer Blocks'} className="w-[125px] h-auto" />
+          </div>
+          <div className="flex flex-col items-center gap-5 mb-4">
+            {/* Badge pill — producción usa la fuente geométrica "Termina" y un
+                triángulo ▶ sólido inline. Replicamos con Montserrat (la más cercana
+                disponible) y el carácter ▶ a tamaño ligeramente menor que el texto. */}
+            <div
+              className="inline-flex items-center gap-2 rounded-full border border-[#0f172a] px-4 py-1 text-sm font-medium text-[#0f172a]"
+              style={{ ...tagStyle, fontFamily: 'Montserrat, sans-serif' }}
+            >
+              <span className="text-[11px] leading-none">▶</span>
+              {subtitle}
+            </div>
+            {/* Titular */}
+            <h1
+              className="max-w-[1024px] mx-auto text-center text-2xl md:text-[32px] font-semibold leading-[1.1] text-[#0f172a]"
+              dangerouslySetInnerHTML={safeHtml(title)}
+            />
+          </div>
+        </div>
+      </header>
+
+      {/* ── Zona oscura: retícula continua que cubre las dos transiciones rasgadas
+            y el contenido. Los wrappers de rasgado son TRANSPARENTES, así muestran
+            esta misma retícula y no aparece ninguna banda/línea negra. ── */}
+      <div className="flex-1 relative" style={darkStyle}>
+        {/* Transición cabecera → zona oscura. El PNG es papel crema con borde
+            rasgado; rotado 180° queda crema arriba (sigue a la cabecera) y el
+            rasgado abajo. Lo transparente bajo el rasgado deja ver la retícula. */}
+        {assets.tornTransition && (
+          <div className="relative z-10 -mt-[5px] overflow-hidden pointer-events-none select-none">
+            <img
+              src={assets.tornTransition}
+              alt=""
+              aria-hidden="true"
+              className="block w-full rotate-180"
+            />
+          </div>
+        )}
+
+        <main className="relative">
+          <div className="max-w-[1064px] mx-auto px-5 pt-6 pb-4">
+            <div
+              className="animate-fade-in"
+              style={{ boxShadow: '0 2px 20px 6px rgba(127,193,255,0.28)' }}
+            >
+              <VideoPlayer
+                videoUrls={urls}
+                buttonPercent={pct}
+                onAgendarClick={goToStepForm}
+                onShowButton={onShowButton}
+                onProgress={onProgress}
+              />
+            </div>
+
+            {/* Botón CTA — aparece al alcanzar el buttonPercent */}
+            {showButton && <AgendarButton theme={theme} onClick={goToStepForm} />}
+
+            <div className="h-[100px]" />
+          </div>
+        </main>
+
+        {/* Transición zona oscura → footer. Sin rotar: rasgado arriba (lo
+            transparente deja ver la retícula) y papel crema abajo. */}
+        <div className="relative">
+          {/* Píxel que asoma sobre el borde rasgado (solo el cuadrado superior). */}
+          {assets.pixels?.sm7 && (
+            <img src={assets.pixels.sm7} alt="" aria-hidden="true" className="hidden md:block absolute -top-[14px] left-[150px] w-[150px] z-0 pointer-events-none select-none" />
+          )}
+          {assets.tornTransition && (
+            <div className="relative z-10 -mb-[1px] overflow-hidden pointer-events-none select-none">
+              <img
+                src={assets.tornTransition}
+                alt=""
+                aria-hidden="true"
+                className="block w-full"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Footer claro ── */}
+      <footer className="relative" style={paperStyle}>
+        {assets.pixels?.lg8 && (
+          <img src={assets.pixels.lg8} alt="" aria-hidden="true" className="hidden md:block absolute top-[13px] right-[15px] w-[100px] pointer-events-none select-none" />
+        )}
+        <div className="py-8 flex justify-center">
+          <img src={assets.logo} alt={school?.slug || 'Conquer Blocks'} className="w-[280px] h-auto" />
+        </div>
+      </footer>
     </div>
   )
 }

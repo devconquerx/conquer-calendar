@@ -1,25 +1,23 @@
-export default function AgendarButton({ theme, onClick, text = 'Agendar Sesion de Consultoria Gratuita' }) {
+// Borde pixelado del CTA de producción (clip-path copiado del botón real).
+const CB_PIXEL_CLIP =
+  'polygon(97.74% 73.83%, 97.74% 82.56%, 100% 82.56%, 100% 100%, 95.47% 100%, 95.47% 91.28%, 81.5% 91.28%, 81.5% 100%, 19.87% 100%, 19.87% 91.28%, 9.06% 91.28%, 9.06% 100%, 2.26% 100%, 2.26% 80.24%, 0% 80.24%, 0% 26.16%, 2.26% 26.16%, 2.26% 17.44%, 0% 17.44%, 0% 0%, 4.53% 0%, 4.53% 8.72%, 12.82% 8.72%, 12.82% 0%, 72.03% 0%, 72.03% 8.72%, 88.67% 8.72%, 88.67% 0%, 97.74% 0%, 97.74% 8.72%, 100% 8.72%, 100% 73.83%)'
+
+export default function AgendarButton({ theme, onClick, text = 'Agendar Sesión de Consultoría Gratuita' }) {
   const isCB = theme?.id === 'conquerblocks'
 
   return (
-    <div className="flex justify-center mt-6 animate-fade-in">
+    <div className="flex justify-center mt-8 animate-fade-in">
       {isCB ? (
         <button
           onClick={onClick}
-          className="relative px-10 py-4 text-white text-lg font-semibold whitespace-nowrap flex items-center justify-center gap-3 hover:brightness-110 active:scale-[0.98] transition-all overflow-visible"
+          className="text-white text-base md:text-lg font-extrabold uppercase text-center px-6 md:px-10 py-5 hover:brightness-110 active:scale-[0.98] transition-all"
+          style={{
+            fontFamily: 'Montserrat, sans-serif',
+            backgroundImage: 'linear-gradient(90deg, #FFBF00, #FF4000)',
+            clipPath: CB_PIXEL_CLIP,
+          }}
         >
-          <img
-            src={theme.assets?.ctaButtonBg}
-            alt=""
-            className="absolute pointer-events-none"
-            style={{
-              top: '-8px',
-              left: '-10px',
-              width: 'calc(100% + 20px)',
-              height: 'calc(100% + 16px)',
-            }}
-          />
-          <span className="relative z-10">{text}</span>
+          {text}
         </button>
       ) : (
         <button

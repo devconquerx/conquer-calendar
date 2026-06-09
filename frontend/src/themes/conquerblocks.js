@@ -15,6 +15,9 @@ import pxLg8 from '../assets/img/cb/px-lg-8.svg'
 import pxSm4 from '../assets/img/cb/px-sm-4.svg'
 import pxSm8 from '../assets/img/cb/px-sm-8.svg'
 import pixelDeco from '../assets/img/cb/pixel-6x6.svg'
+import pixelDeco2 from '../assets/img/cb/pixel-6x6-2.svg'
+import pxSm7 from '../assets/img/cb/px-sm-7.svg'
+import gridBackground from '../assets/img/cb/grid-background.avif'
 import iconReloj from '../assets/img/cb/icon-reloj.svg'
 import iconBandera from '../assets/img/cb/icon-bandera.svg'
 import iconRayo from '../assets/img/cb/icon-rayo.svg'
@@ -58,7 +61,8 @@ export default {
     heroThumbnail,
     tape1,
     tape2,
-    pixels: { lg1: pxLg1, lg5: pxLg5, lg6: pxLg6, lg8: pxLg8, sm4: pxSm4, sm8: pxSm8, deco: pixelDeco },
+    pixels: { lg1: pxLg1, lg5: pxLg5, lg6: pxLg6, lg8: pxLg8, sm4: pxSm4, sm7: pxSm7, sm8: pxSm8, deco: pixelDeco, deco2: pixelDeco2 },
+    gridBackground,
     icons: { reloj: iconReloj, bandera: iconBandera, rayo: iconRayo, agenda: iconAgenda, fuego: iconFuego },
     bulletIcons: [bulletIcon1, bulletIcon2, bulletIcon3],
     footerLogo,
