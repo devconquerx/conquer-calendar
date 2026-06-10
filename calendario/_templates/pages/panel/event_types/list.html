@@ -24,6 +24,16 @@
                 <div class="dropdown-menu shadow p-0" style="min-width:300px; max-width:300px;">
 
                     <div class="p-3 border-bottom">
+                        <label class="fw-bold fs-7 text-gray-800 d-block mb-2">Academia:</label>
+                        <select name="academia" class="form-select form-select-sm">
+                            <option value="">Todas las academias</option>
+                            {% for a in academias %}
+                            <option value="{{ a }}" {% if filtro_academia == a %}selected{% endif %}>@{{ a }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="p-3 border-bottom">
                         <label class="fw-bold fs-7 text-gray-800 d-block mb-2">Organizadores:</label>
                         <div class="position-relative mb-2">
                             <i class="bi bi-search position-absolute" style="left:10px; top:50%; transform:translateY(-50%); color:#9aa3af; font-size:11px;"></i>
@@ -212,10 +222,10 @@
     <span class="text-muted fs-7">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
     <div class="d-flex gap-2">
         {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if filtro_q %}&q={{ filtro_q }}{% endif %}{% for o in filtro_organizadores %}&organizador={{ o }}{% endfor %}{% for c in filtro_creadores %}&creador={{ c }}{% endfor %}" class="btn btn-sm btn-light">Anterior</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if filtro_q %}&q={{ filtro_q }}{% endif %}{% for o in filtro_organizadores %}&organizador={{ o }}{% endfor %}{% for c in filtro_creadores %}&creador={{ c }}{% endfor %}{% if filtro_academia %}&academia={{ filtro_academia }}{% endif %}" class="btn btn-sm btn-light">Anterior</a>
         {% endif %}
         {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if filtro_q %}&q={{ filtro_q }}{% endif %}{% for o in filtro_organizadores %}&organizador={{ o }}{% endfor %}{% for c in filtro_creadores %}&creador={{ c }}{% endfor %}" class="btn btn-sm btn-light">Siguiente</a>
+        <a href="?page={{ page_obj.next_page_number }}{% if filtro_q %}&q={{ filtro_q }}{% endif %}{% for o in filtro_organizadores %}&organizador={{ o }}{% endfor %}{% for c in filtro_creadores %}&creador={{ c }}{% endfor %}{% if filtro_academia %}&academia={{ filtro_academia }}{% endif %}" class="btn btn-sm btn-light">Siguiente</a>
         {% endif %}
     </div>
 </div>

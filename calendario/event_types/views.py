@@ -48,6 +48,10 @@ class EventTypeListView(RequierePermisoMixin, ListView):
         if creadores:
             qs = qs.filter(host_id__in=creadores)
 
+        academia = self.request.GET.get('academia', '').strip()
+        if academia:
+            qs = qs.filter(host__email__iendswith=f'@{academia}')
+
         return (qs
                 .annotate(num_hosts=Count('hosts_pool'))
                 .select_related('host')
@@ -59,7 +63,12 @@ class EventTypeListView(RequierePermisoMixin, ListView):
         ctx['filtro_q'] = self.request.GET.get('q', '')
         ctx['filtro_organizadores'] = self.request.GET.getlist('organizador')
         ctx['filtro_creadores'] = self.request.GET.getlist('creador')
-        ctx['filtros_count'] = len(ctx['filtro_organizadores']) + len(ctx['filtro_creadores'])
+        ctx['filtro_academia'] = self.request.GET.get('academia', '')
+        ctx['filtros_count'] = (
+            len(ctx['filtro_organizadores'])
+            + len(ctx['filtro_creadores'])
+            + (1 if ctx['filtro_academia'] else 0)
+        )
         ctx['soy_organizador_ids'] = set(
             EventTypeXHost.objects.filter(host=self.request.user)
             .values_list('event_type_id', flat=True)
@@ -91,6 +100,11 @@ class EventTypeListView(RequierePermisoMixin, ListView):
                     event_types__isnull=False,
                 ).distinct().order_by('first_name', 'last_name', 'username')
             )
+        ctx['academias'] = sorted({
+            u.email.split('@')[1]
+            for u in ctx.get('creadores_disponibles', [])
+            if u.email and '@' in u.email
+        })
         return ctx
 
 
