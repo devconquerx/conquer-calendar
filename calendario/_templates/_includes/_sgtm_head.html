@@ -1,0 +1,20 @@
+{% comment %}
+  Google Tag Manager — loader first-party (server-side GTM / sGTM).
+
+  Réplica del snippet que sirve Webflow: carga el contenedor web de la marca a
+  través del dominio first-party de sGTM (load.somos.<marca>.com) con el path
+  "cloaked", en vez de www.googletagmanager.com. El contenedor dispara
+  Meta/GA4/TikTok hacia el server-side GTM.
+
+  La config viene de funnels.context_processors.get_gtm_config(escuela):
+    gtm.id            → ID completo del contenedor web (GTM-XXXXXXX) — para el noscript
+    gtm.st            → ID sin el prefijo "GTM-" — lo que espera el loader (?st=)
+    gtm.loader_domain → dominio first-party del sGTM
+    gtm.loader_path   → nombre del archivo cloaked (p.ej. tiehtchn.js)
+
+  Se "enchufa/desenchufa" desde aquí: sin gtm.id no se emite nada.
+{% endcomment %}{% if gtm.id %}
+<!-- Google Tag Manager (first-party sGTM loader) -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://{{ gtm.loader_domain }}/{{ gtm.loader_path }}?st='+i+dl+'';f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','{{ gtm.st }}');</script>
+<!-- End Google Tag Manager -->
+{% endif %}

@@ -17,8 +17,10 @@
     .cta:hover { filter: brightness(1.05); }
     .perfil-card { box-shadow: 0 2px 5px rgba(0,0,0,.2); }
   </style>
+  {% include '_includes/_sgtm_head.html' %}
 </head>
 <body class="bg-white text-[#333]">
+  {% include '_includes/_sgtm_body.html' %}
   <main id="landing-root"
         data-next-url="{{ next_url }}"
         data-escuela="{{ funnel.escuela }}"

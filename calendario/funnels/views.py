@@ -331,7 +331,7 @@ def _spa_render(request, funnel, stage, escuela=None, region=None):
     `stage` y navega entre etapas con pushState usando las URLs canónicas que
     se pasan aquí. `funnel` puede ser None (confirmación sin funnel activo).
     """
-    from .context_processors import get_pixel_ids
+    from .context_processors import get_gtm_config, get_pixel_ids
     escuela = escuela or (funnel.escuela if funnel else '')
     region = region or (funnel.region if funnel else '')
     base = _base_path(request)
@@ -355,6 +355,7 @@ def _spa_render(request, funnel, stage, escuela=None, region=None):
             'stepform_url': stepform_url(escuela, region, base=base),
             'confirmation_url': confirmacion_url(escuela, region, base=base) if region else '',
             'pixel_ids': get_pixel_ids(escuela),
+            'gtm': get_gtm_config(escuela),
             'app_base_path': base,
         },
     )
@@ -381,7 +382,7 @@ class FunnelClaseView(View):
         template_name = _LANDING_TEMPLATE_POR_ESCUELA.get(funnel.escuela)
         if template_name is None:
             return _spa_render(request, funnel, 'landing')
-        from .context_processors import get_pixel_ids
+        from .context_processors import get_gtm_config, get_pixel_ids
         # Siguiente etapa tras la landing: la página de video si la marca la tiene
         # configurada; si no, directo al StepForm (/agenda/<producto>/<region>/).
         cfg = funnel.config or {}
@@ -399,6 +400,7 @@ class FunnelClaseView(View):
                 'next_url': next_url,
                 'landing_config': funnel.config or {},
                 'pixel_ids': get_pixel_ids(funnel.escuela),
+                'gtm': get_gtm_config(funnel.escuela),
                 'app_base_path': _base_path(request),
             },
         )
@@ -425,7 +427,7 @@ class FunnelVideoView(View):
         template_name = _VIDEO_TEMPLATE_POR_ESCUELA.get(funnel.escuela)
         if template_name is None:
             return _spa_render(request, funnel, 'video')
-        from .context_processors import get_pixel_ids
+        from .context_processors import get_gtm_config, get_pixel_ids
         cfg = funnel.config or {}
         # La config del video (videoUrls + buttonPercent) vive en config['video'];
         # si falta, usamos los defaults por marca.
@@ -443,6 +445,7 @@ class FunnelVideoView(View):
                 'next_url': next_url,
                 'video_config': video_cfg,
                 'pixel_ids': get_pixel_ids(funnel.escuela),
+                'gtm': get_gtm_config(funnel.escuela),
                 'app_base_path': _base_path(request),
             },
         )

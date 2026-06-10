@@ -1,0 +1,8 @@
+{% comment %}
+  Google Tag Manager (noscript) — va justo después de abrir <body>.
+  Mismo dominio first-party que el loader del <head>. Ver _sgtm_head.html.
+{% endcomment %}{% if gtm.id %}
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://{{ gtm.loader_domain }}/ns.html?id={{ gtm.id }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+{% endif %}

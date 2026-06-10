@@ -1,14 +1,26 @@
 /**
- * Pixel event helpers for Meta, Google (gtag) and TikTok.
+ * Event helpers — arquitectura server-side GTM (sGTM).
  *
- * Los scripts base se cargan server-side en page.html.
- * Este módulo dispara los eventos de conversión desde React.
+ * El contenedor GTM se carga server-side en el <head> a través del loader
+ * first-party (load.somos.<marca>.com → _includes/_sgtm_head.html). Es ese
+ * contenedor el ÚNICO responsable de disparar Meta / GA4 / Google Ads / TikTok
+ * hacia el server-side GTM.
+ *
+ * Por eso aquí NO llamamos a window.fbq / window.gtag / window.ttq: solo
+ * empujamos eventos semánticos al dataLayer y GTM los recoge con sus triggers.
+ * Las firmas públicas se mantienen para no tocar los componentes.
+ *
+ * Eventos emitidos al dataLayer (configurar el trigger en el contenedor GTM):
+ *   - 'virtual_page_view'  → PageView en cambios de etapa SPA (sin recarga)
+ *   - 'form_submit_lead'   → Lead / SubmitForm   (al enviar el formulario)
+ *   - 'calendly_scheduled' → Schedule            (tras agendar en Calendly)
+ * El campo `event_id` permite la deduplicación con el server-side / CAPI.
  */
 
-import { getPixelIds, normalizeSchool } from './pixelConfig'
+import { normalizeSchool } from './pixelConfig'
 
 // ---------------------------------------------------------------------------
-// DataLayer (compat)
+// DataLayer
 // ---------------------------------------------------------------------------
 
 export function pushToDataLayer(data) {
@@ -17,150 +29,57 @@ export function pushToDataLayer(data) {
 }
 
 // ---------------------------------------------------------------------------
-// Meta Pixel
-// ---------------------------------------------------------------------------
-
-export function setMetaAdvancedMatching({ schoolSlug, email, phone, name }) {
-  if (typeof window.fbq === 'undefined') return
-  const ids = getPixelIds(schoolSlug)
-  if (!ids) return
-
-  const matchData = {}
-  if (email) matchData.em = email.trim().toLowerCase()
-  if (phone) {
-    const digits = phone.replace(/[^0-9]/g, '')
-    if (digits) matchData.ph = digits
-  }
-  if (name) matchData.fn = name.trim().split(' ')[0].toLowerCase()
-
-  window.fbq('init', ids.meta, matchData)
-}
-
-function fireMetaLead({ eventId }) {
-  if (typeof window.fbq === 'undefined') return
-  window.fbq('track', 'Lead', {}, { eventID: eventId })
-}
-
-function fireMetaSchedule({ eventId }) {
-  if (typeof window.fbq === 'undefined') return
-  window.fbq('track', 'Schedule', {}, { eventID: eventId })
-}
-
-// ---------------------------------------------------------------------------
-// Google Ads / GA4 (via gtag)
-// ---------------------------------------------------------------------------
-
-function fireGoogleAdsConversion({ eventId, schoolSlug, type }) {
-  if (typeof window.gtag === 'undefined') return
-  const ids = getPixelIds(schoolSlug)
-  if (!ids?.googleAds?.conversions?.[type]) return
-
-  const conversionLabel = ids.googleAds.conversions[type]
-  window.gtag('event', 'conversion', {
-    send_to: `AW-${ids.googleAds.customerId}/${conversionLabel}`,
-    transaction_id: eventId,
-  })
-}
-
-function fireGA4Event({ eventName, params }) {
-  if (typeof window.gtag === 'undefined') return
-  window.gtag('event', eventName, params || {})
-}
-
-// ---------------------------------------------------------------------------
-// TikTok Pixel
-// ---------------------------------------------------------------------------
-
-function fireTikTokEvent({ eventId, journeyId, eventName, email, phone }) {
-  if (typeof window.ttq === 'undefined') return
-
-  const identify = { external_id: journeyId }
-  if (email) identify.email = email.trim().toLowerCase()
-  if (phone) {
-    const digits = phone.replace(/[^0-9]/g, '')
-    if (digits) identify.phone_number = '+' + digits
-  }
-
-  window.ttq.identify(identify)
-  window.ttq.track(eventName, {}, { event_id: eventId })
-}
-
-// ---------------------------------------------------------------------------
-// Legacy / dataLayer compat
-// ---------------------------------------------------------------------------
-
-export function fireFormSubmitEvent({ eventId, email, name, phone, fbclid, fbp }) {
-  pushToDataLayer({
-    event: 'form_submit_lead',
-    form_email: email || '',
-    form_name: name || '',
-    form_phone: phone || '',
-    event_id: eventId || '',
-    fbclid: fbclid || '',
-    fbp: fbp || '',
-  })
-}
-
-export function fireTikTokSubmitForm({ eventId, journeyId, email, phone }) {
-  fireTikTokEvent({ eventId, journeyId, eventName: 'SubmitForm', email, phone })
-}
-
-// ---------------------------------------------------------------------------
-// Unified wrappers — fire ALL platforms with one call
+// Unified wrappers — un solo dataLayer.push por acción; GTM dispara los tags
 // ---------------------------------------------------------------------------
 
 /**
  * Pageview virtual para navegaciones SPA (pushState). El PageView de la carga
- * inicial lo disparan los scripts base de la plantilla; este se usa al cambiar
- * de etapa (landing → video → stepform → confirmación) sin recarga.
+ * inicial lo dispara el contenedor GTM al cargar; este se usa al cambiar de
+ * etapa (landing → video → stepform → confirmación) sin recarga.
  */
 export function fireAllPageView() {
-  if (typeof window.gtag !== 'undefined') {
-    window.gtag('event', 'page_view', {
-      page_location: window.location.href,
-      page_path: window.location.pathname,
-    })
-  }
-  if (typeof window.fbq !== 'undefined') {
-    window.fbq('track', 'PageView')
-  }
-  if (typeof window.ttq !== 'undefined') {
-    window.ttq.page()
-  }
-}
-
-/** Fire Lead/SubmitForm event on all platforms. Used on form submit. */
-export function fireAllLead({ eventId, journeyId, email, phone, name, schoolSlug, fbp, fbc }) {
-  setMetaAdvancedMatching({ schoolSlug, email, phone, name })
-  fireMetaLead({ eventId })
-
-  fireGoogleAdsConversion({ eventId, schoolSlug, type: 'lead' })
-
-  fireGA4Event({ eventName: 'generate_lead', params: { event_id: eventId } })
-
-  fireTikTokEvent({ eventId, journeyId, eventName: 'SubmitForm', email, phone })
-
-  fireFormSubmitEvent({ eventId, email, name, phone, fbclid: '', fbp: fbp || '' })
+  pushToDataLayer({
+    event: 'virtual_page_view',
+    page_location: window.location.href,
+    page_path: window.location.pathname,
+  })
 }
 
 /**
- * Fire Schedule event on all platforms. Se dispara tras agendar en Calendly.
- * Firma idéntica al funnel de Django (incluye calendly_event_uuid y
- * schedule_event_id en el dataLayer).
+ * Lead / SubmitForm — al enviar el formulario.
+ * GTM mapea este evento a Meta Lead, GA4 generate_lead, Google Ads (lead) y
+ * TikTok SubmitForm, enviándolos al server-side GTM.
+ */
+export function fireAllLead({ eventId, journeyId, email, phone, name, schoolSlug, fbp, fbc }) {
+  pushToDataLayer({
+    event: 'form_submit_lead',
+    school: normalizeSchool(schoolSlug),
+    event_id: eventId || '',
+    journey_id: journeyId || '',
+    // Datos para advanced matching / server-side (GTM los hashea/normaliza)
+    lead_email: email || '',
+    lead_phone: phone || '',
+    lead_name: name || '',
+    fbp: fbp || '',
+    fbc: fbc || '',
+    // Aliases que ya consumía el contenedor existente
+    form_email: email || '',
+    form_name: name || '',
+    form_phone: phone || '',
+  })
+}
+
+/**
+ * Schedule — tras agendar la llamada en Calendly.
+ * GTM mapea este evento a Meta Schedule, GA4 schedule_call, Google Ads
+ * (schedule) y TikTok Schedule, enviándolos al server-side GTM.
  */
 export function fireAllSchedule({ eventId, journeyId, schoolSlug, calendlyEventUuid, scheduleEventId }) {
-  fireMetaSchedule({ eventId })
-
-  fireGoogleAdsConversion({ eventId, schoolSlug, type: 'schedule' })
-
-  fireGA4Event({ eventName: 'schedule_call', params: { event_id: eventId } })
-
-  fireTikTokEvent({ eventId, journeyId, eventName: 'Schedule' })
-
   pushToDataLayer({
     event: 'calendly_scheduled',
-    event_id: eventId,
-    journey_id: journeyId,
+    school: normalizeSchool(schoolSlug),
+    event_id: eventId || '',
+    journey_id: journeyId || '',
     calendly_event_uuid: calendlyEventUuid || '',
     schedule_event_id: scheduleEventId || '',
   })
