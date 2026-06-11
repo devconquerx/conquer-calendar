@@ -31,7 +31,7 @@ function LeftPanel({ eventoInfo }) {
   )
 }
 
-export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaToken, funnelSlug, escuela = '', onBack }) {
+export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaToken, funnelSlug, escuela = '', onBack, onBooked }) {
   const tracking = useTracking()
   const [nombre, setNombre] = useState(prefill?.nombre || '')
   const [email, setEmail] = useState(prefill?.email || '')
@@ -59,15 +59,21 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
         notas: notas.trim(),
       })
       if (result.ok) {
-        // Dispara el evento Schedule en todas las plataformas antes del redirect
-        fireAllSchedule({
-          eventId: tracking.eventId,
-          journeyId: tracking.journeyId,
-          schoolSlug: escuela,
-          calendlyEventUuid: '',
-          scheduleEventId: (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_schedule_event_id')) || '',
-        })
-        window.location.href = apiUrl(`/r/${result.confirmacion_token}/`)
+        // Dentro de un funnel: llevar a SU página de confirmación (el evento
+        // Schedule lo dispara <Confirmation> al montar, no aquí). Sin funnel
+        // (uso suelto): disparar Schedule y caer en la confirmación por-evento.
+        if (onBooked) {
+          onBooked(result)
+        } else {
+          fireAllSchedule({
+            eventId: tracking.eventId,
+            journeyId: tracking.journeyId,
+            schoolSlug: escuela,
+            calendlyEventUuid: '',
+            scheduleEventId: (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_schedule_event_id')) || '',
+          })
+          window.location.href = apiUrl(`/r/${result.confirmacion_token}/`)
+        }
       } else {
         setError(result.mensaje || 'Error al crear la reserva. Inténtalo de nuevo.')
       }

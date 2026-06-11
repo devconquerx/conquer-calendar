@@ -140,7 +140,10 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   // (igual que funnels), leyendo el UUID de Calendly y el schedule_event_id
   // desde localStorage. Propagamos event_id/journey_id por la URL para que la
   // etapa de confirmación conserve el mismo recorrido de tracking.
-  const handleCalendlyScheduled = useCallback(() => {
+  // Lleva a la página de confirmación del funnel (la misma para Calendly y para
+  // el calendario nativo). El evento Schedule lo dispara <Confirmation> al
+  // montar, así que aquí no se dispara (evita doble disparo).
+  const goToConfirmation = useCallback(() => {
     const params = new URLSearchParams(window.location.search)
     params.set('event_id', tracking.eventId)
     params.set('journey_id', tracking.journeyId)
@@ -265,7 +268,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     if (outcome.resultado === 'calendario') {
       // Modo Calendly: embebe el widget del rango (no usamos el calendario local aún).
       if (calendlyUrl) {
-        return <CalendlyEmbed url={calendlyUrl} onScheduled={handleCalendlyScheduled} />
+        return <CalendlyEmbed url={calendlyUrl} onScheduled={goToConfirmation} />
       }
       if (selectedSlot) {
         return (
@@ -277,6 +280,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
             funnelSlug={slug}
             escuela={escuelaProp || escuela}
             onBack={() => setSelectedSlot(null)}
+            onBooked={goToConfirmation}
           />
         )
       }
