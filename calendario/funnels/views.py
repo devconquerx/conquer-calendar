@@ -218,6 +218,8 @@ def stepform_url(escuela, region, base=''):
     `base` antepone un prefijo de path (p.ej. /preview) para mantener la
     navegación dentro del prefijo cuando el funnel se sirve detrás de él.
     """
+    if escuela == 'conquer-legal' and region:
+        return f'{base}/hub/agendar-{region}'
     producto = PRODUCTO_POR_ESCUELA.get(escuela)
     if producto and region:
         return f'{base}/agenda/{producto}/{region}/'

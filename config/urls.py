@@ -85,6 +85,11 @@ urlpatterns = [
         name='video_hub_legal',
     ),
     re_path(
+        r'^hub/agendar-(?P<region>latam|eu|us)/?$',
+        FunnelAgendaView.as_view(), {'producto': 'legal'},
+        name='agenda_hub_legal',
+    ),
+    re_path(
         r'^hub/confirmacion/?$',
         FunnelConfirmationView.as_view(), {'escuela': 'conquer-legal'},
         name='confirmacion_hub_legal',
