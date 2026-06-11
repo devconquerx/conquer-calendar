@@ -16,7 +16,7 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   const [showButton, setShowButton] = useState(false)
 
   const theme = getTheme(school?.slug)
-  const isCB = theme.id === 'conquerblocks'
+  const isPaper = !!theme.paperboard
   const assets = theme.assets
 
   const video = formConfig?.video || {}
@@ -50,9 +50,9 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
     window.location.href = `${nextUrl}${search}`
   }, [router, nextUrl])
 
-  if (isCB) {
+  if (isPaper) {
     return (
-      <CBVideoPage
+      <PaperboardVideoPage
         assets={assets}
         video={video}
         urls={urls}
@@ -114,16 +114,25 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   )
 }
 
-/* ═══ ConquerBlocks VSL — réplica exacta de producción ═══
-   Cabecera clara (paperboard #FAFAFA) con logo vertical, badge pill y H1;
-   transición de papel rasgado hacia una zona negra con retícula (grid) donde
-   vive el video con glow azul y el CTA pixelado; cierre con otra transición
-   rasgada y footer claro con logo y píxeles decorativos. */
-function CBVideoPage({ assets, video, urls, pct, showButton, onShowButton, onProgress, goToStepForm, theme, school }) {
-  // Textos del hero de la página de video (producción los fija en el shell).
-  const subtitle = video.subtitle || 'Vídeo de 15 minutos'
-  const title = video.title ||
-    'Descubre una nueva profesión con la que asegurar tu futuro económico, tener siempre trabajo, un muy buen salario y no tener un techo en tu carrera profesional'
+/* ═══ VSL paperboard (Blocks / Legal) — réplica de producción ═══
+   Renderer compartido dirigido por tokens del tema (`theme.video` + `accent`):
+   cabecera clara (paperboard #FAFAFA) con logo, badge pill y H1; transición de
+   papel rasgado hacia una zona negra con retícula (grid) donde vive el video
+   con glow de marca y el CTA pixelado; cierre con otra transición rasgada y
+   footer claro con logo y píxeles decorativos. El acento (naranja Blocks / azul
+   Legal) y los textos salen del tema; `config['video']` puede sobreescribirlos. */
+function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButton, onProgress, goToStepForm, theme, school }) {
+  const v = theme.video || {}
+  // Textos del hero: prioridad a config['video'], luego tokens del tema.
+  const subtitle = video.subtitle || v.subtitle || 'Vídeo'
+  const title = video.title || v.title || ''
+  const badgeColor = v.badgeColor || '#0f172a'
+  const titleColor = v.titleColor || '#0f172a'
+  const titleSize = v.titleSize || 'text-2xl md:text-[32px]'
+  const glow = v.glow || '0 2px 20px 6px rgba(127,193,255,0.28)'
+  const headerLogoWidth = v.headerLogoWidth || '125px'
+  const footerLogoWidth = v.footerLogoWidth || '280px'
+  const footerLogo = assets.footerLogo || assets.logo
 
   // Fondo claro de cabecera/footer: #FAFAFA + velo blanco 40% sobre paperboard.
   const paperStyle = {
@@ -162,22 +171,23 @@ function CBVideoPage({ assets, video, urls, pct, showButton, onShowButton, onPro
         <div className="relative max-w-[1024px] mx-auto px-5 lg:px-0 pt-4">
           {/* Logo vertical */}
           <div className="py-4 flex justify-center">
-            <img src={assets.logo} alt={school?.slug || 'Conquer Blocks'} className="w-[125px] h-auto" />
+            <img src={assets.logo} alt={school?.slug || ''} className="h-auto" style={{ width: headerLogoWidth }} />
           </div>
           <div className="flex flex-col items-center gap-5 mb-4">
             {/* Badge pill — producción usa la fuente geométrica "Termina" y un
                 triángulo ▶ sólido inline. Replicamos con Montserrat (la más cercana
                 disponible) y el carácter ▶ a tamaño ligeramente menor que el texto. */}
             <div
-              className="inline-flex items-center gap-2 rounded-full border border-[#0f172a] px-4 py-1 text-sm font-medium text-[#0f172a]"
-              style={{ ...tagStyle, fontFamily: 'Montserrat, sans-serif' }}
+              className="inline-flex items-center gap-2 rounded-full border px-4 py-1 text-sm font-medium"
+              style={{ ...tagStyle, fontFamily: 'Montserrat, sans-serif', borderColor: badgeColor, color: badgeColor }}
             >
               <span className="text-[11px] leading-none">▶</span>
               {subtitle}
             </div>
             {/* Titular */}
             <h1
-              className="max-w-[1024px] mx-auto text-center text-2xl md:text-[32px] font-semibold leading-[1.1] text-[#0f172a]"
+              className={`max-w-[1024px] mx-auto text-center ${titleSize} font-semibold leading-[1.1] [&_strong]:font-semibold`}
+              style={{ color: titleColor }}
               dangerouslySetInnerHTML={safeHtml(title)}
             />
           </div>
@@ -206,7 +216,7 @@ function CBVideoPage({ assets, video, urls, pct, showButton, onShowButton, onPro
           <div className="max-w-[1064px] mx-auto px-5 pt-6 pb-4">
             <div
               className="animate-fade-in"
-              style={{ boxShadow: '0 2px 20px 6px rgba(127,193,255,0.28)' }}
+              style={{ boxShadow: glow }}
             >
               <VideoPlayer
                 videoUrls={urls}
@@ -250,7 +260,7 @@ function CBVideoPage({ assets, video, urls, pct, showButton, onShowButton, onPro
           <img src={assets.pixels.lg8} alt="" aria-hidden="true" className="hidden md:block absolute top-[13px] right-[15px] w-[100px] pointer-events-none select-none" />
         )}
         <div className="py-8 flex justify-center">
-          <img src={assets.logo} alt={school?.slug || 'Conquer Blocks'} className="w-[280px] h-auto" />
+          <img src={footerLogo} alt={school?.slug || ''} className="h-auto" style={{ width: footerLogoWidth }} />
         </div>
       </footer>
     </div>

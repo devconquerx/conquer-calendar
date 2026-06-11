@@ -231,6 +231,19 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     ...(funnelFont ? { fontFamily: `'${funnelFont}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif` } : {}),
   }
 
+  // Publica las CSS vars del tema en :root. La barra inferior (BottomNavBar) y
+  // otros elementos se renderizan FUERA de `.funnel-wrap`, así que necesitan que
+  // las variables (--theme-btn-gradient, --theme-accent…) estén en el documento
+  // para heredar el color de marca (azul Legal / naranja Blocks).
+  useEffect(() => {
+    const root = document.documentElement
+    const vars = theme.cssVars || {}
+    for (const [k, val] of Object.entries(vars)) root.style.setProperty(k, val)
+    return () => {
+      for (const k of Object.keys(vars)) root.style.removeProperty(k)
+    }
+  }, [theme])
+
   if (phase === 'loading') {
     return <div className="loading-wrap">Cargando formulario...</div>
   }

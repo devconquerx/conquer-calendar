@@ -13,7 +13,7 @@ export default function WelcomeScreen({ field, onNext }) {
         onClick={() => onNext(null)}
         style={{
           display: 'inline-block',
-          background: 'linear-gradient(90deg, #ffbf00, #ff4000)',
+          background: 'var(--theme-btn-gradient, linear-gradient(90deg, #ffbf00, #ff4000))',
           borderRadius: 0,
           border: 0,
           boxShadow: 'none',

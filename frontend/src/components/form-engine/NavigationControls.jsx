@@ -10,7 +10,7 @@ export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk
           display: 'inline-flex',
           alignItems: 'center',
           gap: '0.5rem',
-          background: isSubmitting ? '#e5e5e5' : 'linear-gradient(90deg, #ffbf00, #ff4000)',
+          background: isSubmitting ? '#e5e5e5' : 'var(--theme-btn-gradient, linear-gradient(90deg, #ffbf00, #ff4000))',
           borderRadius: 0,
           border: 0,
           boxShadow: 'none',

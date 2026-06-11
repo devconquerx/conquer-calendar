@@ -6,12 +6,15 @@ export default function HeroSection({ formConfig, theme }) {
   const title = landing.title || 'Sesion de Consultoria Gratuita'
   const description = landing.description || ''
   const t = theme.landing.hero
-  const isCB = theme.id === 'conquerblocks'
+  const isPaper = !!theme.paperboard
+  const accent = theme.accent || {}
   const tape = theme.assets?.tape1
 
-  // CB: réplica de producción — badge pill + título h5 (24px) + descripción.
-  // Convención del título: <strong> = degradado naranja; <strong><em> = negro en negrita.
-  if (isCB) {
+  // Paperboard (Blocks/Legal): réplica de producción — badge pill + título h5
+  // (24px) + descripción. Convención del título: <strong> = degradado de acento;
+  // <strong><em> = tinta negra en negrita. El degradado de acento se inyecta por
+  // CSS var (--accent-strong-grad) para no depender de colores en el build.
+  if (isPaper) {
     return (
       <div className="text-center flex flex-col items-center gap-5">
         {subtitle && (
@@ -21,7 +24,8 @@ export default function HeroSection({ formConfig, theme }) {
           </div>
         )}
         <h1
-          className="max-w-[820px] mx-auto text-[22px] md:text-2xl font-medium leading-[1.1] text-cb-ink [&_strong]:font-medium [&_strong]:[background-image:linear-gradient(135deg,#FF4000,#FF9800)] [&_strong]:bg-clip-text [&_strong]:text-transparent [&_em]:not-italic [&_em]:font-bold [&_em]:[-webkit-text-fill-color:#0A0A0A] [&_em]:[background-image:none]"
+          style={{ '--accent-strong-grad': accent.strongGradient }}
+          className="max-w-[820px] mx-auto text-[22px]/[1.1] md:text-2xl/[1.1] font-medium text-cb-ink [&_strong]:font-medium [&_strong]:[background-image:var(--accent-strong-grad)] [&_strong]:bg-clip-text [&_strong]:text-transparent [&_em]:not-italic [&_em]:font-bold [&_em]:[-webkit-text-fill-color:#0A0A0A] [&_em]:[background-image:none]"
           dangerouslySetInnerHTML={safeHtml(title)}
         />
         {description && (

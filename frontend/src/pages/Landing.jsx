@@ -8,15 +8,15 @@ import { safeHtml } from '../lib/sanitize'
 export default function Landing({ school, program, region, formConfig, nextUrl, funnelSlug, videoEnabled = false }) {
   const theme = getTheme(school?.slug)
   const t = theme.landing
-  const isCB = theme.id === 'conquerblocks'
+  const isPaper = !!theme.paperboard
   const assets = theme.assets
 
   const landing = formConfig?.landing || formConfig?.welcome || {}
   const instructor = landing.instructor
   const disclaimer = landing.disclaimer
 
-  if (isCB) {
-    return <CBLanding
+  if (isPaper) {
+    return <PaperboardLanding
       school={school} program={program} region={region}
       formConfig={formConfig} theme={theme} assets={assets}
       instructor={instructor} disclaimer={disclaimer}
@@ -33,10 +33,21 @@ export default function Landing({ school, program, region, formConfig, nextUrl, 
 }
 
 
-/* ═══ ConquerBlocks Landing — réplica de producción en React + Tailwind ═══
+/* ═══ Landing "paperboard" — réplica del sistema Webflow (Blocks / Legal) ═══
    Fondo casi blanco (#FAFAFA) con textura sutil, columna central de 1024px,
-   tarjetas planas grises con borde arena, formulario con glow aurora animado. */
-function CBLanding({ school, program, region, formConfig, theme, assets, instructor, disclaimer, nextUrl, funnelSlug, videoEnabled }) {
+   tarjetas planas grises con borde arena, formulario con glow aurora animado.
+   El acento de color (naranja Blocks / azul Legal) viene de `theme.accent`. */
+function PaperboardLanding({ school, program, region, formConfig, theme, assets, instructor, disclaimer, nextUrl, funnelSlug, videoEnabled }) {
+  const accent = theme.accent || {}
+  const footer = theme.footer || {}
+  // Ancho de la columna de contenido (réplica del `container-large` de Webflow:
+  // 1280px en Legal, 1064px en Blocks). Inline porque Tailwind no genera clases
+  // arbitrarias construidas en runtime.
+  const contentWidth = theme.landing?.contentWidth || '1064px'
+  // El px-5 (20px) se suma al ancho de columna para que las tarjetas lleguen al
+  // ancho real de producción (container-large 1280/1064) en desktop, conservando
+  // el padding lateral en móvil. Equivale al `padding-global` externo de Webflow.
+  const columnMaxWidth = `calc(${contentWidth} + 40px)`
   const pageStyle = assets?.paperboardTexture ? {
     backgroundImage: `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url(${assets.paperboardTexture})`,
     backgroundSize: 'cover',
@@ -68,18 +79,21 @@ function CBLanding({ school, program, region, formConfig, theme, assets, instruc
 
   return (
     <div className="min-h-screen overflow-x-hidden relative flex flex-col font-funnel bg-cb-bg text-cb-ink" style={pageStyle}>
-      {/* Pixeles decorativos (réplica de producción: 150px, opacidad 0.2) */}
-      {assets?.pixels?.deco && (
-        <>
-          <img src={assets.pixels.deco} alt="" aria-hidden="true" className="hidden lg:block absolute top-0 left-[6%] w-[150px] opacity-20 pointer-events-none select-none" />
-          <img src={assets.pixels.deco} alt="" aria-hidden="true" className="hidden lg:block absolute top-[280px] right-[2%] w-[150px] opacity-20 pointer-events-none select-none" />
-          <img src={assets.pixels.deco} alt="" aria-hidden="true" className="hidden lg:block absolute bottom-[120px] right-[8%] w-[150px] opacity-20 pointer-events-none select-none" />
-        </>
-      )}
-      <main className="relative z-10 flex-1 w-full max-w-[1064px] mx-auto px-5 flex flex-col">
+      {/* Pixeles decorativos (réplica de producción: 150px, opacidad 0.2).
+          Posiciones definidas por theme; se alternan los dos SVG. */}
+      {assets?.pixels?.deco && (theme.landing?.decoPixels || []).map((pos, i) => (
+        <img
+          key={i}
+          src={(i % 2 && assets.pixels.deco2) ? assets.pixels.deco2 : assets.pixels.deco}
+          alt=""
+          aria-hidden="true"
+          className={`hidden lg:block absolute w-[150px] opacity-20 pointer-events-none select-none ${pos}`}
+        />
+      ))}
+      <main className="relative z-10 flex-1 w-full mx-auto px-5 flex flex-col" style={{ maxWidth: columnMaxWidth }}>
         {/* Logo: imagen centrada (sin tarjeta) */}
         <div className="py-4 flex justify-center">
-          <img src={assets.logo} alt="ConquerBlocks" className="h-9 w-auto" />
+          <img src={assets.logo} alt={footer.copyrightBrand || 'Conquer'} className="w-auto" style={{ height: theme.landing?.logoHeight || '36px' }} />
         </div>
 
         {/* Hero: badge + título + descripción */}
@@ -94,7 +108,7 @@ function CBLanding({ school, program, region, formConfig, theme, assets, instruc
 
         {/* Formulario con glow aurora naranja animado por detrás */}
         <div className="relative mt-10 animate-fade-in">
-          <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(60deg,#FFBF00,#FF4000,#FFBF00,#FF4000)] bg-[length:300%_300%] blur-[20px] animate-aurora" aria-hidden="true" />
+          <div className="absolute inset-0 rounded-2xl bg-[length:300%_300%] blur-[20px] animate-aurora" style={{ backgroundImage: accent.auroraGradient }} aria-hidden="true" />
           <div className="relative z-10 rounded-2xl border border-cb-line px-5 py-5 md:px-12 md:py-6" style={cardStyle}>
             <LandingForm
               program={program}
@@ -110,24 +124,24 @@ function CBLanding({ school, program, region, formConfig, theme, assets, instruc
 
         {/* Instructor */}
         {instructor && (
-          <div className="mt-10 animate-fade-in rounded-2xl border border-cb-line overflow-hidden flex flex-col md:flex-row md:min-h-[341px]" style={cardStyle}>
-            <div className="w-full aspect-square md:aspect-auto md:w-[341px] md:self-stretch flex-shrink-0">
+          <div className="mt-10 animate-fade-in rounded-2xl border border-cb-line overflow-hidden flex flex-col md:flex-row md:min-h-[426px]" style={cardStyle}>
+            <div className="w-full aspect-square md:aspect-auto md:w-[426px] md:h-[426px] flex-shrink-0 self-start">
               {instructorPhoto && (
                 <img
                   src={instructorPhoto}
                   alt={instructor.name}
-                  className="w-full h-full object-cover bg-black"
+                  className="w-full h-full object-cover object-top bg-black"
                   style={pixelMaskStyle}
                 />
               )}
             </div>
-            <div className="flex-1 p-8 md:p-12 flex flex-col gap-4 justify-center">
+            <div className="flex-1 p-8 md:p-12 flex flex-col justify-center">
               <h2 className="text-4xl md:text-[48px] font-semibold leading-[1.1] text-cb-ink2">
                 {instructor.name}
               </h2>
-              <div className="text-base font-light text-cb-ink2 leading-relaxed">
-                {instructor.role && <p>{instructor.role}</p>}
-                <p className="mt-4" dangerouslySetInnerHTML={safeHtml(instructor.description)} />
+              <div className="mt-7 text-base font-light text-cb-ink2 leading-[1.25]">
+                {instructor.role && <p className="mb-4">{instructor.role}</p>}
+                <p dangerouslySetInnerHTML={safeHtml(instructor.description)} />
               </div>
             </div>
           </div>
@@ -135,21 +149,22 @@ function CBLanding({ school, program, region, formConfig, theme, assets, instruc
       </main>
 
       {/* Footer */}
-      <footer className="w-full max-w-[1064px] mx-auto px-5 mt-12 pb-10">
+      <footer className="w-full mx-auto px-5 mt-12 pb-10" style={{ maxWidth: columnMaxWidth }}>
         {disclaimer && (
-          <p className="text-base font-light text-cb-ink2 leading-relaxed text-center">
-            {disclaimer} Puedes contactarnos enviándonos un email a contacto@conquerblocks.com
+          <p className="max-w-[90%] mx-auto text-xs font-light text-neutral-500 leading-[1.25] text-center">
+            {disclaimer}
+            {footer.contactEmail && ` Puedes contactarnos enviándonos un email a ${footer.contactEmail}`}
           </p>
         )}
-        <div className="border-t border-cb-line/60 my-6" />
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm font-light text-cb-ink2">
+        <div className="border-t border-[#404040] my-6" />
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm font-light text-cb-ink2 leading-tight">
           <p className="text-center md:text-left">
-            Conquer Blocks {new Date().getFullYear()} &reg; | ConquerX LLC | 16192 Coastal Highway, Lewes 19958, Delaware, USA
+            {footer.copyrightBrand || 'Conquer'} {new Date().getFullYear()} &reg; | ConquerX LLC | 16192 Coastal Highway, Lewes 19958, Delaware, USA
           </p>
-          <div className="flex gap-5 flex-shrink-0">
-            <a href="https://www.conquerblocks.com/legal/politica-de-cookies" target="_blank" rel="noopener noreferrer" className="hover:text-cb-ink">Política de Cookies</a>
-            <a href="https://www.conquerblocks.com/legal/politica-de-privacidad" target="_blank" rel="noopener noreferrer" className="hover:text-cb-ink">Política de Privacidad</a>
-            <a href="https://www.conquerblocks.com/legal/terminos-y-condiciones" target="_blank" rel="noopener noreferrer" className="hover:text-cb-ink">Términos y Condiciones</a>
+          <div className="flex gap-4 flex-shrink-0 text-xs">
+            <a href={footer.legal?.cookies} target="_blank" rel="noopener noreferrer" className="hover:text-cb-ink">Política de Cookies</a>
+            <a href={footer.legal?.privacy} target="_blank" rel="noopener noreferrer" className="hover:text-cb-ink">Política de Privacidad</a>
+            <a href={footer.legal?.terms} target="_blank" rel="noopener noreferrer" className="hover:text-cb-ink">Términos y Condiciones</a>
           </div>
         </div>
       </footer>

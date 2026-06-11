@@ -67,7 +67,8 @@ export default function LandingForm({ program, region, formConfig, school, nextU
 
   const theme = getTheme(school?.slug)
   const t = theme.landing.form
-  const isCB = theme.id === 'conquerblocks'
+  const isPaper = !!theme.paperboard
+  const accent = theme.accent || {}
 
   const landing = formConfig?.landing || formConfig?.welcome || {}
   const buttonText = landing.buttonText || 'Ver video gratis'
@@ -138,7 +139,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
     const newErrors = {}
     if (!name.trim()) {
       newErrors.name = 'El nombre es obligatorio'
-    } else if (isCB && name.trim().length < 2) {
+    } else if (isPaper && name.trim().length < 2) {
       newErrors.name = 'El nombre debe tener al menos 2 caracteres'
     }
     if (!email.trim()) {
@@ -264,7 +265,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className={isCB
+            className={isPaper
               ? `flex items-center gap-1.5 px-2 py-3 rounded border bg-white text-base text-black shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] min-w-[90px] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
               : `flex items-center gap-1.5 px-3 py-3.5 rounded-xl border text-sm min-w-[100px] ${errors.phone ? t.inputError : t.input}`
             }
@@ -315,18 +316,19 @@ export default function LandingForm({ program, region, formConfig, school, nextU
           placeholder={phonePlaceholder}
           value={phone}
           onChange={handlePhoneChange}
-          className={isCB
-            ? `flex-1 px-3 py-3 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
+          style={isPaper ? { '--tw-ring-color': accent.ring } : undefined}
+          className={isPaper
+            ? `flex-1 px-3 py-3 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
             : `flex-1 px-4 py-3.5 rounded-xl border focus:outline-none text-sm transition-colors ${errors.phone ? t.inputError : t.input}`
           }
         />
       </div>
-      {errors.phone && <p className={`text-xs mt-1 ${isCB ? 'text-red-500' : 'text-red-400'}`}>{errors.phone}</p>}
+      {errors.phone && <p className={`text-xs mt-1 ${isPaper ? 'text-red-500' : 'text-red-400'}`}>{errors.phone}</p>}
     </div>
   ) : null
 
   // ── CB layout ──
-  if (isCB) {
+  if (isPaper) {
     return (
       <form onSubmit={handleSubmit}>
         {honeypotField}
@@ -339,7 +341,8 @@ export default function LandingForm({ program, region, formConfig, school, nextU
               placeholder="Nombre sin apellidos *"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className={`w-full px-3 py-3 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.name ? 'border-red-500' : 'border-[#404040]'}`}
+              style={{ '--tw-ring-color': accent.ring }}
+              className={`w-full px-3 py-3 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.name ? 'border-red-500' : 'border-[#404040]'}`}
             />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
@@ -350,7 +353,8 @@ export default function LandingForm({ program, region, formConfig, school, nextU
               placeholder="Tu mejor email *"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={`w-full px-3 py-3 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 focus:outline-none focus:ring-2 focus:ring-orange-400 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.email ? 'border-red-500' : 'border-[#404040]'}`}
+              style={{ '--tw-ring-color': accent.ring }}
+              className={`w-full px-3 py-3 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.email ? 'border-red-500' : 'border-[#404040]'}`}
             />
             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
@@ -364,7 +368,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
           </p>
           <p>
             Al continuar, confirmas que has leído y aceptas nuestra{' '}
-            <a href={school?.privacyPolicyUrl || 'https://www.conquerblocks.com/legal/politica-de-privacidad'} target="_blank" rel="noopener noreferrer" className="underline bg-gradient-to-r from-[#FFBF00] to-[#FF4000] bg-clip-text text-transparent">
+            <a href={school?.privacyPolicyUrl || theme.footer?.legal?.privacy || '#'} target="_blank" rel="noopener noreferrer" style={{ backgroundImage: accent.linkGradient }} className="underline bg-clip-text text-transparent">
               política de privacidad.
             </a>
           </p>
@@ -373,8 +377,8 @@ export default function LandingForm({ program, region, formConfig, school, nextU
         <button
           type="submit"
           disabled={submitting}
-          className="mt-4 w-full px-6 py-3 text-[#FAFAFA] font-normal uppercase flex items-center justify-center gap-2 bg-[linear-gradient(90deg,#FFBF00,#FF4000)] hover:brightness-105 active:scale-[0.99] transition-all disabled:opacity-50"
-          style={{ clipPath: 'polygon(97.74% 73.83%, 97.74% 82.56%, 100% 82.56%, 100% 100%, 95.47% 100%, 95.47% 91.28%, 81.5% 91.28%, 81.5% 100%, 19.87% 100%, 19.87% 91.28%, 9.06% 91.28%, 9.06% 100%, 2.26% 100%, 2.26% 80.24%, 0% 80.24%, 0% 26.16%, 2.26% 26.16%, 2.26% 17.44%, 0% 17.44%, 0% 0%, 4.53% 0%, 4.53% 8.72%, 12.82% 8.72%, 12.82% 0%, 72.03% 0%, 72.03% 8.72%, 88.67% 8.72%, 88.67% 0%, 97.74% 0%, 97.74% 8.72%, 100% 8.72%, 100% 73.83%)' }}
+          className="mt-4 w-full px-6 py-3 text-[#FAFAFA] uppercase flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition-all disabled:opacity-50"
+          style={{ backgroundImage: accent.buttonGradient, fontWeight: accent.buttonWeight || '400', clipPath: 'polygon(97.74% 73.83%, 97.74% 82.56%, 100% 82.56%, 100% 100%, 95.47% 100%, 95.47% 91.28%, 81.5% 91.28%, 81.5% 100%, 19.87% 100%, 19.87% 91.28%, 9.06% 91.28%, 9.06% 100%, 2.26% 100%, 2.26% 80.24%, 0% 80.24%, 0% 26.16%, 2.26% 26.16%, 2.26% 17.44%, 0% 17.44%, 0% 0%, 4.53% 0%, 4.53% 8.72%, 12.82% 8.72%, 12.82% 0%, 72.03% 0%, 72.03% 8.72%, 88.67% 8.72%, 88.67% 0%, 97.74% 0%, 97.74% 8.72%, 100% 8.72%, 100% 73.83%)' }}
         >
           {submitting ? <Spinner /> : buttonText}
         </button>

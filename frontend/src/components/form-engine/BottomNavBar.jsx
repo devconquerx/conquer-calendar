@@ -8,7 +8,7 @@ export default function BottomNavBar({ progress, onUp, onDown, canGoUp, canGoDow
             className="progress-fill"
             style={{
               width: `${progress}%`,
-              background: 'linear-gradient(90deg, #ffbf00, #ff4000)',
+              background: 'var(--theme-btn-gradient, linear-gradient(90deg, #ffbf00, #ff4000))',
             }}
           />
         </div>

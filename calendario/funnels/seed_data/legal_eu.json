@@ -207,22 +207,22 @@
       "label.button.enterHint": "presiona"
     },
     "landing": {
-      "title": "Estructura la legalidad de tu empresa para acelerar tus acuerdos comerciales y tomar decisiones con <strong>total autonomía operativa</strong>",
+      "title": "Los <strong>negocios online</strong> no se destruyen por la falta de ventas...<br/>se destruyen porque crecen más rápido que la estructura que los sostiene",
       "bullets": [
-        "<strong>Sientes que la legalidad frena tu crecimiento</strong>, y necesitas un marco ágil que te permita crecer a la velocidad que exige el mercado.",
-        "Tu equipo depende constantemente de validaciones externas y abogados tradicionales por horas, lo que ralentiza tus operaciones diarias y resta agilidad a tu capacidad de ejecución.",
-        "<strong>Delegar operaciones críticas es arriesgado</strong>, por miedo a un error estructural, asumiendo tú mismo la carga de revisar contratos en lugar de centrarte puramente en escalar la rentabilidad del negocio."
+        "Descbre los <strong>riesgos ocultos</strong> que se están generando silenciosamente en tu negocio y que podrían acabar costandote cientos de miles de euros.",
+        "Te ayudamos a detectar, corregir y <strong>eliminar</strong> los riesgos fiscales, laborales y contractuales que amenazan el crecimiento de tu negocio.",
+        "Prepara tu empresa y <strong>crea una estructura</strong> que te permita escalar tu facturación mientras duermes tranquilo."
       ],
-      "subtitle": "Vídeo exclusivo de 15 minutos",
-      "buttonText": "Ver vídeo",
-      "disclaimer": "* La clase y los materiales compartidos son únicamente educativos e informativos. No constituyen asesoramiento legal vinculante hasta la formalización contractual del servicio. Los resultados óptimos varían según la situación y madurez estructural de cada compañía. Puedes contactarnos enviándonos un email a contacto@conquerlegal.com",
+      "subtitle": "Presentación exclusiva de 10 minutos",
+      "buttonText": "Ver vídeo gratis",
+      "disclaimer": "La clase y los materiales compartidos son únicamente educativos e informativos. No constituyen asesoramiento legal vinculante hasta la formalización contractual del servicio. Los resultados óptimos varían según la situación y madurez estructural de cada compañía.",
       "instructor": {
-        "name": "Ignacio",
-        "role": "Director Jurídico en Conquer Legal.",
-        "imageUrl": "https://cdn.prod.website-files.com/6a073366a754c9ee20607db8/6a074c52a75edae5e788b18c_343038e41046031b79e86982644e9de6_Ignacio.avif",
-        "description": "Con más de <strong>20 años de trayectoria</strong> blindando y estructurando más de 150 empresas internacionales de alto nivel."
+        "name": "Ignacio Fernández",
+        "role": "",
+        "imageUrl": "https://cdn.prod.website-files.com/6a073366a754c9ee20607db8/6a074c52a75edae5e788b18c_8444298595b3cd7599dcbc43ee523680_Ignacio.avif",
+        "description": "Ignacio es el director de Conquer Legal y cuenta con más de <strong>20 años de trayectoria</strong> blindando legalmente y ahorrando millones de euros en impuestos para dueños de negocios.<br/><br/>En el vídeo que estás a punto de ver, te presentamos cómo Ignacio ya ha ayudado a decenas de negocios online a ahorrar muchísimo dinero tanto en impuestos, como en evitar problemas legales."
       },
-      "description": "... sin depender de despachos tradicionales lentos ni lidiar con tecnicismos burocráticos incomprensibles."
+      "description": "*Solo para dueños de negocios online facturando al menos 10k/mes*"
     },
     "welcome": {
       "title": "Sesión de Consultoría | Conquer Legal",

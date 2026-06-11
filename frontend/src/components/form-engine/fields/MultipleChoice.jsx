@@ -41,14 +41,19 @@ export default function MultipleChoice({ field, value, onChange, onNext }) {
             onClick={() => handleSelect(choice.value)}
             className={`group/choice relative flex items-center text-left px-2 py-2.5 rounded-lg border transition-all duration-200 overflow-hidden w-full ${
               isSelected
-                ? 'border-[#F97316] ring-2 ring-[#F97316]/30'
-                : 'border-[#BBB49B] hover:border-[#F97316]/50'
+                ? ''
+                : 'border-[#BBB49B] hover:border-[color:var(--theme-accent,#F97316)]'
             }`}
             style={{
               backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${paperboardTexture})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              boxShadow: cbShadow,
+              // Acento de marca por CSS var (naranja Blocks / azul Legal). El aro
+              // translúcido va por box-shadow para poder usar el color del tema.
+              borderColor: isSelected ? 'var(--theme-accent, #F97316)' : undefined,
+              boxShadow: isSelected
+                ? `0 0 0 2px var(--theme-accent-ring, rgba(249,115,22,0.3)), ${cbShadow}`
+                : cbShadow,
             }}
           >
             <div className={`absolute inset-0 pointer-events-none rounded-lg transition-colors ${

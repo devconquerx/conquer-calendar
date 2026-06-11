@@ -11,12 +11,14 @@ export default function BulletPoints({ formConfig, theme }) {
   const landing = formConfig?.landing || formConfig?.welcome || {}
   const bullets = landing.bullets || DEFAULT_BULLETS
   const t = theme.landing.bullets
-  const isCB = theme.id === 'conquerblocks'
+  const isPaper = !!theme.paperboard
 
-  // CB: réplica de producción — filas a ancho completo con textura paperboard
+  // Paperboard (Blocks/Legal): filas a ancho completo con textura paperboard
   // (overlay blanco 0.6) y sombra suave en capas, icono 48px + texto 16px.
-  if (isCB) {
+  if (isPaper) {
     const bulletIcons = theme.assets?.bulletIcons || []
+    const iconSize = t?.iconSize || '48px'
+    const strongWeight = t?.strongWeight || '600'
     const cardStyle = {
       backgroundColor: '#F6F6F6',
       backgroundImage: theme.assets?.paperboardTexture
@@ -38,10 +40,11 @@ export default function BulletPoints({ formConfig, theme }) {
               style={cardStyle}
             >
               {iconSrc && (
-                <img src={iconSrc} alt="" className="w-12 h-12 flex-shrink-0 object-contain" />
+                <img src={iconSrc} alt="" className="flex-shrink-0 object-contain" style={{ width: iconSize, height: iconSize }} />
               )}
               <p
-                className="text-base font-light text-cb-ink leading-snug [&_strong]:font-semibold"
+                className="text-base font-light text-cb-ink leading-[1.25] [&_strong]:[font-weight:var(--bw)]"
+                style={{ '--bw': strongWeight }}
                 dangerouslySetInnerHTML={safeHtml(item)}
               />
             </div>
