@@ -69,6 +69,26 @@ urlpatterns = [
         r'^confirmacion-llamada(?:-(?P<region>latam|eu|us))?/?$',
         FunnelConfirmationView.as_view(), name='confirmacion_host',
     ),
+    # Rutas /hub/* que replican exactamente las URLs de producción de Conquer
+    # Legal (conquerlegal.com/hub/registro-eu, /hub/video-eu, /hub/confirmacion).
+    # El prefijo /hub/ es propio de Legal, así que fijamos escuela=conquer-legal.
+    # Deben ir antes del catch-all de booking para que "hub/<algo>" no se
+    # interprete como user_slug/event_type_slug.
+    re_path(
+        r'^hub/registro-(?P<region>latam|eu|us)/?$',
+        FunnelClaseView.as_view(), {'escuela': 'conquer-legal'},
+        name='clase_hub_legal',
+    ),
+    re_path(
+        r'^hub/video-(?P<region>latam|eu|us)/?$',
+        FunnelVideoView.as_view(), {'escuela': 'conquer-legal'},
+        name='video_hub_legal',
+    ),
+    re_path(
+        r'^hub/confirmacion/?$',
+        FunnelConfirmationView.as_view(), {'escuela': 'conquer-legal'},
+        name='confirmacion_hub_legal',
+    ),
     re_path(
         r'^(?P<user_slug>[-a-zA-Z0-9_.]+)/(?P<event_type_slug>[-a-zA-Z0-9_]+)/',
         include('calendario.bookings.urls_public_booking'),

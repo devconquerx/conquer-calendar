@@ -260,8 +260,11 @@ def _escuela_por_host(request):
 _ESCUELAS_RUTA_PATH = ('conquer-blocks', 'conquer-legal')
 
 
-# URLs de la página de video por marca.
+# URLs de la página de video por marca. Conquer Legal replica las rutas de
+# producción bajo /hub/ (conquerlegal.com/hub/video-<region>).
 def _video_url(escuela, region, base=''):
+    if escuela == 'conquer-legal':
+        return f'{base}/hub/video-{region}'
     if escuela in _ESCUELAS_RUTA_PATH:
         return f'{base}/{escuela}/video-clase-{region}/'
     return f'{base}/video-clase-{region}/'
@@ -269,6 +272,8 @@ def _video_url(escuela, region, base=''):
 
 # URL de la landing de registro de lead por marca (misma convención).
 def _landing_url(escuela, region, base=''):
+    if escuela == 'conquer-legal':
+        return f'{base}/hub/registro-{region}'
     if escuela in _ESCUELAS_RUTA_PATH:
         return f'{base}/{escuela}/clase-online-gratuita-{region}/'
     return f'{base}/clase-online-gratuita-{region}/'
@@ -276,6 +281,8 @@ def _landing_url(escuela, region, base=''):
 
 # URL de la página de confirmación de llamada por marca (misma convención).
 def confirmacion_url(escuela, region, base=''):
+    if escuela == 'conquer-legal':
+        return f'{base}/hub/confirmacion'
     if escuela in _ESCUELAS_RUTA_PATH:
         return f'{base}/{escuela}/confirmacion-llamada-{region}/'
     return f'{base}/confirmacion-llamada-{region}/'
@@ -501,8 +508,8 @@ class FunnelStatusView(View):
                 'has_landing': 'landing' in cfg,
                 'has_welcome': 'welcome' in cfg,
                 'has_video': tiene_video,
-                'landing_url': f'{base}/{f.escuela}/clase-online-gratuita-{f.region}/',
-                'video_url': f'{base}/{f.escuela}/video-clase-{f.region}/',
+                'landing_url': _landing_url(f.escuela, f.region, base=base),
+                'video_url': _video_url(f.escuela, f.region, base=base),
                 'stepform_url': stepform_url(f.escuela, f.region, base=base) or '',
             })
         return render(request, 'pages/public/funnel/status.html', {
