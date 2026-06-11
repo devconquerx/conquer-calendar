@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { apiUrl } from '../lib/apiBase'
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -111,7 +112,7 @@ export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSe
 
   const fetchMes = useCallback((mesStr) => {
     setLoadingMes(true)
-    fetch(`/${hostSlug}/${eventTypeSlug}/slots.json?mes=${mesStr}&tz=${encodeURIComponent(tz)}`)
+    fetch(apiUrl(`/${hostSlug}/${eventTypeSlug}/slots.json?mes=${mesStr}&tz=${encodeURIComponent(tz)}`))
       .then(r => r.json())
       .then(data => { setSlotsData(data); setLoadingMes(false) })
       .catch(() => setLoadingMes(false))

@@ -202,6 +202,13 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
+# Origen público canónico del calendario (p.ej. https://calendar.conquerx.com).
+# Cuando el funnel/booking se sirve embebido en un dominio de marca
+# (conquerlegal.com, conquerblocks.com, …), el frontend antepone este origen a
+# sus requests de API/slots para que vayan al backend del calendario en lugar de
+# al dominio de marca (donde esas rutas no existen). Vacío = mismo origen (dev).
+CALENDAR_PUBLIC_ORIGIN = env.str('CALENDARIO_PUBLIC_ORIGIN', default='')
+
 SESSION_COOKIE_NAME = 'calendario_sessionid'
 
 LOGIN_REDIRECT_URL = "/panel/"

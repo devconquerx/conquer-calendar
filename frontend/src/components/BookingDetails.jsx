@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { postReservar } from '../api'
 import useTracking from '../hooks/useTracking'
 import { fireAllSchedule } from '../lib/pixelEvents'
+import { apiUrl } from '../lib/apiBase'
 
 function LeftPanel({ eventoInfo }) {
   return (
@@ -66,7 +67,7 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
           calendlyEventUuid: '',
           scheduleEventId: (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_schedule_event_id')) || '',
         })
-        window.location.href = `/r/${result.confirmacion_token}/`
+        window.location.href = apiUrl(`/r/${result.confirmacion_token}/`)
       } else {
         setError(result.mensaje || 'Error al crear la reserva. Inténtalo de nuevo.')
       }

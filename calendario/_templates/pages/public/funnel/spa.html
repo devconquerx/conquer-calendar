@@ -11,6 +11,11 @@
 
   {% include '_includes/_sgtm_head.html' %}
 
+  {# Origen canónico del calendario: el bundle antepone esto a sus requests de
+     API/slots cuando corre embebido en un dominio de marca. Vacío = mismo
+     origen (dev / servido en calendar.conquerx.com). #}
+  <script>window.__CQX_CALENDAR_ORIGIN__ = "{{ calendar_public_origin|escapejs }}";</script>
+
   {% vite_hmr_client %}
   {% vite_react_refresh %}
   {% vite_asset 'src/funnel-spa.jsx' %}

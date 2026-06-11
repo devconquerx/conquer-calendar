@@ -100,8 +100,10 @@ def pixel_ids(request):
     app_base_path lo fija AppBasePathMiddleware cuando el funnel se sirve bajo
     un prefijo (p.ej. /preview); por defecto '' (servido en la raíz).
     """
+    from django.conf import settings
     return {
         'pixel_ids': {},
         'gtm': {},
         'app_base_path': getattr(request, 'app_base_path', ''),
+        'calendar_public_origin': getattr(settings, 'CALENDAR_PUBLIC_ORIGIN', ''),
     }
