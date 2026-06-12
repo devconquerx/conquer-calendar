@@ -33,13 +33,16 @@ def _intervals_overlap(a_inicio, a_fin, b_inicio, b_fin):
 def _obtener_hosts_pool(event_type):
     """
     Hosts activos del pool del event_type, ordenados por pivot.id ASC.
-    Si pool vacío, devuelve [].
+    Si pool vacío (evento no-equipo), usa el host dueño del evento como fallback.
     """
     pivots = (EventTypeXHost.objects
               .filter(event_type=event_type, host__is_active=True)
               .select_related('host')
               .order_by('id'))
-    return [p.host for p in pivots]
+    hosts = [p.host for p in pivots]
+    if not hosts and event_type.host.is_active:
+        hosts = [event_type.host]
+    return hosts
 
 
 def _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc):
