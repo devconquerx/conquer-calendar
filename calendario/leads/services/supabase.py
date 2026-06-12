@@ -62,6 +62,11 @@ def _row_from_lead(lead):
         'is_proxy': lead.is_proxy,
         # NeverBounce result (jsonb)
         'neverbounce_result': lead.neverbounce_result,
+        # VSL: % de video visto (genérico + por escuela), espejo de la BD.
+        'vsl_percentage': lead.vsl_percentage,
+        'vsl_percent_cb': lead.vsl_percent_cb,
+        'vsl_percent_cl': lead.vsl_percent_cl,
+        'vsl_percent_cf': lead.vsl_percent_cf,
     }
     return {k: v for k, v in row.items() if v is not None}
 

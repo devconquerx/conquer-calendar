@@ -68,6 +68,23 @@ class Reserva(models.Model):
     telefono_invitado = models.CharField(max_length=50, blank=True, default='')
     notas = models.TextField(blank=True, default='')
     timezone_invitado = models.CharField(max_length=100, blank=True, default='')
+
+    # Tracking: snapshot al crear la reserva (del tracking de la Prellamada en el
+    # flujo del funnel). Queda autocontenido en la reserva y se envía al CRM
+    # schedule y al respaldo de Supabase sin depender del Lead/Prellamada
+    # enlazados. Vacío en reservas creadas fuera del funnel (calendario directo).
+    journey_id = models.CharField(max_length=120, blank=True, default='', db_index=True)
+    event_id = models.CharField(max_length=120, blank=True, default='')
+    utm_source = models.CharField(max_length=255, blank=True, default='')
+    utm_campaign = models.CharField(max_length=255, blank=True, default='')
+    utm_medium = models.CharField(max_length=255, blank=True, default='')
+    utm_term = models.CharField(max_length=255, blank=True, default='')
+    utm_content = models.CharField(max_length=255, blank=True, default='')
+    utm_idcampaign = models.CharField(max_length=255, blank=True, default='')
+    utm_adsetid = models.CharField(max_length=255, blank=True, default='')
+    utm_adid = models.CharField(max_length=255, blank=True, default='')
+    utm_form_variant = models.CharField(max_length=500, blank=True, default='')
+
     estado = models.CharField(
         max_length=20,
         choices=Estado.choices,

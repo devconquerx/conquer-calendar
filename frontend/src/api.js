@@ -24,6 +24,26 @@ export async function postResolver(slug, respuestas, tracking = {}) {
   return res.json()
 }
 
+/**
+ * Pre-schedule intermedio: tras capturar el teléfono, en cada pregunta se
+ * crea/actualiza la Prellamada en el backend (upsert por journey_id), igual que
+ * el submitForm(..., false) de conquerx-funnels-new. Fire-and-forget: nunca
+ * bloquea ni rompe el avance del formulario.
+ */
+export function sendPreSchedule(slug, respuestas, tracking = {}) {
+  fetch(apiUrl(`/f/api/${slug}/resolver/`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrf(),
+    },
+    body: JSON.stringify({ respuestas, tracking, final: false }),
+  }).catch((err) => {
+    console.error('[API] Error sending pre-schedule:', err)
+    Sentry.captureException(err, { tags: { action: 'sendPreSchedule' } })
+  })
+}
+
 export async function postReservar(slug, data) {
   const res = await fetch(apiUrl(`/f/api/${slug}/reservar/`), {
     method: 'POST',

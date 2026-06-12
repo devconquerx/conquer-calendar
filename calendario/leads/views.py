@@ -151,8 +151,16 @@ def video_progress(request):
 
     if update_fields:
         lead.save(update_fields=update_fields)
+        # Re-respalda el Lead en Supabase con el VSL actualizado (la señal solo
+        # corre al crear, así que el update del % no lo cubre). Upsert por
+        # source_id: converge al último estado. Fire-and-forget.
+        try:
+            from .tasks import process_supabase
+            process_supabase.delay(lead.pk)
+        except Exception:
+            logger.exception('No se pudo re-encolar Supabase para lead %s (vsl)', lead.pk)
 
-    # Reenvía el progreso al CRM (réplica de funnels: reemplaza el webhook de Make).
+    # Reenvía el progreso del VSL al CRM ingest.
     if brand_updated:
         _patch_vsl_progress_to_crm(email, brand_field, percent)
 

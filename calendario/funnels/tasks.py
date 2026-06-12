@@ -20,10 +20,10 @@ RETRY_POLICY = dict(
 
 @shared_task(**RETRY_POLICY)
 def process_pre_schedule_crm(self, prellamada_id):
-    """Envía la Prellamada al CRM ingest. Gated por FUNNELS_PRESCHEDULE_CRM_ENABLED:
+    """Envía la Prellamada al CRM ingest. Gated por CRM_INGEST_ENABLED:
     mientras esté en False hace no-op (y el sweep no la reintenta)."""
-    if not settings.FUNNELS_PRESCHEDULE_CRM_ENABLED:
-        logger.info('Prellamada %s: CRM send SKIPPED (FUNNELS_PRESCHEDULE_CRM_ENABLED=False)', prellamada_id)
+    if not settings.CRM_INGEST_ENABLED:
+        logger.info('Prellamada %s: CRM send SKIPPED (CRM_INGEST_ENABLED=False)', prellamada_id)
         return
 
     from .models import Prellamada
@@ -70,7 +70,7 @@ def sweep_incomplete_prellamadas():
         .filter(creado_en__gte=cutoff_old, creado_en__lte=cutoff_recent)
         .prefetch_related('tags')
     )
-    crm_on = settings.FUNNELS_PRESCHEDULE_CRM_ENABLED
+    crm_on = settings.CRM_INGEST_ENABLED
 
     requeued = 0
     for p in prellamadas.iterator(chunk_size=200):

@@ -18,7 +18,6 @@ from calendario.google_calendar.services import (
 )
 from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .models import Reserva
-from .services_crm import notificar_crm
 
 logger = logging.getLogger(__name__)
 
@@ -286,12 +285,31 @@ def _seleccionar_host_round_robin(event_type, candidatos):
     )
 
 
+# Campos de tracking que la Reserva guarda como snapshot (del tracking de la
+# Prellamada). Mismos nombres que el payload del CRM schedule / Supabase.
+RESERVA_TRACKING_FIELDS = (
+    'journey_id', 'event_id', 'utm_source', 'utm_campaign', 'utm_medium',
+    'utm_term', 'utm_content', 'utm_idcampaign', 'utm_adsetid', 'utm_adid',
+    'utm_form_variant',
+)
+
+
+def _tracking_kwargs(tracking):
+    """Extrae los campos de tracking de un dict (p.ej. Prellamada.tracking) a los
+    kwargs del modelo Reserva. Devuelve '' para los que falten."""
+    tr = tracking if isinstance(tracking, dict) else {}
+    return {f: (tr.get(f) or '') for f in RESERVA_TRACKING_FIELDS}
+
+
 def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
-                  telefono_invitado='', notas='', timezone_invitado=''):
+                  telefono_invitado='', notas='', timezone_invitado='', tracking=None):
     """
     Crea una reserva eligiendo automáticamente un host del pool (round-robin
     least-loaded). Lock sobre la fila EventType para serializar concurrentes
     del mismo event_type. Lanza SlotNoDisponibleError si no hay candidato.
+
+    `tracking` (dict, opcional): journey_id/event_id/UTMs a guardar como snapshot
+    en la reserva (lo pasa el flujo del funnel desde Prellamada.tracking).
     """
     with transaction.atomic():
         et = EventType.objects.select_for_update().get(pk=event_type.pk)
@@ -331,12 +349,11 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
             telefono_invitado=telefono_invitado.strip(),
             notas=notas.strip(),
             timezone_invitado=timezone_invitado,
+            **_tracking_kwargs(tracking),
         )
         et_id = et.pk
         transaction.on_commit(lambda: invalidar_slots(et_id))
         transaction.on_commit(lambda: crear_evento_google(reserva.pk))
-        if et.notificar_crm:
-            transaction.on_commit(lambda: notificar_crm(reserva.pk))
         # Conversiones server-side (Meta CAPI/TikTok/Google Ads/AC/Respond.io/CRM)
         # vía Celery. La reserva ya quedó creada; si Celery/Redis falla, no
         # bloquea ni rompe el booking.
@@ -377,7 +394,9 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
                 vieja_pk = vieja.pk
                 transaction.on_commit(lambda: cancelar_evento_google(vieja_pk))
 
-        # crear_reserva ahora no detecta duplicado porque la vieja está cancelada
+        # crear_reserva ahora no detecta duplicado porque la vieja está cancelada.
+        # El reagendamiento conserva el tracking de la reserva original.
+        tracking_previo = {f: getattr(vieja, f, '') for f in RESERVA_TRACKING_FIELDS} if vieja else None
         return crear_reserva(
             event_type=event_type,
             inicio_utc=inicio_utc,
@@ -386,6 +405,7 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
             telefono_invitado=telefono_invitado,
             notas=notas,
             timezone_invitado=timezone_invitado,
+            tracking=tracking_previo,
         )
 
 

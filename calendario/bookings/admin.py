@@ -250,3 +250,57 @@ class LogCorreoAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(Reserva)
+class ReservaAdmin(admin.ModelAdmin):
+    list_display = (
+        'nombre_invitado', 'email_invitado', 'event_type', 'host',
+        'inicio_utc', 'estado', 'google_sync_estado', 'fecha_creacion',
+    )
+    list_filter = ('estado', 'google_sync_estado', 'event_type', 'host', 'fecha_creacion', 'tags')
+    search_fields = (
+        'nombre_invitado', 'email_invitado', 'telefono_invitado',
+        'google_event_id', 'confirmacion_token', 'journey_id', 'event_id',
+    )
+    date_hierarchy = 'fecha_creacion'
+    ordering = ('-fecha_creacion',)
+    raw_id_fields = ('event_type', 'host')
+    list_select_related = ('event_type', 'host')
+    readonly_fields = (
+        'confirmacion_token', 'google_event_id', 'google_event_link',
+        'google_meet_url', 'fecha_creacion', 'fecha_actualizacion',
+    )
+    fieldsets = (
+        ('Invitado', {
+            'fields': ('nombre_invitado', 'email_invitado', 'telefono_invitado',
+                       'timezone_invitado', 'notas'),
+        }),
+        ('Evento', {
+            'fields': ('event_type', 'host', 'inicio_utc', 'fin_utc', 'estado'),
+        }),
+        ('Google Calendar', {
+            'fields': ('google_sync_estado', 'google_event_id', 'google_event_link',
+                       'google_meet_url'),
+        }),
+        ('Recordatorios', {
+            'fields': ('recordatorio_1_enviado', 'recordatorio_2_enviado'),
+        }),
+        ('Tracking', {
+            'fields': (
+                'journey_id', 'event_id', 'utm_source', 'utm_campaign', 'utm_medium',
+                'utm_term', 'utm_content', 'utm_idcampaign', 'utm_adsetid', 'utm_adid',
+                'utm_form_variant',
+            ),
+        }),
+        ('Metadatos', {
+            'fields': ('confirmacion_token', 'tags', 'fecha_creacion', 'fecha_actualizacion'),
+        }),
+    )
+
+    @admin.display(description='Evento en Google Calendar')
+    def google_event_link(self, obj):
+        url = obj.google_event_url
+        if url:
+            return format_html('<a href="{}" target="_blank">Abrir en Google Calendar</a>', url)
+        return '-'

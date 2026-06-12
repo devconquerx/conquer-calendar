@@ -102,6 +102,7 @@ class Prellamada(models.Model):
     """
 
     class Resultado(models.TextChoices):
+        PENDIENTE = 'pendiente', 'Pendiente'
         CALENDARIO = 'calendario', 'Calendario'
         RECHAZADO = 'rechazado', 'Rechazado'
 
@@ -111,6 +112,24 @@ class Prellamada(models.Model):
         related_name='prellamadas',
     )
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    # Clave de upsert: el journey_id del tracking identifica el recorrido del
+    # lead. Las llamadas intermedias (pre-schedule, una por pregunta tras el
+    # teléfono) y la final upsertan la MISMA fila por este campo, igual que
+    # conquerx-funnels-new. Vacío cuando no llega journey_id (no se deduplica).
+    journey_id = models.CharField(max_length=120, blank=True, default='', db_index=True)
+    # Resto del tracking promovido a columnas (snapshot desde `tracking` al
+    # crear/upsert). Autocontenido y queryable; se envía al CRM pre-schedule y a
+    # Supabase. El JSON `tracking` se mantiene como respaldo completo.
+    event_id = models.CharField(max_length=120, blank=True, default='')
+    utm_source = models.CharField(max_length=255, blank=True, default='')
+    utm_campaign = models.CharField(max_length=255, blank=True, default='')
+    utm_medium = models.CharField(max_length=255, blank=True, default='')
+    utm_term = models.CharField(max_length=255, blank=True, default='')
+    utm_content = models.CharField(max_length=255, blank=True, default='')
+    utm_idcampaign = models.CharField(max_length=255, blank=True, default='')
+    utm_adsetid = models.CharField(max_length=255, blank=True, default='')
+    utm_adid = models.CharField(max_length=255, blank=True, default='')
+    utm_form_variant = models.CharField(max_length=500, blank=True, default='')
     nombre = models.CharField(max_length=160)
     email = models.EmailField()
     telefono = models.CharField(max_length=40, blank=True, default='')

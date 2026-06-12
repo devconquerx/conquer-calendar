@@ -254,10 +254,6 @@ FUNNEL_HOST_ESCUELA = env.dict('CALENDARIO_FUNNEL_HOST_ESCUELA', default={
 # prefijo a sus URLs de navegación. Vacío = el funnel solo se sirve en la raíz.
 FUNNEL_BASE_PATHS = env.list('CALENDARIO_FUNNEL_BASE_PATHS', default=['/preview'])
 
-# CRM webhook (Make)
-CRM_WEBHOOK_URL = env.str('CRM_WEBHOOK_URL', default='')
-CRM_WEBHOOK_API_KEY = env.str('CRM_WEBHOOK_API_KEY', default='')
-CRM_WEBHOOK_TIMEOUT_SECONDS = env.int('CRM_WEBHOOK_TIMEOUT_SECONDS', default=8)
 
 # ──────────────────────────────────────────────────────────────────────
 # Tracking / conversiones (lead + schedule). Todas las claves tienen
@@ -274,13 +270,15 @@ GOOGLE_ADS_CLIENT_ID = env.str('GOOGLE_ADS_CLIENT_ID', default='')
 GOOGLE_ADS_CLIENT_SECRET = env.str('GOOGLE_ADS_CLIENT_SECRET', default='')
 GOOGLE_ADS_REFRESH_TOKEN = env.str('GOOGLE_ADS_REFRESH_TOKEN', default='')
 GOOGLE_ADS_LOGIN_CUSTOMER_ID = env.str('GOOGLE_ADS_LOGIN_CUSTOMER_ID', default='')
-# CRM ingest (distinto del webhook de Make de arriba)
+# CRM ingest (crm.conquerx.com/api/v1/ingest/...)
 CRM_BASE_URL = env.str('CRM_BASE_URL', default='https://crm.conquerx.com')
 CRM_API_KEY = env.str('CRM_API_KEY', default='')
-# Envío de la Prellamada al CRM ingest. Mientras esté en False, la task hace
-# no-op y el sweep no la reintenta (evita loop). Ponlo en True cuando el CRM esté
-# listo para recibir pre-schedules.
-FUNNELS_PRESCHEDULE_CRM_ENABLED = env.bool('FUNNELS_PRESCHEDULE_CRM_ENABLED', default=False)
+# Interruptor global y hardcodeado del envío al CRM ingest. Del que beben los TRES
+# procesos: lead (process_crm_send), prellamada (process_pre_schedule_crm) y
+# llamada/reserva (process_schedule_crm). Mientras esté en False las tasks hacen
+# no-op y los sweeps no las reintentan (evita loop). Cámbialo aquí para
+# prender/apagar los tres a la vez.
+CRM_INGEST_ENABLED = True
 
 # ──────────────────────────────────────────────────────────────────────
 # Supabase — respaldo rodante de lo que se envía al CRM (lead/preschedule/

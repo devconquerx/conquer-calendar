@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
+from django.conf import settings
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -101,9 +102,11 @@ def process_neverbounce(self, lead_id):
 
 @shared_task(**RETRY_POLICY)
 def process_crm_send(self, lead_id):
-    # TEMP: deshabilitado (igual que funnels) — habilitar cuando el CRM esté listo
-    logger.info('Lead %s: CRM send SKIPPED (temporarily disabled)', lead_id)
-    return
+    """Envía el Lead al CRM ingest. Gated por CRM_INGEST_ENABLED:
+    mientras esté en False hace no-op (y el sweep no lo reintenta)."""
+    if not settings.CRM_INGEST_ENABLED:
+        logger.info('Lead %s: CRM send SKIPPED (CRM_INGEST_ENABLED=False)', lead_id)
+        return
 
     from calendario.leads.models import Lead
     from calendario.leads.services import crm
@@ -125,17 +128,6 @@ def process_supabase(self, lead_id):
     supabase.push_lead(lead)
     lead.tags.add('supabase_done')
     logger.info('Lead %s: supabase_done', lead_id)
-
-
-@shared_task(**RETRY_POLICY)
-def process_welcome_email(self, lead_id):
-    from calendario.leads.models import Lead
-    from calendario.leads.services import mailgun
-
-    lead = Lead.objects.get(pk=lead_id)
-    mailgun.send_welcome_email(lead)
-    lead.tags.add('welcome_email_done')
-    logger.info('Lead %s: welcome_email_done', lead_id)
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +155,6 @@ def dispatch_lead_tasks(lead_id):
     if lead.email:
         process_activecampaign.delay(lead_id)
         process_neverbounce.delay(lead_id)
-        process_welcome_email.delay(lead_id)
 
     logger.info('Lead %s: dispatched processing tasks', lead_id)
 
@@ -220,11 +211,8 @@ def sweep_incomplete_leads():
             process_neverbounce.delay(lead.pk)
             requeued += 1
 
-        if lead.email and 'welcome_email_done' not in tag_names and 'welcome_email_failed' not in tag_names:
-            process_welcome_email.delay(lead.pk)
-            requeued += 1
-
-        if lead.email and 'neverbounce_done' in tag_names and 'crm_done' not in tag_names and 'crm_failed' not in tag_names:
+        if (settings.CRM_INGEST_ENABLED and lead.email and 'neverbounce_done' in tag_names
+                and 'crm_done' not in tag_names and 'crm_failed' not in tag_names):
             process_crm_send.delay(lead.pk)
             requeued += 1
 

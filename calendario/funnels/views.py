@@ -45,32 +45,72 @@ class ConfigView(View):
         return JsonResponse(data)
 
 
+# Campos de tracking que la Prellamada guarda como columnas (snapshot desde el
+# JSON `tracking`). journey_id va aparte (es la clave de upsert).
+PRELLAMADA_TRACKING_FIELDS = (
+    'event_id', 'utm_source', 'utm_campaign', 'utm_medium', 'utm_term',
+    'utm_content', 'utm_idcampaign', 'utm_adsetid', 'utm_adid', 'utm_form_variant',
+)
+
+
+def _upsert_prellamada(funnel, journey_id, **fields):
+    """Crea o actualiza la Prellamada por `journey_id` (upsert), igual que
+    conquerx-funnels-new. Todas las llamadas de un mismo recorrido (las
+    intermedias por pregunta + la final) convergen a la misma fila. Sin
+    journey_id no se puede deduplicar: se crea una fila nueva."""
+    # Snapshot del tracking a columnas (además del JSON `tracking`).
+    tr = fields.get('tracking') if isinstance(fields.get('tracking'), dict) else {}
+    cols = {f: (tr.get(f) or '') for f in PRELLAMADA_TRACKING_FIELDS}
+    if journey_id:
+        prellamada, _ = Prellamada.objects.update_or_create(
+            journey_id=journey_id,
+            defaults={'funnel': funnel, **fields, **cols},
+        )
+        return prellamada
+    return Prellamada.objects.create(funnel=funnel, journey_id='', **fields, **cols)
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class ResolverView(View):
-    """POST /f/api/<slug>/resolver/ → calcula outcome, crea Prellamada."""
+    """POST /f/api/<slug>/resolver/ → crea/actualiza la Prellamada.
+
+    Réplica del `submitForm` de conquerx-funnels-new, que envía un request por
+    cada pregunta contestada tras el teléfono:
+
+    - `final=False` (intermedio, pre-schedule): upsert del lead+respuestas por
+      journey_id, SIN resolver el outcome (en CL EU el teléfono va antes de las
+      preguntas de scoring, así que puntuar aquí daría un rechazo falso). Queda
+      como `pendiente`.
+    - `final=True` (por defecto, submit final): resuelve el outcome, finaliza la
+      Prellamada y devuelve el destino (calendario/rechazo).
+    """
 
     def post(self, request, slug):
         funnel = get_object_or_404(FunnelForm, slug=slug, activo=True)
         body = _json_body(request)
         respuestas = body.get('respuestas') or {}
         tracking = body.get('tracking') or {}
-
-        outcome = resolver_outcome(funnel, respuestas)
+        final = body.get('final', True)
 
         nombre = respuestas.get('name', '') or respuestas.get('nombre', '')
         email = respuestas.get('email', '')
         telefono = respuestas.get('phone', '') or respuestas.get('telefono', '')
+        journey_id = (tracking.get('journey_id') or '').strip()
 
-        prellamada_kwargs = dict(
-            funnel=funnel,
-            nombre=nombre,
-            email=email,
-            telefono=telefono,
-            respuestas=respuestas,
-            score=outcome['promedio'] if outcome['promedio'] else None,
-            resultado=outcome['resultado'],
-            tracking=tracking,
-        )
+        # Pre-schedule intermedio: solo captura/actualiza el lead. No puntúa ni
+        # resuelve evento (lo hará la llamada final).
+        if not final:
+            prellamada = _upsert_prellamada(
+                funnel, journey_id,
+                nombre=nombre, email=email, telefono=telefono,
+                respuestas=respuestas, tracking=tracking,
+                resultado=Prellamada.Resultado.PENDIENTE,
+                score=None, event_type=None,
+            )
+            return JsonResponse({'ok': True, 'prellamada_token': str(prellamada.token)})
+
+        outcome = resolver_outcome(funnel, respuestas)
+
         # En modo Calendly el rango no resuelve EventType local (queda None); la
         # Prellamada se guarda igual (el evento se agenda en Calendly).
         event_type = None
@@ -79,9 +119,16 @@ class ResolverView(View):
             event_type = EventType.objects.filter(
                 slug=outcome['event_type_slug'], activo=True
             ).first()
-        prellamada_kwargs['event_type'] = event_type
 
-        prellamada = Prellamada.objects.create(**prellamada_kwargs)
+        prellamada = _upsert_prellamada(
+            funnel, journey_id,
+            nombre=nombre, email=email, telefono=telefono,
+            respuestas=respuestas,
+            score=outcome['promedio'] if outcome['promedio'] else None,
+            resultado=outcome['resultado'],
+            tracking=tracking,
+            event_type=event_type,
+        )
 
         if outcome['resultado'] == 'rechazado':
             return JsonResponse({
@@ -166,6 +213,7 @@ class ReservarView(View):
                     telefono_invitado=telefono,
                     notas=notas,
                     timezone_invitado=tz,
+                    tracking=prellamada.tracking,
                 )
                 prellamada.reserva = reserva
                 prellamada.save(update_fields=['reserva'])

@@ -78,8 +78,10 @@ def build_schedule_ctx(reserva):
     s.call_datetime = reserva.inicio_utc
     s.created = reserva.fecha_creacion
 
-    s.event_id = (lead.event_id if lead else None) or tracking.get('event_id') or ''
-    s.journey_id = (lead.journey_id if lead else None) or tracking.get('journey_id') or ''
+    # Preferimos el snapshot guardado en la propia reserva; fallback al Lead y al
+    # tracking de la Prellamada (reservas viejas creadas antes del snapshot).
+    s.event_id = reserva.event_id or (lead.event_id if lead else None) or tracking.get('event_id') or ''
+    s.journey_id = reserva.journey_id or (lead.journey_id if lead else None) or tracking.get('journey_id') or ''
     s.page_url = (lead.page_url if lead else '') or ''
 
     s.setter = ''
@@ -99,17 +101,19 @@ def build_schedule_ctx(reserva):
     for i in range(1, 7):
         setattr(s, f'q{i}_answer', None)
 
-    # UTMs: del lead si existe; si no, del tracking de la prellamada (para que el
-    # fallback por utm_source funcione aunque no haya Lead emparejado).
+    # UTMs: snapshot de la reserva si lo tiene; si no, del lead; si no, del
+    # tracking de la prellamada (para reservas viejas o sin Lead emparejado).
     for f in ('utm_source', 'utm_campaign', 'utm_medium', 'utm_term', 'utm_content',
               'utm_idcampaign', 'utm_adsetid', 'utm_adid'):
-        val = getattr(lead, f, None) if lead else None
-        if not val:
-            val = tracking.get(f)
+        val = getattr(reserva, f, None) or (getattr(lead, f, None) if lead else None) or tracking.get(f)
         setattr(s, f, val)
     s.utm_vsl = None
     s.utm_nuturing = None
     s.utm_form_length = None
-    s.utm_form_variant = (getattr(lead, 'utm_form_variant', None) if lead else None) or tracking.get('utm_form_variant')
+    s.utm_form_variant = (
+        getattr(reserva, 'utm_form_variant', None)
+        or (getattr(lead, 'utm_form_variant', None) if lead else None)
+        or tracking.get('utm_form_variant')
+    )
 
     return s

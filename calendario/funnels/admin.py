@@ -132,16 +132,20 @@ class PrellamadaAdmin(admin.ModelAdmin):
         'col_supabase', 'col_crm', 'creado_en',
     )
     list_filter = ('resultado', 'funnel', 'creado_en', 'tags')
-    search_fields = ('nombre', 'email', 'telefono', 'token')
+    search_fields = ('nombre', 'email', 'telefono', 'token', 'journey_id', 'event_id')
     date_hierarchy = 'creado_en'
+    ordering = ('-id',)
     exclude = ('tags',)
     readonly_fields = (
         'funnel', 'token', 'nombre', 'email', 'telefono', 'respuestas',
-        'score', 'resultado', 'event_type', 'reserva', 'tracking', 'creado_en',
+        'score', 'resultado', 'event_type', 'reserva',
+        'journey_id', 'event_id', 'utm_source', 'utm_campaign', 'utm_medium',
+        'utm_term', 'utm_content', 'utm_idcampaign', 'utm_adsetid', 'utm_adid',
+        'utm_form_variant', 'tracking', 'creado_en',
     )
 
     col_supabase = _tag_col('supabase_done', 'supabase_failed', 'Supabase')
-    col_crm = _tag_col('crm_done', 'crm_failed', 'CRM', gated_setting='FUNNELS_PRESCHEDULE_CRM_ENABLED')
+    col_crm = _tag_col('crm_done', 'crm_failed', 'CRM', gated_setting='CRM_INGEST_ENABLED')
     formfield_overrides = {
         models.JSONField: {'widget': JSONEditorWidget},
     }

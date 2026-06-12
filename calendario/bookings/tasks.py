@@ -9,6 +9,7 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
+from django.conf import settings
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -85,14 +86,26 @@ def process_schedule_respondio(self, reserva_id):
 
 @shared_task(**RETRY_POLICY)
 def process_schedule_crm(self, reserva_id):
-    # TEMP: deshabilitado (igual que funnels) — habilitar cuando el CRM esté listo
-    logger.info('Reserva %s: CRM send SKIPPED (temporarily disabled)', reserva_id)
-    return
+    """Envía la Reserva al CRM ingest. Doble gate:
+    1. CRM_INGEST_ENABLED (interruptor global).
+    2. EventType.notificar_crm: solo se envían las reservas cuyo tipo de evento
+       está marcado como "Notificar al CRM" (la casilla de las llamadas de
+       venta). El resto (tutorías, team calls, internos) no va al CRM.
+    Mientras no aplique hace no-op (el sweep no reintenta: sch_crm_dispatched ya
+    está puesto en el dispatch)."""
+    if not settings.CRM_INGEST_ENABLED:
+        logger.info('Reserva %s: CRM send SKIPPED (CRM_INGEST_ENABLED=False)', reserva_id)
+        return
 
     from .models import Reserva
     from .conversions.services import crm
 
-    reserva = Reserva.objects.get(pk=reserva_id)
+    reserva = Reserva.objects.select_related('event_type').get(pk=reserva_id)
+    if not (reserva.event_type and reserva.event_type.notificar_crm):
+        logger.info('Reserva %s: CRM send SKIPPED (event_type sin "Notificar al CRM")', reserva_id)
+        reserva.tags.add('sch_crm_skipped')
+        return
+
     crm.push_schedule(reserva)
     reserva.tags.add('sch_crm_done')
     logger.info('Reserva %s: sch_crm_done', reserva_id)

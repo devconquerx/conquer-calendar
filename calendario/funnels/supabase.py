@@ -16,11 +16,16 @@ logger = logging.getLogger(__name__)
 def _row_from_prellamada(prellamada):
     tracking = prellamada.tracking if isinstance(prellamada.tracking, dict) else {}
 
+    # Preferimos las columnas (snapshot); fallback al JSON `tracking` para filas
+    # viejas. journey_id es columna propia con fallback al tracking.
+    def _trk(field):
+        return getattr(prellamada, field, '') or tracking.get(field)
+
     row = {
         'source_id': prellamada.pk,
         'created_at': prellamada.creado_en.isoformat() if prellamada.creado_en else None,
-        'journey_id': tracking.get('journey_id'),
-        'event_id': tracking.get('event_id'),
+        'journey_id': prellamada.journey_id or tracking.get('journey_id'),
+        'event_id': _trk('event_id'),
         'lead_email': prellamada.email,
         'lead_name': prellamada.nombre,
         'lead_phone_number': prellamada.telefono,
@@ -30,15 +35,16 @@ def _row_from_prellamada(prellamada):
         'resultado': prellamada.resultado,
         'lead_scoring_score': float(prellamada.score) if prellamada.score is not None else None,
         'respuestas': prellamada.respuestas or {},
-        # UTMs desde el tracking
-        'utm_source': tracking.get('utm_source'),
-        'utm_campaign': tracking.get('utm_campaign'),
-        'utm_medium': tracking.get('utm_medium'),
-        'utm_term': tracking.get('utm_term'),
-        'utm_content': tracking.get('utm_content'),
-        'utm_idcampaign': tracking.get('utm_idcampaign'),
-        'utm_adsetid': tracking.get('utm_adsetid'),
-        'utm_adid': tracking.get('utm_adid'),
+        # UTMs (columna con fallback al tracking)
+        'utm_source': _trk('utm_source'),
+        'utm_campaign': _trk('utm_campaign'),
+        'utm_medium': _trk('utm_medium'),
+        'utm_term': _trk('utm_term'),
+        'utm_content': _trk('utm_content'),
+        'utm_idcampaign': _trk('utm_idcampaign'),
+        'utm_adsetid': _trk('utm_adsetid'),
+        'utm_adid': _trk('utm_adid'),
+        'utm_form_variant': _trk('utm_form_variant'),
     }
     return {k: v for k, v in row.items() if v is not None}
 

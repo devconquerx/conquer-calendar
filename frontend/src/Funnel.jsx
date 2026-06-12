@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { fetchConfig, postResolver, registerLead } from './api'
+import { fetchConfig, postResolver, registerLead, sendPreSchedule } from './api'
 import useTracking from './hooks/useTracking'
 import { fireAllLead } from './lib/pixelEvents'
 import FormStep from './components/FormStep'
@@ -26,12 +26,10 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   // El fetch a /f/api/<slug>/config/ queda solo como fallback (dev standalone,
   // o si por algún motivo la config no viajó en el HTML).
   const embedded = formConfig && Array.isArray(formConfig.blocks) ? formConfig : null
-  // Los pasos de contacto (name/email/phone) que llegan válidos por la URL se
-  // ocultan para acortar el formulario (el valor viaja igual en `respuestas`).
-  const filtrarVisibles = (lista) => {
-    const prefill = getPrefillRespuestas(window.location.search)
-    return (lista || []).filter(b => !(prefill[b.id] && validateBlock(b, prefill[b.id])))
-  }
+  // Los pasos de contacto (name/email/phone) que llegan por la URL SÍ se muestran
+  // en el StepForm, pero autorrellenados con el valor del query param (ese valor
+  // se siembra en `respuestas`). No se ocultan: el lead ve y puede corregir sus
+  // datos.
   const leadRegisteredRef = useRef(false)
   // schedule_event_id del recorrido: se genera una vez al montar y se reutiliza
   // en el utm_term de Calendly y en fireAllSchedule (igual que el funnel de
@@ -42,7 +40,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     return id
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  const [blocks, setBlocks] = useState(() => embedded ? filtrarVisibles(embedded.blocks) : [])
+  const [blocks, setBlocks] = useState(() => embedded ? (embedded.blocks || []) : [])
   const [escuela, setEscuela] = useState(embedded ? escuelaProp : '')
   const [messages, setMessages] = useState(() => embedded?.messages || {})
   const [funnelFont, setFunnelFont] = useState(() => embedded?.theme?.font || '')
@@ -62,7 +60,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     if (embedded) return
     fetchConfig(slug)
       .then(data => {
-        setBlocks(filtrarVisibles(data.blocks))
+        setBlocks(data.blocks || [])
         setEscuela(data.escuela || '')
         setMessages(data.messages || {})
         setFunnelFont(data.theme?.font || '')
@@ -124,6 +122,13 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
 
     setDirection('forward')
     if (currentIndex < blocks.length - 1) {
+      // Pre-schedule progresivo: una vez capturado el teléfono, cada avance
+      // crea/actualiza la Prellamada por journey_id (réplica del
+      // submitForm(..., false) de conquerx-funnels-new). El submit del último
+      // bloque la finaliza vía submitResolver. Fire-and-forget.
+      if (updated.phone) {
+        sendPreSchedule(slug, updated, tracking.buildFullPayload())
+      }
       setCurrentIndex(i => i + 1)
     } else {
       submitResolver(updated)
