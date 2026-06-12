@@ -203,7 +203,7 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
       {/* ── Zona oscura: retícula continua que cubre las dos transiciones rasgadas
             y el contenido. Los wrappers de rasgado son TRANSPARENTES, así muestran
             esta misma retícula y no aparece ninguna banda/línea negra. ── */}
-      <div className="flex-1 relative" style={darkStyle}>
+      <div className="flex-1 relative flex flex-col" style={darkStyle}>
         {/* Transición cabecera → zona oscura. El PNG es papel crema con borde
             rasgado; rotado 180° queda crema arriba (sigue a la cabecera) y el
             rasgado abajo. Lo transparente bajo el rasgado deja ver la retícula. */}
@@ -218,8 +218,8 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
           </div>
         )}
 
-        <main className="relative">
-          <div className="max-w-[1064px] mx-auto px-5 pt-6 pb-4">
+        <main className="relative flex-1">
+          <div className="max-w-[1064px] mx-auto px-2 md:px-5 pt-6 pb-4">
             <div
               className="animate-fade-in"
               style={{ boxShadow: glow }}
@@ -261,12 +261,29 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
       </div>
 
       {/* ── Footer claro ── */}
-      <footer className="relative" style={paperStyle}>
-        {assets.pixels?.lg8 && (
-          <img src={assets.pixels.lg8} alt="" aria-hidden="true" className="hidden md:block absolute top-[13px] right-[15px] w-[100px] pointer-events-none select-none" />
+      {/* `isolate` acota los z-index de las capas al footer. Réplica del orden de
+          producción: fondo crema → píxel izq (oculto, solo asoma arriba) → velo
+          crema → píxel der (visible) → logo (encima, limpio). */}
+      <footer className="relative isolate" style={paperStyle}>
+        {/* Píxel izquierdo (móvil): queda DETRÁS del velo crema, así solo asoma por
+            encima del footer sobre la transición — igual que producción (z-index bajo). */}
+        {assets.pixels?.sm7 && (
+          <img src={assets.pixels.sm7} alt="" aria-hidden="true" className="md:hidden absolute -top-[20px] left-6 w-[100px] z-0 pointer-events-none select-none" />
         )}
-        <div className="py-8 flex justify-center">
-          <img src={footerLogo} alt={school?.slug || ''} className="h-auto" style={{ width: footerLogoWidth }} />
+        {/* Velo crema (solo móvil): cubre el píxel izquierdo dentro del footer; la
+            parte que sobresale por arriba queda visible. */}
+        <div className="md:hidden absolute inset-0 z-[1]" style={paperStyle} />
+        {/* Píxel derecho: por ENCIMA del velo, visible a la derecha del logo
+            (producción). En desktop conserva su posición original arriba a la dcha. */}
+        {assets.pixels?.lg8 && (
+          <img src={assets.pixels.lg8} alt="" aria-hidden="true" className="absolute -top-[12px] right-4 w-[75px] z-[2] md:top-[13px] md:right-[15px] md:w-[100px] pointer-events-none select-none" />
+        )}
+        {/* z-10: el logo va SIEMPRE por encima de los píxeles decorativos. */}
+        <div className="relative z-10 py-8 flex justify-center">
+          {/* Móvil: logo vertical compacto (125px), igual que producción. */}
+          <img src={assets.logo} alt={school?.slug || ''} className="md:hidden h-auto w-[125px]" />
+          {/* Desktop: logo de footer a tamaño completo (sin cambios). */}
+          <img src={footerLogo} alt={school?.slug || ''} className="hidden md:block h-auto" style={{ width: footerLogoWidth }} />
         </div>
       </footer>
     </div>

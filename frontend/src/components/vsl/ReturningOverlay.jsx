@@ -4,17 +4,15 @@
 
 function CircleButton({ onClick, label, icon }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-5 group text-left">
+    <button onClick={onClick} className="flex items-center gap-3 md:gap-5 group text-left">
       <svg
-        width="80"
-        height="80"
         viewBox="0 0 64 64"
-        className="shrink-0 transition-transform group-hover:scale-105"
+        className="shrink-0 w-10 h-10 md:w-20 md:h-20 transition-transform group-hover:scale-105"
       >
         <circle cx="32" cy="32" r="29.18" fill="#000" stroke="#3974FF" strokeWidth="3.07" />
         {icon}
       </svg>
-      <span className="text-white text-[17px] font-normal">{label}</span>
+      <span className="text-white text-sm md:text-[17px] font-normal leading-tight">{label}</span>
     </button>
   )
 }
@@ -35,12 +33,12 @@ const restartIcon = (
 
 export default function ReturningOverlay({ onContinue, onRestart }) {
   return (
-    <div className="absolute inset-0 z-10 grid place-items-center bg-black/80 px-4">
+    <div className="absolute inset-0 z-10 grid place-items-center bg-black/80 px-2 md:px-4">
       <div className="text-center text-white max-w-[760px] w-full">
-        <h2 className="font-funnel text-2xl md:text-4xl font-semibold mb-8">
+        <h2 className="font-funnel text-sm md:text-4xl font-semibold leading-tight mb-3 md:mb-8">
           Ya habías comenzado a ver este video
         </h2>
-        <div className="flex flex-col md:flex-row gap-5 justify-center md:justify-between items-center md:items-stretch md:px-7">
+        <div className="flex flex-col md:flex-row gap-3 md:gap-5 justify-center md:justify-between items-center md:items-stretch md:px-7">
           <CircleButton onClick={onContinue} label="¿Continuar donde lo dejaste?" icon={playIcon} />
           <CircleButton onClick={onRestart} label="¿Empezar desde el principio?" icon={restartIcon} />
         </div>
