@@ -94,6 +94,7 @@ urlpatterns = [
         FunnelConfirmationView.as_view(), {'escuela': 'conquer-legal'},
         name='confirmacion_hub_legal',
     ),
+    path('webhooks/', include('calendario.google_calendar.urls')),
     re_path(
         r'^(?P<user_slug>[-a-zA-Z0-9_.]+)/(?P<event_type_slug>[-a-zA-Z0-9_]+)/',
         include('calendario.bookings.urls_public_booking'),

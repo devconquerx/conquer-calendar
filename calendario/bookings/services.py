@@ -125,10 +125,7 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
         else:
             bloques_del_dia = bloques_por_dia[fecha_actual.weekday()]
         for bloque in bloques_del_dia:
-            cursor_local = (
-                datetime.combine(fecha_actual, bloque.hora_inicio).replace(tzinfo=tz_host)
-                + timedelta(minutes=buffer_antes)
-            )
+            cursor_local = datetime.combine(fecha_actual, bloque.hora_inicio).replace(tzinfo=tz_host)
             fin_local = datetime.combine(fecha_actual, bloque.hora_fin).replace(tzinfo=tz_host)
             while cursor_local + timedelta(minutes=duracion) <= fin_local:
                 slot_utc = cursor_local.astimezone(UTC)
