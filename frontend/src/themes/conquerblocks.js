@@ -14,6 +14,7 @@ import pxLg6 from '../assets/img/cb/px-lg-6.svg'
 import pxLg8 from '../assets/img/cb/px-lg-8.svg'
 import pxSm4 from '../assets/img/cb/px-sm-4.svg'
 import pxSm8 from '../assets/img/cb/px-sm-8.svg'
+import pixel55 from '../assets/img/cb/pixel-5x5-5.svg'
 import pixelDeco from '../assets/img/cb/pixel-6x6.svg'
 import pixelDeco2 from '../assets/img/cb/pixel-6x6-2.svg'
 import pxSm7 from '../assets/img/cb/px-sm-7.svg'
@@ -28,6 +29,7 @@ import bulletIcon2 from '../assets/img/cb/conquie-escribir.svg'
 import bulletIcon3 from '../assets/img/cb/conquie-dinero2.svg'
 import footerLogo from '../assets/img/cb/footer-logo.png'
 import instructorMask from '../assets/img/cb/instructor-mask-right.svg'
+import instructorMaskBottom from '../assets/img/cb/instructor-mask-bottom.svg'
 import pixelCardTop from '../assets/img/cb/pixel-card-top.svg'
 import pixelCardBottom from '../assets/img/cb/pixel-card-bottom.png'
 import instructorPhoto from '../assets/img/cb/bienvenido-saez-2.avif'
@@ -41,6 +43,7 @@ import confMockup from '../assets/img/cb/confirmation/conquer-mockup.png'
 import confStep3Thumb from '../assets/img/cb/confirmation/conquer-blocks-video-thumbnail.jpg'
 import confPaperboard from '../assets/img/cb/confirmation/paperboard-texture.avif'
 import confTorn from '../assets/img/cb/confirmation/torn-transition.png'
+import confMaskBottom from '../assets/img/cb/confirmation/instructor-mask-bottom.svg'
 
 const cbShadow =
   '0px 2px 5px rgba(0,0,0,0.1), 0px 9px 9px rgba(0,0,0,0.09), 0px 20px 12px rgba(0,0,0,0.05), 0px 36px 14px rgba(0,0,0,0.01)'
@@ -62,6 +65,7 @@ export default {
     auroraGradient: 'linear-gradient(60deg,#FFBF00,#FF4000,#FFBF00,#FF4000)',
     buttonGradient: 'linear-gradient(90deg,#FFBF00,#FF4000)',
     buttonWeight: '400',
+    ctaWeight: '600', // CTA del VSL (botón pixelado): producción usa 600 (semibold)
     linkGradient: 'linear-gradient(to right,#FFBF00,#FF4000)',
     ring: '#FB923C', // orange-400
   },
@@ -85,10 +89,11 @@ export default {
       'Descubre una nueva profesión con la que asegurar tu futuro económico, tener siempre trabajo, un muy buen salario y no tener un techo en tu carrera profesional',
     badgeColor: '#0f172a', // borde y texto del badge sobre la cabecera crema
     titleColor: '#0f172a',
-    titleSize: 'text-2xl md:text-[32px]',
+    titleSize: 'text-base md:text-[32px]',
     // Glow azul suave alrededor del reproductor (idéntico a producción).
     glow: '0 2px 20px 6px rgba(127,193,255,0.28)',
     headerLogoWidth: '125px',
+    headerLogoWidthMobile: '100px', // móvil: producción usa logo más pequeño
     footerLogoWidth: '280px',
   },
 
@@ -136,15 +141,27 @@ export default {
     // título 40px/500, icono móvil 93×132, párrafos 16px/300 #171717, y espacios
     // medidos en producción (20px badge→tarjeta, 28px título→párrafos, 20px
     // tarjeta→recordatorio).
+    paso2SectionPad: 'py-12 lg:py-20', // móvil 48px / desktop 80px (medido en producción)
     paso2BadgeMb: 'mb-5',
     paso2CardMax: 'max-w-[1024px] mx-auto',
     paso2ImgWidth: 'lg:w-[511px]',
     paso2MinHeight: '511px',
-    paso2HeadingClass: 'text-3xl md:text-[40px] font-medium leading-[1.1]',
-    paso2IconClass: 'w-[93px] h-auto',
+    // En móvil la tarjeta se apila: la imagen va arriba (cuadrada) y el borde
+    // pixelado va ABAJO (máscara rotada); en desktop el borde va a la derecha.
+    paso2MobileBox: 'aspect-square lg:aspect-auto',
+    paso2MaskMobile: confMaskBottom,
+    // Móvil: título 32px, padding 24px, párrafos 14px, y el icono del teléfono
+    // no va junto al título (se oculta) sino flotando a la derecha más pequeño.
+    paso2HeadingClass: 'text-[32px] md:text-[40px] font-medium leading-[1.1]',
+    paso2IconClass: 'w-[93px] h-auto hidden lg:block',
+    paso2IconMobileFloat: true,
+    paso2ContentPad: 'p-6 lg:p-12',
     paso2HeadingMb: 'mb-7',
-    paso2ParagraphClass: 'text-base text-[#171717] leading-[1.25] font-light space-y-5',
-    paso2ReminderMt: 'mt-5',
+    paso2ParagraphClass: 'text-sm md:text-base text-[#171717] leading-[1.25] font-light space-y-5',
+    // Caja recordatorio — móvil: 14px/300 a la izquierda, padding 24px, gap 27px;
+    // desktop: 24px/500 centrado, padding 48px, gap 20px (medido en producción).
+    paso2ReminderMt: 'mt-7 lg:mt-5',
+    reminderPad: 'px-6 md:px-12 py-6',
     // Paso 3 — sección con padding 24px/16px; título 48px/600 interlineado 1.1
     // (maxW 768); subtítulo y acento 16px/300; play 102px; todos los gaps 20px.
     paso3SectionPad: 'pt-6 pb-12',
@@ -160,20 +177,22 @@ export default {
     paso3SubtitleAccentClass: 'text-base font-light leading-[1.25] inline-block',
     paso3SubtitleMb: 'mb-5',
     paso3SubtitleBlockMb: 'mb-5',
-    paso3PlayClass: 'w-[102px] h-[102px]',
+    paso3PlayClass: 'w-8 h-8 md:w-16 md:h-16 lg:w-[102px] lg:h-[102px]', // móvil ~32px / desktop 102px
     // El thumbnail va oscurecido y desenfocado (el play queda nítido encima).
     paso3ThumbFilter: 'brightness(0.65) blur(3px)',
     // Footer minimal: padding 32px, logo ~106px, y dos píxeles decorativos
     // (derecha px-lg-8 opacidad 0.85; izquierda px-sm-7 asomando arriba).
     footerPadY: 'py-8',
-    footerLogoHeight: 'h-[106px]',
+    footerLogoHeight: 'h-[37px] md:h-[106px] w-auto', // móvil 37px / desktop 106px (evita la distorsión por max-width en móvil)
+    // Visibles también en móvil (más pequeños): derecho px-lg-8 75→100px op 0.85,
+    // izquierdo px-sm-7 100→150px op 1.
     footerDecos: [
-      { img: 'lg8', cls: 'top-4 right-5 w-[100px] opacity-[0.85]' },
-      { img: 'sm7', cls: 'top-0 left-[10%] w-[150px] opacity-100 -translate-y-[88%]' },
+      { img: 'lg8', cls: 'top-3 right-8 w-[75px] md:top-4 md:right-5 md:w-[100px] opacity-[0.85]' },
+      { img: 'sm7', cls: 'hidden md:block top-0 left-[10%] w-[150px] -translate-y-[88%]' },
     ],
     // Tamaños de texto medidos en producción (Funnel Display).
     importanteTextSize: 'text-base md:text-lg', // 18px
-    reminderTextClass: 'font-medium text-lg md:text-[24px] leading-[1.15]', // 24px/500
+    reminderTextClass: 'text-center font-medium text-xl md:text-[24px] leading-[1.1]', // 20px móvil / 24px desktop, peso 500, centrado
     badgeBig: false,
     heroWeight: 'font-medium',
     // Badges (Paso 1/2/3): 20px, peso 500, padding 4px 16px, pill completo —
@@ -246,12 +265,13 @@ export default {
     heroThumbnail,
     tape1,
     tape2,
-    pixels: { lg1: pxLg1, lg5: pxLg5, lg6: pxLg6, lg8: pxLg8, sm4: pxSm4, sm7: pxSm7, sm8: pxSm8, deco: pixelDeco, deco2: pixelDeco2 },
+    pixels: { lg1: pxLg1, lg5: pxLg5, lg6: pxLg6, lg8: pxLg8, sm4: pxSm4, sm5: pixel55, sm7: pxSm7, sm8: pxSm8, deco: pixelDeco, deco2: pixelDeco2 },
     gridBackground,
     icons: { reloj: iconReloj, bandera: iconBandera, rayo: iconRayo, agenda: iconAgenda, fuego: iconFuego },
     bulletIcons: [bulletIcon1, bulletIcon2, bulletIcon3],
     footerLogo,
     instructorMask,
+    instructorMaskBottom, // borde pixelado abajo (móvil); el derecho es para desktop
     pixelCardTop,
     pixelCardBottom,
     instructorPhoto,
@@ -270,6 +290,15 @@ export default {
     contentWidth: '1064px',
     logoHeight: '36px',
     decoPixels: ['top-0 left-[6%]', 'top-[280px] right-[2%]', 'bottom-[120px] right-[8%]'],
+    // Píxeles de fondo en móvil (réplica de producción: opacidad 0.2, z 0). Dos
+    // grandes 6x6 (150px, esquina sup-izq asomando + lateral derecho a la altura
+    // de los bullets) y dos pequeños 5x5 (46px) flanqueando el formulario.
+    decoPixelsMobile: [
+      { img: 'deco2', cls: '-top-[114px] -left-[44px] w-[150px]' },
+      { img: 'deco2', cls: 'top-[293px] right-[26px] w-[150px]' },
+      { img: 'sm5', cls: 'top-[760px] left-[9px] w-[46px]' },
+      { img: 'sm5', cls: 'top-[760px] right-[30px] w-[46px]' },
+    ],
     bg: 'bg-[#F5EDE3]',
     dotPattern: '',
     ambientGlow: 'hidden',
@@ -282,7 +311,7 @@ export default {
     },
     bullets: {
       iconSize: '48px',
-      strongWeight: '600',
+      strongWeight: '700',
       checkBg: 'bg-orange-100',
       checkIcon: 'text-orange-500',
       text: 'text-gray-700',

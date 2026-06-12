@@ -66,15 +66,24 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
     boxShadow: CB_CARD_SHADOW,
   }
   const instructorPhoto = assets?.instructorPhoto || instructor?.imageUrl
-  // Máscara con el borde pixelado a la derecha (como en producción). El volteo
-  // está hecho dentro del propio SVG, no sobre la imagen.
-  const pixelMaskStyle = assets?.instructorMask ? {
-    WebkitMaskImage: `url(${assets.instructorMask})`,
-    maskImage: `url(${assets.instructorMask})`,
+  // Borde pixelado: en móvil la tarjeta se apila (imagen arriba), así que el
+  // borde va ABAJO; en desktop (md+) va a la DERECHA. Si el tema trae la máscara
+  // inferior, se cambia por CSS var (clase `md:[--imask:...]` en la imagen); si
+  // no, usa siempre la derecha. El volteo está dentro del propio SVG.
+  const maskRight = assets?.instructorMask ? `url(${assets.instructorMask})` : undefined
+  const maskBottom = assets?.instructorMaskBottom ? `url(${assets.instructorMaskBottom})` : undefined
+  const pixelMaskStyle = maskRight ? {
     WebkitMaskSize: '100% 100%',
     maskSize: '100% 100%',
     WebkitMaskRepeat: 'no-repeat',
     maskRepeat: 'no-repeat',
+    ...(maskBottom ? {
+      '--imask-right': maskRight,
+      '--imask-bottom': maskBottom,
+      '--imask': 'var(--imask-bottom)',
+      WebkitMaskImage: 'var(--imask)',
+      maskImage: 'var(--imask)',
+    } : { WebkitMaskImage: maskRight, maskImage: maskRight }),
   } : undefined
 
   return (
@@ -88,6 +97,16 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
           alt=""
           aria-hidden="true"
           className={`hidden lg:block absolute w-[150px] opacity-20 pointer-events-none select-none ${pos}`}
+        />
+      ))}
+      {/* Píxeles de fondo en móvil (réplica de producción) */}
+      {(theme.landing?.decoPixelsMobile || []).map((p, i) => (
+        <img
+          key={`m${i}`}
+          src={assets?.pixels?.[p.img]}
+          alt=""
+          aria-hidden="true"
+          className={`lg:hidden absolute z-0 opacity-20 pointer-events-none select-none ${p.cls}`}
         />
       ))}
       <main className="relative z-10 flex-1 w-full mx-auto px-5 flex flex-col" style={{ maxWidth: columnMaxWidth }}>
@@ -107,7 +126,7 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
         </div>
 
         {/* Formulario con glow aurora naranja animado por detrás */}
-        <div className="relative mt-10 animate-fade-in">
+        <div className="relative mt-6 md:mt-10 animate-fade-in">
           <div className="absolute inset-0 rounded-2xl bg-[length:300%_300%] blur-[20px] animate-aurora" style={{ backgroundImage: accent.auroraGradient }} aria-hidden="true" />
           <div className="relative z-10 rounded-2xl border border-cb-line px-5 py-5 md:px-12 md:py-6" style={cardStyle}>
             <LandingForm
@@ -130,16 +149,16 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
                 <img
                   src={instructorPhoto}
                   alt={instructor.name}
-                  className="w-full h-full object-cover object-top bg-black"
+                  className="w-full h-full object-cover object-top bg-black md:[--imask:var(--imask-right)]"
                   style={pixelMaskStyle}
                 />
               )}
             </div>
-            <div className="flex-1 p-8 md:p-12 flex flex-col justify-center">
+            <div className="flex-1 p-6 md:p-12 flex flex-col justify-center">
               <h2 className="text-4xl md:text-[48px] font-semibold leading-[1.1] text-cb-ink2">
                 {instructor.name}
               </h2>
-              <div className="mt-7 text-base font-light text-cb-ink2 leading-[1.25]">
+              <div className="mt-7 text-sm md:text-base font-light text-cb-ink2 leading-[1.25]">
                 {instructor.role && <p className="mb-4">{instructor.role}</p>}
                 <p dangerouslySetInnerHTML={safeHtml(instructor.description)} />
               </div>

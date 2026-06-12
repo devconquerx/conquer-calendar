@@ -11,11 +11,11 @@ export default function AgendarButton({ theme, onClick, text = 'Agendar Sesión 
       {isPaper ? (
         <button
           onClick={onClick}
-          className="text-white text-base md:text-lg uppercase text-center px-6 md:px-10 py-5 hover:brightness-110 active:scale-[0.98] transition-all"
+          className="text-white text-base md:text-lg uppercase text-center leading-[1.25] px-[30px] md:px-10 py-2.5 md:py-5 hover:brightness-110 active:scale-[0.98] transition-all"
           style={{
             fontFamily: 'Montserrat, sans-serif',
             backgroundImage: accent.buttonGradient || 'linear-gradient(90deg, #FFBF00, #FF4000)',
-            fontWeight: accent.buttonWeight || '800',
+            fontWeight: accent.ctaWeight || accent.buttonWeight || '800',
             clipPath: CB_PIXEL_CLIP,
           }}
         >

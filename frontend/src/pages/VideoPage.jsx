@@ -131,6 +131,7 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
   const titleSize = v.titleSize || 'text-2xl md:text-[32px]'
   const glow = v.glow || '0 2px 20px 6px rgba(127,193,255,0.28)'
   const headerLogoWidth = v.headerLogoWidth || '125px'
+  const headerLogoWidthMobile = v.headerLogoWidthMobile || headerLogoWidth
   const footerLogoWidth = v.footerLogoWidth || '280px'
   const footerLogo = assets.footerLogo || assets.logo
 
@@ -170,10 +171,15 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
         )}
         <div className="relative max-w-[1024px] mx-auto px-5 lg:px-0 pt-4">
           {/* Logo vertical */}
-          <div className="py-4 flex justify-center">
-            <img src={assets.logo} alt={school?.slug || ''} className="h-auto" style={{ width: headerLogoWidth }} />
+          <div className="py-2 md:py-4 flex justify-center">
+            <img
+              src={assets.logo}
+              alt={school?.slug || ''}
+              className="h-auto w-[var(--logo-w-m)] md:w-[var(--logo-w)]"
+              style={{ '--logo-w-m': headerLogoWidthMobile, '--logo-w': headerLogoWidth }}
+            />
           </div>
-          <div className="flex flex-col items-center gap-5 mb-4">
+          <div className="flex flex-col items-center gap-5 mb-4 mt-1.5 md:mt-0">
             {/* Badge pill — producción usa la fuente geométrica "Termina" y un
                 triángulo ▶ sólido inline. Replicamos con Montserrat (la más cercana
                 disponible) y el carácter ▶ a tamaño ligeramente menor que el texto. */}

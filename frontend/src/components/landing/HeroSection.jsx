@@ -16,20 +16,20 @@ export default function HeroSection({ formConfig, theme }) {
   // CSS var (--accent-strong-grad) para no depender de colores en el build.
   if (isPaper) {
     return (
-      <div className="text-center flex flex-col items-center gap-5">
+      <div className="text-center flex flex-col items-center gap-4 md:gap-5">
         {subtitle && (
-          <div className="inline-flex items-center gap-2 rounded-full border border-cb-line px-4 py-1 text-sm font-medium text-cb-ink shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-cb-line px-4 py-1 text-sm font-light text-cb-ink shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
             <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
             {subtitle}
           </div>
         )}
         <h1
           style={{ '--accent-strong-grad': accent.strongGradient }}
-          className="max-w-[820px] mx-auto text-[22px]/[1.1] md:text-2xl/[1.1] font-medium text-cb-ink [&_strong]:font-medium [&_strong]:[background-image:var(--accent-strong-grad)] [&_strong]:bg-clip-text [&_strong]:text-transparent [&_em]:not-italic [&_em]:font-bold [&_em]:[-webkit-text-fill-color:#0A0A0A] [&_em]:[background-image:none]"
+          className="max-w-[820px] mx-auto text-base/[1.1] md:text-2xl/[1.1] font-normal text-cb-ink [&_strong]:font-bold [&_strong]:[background-image:var(--accent-strong-grad)] [&_strong]:bg-clip-text [&_strong]:text-transparent [&_em]:not-italic [&_em]:font-bold [&_em]:[-webkit-text-fill-color:#0A0A0A] [&_em]:[background-image:none]"
           dangerouslySetInnerHTML={safeHtml(title)}
         />
         {description && (
-          <p className="max-w-[760px] mx-auto text-base font-light text-cb-ink leading-[1.35]">
+          <p className="max-w-[760px] mx-auto text-sm md:text-base font-light text-cb-ink leading-[1.2] md:leading-[1.35]">
             {description}
           </p>
         )}

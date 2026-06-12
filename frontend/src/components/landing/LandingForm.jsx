@@ -266,7 +266,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className={isPaper
-              ? `flex items-center gap-1.5 px-2 py-3 rounded border bg-white text-base text-black shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] min-w-[90px] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
+              ? `flex items-center gap-1.5 px-2 py-2 rounded border bg-white text-base text-black shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] min-w-[90px] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
               : `flex items-center gap-1.5 px-3 py-3.5 rounded-xl border text-sm min-w-[100px] ${errors.phone ? t.inputError : t.input}`
             }
           >
@@ -318,7 +318,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
           onChange={handlePhoneChange}
           style={isPaper ? { '--tw-ring-color': accent.ring } : undefined}
           className={isPaper
-            ? `flex-1 px-3 py-3 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
+            ? `flex-1 px-3 py-2 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 placeholder:text-sm placeholder:font-light focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
             : `flex-1 px-4 py-3.5 rounded-xl border focus:outline-none text-sm transition-colors ${errors.phone ? t.inputError : t.input}`
           }
         />
@@ -342,7 +342,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
               value={name}
               onChange={(e) => setName(e.target.value)}
               style={{ '--tw-ring-color': accent.ring }}
-              className={`w-full px-3 py-3 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.name ? 'border-red-500' : 'border-[#404040]'}`}
+              className={`w-full px-3 py-2 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 placeholder:text-sm placeholder:font-light focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.name ? 'border-red-500' : 'border-[#404040]'}`}
             />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
@@ -354,7 +354,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={{ '--tw-ring-color': accent.ring }}
-              className={`w-full px-3 py-3 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.email ? 'border-red-500' : 'border-[#404040]'}`}
+              className={`w-full px-3 py-2 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 placeholder:text-sm placeholder:font-light focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.email ? 'border-red-500' : 'border-[#404040]'}`}
             />
             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>

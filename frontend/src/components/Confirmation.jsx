@@ -171,18 +171,30 @@ function PaperboardConfirmation({ theme, assets }) {
   const torn = c.torn || assets?.tornTransition2000
   const heroWeight = c.heroWeight || 'font-semibold'
   const isInstr = c.paso2ImageMode === 'instructor'
+  const maskRight = assets?.instructorMask ? `url(${assets.instructorMask})` : undefined
+  const maskMobile = c.paso2MaskMobile ? `url(${c.paso2MaskMobile})` : undefined
   const paso2ImgStyle = {
     backgroundImage: `url(${c.paso2Image})`,
     backgroundSize: isInstr ? '120%' : 'cover',
     backgroundPosition: isInstr ? '40% 32%' : 'center',
     backgroundRepeat: 'no-repeat',
-    WebkitMaskImage: assets?.instructorMask ? `url(${assets.instructorMask})` : undefined,
-    maskImage: assets?.instructorMask ? `url(${assets.instructorMask})` : undefined,
     WebkitMaskSize: '100% 100%',
     maskSize: '100% 100%',
     WebkitMaskRepeat: 'no-repeat',
     maskRepeat: 'no-repeat',
     transform: isInstr ? 'scaleX(-1)' : undefined,
+    // Con máscara móvil (Blocks): por defecto la máscara con el borde ABAJO; la
+    // clase `lg:[--p2mask:...]` del elemento la cambia a la de la derecha en
+    // desktop. Sin ella (Legal): siempre la máscara derecha.
+    ...(maskMobile
+      ? {
+          '--p2-right': maskRight,
+          '--p2-bottom': maskMobile,
+          '--p2mask': 'var(--p2-bottom)',
+          WebkitMaskImage: 'var(--p2mask)',
+          maskImage: 'var(--p2mask)',
+        }
+      : { WebkitMaskImage: maskRight, maskImage: maskRight }),
   }
 
   return (
@@ -295,7 +307,7 @@ function PaperboardConfirmation({ theme, assets }) {
       )}
 
       {/* ═══ SECTION 3: Paso 2 — confirma tu cita ═══ */}
-      <section className="relative px-4 lg:px-16 py-20 bg-[#F5EDE3]" style={paperboardBg}>
+      <section className={`relative px-4 lg:px-16 ${c.paso2SectionPad || 'py-20'} bg-[#F5EDE3]`} style={paperboardBg}>
         {px.deco && (
           <img src={px.deco} alt="" className="absolute top-8 left-8 w-28 opacity-20 pointer-events-none hidden lg:block" />
         )}
@@ -311,15 +323,23 @@ function PaperboardConfirmation({ theme, assets }) {
             className={`rounded-2xl overflow-hidden ${cardShadow} flex flex-col lg:flex-row border border-[#BBB49B] ${c.paso2CardMax || ''}`}
             style={{ ...cardBg, minHeight: c.paso2MinHeight || undefined }}
           >
-            <div className={`${c.paso2ImgWidth || 'lg:w-[540px]'} flex-shrink-0 self-stretch h-64 lg:h-auto`} style={paso2ImgStyle} />
+            <div
+              className={`${c.paso2ImgWidth || 'lg:w-[540px]'} flex-shrink-0 self-stretch ${c.paso2MobileBox || 'h-64'} lg:h-auto ${c.paso2MaskMobile ? 'lg:[--p2mask:var(--p2-right)]' : ''}`}
+              style={paso2ImgStyle}
+            />
 
-            <div className="flex-1 p-8 lg:p-12 flex flex-col justify-center">
+            <div className={`flex-1 ${c.paso2ContentPad || 'p-8 lg:p-12'} flex flex-col justify-center`}>
               {c.paso2Heading && (
-                <div className={`flex items-center gap-4 ${c.paso2HeadingMb || 'mb-6'}`}>
+                <div className={`relative flex items-center gap-4 ${c.paso2HeadingMb || 'mb-6'}`}>
                   {c.paso2HeadingIcon && <img src={c.paso2HeadingIcon} alt="" className={`${c.paso2IconClass || 'w-12 h-12'} flex-shrink-0`} />}
                   <h3 className={`text-black ${c.paso2HeadingClass || 'text-2xl md:text-[32px] font-semibold leading-[1.1]'}`}>
                     {c.paso2Heading}
                   </h3>
+                  {/* En móvil (Blocks) el icono va pequeño, pegado al borde derecho de la
+                      tarjeta y solapando la esquina inferior del título — como producción. */}
+                  {c.paso2IconMobileFloat && c.paso2HeadingIcon && (
+                    <img src={c.paso2HeadingIcon} alt="" className="lg:hidden absolute -right-7 -bottom-[34px] w-[50px] h-auto rotate-[10deg] pointer-events-none" />
+                  )}
                 </div>
               )}
               <div className={c.paso2ParagraphClass || 'text-base md:text-lg text-[#333] leading-[1.5] font-normal space-y-5'}>
@@ -336,8 +356,8 @@ function PaperboardConfirmation({ theme, assets }) {
             className={`${c.paso2ReminderMt || 'mt-12'} relative ${cardShadow} rounded-xl overflow-hidden w-full ${c.paso2CardMax || ''}`}
             style={boxBg}
           >
-            <div className="relative px-8 md:px-12 py-6">
-              <p className={`text-white text-center ${c.reminderTextClass || 'font-semibold text-xl md:text-[28px] leading-[1.3]'}`}>
+            <div className={`relative ${c.reminderPad || 'px-8 md:px-12 py-6'}`}>
+              <p className={`text-white ${c.reminderTextClass || 'text-center font-semibold text-xl md:text-[28px] leading-[1.3]'}`}>
                 {c.reminderText}
               </p>
             </div>
@@ -418,7 +438,7 @@ function PaperboardConfirmation({ theme, assets }) {
             {/* Blocks: píxeles decorativos relativos al footer completo (uno a
                 cada lado, como producción). Legal: el deco original centrado. */}
             {(c.footerDecos || []).map((d, i) => (
-              <img key={i} src={(assets?.pixels || {})[d.img]} alt="" className={`absolute ${d.cls} pointer-events-none hidden lg:block`} />
+              <img key={i} src={(assets?.pixels || {})[d.img]} alt="" className={`absolute ${d.cls} pointer-events-none`} />
             ))}
             <div className={`relative w-full max-w-[1280px] mx-auto px-6 ${c.footerPadY || 'py-16'} flex justify-center`}>
               {!c.footerDecos && px.deco2 && (

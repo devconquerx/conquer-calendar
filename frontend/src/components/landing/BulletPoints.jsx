@@ -36,14 +36,14 @@ export default function BulletPoints({ formConfig, theme }) {
           return (
             <div
               key={i}
-              className="flex items-center gap-4 px-3 py-2 rounded-2xl border border-cb-line overflow-hidden"
+              className="flex items-center gap-4 p-1.5 rounded-2xl border border-cb-line overflow-hidden"
               style={cardStyle}
             >
               {iconSrc && (
                 <img src={iconSrc} alt="" className="flex-shrink-0 object-contain" style={{ width: iconSize, height: iconSize }} />
               )}
               <p
-                className="text-base font-light text-cb-ink leading-[1.25] [&_strong]:[font-weight:var(--bw)]"
+                className="text-sm md:text-base font-light text-cb-ink leading-[1.25] [&_strong]:[font-weight:var(--bw)]"
                 style={{ '--bw': strongWeight }}
                 dangerouslySetInnerHTML={safeHtml(item)}
               />
