@@ -30,6 +30,17 @@ class EventType(models.Model):
         (14400, '10 días'),
     ]
 
+    INCREMENTO_CHOICES = [
+        (15, '15 minutos'),
+        (20, '20 minutos'),
+        (30, '30 minutos'),
+        (60, '60 minutos'),
+    ]
+    incremento_inicio_minutos = models.PositiveSmallIntegerField(
+        default=30,
+        choices=INCREMENTO_CHOICES,
+        help_text="Cada cuántos minutos aparece un slot disponible.",
+    )
     buffer_antes_minutos = models.PositiveSmallIntegerField(default=0)
     buffer_despues_minutos = models.PositiveSmallIntegerField(default=0)
     aviso_minimo_minutos = models.PositiveSmallIntegerField(

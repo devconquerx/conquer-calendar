@@ -30,6 +30,12 @@ def _generar_slug_equipo(nombre, exclude_pk=None):
 
 
 class EventTypeForm(forms.ModelForm):
+    incremento_inicio_minutos = forms.TypedChoiceField(
+        coerce=int,
+        choices=EventType.INCREMENTO_CHOICES,
+        initial=30,
+        label='Incremento de inicio',
+    )
     buffer_antes_minutos = forms.IntegerField(
         required=False, min_value=0, initial=0,
         label='Buffer antes (min)',
@@ -63,6 +69,7 @@ class EventTypeForm(forms.ModelForm):
         model = EventType
         fields = [
             'nombre', 'descripcion', 'duracion_minutos',
+            'incremento_inicio_minutos',
             'buffer_antes_minutos', 'buffer_despues_minutos',
             'aviso_minimo_minutos', 'aviso_maximo_dias', 'activo',
             'notificar_crm', 'unico_por_invitado',

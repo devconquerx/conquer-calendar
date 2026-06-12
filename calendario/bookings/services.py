@@ -65,6 +65,7 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
     """
     tz_host = ZoneInfo(host.timezone)
     duracion = event_type.duracion_minutos
+    incremento = event_type.incremento_inicio_minutos
     buffer_antes = event_type.buffer_antes_minutos
     buffer_despues = event_type.buffer_despues_minutos
     aviso = event_type.aviso_minimo_minutos
@@ -104,14 +105,12 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
         ).select_related('event_type').order_by('inicio_utc')
     )
 
-    # Eventos externos cortos (<=duracion) se tratan como reuniones y reciben
     # Los eventos externos de GCal bloquean solo su tiempo real, sin buffer.
     # El buffer solo aplica alrededor de reservas confirmadas (igual que Calendly).
-    step_td = timedelta(minutes=duracion)
     busy_intervalos = list(_obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc))
 
     slots = []
-    step = timedelta(minutes=duracion)
+    step = timedelta(minutes=incremento)
     fecha_actual = fecha_desde
     while fecha_actual <= fecha_hasta:
         if fecha_actual in overrides_por_fecha:

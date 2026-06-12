@@ -132,7 +132,7 @@
 
             <!--begin::Row tiempos-->
             <div class="row mb-7">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label fw-semibold required">Duración (min)</label>
                     <input type="number" name="duracion_minutos" min="1"
                            class="form-control form-control-lg{% if form.duracion_minutos.errors %} is-invalid{% endif %}"
@@ -141,7 +141,19 @@
                     <div class="invalid-feedback">{{ form.duracion_minutos.errors|join:", " }}</div>
                     {% endif %}
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Incremento de inicio</label>
+                    <select name="incremento_inicio_minutos"
+                            class="form-select form-select-lg{% if form.incremento_inicio_minutos.errors %} is-invalid{% endif %}">
+                      {% for val, label in form.incremento_inicio_minutos.field.choices %}
+                      <option value="{{ val }}"{% if form.incremento_inicio_minutos.value|stringformat:"s" == val|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                    {% if form.incremento_inicio_minutos.errors %}
+                    <div class="invalid-feedback">{{ form.incremento_inicio_minutos.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
                     <label class="form-label fw-semibold">Buffer antes (min)</label>
                     <input type="number" name="buffer_antes_minutos" min="0"
                            class="form-control form-control-lg{% if form.buffer_antes_minutos.errors %} is-invalid{% endif %}"
@@ -150,7 +162,7 @@
                     <div class="invalid-feedback">{{ form.buffer_antes_minutos.errors|join:", " }}</div>
                     {% endif %}
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label fw-semibold">Buffer después (min)</label>
                     <input type="number" name="buffer_despues_minutos" min="0"
                            class="form-control form-control-lg{% if form.buffer_despues_minutos.errors %} is-invalid{% endif %}"
@@ -338,6 +350,27 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+(function () {
+  var duracionInput   = document.querySelector('[name="duracion_minutos"]');
+  var incrementoSelect = document.querySelector('[name="incremento_inicio_minutos"]');
+  if (!duracionInput || !incrementoSelect) return;
+
+  var touched = false;
+
+  incrementoSelect.addEventListener('change', function () {
+    touched = true;
+  });
+
+  duracionInput.addEventListener('change', function () {
+    if (touched) return;
+    var dur = parseInt(duracionInput.value, 10);
+    if (isNaN(dur)) return;
+    var recomendado = dur > 30 ? '60' : '30';
+    incrementoSelect.value = recomendado;
+  });
+})();
+</script>
 <script>
 (function () {
   var input  = document.getElementById('descripcion-input');
