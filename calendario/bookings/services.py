@@ -105,16 +105,10 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
     )
 
     # Eventos externos cortos (<=duracion) se tratan como reuniones y reciben
-    # buffer alrededor. Los largos se asumen bloqueos manuales (almuerzo,
-    # focus time, etc.) y se respetan tal cual. Iguala el comportamiento de
-    # Calendly.
+    # Los eventos externos de GCal bloquean solo su tiempo real, sin buffer.
+    # El buffer solo aplica alrededor de reservas confirmadas (igual que Calendly).
     step_td = timedelta(minutes=duracion)
-    busy_intervalos = [
-        (b_ini - timedelta(minutes=buffer_antes), b_fin + timedelta(minutes=buffer_despues))
-        if (b_fin - b_ini) <= step_td
-        else (b_ini, b_fin)
-        for b_ini, b_fin in _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc)
-    ]
+    busy_intervalos = list(_obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc))
 
     slots = []
     step = timedelta(minutes=duracion)
