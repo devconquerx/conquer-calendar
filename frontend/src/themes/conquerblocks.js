@@ -31,13 +31,16 @@ import instructorMask from '../assets/img/cb/instructor-mask-right.svg'
 import pixelCardTop from '../assets/img/cb/pixel-card-top.svg'
 import pixelCardBottom from '../assets/img/cb/pixel-card-bottom.png'
 import instructorPhoto from '../assets/img/cb/bienvenido-saez-2.avif'
-import confConfetti from '../assets/img/cb/confirmation/confetti-icon.svg'
-import confConfettiSmall from '../assets/img/cb/confirmation/confetti-icon-small.svg'
-import confYoutube from '../assets/img/cb/confirmation/youtube-icon.svg'
-import confVideoFrame from '../assets/img/cb/confirmation/video-frame.svg'
-import confCheck from '../assets/img/cb/confirmation/check-circle-icon.svg'
-import confLightbulb from '../assets/img/cb/confirmation/lightbulb-icon.svg'
-import confStep3Thumb from '../assets/img/cb/confirmation/video-thumbnail-1.png'
+// Assets de la página de confirmación — réplica 1:1 de producción
+// (conquerblocks.com/conquer-blocks/confirmacion-llamada).
+import confFiesta from '../assets/img/cb/confirmation/conquie-fiesta.svg'
+import confRayo from '../assets/img/cb/confirmation/conquie-rayo.svg'
+import confMovil from '../assets/img/cb/confirmation/conquie-movil2.svg'
+import confPlay from '../assets/img/cb/confirmation/conquie-play.svg'
+import confMockup from '../assets/img/cb/confirmation/conquer-mockup.png'
+import confStep3Thumb from '../assets/img/cb/confirmation/conquer-blocks-video-thumbnail.jpg'
+import confPaperboard from '../assets/img/cb/confirmation/paperboard-texture.avif'
+import confTorn from '../assets/img/cb/confirmation/torn-transition.png'
 
 const cbShadow =
   '0px 2px 5px rgba(0,0,0,0.1), 0px 9px 9px rgba(0,0,0,0.09), 0px 20px 12px rgba(0,0,0,0.05), 0px 36px 14px rgba(0,0,0,0.01)'
@@ -92,47 +95,131 @@ export default {
   // Página de confirmación de llamada (paperboard). Contenido + assets de la
   // marca; el renderer compartido (PaperboardConfirmation) los consume.
   confirmation: {
-    heroIcon: confConfetti,
-    heroIconSmall: confConfettiSmall,
+    heroIcon: confFiesta,
+    heroIconSmall: confRayo,
     felicidades: '¡Felicidades!',
-    felicidadesGradient: 'linear-gradient(to right,#FACC15,#FF7700,#EF4444)',
+    // Degradado de texto "conquer-gradient" medido en producción.
+    felicidadesGradient: 'linear-gradient(135deg,#FF4000,#FF9800)',
     heroTitle: 'Tu llamada ha sido reservada',
     importanteTitle: 'Importante',
     importanteText: 'completa estos 3 pasos ahora para poder aprovechar tu llamada al máximo',
-    boxGradient: 'linear-gradient(to right,#FFBF00,#FF4000)',
-    accentGradient: 'linear-gradient(to right,#FFBF00,#FF4000)',
-    badgeBig: true,
-    heroWeight: 'font-semibold',
-    paso2MinHeight: '640px',
+    // Caja "Importante" / recordatorio: fondo de imagen (card-background.png),
+    // igual que producción. El rayo se desborda por la esquina inferior derecha.
+    boxImage: cardBackground,
+    accentGradient: 'linear-gradient(135deg,#FF4000,#FF9800)',
+    // Navbar: solo el logo centrado, sin tarjeta/borde (como producción).
+    navbarLogoOnly: true,
+    // Fondo paperboard de la página de confirmación: textura propia (más clara y
+    // fina que la del StepForm) tileada al 50% con velo blanco 0.4 sobre #FAFAFA,
+    // exactamente como producción.
+    texture: confPaperboard,
+    // Rasgado hecho con la MISMA textura paperboard de producción, para que el
+    // crema del borde combine con el fondo de las secciones (el antiguo era de
+    // otra textura y se veía más tenue/desentonado).
+    torn: confTorn,
+    paperboardTiled: true,
+    // Espaciado del hero medido en producción (logo 32px desde arriba; 16px
+    // logo→icono; 40px icono→título; 40px título→caja; 32px caja→fin).
+    heroSectionPad: 'pt-4 pb-8',
+    navbarMb: 'mb-0',
+    heroIconMb: 'mb-10',
+    heroTitleMb: 'mb-10',
+    boxPadY: 'py-10 md:py-12', // caja Importante: padding 48px como producción
+    importanteTitleMb: 'mb-4',
+    // Píxeles decorativos: 150px, opacidad plena, pegados a los bordes (izq
+    // arriba, dcha más abajo) — idéntico a producción.
+    heroDecos: ['top-[60px] left-0 w-[150px]', 'top-[239px] right-0 w-[150px]'],
+    heroIconSize: 'w-32 h-32',
+    heroMaxWidth: '740px',
+    boxMaxWidth: '740px',
+    // Paso 2 — tarjeta 1024px (2 columnas de 511px), mockup 511×511 cuadrado,
+    // título 40px/500, icono móvil 93×132, párrafos 16px/300 #171717, y espacios
+    // medidos en producción (20px badge→tarjeta, 28px título→párrafos, 20px
+    // tarjeta→recordatorio).
+    paso2BadgeMb: 'mb-5',
+    paso2CardMax: 'max-w-[1024px] mx-auto',
+    paso2ImgWidth: 'lg:w-[511px]',
+    paso2MinHeight: '511px',
+    paso2HeadingClass: 'text-3xl md:text-[40px] font-medium leading-[1.1]',
+    paso2IconClass: 'w-[93px] h-auto',
+    paso2HeadingMb: 'mb-7',
+    paso2ParagraphClass: 'text-base text-[#171717] leading-[1.25] font-light space-y-5',
+    paso2ReminderMt: 'mt-5',
+    // Paso 3 — sección con padding 24px/16px; título 48px/600 interlineado 1.1
+    // (maxW 768); subtítulo y acento 16px/300; play 102px; todos los gaps 20px.
+    paso3SectionPad: 'pt-6 pb-12',
+    paso3BadgeMb: 'mb-5',
+    paso3TitleSize: 'text-3xl md:text-[48px]',
+    paso3TitleLeading: 'leading-[1.1]',
+    paso3TitleMb: 'mb-5',
+    paso3TitleMaxW: 'max-w-[768px]',
+    paso3SubtitleMaxW: 'max-w-[560px]',
+    paso3SubtitleClass: 'text-white text-base font-light leading-[1.25]',
+    // inline-block para que el gradiente abarque exactamente el texto (gradiente
+    // completo y vivo en toda la frase, no repartido por todo el ancho del div).
+    paso3SubtitleAccentClass: 'text-base font-light leading-[1.25] inline-block',
+    paso3SubtitleMb: 'mb-5',
+    paso3SubtitleBlockMb: 'mb-5',
+    paso3PlayClass: 'w-[102px] h-[102px]',
+    // El thumbnail va oscurecido y desenfocado (el play queda nítido encima).
+    paso3ThumbFilter: 'brightness(0.65) blur(3px)',
+    // Footer minimal: padding 32px, logo ~106px, y dos píxeles decorativos
+    // (derecha px-lg-8 opacidad 0.85; izquierda px-sm-7 asomando arriba).
+    footerPadY: 'py-8',
+    footerLogoHeight: 'h-[106px]',
+    footerDecos: [
+      { img: 'lg8', cls: 'top-4 right-5 w-[100px] opacity-[0.85]' },
+      { img: 'sm7', cls: 'top-0 left-[10%] w-[150px] opacity-100 -translate-y-[88%]' },
+    ],
+    // Tamaños de texto medidos en producción (Funnel Display).
+    importanteTextSize: 'text-base md:text-lg', // 18px
+    reminderTextClass: 'font-medium text-lg md:text-[24px] leading-[1.15]', // 24px/500
+    badgeBig: false,
+    heroWeight: 'font-medium',
+    // Badges (Paso 1/2/3): 20px, peso 500, padding 4px 16px, pill completo —
+    // medido en producción.
+    badgePad: 'px-4 py-1 rounded-full',
+    badgeText: 'text-lg md:text-xl',
+    badgeWeight: 'font-medium',
     paso1Badge: 'Paso 1 • Mira este vídeo',
-    paso1BadgeIcon: confYoutube,
+    paso1BadgeIcon: null,
     paso1Text: 'Mira este vídeo de 47 segundos para entender tus siguientes pasos lógicos',
+    // Sección del vídeo: padding 48px arriba / 80px abajo; 40px badge→texto y
+    // texto→vídeo; texto 16px peso 300 con "47 segundos" en negrita.
+    paso1SectionPad: 'pt-12 pb-20',
+    paso1BadgeMb: 'mb-10',
+    paso1TextClass: 'font-light text-base leading-[1.25]',
+    paso1TextMb: 'mb-10',
+    paso1TextBold: '47 segundos',
     paso1Video:
       'https://iframe.mediadelivery.net/embed/146448/b13e87cd-570a-4f6b-aba2-23f2bbdebd8e?autoplay=false&loop=false&muted=false&preload=true&responsive=true',
-    videoFrame: confVideoFrame,
+    // Sin marco pixelado: marco de vídeo = borde naranja 2px, sin glow.
+    videoFrame: null,
+    videoBorderColor: '#FF7700',
+    videoGlow: 'none',
     paso2Badge: 'Paso 2 • Confirma tu cita',
-    paso2BadgeIcon: confCheck,
-    paso2Image: instructorPhoto,
-    paso2ImageMode: 'instructor',
-    paso2HeadingIcon: null,
-    paso2Heading: null,
+    paso2BadgeIcon: null,
+    paso2Image: confMockup,
+    paso2ImageMode: 'photo',
+    paso2HeadingIcon: confMovil,
+    paso2Heading: 'Mantente al tanto de tu teléfono',
     paso2Paragraphs: [
-      'Mantente al tanto de tu teléfono porque te contactaremos por llamada para confirmar la cita el día y la hora acordadas, una vez confirmada la sesión con tu asesor te enviaremos el enlace de la videollamada.',
+      'te contactaremos por llamada para confirmar la cita el día y la hora acordadas, una vez confirmada la sesión con tu asesor, te enviaremos el enlace de la videollamada.',
       'Es importante que contestes confirmando 👍 tu llamada, ya que estamos recibiendo muchísimas solicitudes y queremos hablar con personas que estén comprometidas en ser un caso de éxito.',
     ],
     paso2Divider: false,
     reminderText: 'Recuerda conectarte puntual y estando en un lugar tranquilo y cómodo.',
     paso3Badge: 'Paso 3 • Descubre',
-    paso3BadgeIcon: confLightbulb,
+    paso3BadgeIcon: null,
     paso3TitlePre: 'Descubre más acerca de la oportunidad de convertirte en ',
     paso3TitleAccent: 'Desarrollador Full-Stack',
     paso3Subtitle:
       'Disfruta de este video donde revelamos más datos, errores comunes y falsas creencias acerca del Desarrollo Full-Stack.',
     paso3SubtitleAccent: 'Además te enseñaremos nuestra academia por dentro',
     paso3Thumbnail: confStep3Thumb,
-    paso3PlayIcon: null,
+    paso3PlayIcon: confPlay,
     paso3Video: 'https://youtu.be/70NzkcJa5oA',
-    footerMode: 'full',
+    footerMode: 'minimal',
     footer: {
       contactPhone: '+971 58 848 2637',
       contactEmail: 'admisiones@conquerx.com',

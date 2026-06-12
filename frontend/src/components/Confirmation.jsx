@@ -57,14 +57,17 @@ const gradText = (grad) => ({
   color: 'transparent',
 })
 
-// Badge pill de cada paso. `big` = estilo Blocks (32px + icono); si no, pill
-// pequeño de texto (estilo Legal). `texture` aplica el papel paperboard de fondo.
-function StepBadge({ children, icon, big, texture }) {
+// Badge pill de cada paso. `big` = estilo grande (32px + icono); si no, pill
+// pequeño de texto. `padClass`/`sizeClass`/`weightClass` permiten al tema fijar
+// los valores exactos de producción (Blocks: 20px/500, padding 4px 16px).
+// `texture` aplica el papel paperboard de fondo.
+function StepBadge({ children, icon, big, texture, padClass, sizeClass, weightClass }) {
+  const pad = padClass || (big ? 'px-4 py-1 rounded-2xl' : 'px-5 py-1.5 rounded-full')
+  const size = sizeClass || (big ? 'text-2xl md:text-[32px]' : 'text-base md:text-lg')
+  const weight = weightClass || 'font-semibold'
   return (
     <div
-      className={`relative inline-flex items-center gap-3 ${
-        big ? 'px-4 py-1 rounded-2xl' : 'px-5 py-1.5 rounded-full'
-      } border border-[#BBB49B] ${cardShadow} overflow-hidden`}
+      className={`relative inline-flex items-center gap-3 ${pad} border border-[#BBB49B] ${cardShadow} overflow-hidden`}
     >
       <div
         className="absolute inset-0 pointer-events-none"
@@ -77,9 +80,7 @@ function StepBadge({ children, icon, big, texture }) {
         }}
       />
       <p
-        className={`relative font-['Funnel_Display',sans-serif] font-semibold ${
-          big ? 'text-2xl md:text-[32px]' : 'text-base md:text-lg'
-        } leading-[1.3] text-black whitespace-nowrap`}
+        className={`relative font-['Funnel_Display',sans-serif] ${weight} ${size} leading-[1.25] text-black whitespace-nowrap`}
       >
         {children}
       </p>
@@ -88,9 +89,24 @@ function StepBadge({ children, icon, big, texture }) {
   )
 }
 
-// Marco del vídeo: si el tema trae un SVG de marco (Blocks), se superpone; si no,
-// borde azul redondeado con glow (Legal).
-function VideoFrame({ frame, accent, children }) {
+// Resalta en negrita el fragmento `bold` dentro de `text` (p. ej. "47 segundos"
+// en el texto del Paso 1, como en producción). Sin `bold`, devuelve el texto tal cual.
+function withBold(text, bold) {
+  if (!bold || typeof text !== 'string' || !text.includes(bold)) return text
+  const i = text.indexOf(bold)
+  return (
+    <>
+      {text.slice(0, i)}
+      <strong className="font-bold">{bold}</strong>
+      {text.slice(i + bold.length)}
+    </>
+  )
+}
+
+// Marco del vídeo: si el tema trae un SVG de marco se superpone; si no, borde
+// redondeado de color `borderColor` (naranja en Blocks, azul en Legal) con un
+// `glow` opcional. Producción de Blocks usa borde naranja 2px sin glow.
+function VideoFrame({ frame, accent, borderColor, glow, children }) {
   if (frame) {
     return (
       <div className="aspect-video relative">
@@ -99,13 +115,12 @@ function VideoFrame({ frame, accent, children }) {
       </div>
     )
   }
+  const ring = borderColor || accent?.ring || '#3E76FF'
+  const shadow = glow !== undefined ? glow : '0 0 30px rgba(62,118,255,0.25)'
   return (
     <div
       className="aspect-video relative rounded-xl overflow-hidden"
-      style={{
-        border: `2px solid ${accent?.ring || '#3E76FF'}`,
-        boxShadow: '0 0 30px rgba(62,118,255,0.25)',
-      }}
+      style={{ border: `2px solid ${ring}`, boxShadow: shadow === 'none' ? undefined : shadow }}
     >
       {children}
     </div>
@@ -114,12 +129,25 @@ function VideoFrame({ frame, accent, children }) {
 
 function PaperboardConfirmation({ theme, assets }) {
   const c = theme.confirmation
-  const texture = assets?.paperboardTexture
+  // La confirmación puede traer su propia textura paperboard (Blocks usa una más
+  // clara y fina que la del StepForm); si no, cae a la del tema.
+  const texture = c.texture || assets?.paperboardTexture
   const px = assets?.pixels || {}
 
-  const paperboardBg = texture
-    ? { backgroundImage: `url(${texture})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : undefined
+  // Fondo paperboard de las secciones crema. `paperboardTiled` replica producción
+  // (textura tileada al 50% con velo blanco 0.4 sobre #FAFAFA); por defecto, la
+  // textura a `cover` (comportamiento original de Legal).
+  const paperboardBg = !texture
+    ? undefined
+    : c.paperboardTiled
+      ? {
+          backgroundColor: '#FAFAFA',
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.4)), url(${texture})`,
+          backgroundSize: 'auto, 50%',
+          backgroundRepeat: 'repeat',
+          backgroundPosition: '0 0, 50% 0',
+        }
+      : { backgroundImage: `url(${texture})`, backgroundSize: 'cover', backgroundPosition: 'center' }
   const cardBg = texture
     ? {
         backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${texture})`,
@@ -127,12 +155,20 @@ function PaperboardConfirmation({ theme, assets }) {
         backgroundPosition: 'center',
       }
     : undefined
+  // Fondo de las cajas naranjas (Importante / recordatorio): imagen
+  // (card-background.png en Blocks) o degradado (Legal), según el tema.
+  const boxBg = c.boxImage
+    ? { backgroundImage: `url(${c.boxImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { backgroundImage: c.boxGradient }
   const gridBg = {
     backgroundImage:
       'linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px)',
     backgroundSize: '48px 48px',
   }
 
+  // Imagen del rasgado entre secciones: la confirmación puede traer la suya
+  // (Blocks usa la de producción que combina con su paperboard); si no, la del tema.
+  const torn = c.torn || assets?.tornTransition2000
   const heroWeight = c.heroWeight || 'font-semibold'
   const isInstr = c.paso2ImageMode === 'instructor'
   const paso2ImgStyle = {
@@ -153,80 +189,91 @@ function PaperboardConfirmation({ theme, assets }) {
     <div className="min-h-screen overflow-x-hidden relative flex flex-col font-['Funnel_Display',sans-serif] bg-black">
 
       {/* ═══ SECTION 1: Hero ═══ */}
-      <section className="relative bg-[#F5EDE3] px-4 lg:px-16 pt-12 pb-12" style={paperboardBg}>
-        {px.deco2 && (
-          <>
-            <img src={px.deco2} alt="" className="absolute top-8 left-6 w-24 opacity-40 pointer-events-none hidden lg:block" />
-            <img src={px.deco2} alt="" className="absolute top-16 right-6 w-28 opacity-20 pointer-events-none hidden lg:block" />
-          </>
-        )}
+      <section className={`relative bg-[#F5EDE3] px-4 lg:px-16 ${c.heroSectionPad || 'pt-12 pb-12'}`} style={paperboardBg}>
+        {px.deco2 &&
+          (c.heroDecos || ['top-8 left-6 w-24 opacity-40', 'top-16 right-6 w-28 opacity-20']).map((cls, i) => (
+            <img key={i} src={px.deco2} alt="" className={`absolute ${cls} pointer-events-none hidden lg:block`} />
+          ))}
 
-        {/* Navbar con logo */}
-        <header className="relative z-10 mb-12">
-          <div className="max-w-[1280px] mx-auto">
-            <div
-              className={`flex items-center justify-center py-5 rounded-lg border border-[#BBB49B] ${cardShadow} overflow-hidden`}
-              style={cardBg}
-            >
-              <img src={assets?.logo} alt="" className="h-6" />
-            </div>
+        {/* Navbar con logo. En Blocks (navbarLogoOnly) solo el logo centrado, sin
+            tarjeta; en Legal se mantiene la tarjeta paperboard con borde. */}
+        <header className={`relative z-10 ${c.navbarMb || 'mb-12'}`}>
+          <div className="mx-auto" style={{ maxWidth: c.heroMaxWidth || '1280px' }}>
+            {c.navbarLogoOnly ? (
+              <div className="flex items-center justify-center py-4">
+                <img src={assets?.logo} alt="" className={c.navLogoHeight || 'h-9'} />
+              </div>
+            ) : (
+              <div
+                className={`flex items-center justify-center py-5 rounded-lg border border-[#BBB49B] ${cardShadow} overflow-hidden`}
+                style={cardBg}
+              >
+                <img src={assets?.logo} alt="" className="h-6" />
+              </div>
+            )}
           </div>
         </header>
 
-        <div className="relative z-10 max-w-[1280px] mx-auto text-center">
+        <div className="relative z-10 mx-auto text-center" style={{ maxWidth: c.heroMaxWidth || '1280px' }}>
           {c.heroIcon && (
-            <div className="mx-auto mb-8">
-              <img src={c.heroIcon} alt="" className="w-24 h-24 mx-auto" />
+            <div className={`mx-auto ${c.heroIconMb || 'mb-8'}`}>
+              <img src={c.heroIcon} alt="" className={`${c.heroIconSize || 'w-24 h-24'} mx-auto`} />
             </div>
           )}
 
-          <h1 className={`text-3xl md:text-[40px] ${heroWeight} leading-[1.2] text-black mb-8`}>
+          <h1 className={`text-3xl md:text-[40px] ${heroWeight} leading-[1.2] text-black ${c.heroTitleMb || 'mb-8'}`}>
             <span className="block text-4xl md:text-[40px]" style={gradText(c.felicidadesGradient)}>
               {c.felicidades}
             </span>
             {c.heroTitle}
           </h1>
 
-          {/* Caja Importante */}
+          {/* Caja Importante. La imagen redondeada se recorta (overflow-hidden)
+              en la capa interna; el rayo se desborda por la esquina inferior
+              derecha desde la capa externa (overflow visible). */}
           <div
-            className={`relative inline-flex flex-col items-center justify-center rounded-lg ${cardShadow} max-w-[640px] w-full overflow-hidden`}
-            style={{ backgroundImage: c.boxGradient }}
+            className={`relative w-full mx-auto`}
+            style={{ maxWidth: c.boxMaxWidth || '640px' }}
           >
-            <div className="relative w-full px-8 md:px-12 py-6">
-              <p className="font-semibold text-white text-2xl md:text-[32px] leading-[1.3] text-center mb-2">
+            <div className={`relative rounded-xl overflow-hidden ${cardShadow} px-8 md:px-12 ${c.boxPadY || 'py-6'}`} style={boxBg}>
+              <p className={`font-semibold text-white text-2xl md:text-[32px] leading-[1.15] text-center ${c.importanteTitleMb || 'mb-2'}`}>
                 {c.importanteTitle}
               </p>
-              <p className="font-medium text-white text-lg md:text-xl leading-[1.25] text-center">
+              <p className={`font-medium text-white ${c.importanteTextSize || 'text-lg md:text-xl'} leading-[1.25] text-center`}>
                 {c.importanteText}
               </p>
             </div>
             {c.heroIconSmall && (
-              <img src={c.heroIconSmall} alt="" className="absolute -top-4 -right-4 w-16 h-16 pointer-events-none hidden md:block" />
+              <img
+                src={c.heroIconSmall}
+                alt=""
+                className="absolute w-[80px] md:w-[111px] -bottom-[24px] -right-[20px] md:-bottom-[37px] md:-right-[37px] pointer-events-none"
+              />
             )}
           </div>
         </div>
       </section>
 
       {/* ═══ TORN: cream → black ═══ */}
-      {assets?.tornTransition2000 && (
+      {torn && (
         <div className="relative z-10 bg-black -mt-[2px]">
-          <img src={assets.tornTransition2000} alt="" className="w-full block scale-y-[-1]" />
+          <img src={torn} alt="" className="w-full block scale-y-[-1] -mt-[3px]" />
         </div>
       )}
 
       {/* ═══ SECTION 2: Paso 1 — vídeo ═══ */}
-      <section className="relative bg-black px-4 lg:px-16 py-20 lg:py-28" style={gridBg}>
+      <section className={`relative bg-black px-4 lg:px-16 ${c.paso1SectionPad || 'py-20 lg:py-28'}`} style={gridBg}>
         <div className="relative z-10 max-w-[1280px] mx-auto text-center">
-          <div className="mb-8">
-            <StepBadge big={c.badgeBig} icon={c.paso1BadgeIcon} texture={texture}>
+          <div className={c.paso1BadgeMb || 'mb-8'}>
+            <StepBadge big={c.badgeBig} icon={c.paso1BadgeIcon} texture={texture} padClass={c.badgePad} sizeClass={c.badgeText} weightClass={c.badgeWeight}>
               {c.paso1Badge}
             </StepBadge>
           </div>
-          <p className="font-medium text-white text-lg md:text-xl leading-[1.3] mb-12 max-w-[820px] mx-auto">
-            {c.paso1Text}
+          <p className={`text-white ${c.paso1TextClass || 'font-medium text-lg md:text-xl leading-[1.3]'} ${c.paso1TextMb || 'mb-12'} max-w-[820px] mx-auto`}>
+            {withBold(c.paso1Text, c.paso1TextBold)}
           </p>
           <div className="max-w-[1024px] mx-auto">
-            <VideoFrame frame={c.videoFrame} accent={theme.accent}>
+            <VideoFrame frame={c.videoFrame} accent={theme.accent} borderColor={c.videoBorderColor} glow={c.videoGlow}>
               <iframe
                 src={c.paso1Video}
                 className="w-full h-full relative z-0"
@@ -240,35 +287,42 @@ function PaperboardConfirmation({ theme, assets }) {
         </div>
       </section>
 
+      {/* ═══ TORN: black → cream (vídeo → Paso 2) ═══ */}
+      {torn && (
+        <div className="relative z-10 bg-black -mb-[2px]">
+          <img src={torn} alt="" className="w-full block -mb-[3px]" />
+        </div>
+      )}
+
       {/* ═══ SECTION 3: Paso 2 — confirma tu cita ═══ */}
       <section className="relative px-4 lg:px-16 py-20 bg-[#F5EDE3]" style={paperboardBg}>
         {px.deco && (
           <img src={px.deco} alt="" className="absolute top-8 left-8 w-28 opacity-20 pointer-events-none hidden lg:block" />
         )}
         <div className="relative z-10 max-w-[1280px] mx-auto">
-          <div className="text-center mb-16">
-            <StepBadge big={c.badgeBig} icon={c.paso2BadgeIcon} texture={texture}>
+          <div className={`text-center ${c.paso2BadgeMb || 'mb-16'}`}>
+            <StepBadge big={c.badgeBig} icon={c.paso2BadgeIcon} texture={texture} padClass={c.badgePad} sizeClass={c.badgeText} weightClass={c.badgeWeight}>
               {c.paso2Badge}
             </StepBadge>
           </div>
 
           {/* Tarjeta: foto + texto */}
           <div
-            className={`rounded-2xl overflow-hidden ${cardShadow} flex flex-col lg:flex-row border border-[#BBB49B]`}
+            className={`rounded-2xl overflow-hidden ${cardShadow} flex flex-col lg:flex-row border border-[#BBB49B] ${c.paso2CardMax || ''}`}
             style={{ ...cardBg, minHeight: c.paso2MinHeight || undefined }}
           >
-            <div className="lg:w-[540px] flex-shrink-0 self-stretch h-64 lg:h-auto" style={paso2ImgStyle} />
+            <div className={`${c.paso2ImgWidth || 'lg:w-[540px]'} flex-shrink-0 self-stretch h-64 lg:h-auto`} style={paso2ImgStyle} />
 
             <div className="flex-1 p-8 lg:p-12 flex flex-col justify-center">
               {c.paso2Heading && (
-                <div className="flex items-center gap-4 mb-6">
-                  {c.paso2HeadingIcon && <img src={c.paso2HeadingIcon} alt="" className="w-12 h-12 flex-shrink-0" />}
-                  <h3 className="text-2xl md:text-[32px] font-semibold text-black leading-[1.1]">
+                <div className={`flex items-center gap-4 ${c.paso2HeadingMb || 'mb-6'}`}>
+                  {c.paso2HeadingIcon && <img src={c.paso2HeadingIcon} alt="" className={`${c.paso2IconClass || 'w-12 h-12'} flex-shrink-0`} />}
+                  <h3 className={`text-black ${c.paso2HeadingClass || 'text-2xl md:text-[32px] font-semibold leading-[1.1]'}`}>
                     {c.paso2Heading}
                   </h3>
                 </div>
               )}
-              <div className="text-base md:text-lg text-[#333] leading-[1.5] font-normal space-y-5">
+              <div className={c.paso2ParagraphClass || 'text-base md:text-lg text-[#333] leading-[1.5] font-normal space-y-5'}>
                 {c.paso2Paragraphs.map((p, i) => (
                   <p key={i}>{p}</p>
                 ))}
@@ -279,11 +333,11 @@ function PaperboardConfirmation({ theme, assets }) {
 
           {/* Caja recordatorio */}
           <div
-            className={`mt-12 relative ${cardShadow} rounded-lg overflow-hidden w-full`}
-            style={{ backgroundImage: c.boxGradient }}
+            className={`${c.paso2ReminderMt || 'mt-12'} relative ${cardShadow} rounded-xl overflow-hidden w-full ${c.paso2CardMax || ''}`}
+            style={boxBg}
           >
             <div className="relative px-8 md:px-12 py-6">
-              <p className="font-semibold text-white text-xl md:text-[28px] leading-[1.3] text-center">
+              <p className={`text-white text-center ${c.reminderTextClass || 'font-semibold text-xl md:text-[28px] leading-[1.3]'}`}>
                 {c.reminderText}
               </p>
             </div>
@@ -292,33 +346,33 @@ function PaperboardConfirmation({ theme, assets }) {
       </section>
 
       {/* ═══ TORN: cream → black ═══ */}
-      {assets?.tornTransition2000 && (
+      {torn && (
         <div className="relative z-10 bg-black -mt-[2px]">
-          <img src={assets.tornTransition2000} alt="" className="w-full block scale-y-[-1]" />
+          <img src={torn} alt="" className="w-full block scale-y-[-1] -mt-[3px]" />
         </div>
       )}
 
       {/* ═══ SECTION 4: Paso 3 — perspectivas ═══ */}
-      <section className="relative bg-black px-4 lg:px-16 py-20 lg:py-28 overflow-hidden" style={gridBg}>
+      <section className={`relative bg-black px-4 lg:px-16 overflow-hidden ${c.paso3SectionPad || 'py-20 lg:py-28'}`} style={gridBg}>
         {px.deco && (
           <img src={px.deco} alt="" className="absolute top-20 left-6 w-20 opacity-60 pointer-events-none hidden lg:block" />
         )}
         <div className="relative z-10 max-w-[1280px] mx-auto text-center">
-          <div className="mb-8">
-            <StepBadge big={c.badgeBig} icon={c.paso3BadgeIcon} texture={texture}>
+          <div className={c.paso3BadgeMb || 'mb-8'}>
+            <StepBadge big={c.badgeBig} icon={c.paso3BadgeIcon} texture={texture} padClass={c.badgePad} sizeClass={c.badgeText} weightClass={c.badgeWeight}>
               {c.paso3Badge}
             </StepBadge>
           </div>
 
-          <h2 className="font-semibold text-white text-3xl md:text-[40px] leading-[1.2] mb-6 max-w-[820px] mx-auto">
+          <h2 className={`font-semibold text-white ${c.paso3TitleSize || 'text-3xl md:text-[40px]'} ${c.paso3TitleLeading || 'leading-[1.2]'} ${c.paso3TitleMb || 'mb-6'} ${c.paso3TitleMaxW || 'max-w-[820px]'} mx-auto`}>
             {c.paso3TitlePre}
             <span style={gradText(c.accentGradient)}>{c.paso3TitleAccent}</span>
           </h2>
 
-          <div className="max-w-[760px] mx-auto mb-12">
-            <p className="text-white text-lg md:text-xl leading-[1.3] mb-1">{c.paso3Subtitle}</p>
+          <div className={`${c.paso3SubtitleMaxW || 'max-w-[760px]'} mx-auto ${c.paso3SubtitleBlockMb || 'mb-12'}`}>
+            <p className={`${c.paso3SubtitleClass || 'text-white text-lg md:text-xl leading-[1.3]'} ${c.paso3SubtitleMb || 'mb-1'}`}>{c.paso3Subtitle}</p>
             {c.paso3SubtitleAccent && (
-              <p className="text-lg md:text-xl leading-[1.3] font-semibold" style={gradText(c.accentGradient)}>
+              <p className={c.paso3SubtitleAccentClass || 'text-lg md:text-xl leading-[1.3] font-semibold'} style={gradText(c.accentGradient)}>
                 {c.paso3SubtitleAccent}
               </p>
             )}
@@ -326,11 +380,16 @@ function PaperboardConfirmation({ theme, assets }) {
 
           <div className="max-w-[1024px] mx-auto">
             <a href={c.paso3Video} target="_blank" rel="noopener noreferrer" className="block group">
-              <VideoFrame frame={c.videoFrame} accent={theme.accent}>
-                <img src={c.paso3Thumbnail} alt="" className="w-full h-full object-cover" />
+              <VideoFrame frame={c.videoFrame} accent={theme.accent} borderColor={c.videoBorderColor} glow={c.videoGlow}>
+                <img
+                  src={c.paso3Thumbnail}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  style={c.paso3ThumbFilter ? { filter: c.paso3ThumbFilter, transform: 'scale(1.03)' } : undefined}
+                />
                 <div className="absolute inset-0 flex items-center justify-center z-[5]">
                   {c.paso3PlayIcon ? (
-                    <img src={c.paso3PlayIcon} alt="" className="w-16 h-16 md:w-20 md:h-20 group-hover:scale-110 transition-transform" />
+                    <img src={c.paso3PlayIcon} alt="" className={`${c.paso3PlayClass || 'w-16 h-16 md:w-20 md:h-20'} group-hover:scale-110 transition-transform`} />
                   ) : (
                     <div className="w-16 h-16 md:w-20 md:h-20 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                       <svg className="w-8 h-8 md:w-10 md:h-10 ml-1 text-black" fill="currentColor" viewBox="0 0 24 24">
@@ -346,21 +405,28 @@ function PaperboardConfirmation({ theme, assets }) {
       </section>
 
       {/* ═══ TORN: black → footer ═══ */}
-      {assets?.tornTransition2000 && (
+      {torn && (
         <div className="relative z-10 bg-black -mb-[2px]">
-          <img src={assets.tornTransition2000} alt="" className="w-full block" />
+          <img src={torn} alt="" className="w-full block -mt-[3px]" />
         </div>
       )}
 
       {/* ═══ FOOTER ═══ */}
       <footer className="relative flex-shrink-0 z-10 overflow-hidden bg-[#F5EDE3]" style={paperboardBg}>
         {c.footerMode === 'minimal' ? (
-          <div className="relative w-full max-w-[1280px] mx-auto px-6 py-16 flex justify-center">
-            {px.deco2 && (
-              <img src={px.deco2} alt="" className="absolute top-8 right-10 w-24 opacity-40 pointer-events-none hidden lg:block" />
-            )}
-            <img src={assets?.logo} alt="" className="h-16" />
-          </div>
+          <>
+            {/* Blocks: píxeles decorativos relativos al footer completo (uno a
+                cada lado, como producción). Legal: el deco original centrado. */}
+            {(c.footerDecos || []).map((d, i) => (
+              <img key={i} src={(assets?.pixels || {})[d.img]} alt="" className={`absolute ${d.cls} pointer-events-none hidden lg:block`} />
+            ))}
+            <div className={`relative w-full max-w-[1280px] mx-auto px-6 ${c.footerPadY || 'py-16'} flex justify-center`}>
+              {!c.footerDecos && px.deco2 && (
+                <img src={px.deco2} alt="" className="absolute top-8 right-10 w-24 opacity-40 pointer-events-none hidden lg:block" />
+              )}
+              <img src={assets?.logo} alt="" className={c.footerLogoHeight || 'h-16'} />
+            </div>
+          </>
         ) : (
           <>
             {px.deco && (
