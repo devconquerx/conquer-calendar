@@ -49,11 +49,11 @@ body { background: var(--bk-bg) !important; }
   display: flex;
   width: 100%;
   max-width: 880px;
-  min-height: 560px;
+  height: 575px;
   overflow: hidden;
   transition: max-width .35s cubic-bezier(.4,0,.2,1), min-width .35s cubic-bezier(.4,0,.2,1);
 }
-.bk-card.has-slots { min-width: 900px; max-width: 1060px; height: 560px; }
+.bk-card.has-slots { min-width: 900px; max-width: 1060px; height: 575px; }
 
 /* ── LEFT PANEL ── */
 .bk-left {
@@ -62,6 +62,8 @@ body { background: var(--bk-bg) !important; }
   padding: 40px 36px;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .bk-card.has-slots .bk-left { flex: 0 0 360px; }
 .bk-title   { font-size: 26px; font-weight: 500; font-family: var(--bk-font-heading); color: var(--bk-text); margin: 0 0 16px; line-height: 1.25; letter-spacing: -0.02em; }
