@@ -106,6 +106,23 @@ _VSL_FIELD_POR_ESCUELA = {
     'conquerfinance': 'vsl_percent_cf',
 }
 
+# Hitos VSL aceptados por el CRM (IngestVslProgressView.VALID_PERCENTS). El campo
+# por marca (vsl_percent_cb/cl/cf) refleja exactamente el del CRM, así que solo
+# guarda/reenvía estos valores; cualquier otro % el CRM lo rechazaría con 400.
+_VSL_MILESTONES = (25, 50, 75, 100)
+
+
+def _vsl_milestone(percent):
+    """Trunca el % al hito VSL inferior aceptado por el CRM (25/50/75/100).
+
+    Devuelve None si todavía no se alcanza el primer hito (< 25).
+    """
+    milestone = None
+    for m in _VSL_MILESTONES:
+        if percent >= m:
+            milestone = m
+    return milestone
+
 
 @csrf_exempt
 @require_POST
@@ -142,12 +159,15 @@ def video_progress(request):
         lead.vsl_percentage = percent
         update_fields.append('vsl_percentage')
 
+    # Campo por marca (cb/cl/cf): igual que el CRM, solo guarda hitos
+    # 25/50/75/100 y nunca decrece.
     brand_field = _VSL_FIELD_POR_ESCUELA.get(school)
-    brand_updated = False
-    if brand_field and percent > (getattr(lead, brand_field) or 0):
-        setattr(lead, brand_field, percent)
+    milestone = _vsl_milestone(percent)
+    milestone_to_send = None
+    if brand_field and milestone and milestone > (getattr(lead, brand_field) or 0):
+        setattr(lead, brand_field, milestone)
         update_fields.append(brand_field)
-        brand_updated = True
+        milestone_to_send = milestone
 
     if update_fields:
         lead.save(update_fields=update_fields)
@@ -160,9 +180,9 @@ def video_progress(request):
         except Exception:
             logger.exception('No se pudo re-encolar Supabase para lead %s (vsl)', lead.pk)
 
-    # Reenvía el progreso del VSL al CRM ingest.
-    if brand_updated:
-        _patch_vsl_progress_to_crm(email, brand_field, percent)
+    # Reenvía el progreso del VSL al CRM ingest (mismo hito y campo que guardamos).
+    if milestone_to_send:
+        _patch_vsl_progress_to_crm(email, brand_field, milestone_to_send)
 
     return JsonResponse({'status': 'ok'})
 
