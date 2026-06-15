@@ -60,11 +60,12 @@ def _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc):
     return obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
 
 
-def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
+def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_override=None):
     """
     Devuelve lista de inicio_utc aware-UTC disponibles para un host concreto.
     fecha_desde / fecha_hasta: date naive (interpretadas en TZ del host).
     Clamp servidor: fecha_hasta = min(fecha_hasta, fecha_desde + MAX_VENTANA_DIAS).
+    busy_override: si se pasa, usa esta lista de (inicio, fin) en vez de la caché local/API.
     """
     tz_host = ZoneInfo(host.timezone)
     duracion = event_type.duracion_minutos
@@ -110,7 +111,10 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta):
 
     # Los eventos externos de GCal bloquean solo su tiempo real, sin buffer.
     # El buffer solo aplica alrededor de reservas confirmadas (igual que Calendly).
-    busy_intervalos = list(_obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc))
+    if busy_override is not None:
+        busy_intervalos = list(busy_override)
+    else:
+        busy_intervalos = list(_obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc))
 
     slots = []
     step = timedelta(minutes=incremento)
