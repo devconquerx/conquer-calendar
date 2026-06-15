@@ -47,7 +47,7 @@ function storeProgress(videoUrl, updates) {
   } catch {}
 }
 
-export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarClick, onShowButton, onProgress }) {
+export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarClick, onShowButton, onProgress, theme }) {
   const videoRef = useRef(null)
   const playerRef = useRef(null)
   const [showUnmute, setShowUnmute] = useState(false)
@@ -83,11 +83,17 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
     videoRef.current.src = videoUrl
     videoRef.current.muted = true
 
+    // Modo debug (?debug=1): controles completos del reproductor (barra de
+    // progreso/seek, tiempos, etc.) para poder navegar el vídeo durante pruebas.
+    const isDebug = new URLSearchParams(window.location.search).get('debug') === '1'
+
     const player = new Plyr(videoRef.current, {
       hideControls: false,
       autoplay: true,
       muted: true,
-      controls: ['play', 'mute', 'volume', 'fullscreen'],
+      controls: isDebug
+        ? ['play-large', 'restart', 'rewind', 'play', 'fast-forward', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen']
+        : ['play', 'mute', 'volume', 'fullscreen'],
     })
 
     playerRef.current = player
@@ -186,9 +192,9 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
         className="w-full h-full"
       />
 
-      {showUnmute && <UnmuteOverlay onUnmute={handleUnmute} />}
+      {showUnmute && <UnmuteOverlay onUnmute={handleUnmute} theme={theme} />}
       {showReturning && (
-        <ReturningOverlay onContinue={handleContinue} onRestart={handleRestart} />
+        <ReturningOverlay onContinue={handleContinue} onRestart={handleRestart} theme={theme} />
       )}
     </div>
   )

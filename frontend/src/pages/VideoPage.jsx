@@ -102,6 +102,7 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
             onAgendarClick={goToStepForm}
             onShowButton={handleShowButton}
             onProgress={handleProgress}
+            theme={theme}
           />
         </div>
 
@@ -219,7 +220,7 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
         )}
 
         <main className="relative flex-1">
-          <div className="max-w-[1064px] mx-auto px-2 md:px-5 pt-6 pb-4">
+          <div className="max-w-[1064px] mx-auto px-5 md:px-5 pt-6 pb-4">
             <div
               className="animate-fade-in"
               style={{ boxShadow: glow }}
@@ -230,6 +231,7 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
                 onAgendarClick={goToStepForm}
                 onShowButton={onShowButton}
                 onProgress={onProgress}
+                theme={theme}
               />
             </div>
 
