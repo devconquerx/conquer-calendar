@@ -148,7 +148,7 @@ export default function PhoneField({ field, value, onChange, onNext }) {
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="text-black text-xl md:text-3xl font-normal bg-transparent outline-none hover:opacity-70 transition-opacity border-b-2 border-black pb-2"
+            className="text-black text-lg md:text-3xl font-normal bg-transparent outline-none hover:opacity-70 transition-opacity border-b-2 border-black pb-2"
           >
             {selectedCountry ? `+${selectedCountry.phoneCode}` : '...'}
           </button>
@@ -199,7 +199,7 @@ export default function PhoneField({ field, value, onChange, onNext }) {
           onChange={handlePhoneChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="flex-1 min-w-0 bg-transparent text-black text-xl md:text-3xl outline-none placeholder:text-[#aaa] border-b-2 border-black pb-2"
+          className="flex-1 min-w-0 bg-transparent text-black text-lg md:text-3xl outline-none placeholder:text-[#aaa] border-b-2 border-black pb-2"
         />
 
         {/* Flag on the right */}

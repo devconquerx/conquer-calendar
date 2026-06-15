@@ -59,7 +59,7 @@ export default function MultipleChoice({ field, value, onChange, onNext }) {
             <div className={`absolute inset-0 pointer-events-none rounded-lg transition-colors ${
               isSelected ? 'bg-black/[0.08]' : 'bg-transparent group-hover/choice:bg-black/[0.06]'
             }`} />
-            <span className="relative text-[#444] text-lg md:text-xl leading-[1.5]">
+            <span className="relative text-[#444] text-base md:text-xl leading-[1.5]">
               {choice.label}
             </span>
           </button>

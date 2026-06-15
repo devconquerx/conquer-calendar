@@ -336,14 +336,12 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     <ThemeContext.Provider value={theme}>
       <div className="funnel-wrap" style={pageStyle}>
         <div
-          className="px-4 min-[480px]:px-8 sm:px-16 py-10 rounded-2xl mx-auto min-h-[80vh]"
+          className="w-full grow min-h-[100dvh] sm:w-[calc(90vw_-_2rem)] sm:grow-0 sm:min-h-[80vh] px-4 min-[480px]:px-8 sm:px-16 py-10 mx-auto sm:rounded-2xl sm:border sm:shadow-[var(--theme-form-shadow,none)]"
           style={{
-            width: 'calc(90vw - 2rem)',
+            borderColor: 'var(--theme-form-border, transparent)',
             backgroundImage: `linear-gradient(var(--theme-form-bg, transparent), var(--theme-form-bg, transparent)), var(--theme-form-texture, none)`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            border: `1px solid var(--theme-form-border, transparent)`,
-            boxShadow: 'var(--theme-form-shadow, none)',
           }}
         >
           <div className="mt-8 overflow-hidden min-h-[60vh]">
