@@ -86,18 +86,25 @@ def process_neverbounce(self, lead_id):
     from calendario.leads.services import neverbounce
 
     lead = Lead.objects.get(pk=lead_id)
-    if lead.neverbounce_result:
-        lead.tags.add('neverbounce_done')
-        process_crm_send.delay(lead_id)
-        return
-    neverbounce.validate_email(lead)
-    lead.refresh_from_db(fields=['neverbounce_result'])
+
+    # NeverBounce es enriquecimiento opcional: NO debe bloquear el envío al CRM.
+    # Si no está configurado o falla, se continúa sin resultado de validación.
+    if not lead.neverbounce_result:
+        try:
+            neverbounce.validate_email(lead)
+            lead.refresh_from_db(fields=['neverbounce_result'])
+        except Exception:
+            logger.exception('Lead %s: NeverBounce falló; se continúa sin validación', lead_id)
+
     if lead.neverbounce_result:
         lead.tags.add('neverbounce_done')
         logger.info('Lead %s: neverbounce_done', lead_id)
-        process_crm_send.delay(lead_id)
     else:
-        raise RuntimeError(f'NeverBounce did not populate result for lead {lead_id}')
+        lead.tags.add('neverbounce_skipped')
+        logger.info('Lead %s: neverbounce_skipped (sin validación)', lead_id)
+
+    # El envío al CRM se dispara siempre (la validación viaja si está disponible).
+    process_crm_send.delay(lead_id)
 
 
 @shared_task(**RETRY_POLICY)
@@ -207,11 +214,14 @@ def sweep_incomplete_leads():
             process_activecampaign.delay(lead.pk)
             requeued += 1
 
-        if lead.email and 'neverbounce_done' not in tag_names and 'neverbounce_failed' not in tag_names:
+        if (lead.email and 'neverbounce_done' not in tag_names
+                and 'neverbounce_skipped' not in tag_names
+                and 'neverbounce_failed' not in tag_names):
             process_neverbounce.delay(lead.pk)
             requeued += 1
 
-        if (settings.CRM_INGEST_ENABLED and lead.email and 'neverbounce_done' in tag_names
+        if (settings.CRM_INGEST_ENABLED and lead.email
+                and ('neverbounce_done' in tag_names or 'neverbounce_skipped' in tag_names)
                 and 'crm_done' not in tag_names and 'crm_failed' not in tag_names):
             process_crm_send.delay(lead.pk)
             requeued += 1
