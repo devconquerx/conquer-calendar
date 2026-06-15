@@ -160,7 +160,7 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden relative flex flex-col font-funnel">
+    <div className="min-h-[100dvh] overflow-x-hidden relative flex flex-col font-funnel">
       {/* ── Cabecera clara ── */}
       <header className="relative" style={paperStyle}>
         {/* Píxeles decorativos laterales */}
@@ -237,8 +237,6 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
 
             {/* Botón CTA — aparece al alcanzar el buttonPercent */}
             {showButton && <AgendarButton theme={theme} onClick={goToStepForm} />}
-
-            <div className="h-[100px]" />
           </div>
         </main>
 
