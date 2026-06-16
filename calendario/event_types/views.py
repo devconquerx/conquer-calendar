@@ -8,9 +8,13 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+
 from calendario.permisos.mixins import RequierePermisoMixin
 from .forms import EventTypeForm, _hosts_queryset, _generar_slug_equipo
-from .models import EventType, EventTypeXHost
+from .models import EventType, EventTypeXHost, EnlaceUnico
 
 User = get_user_model()
 
@@ -265,6 +269,25 @@ class EventTypeDeleteView(RequierePermisoMixin, DeleteView):
         obj = self.get_object()
         messages.success(request, f"Tipo de evento '{obj.nombre}' eliminado.")
         return super().post(request, *args, **kwargs)
+
+
+@login_required
+@require_POST
+def generar_enlace_unico(request, pk):
+    if request.user.es_admin:
+        event_type = get_object_or_404(EventType, pk=pk)
+    else:
+        from django.db.models import Q
+        from calendario.grupos.utils import miembros_de_mis_grupos
+        grupo_ids = miembros_de_mis_grupos(request.user)
+        q = Q(host=request.user) | Q(hosts_pool__host=request.user)
+        if grupo_ids:
+            q |= Q(host_id__in=grupo_ids)
+        event_type = get_object_or_404(EventType.objects.filter(q).distinct(), pk=pk)
+
+    enlace = EnlaceUnico.objects.create(event_type=event_type, creado_por=request.user)
+    url = request.build_absolute_uri(f'/u/{enlace.token}/')
+    return JsonResponse({'url': url})
 
 
 class EventTypeToggleActivoView(RequierePermisoMixin, View):

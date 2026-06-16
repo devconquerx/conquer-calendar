@@ -8,7 +8,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.formats import date_format
 from django.views import View
 
-from calendario.event_types.models import EventType
+from django.utils import timezone as dj_timezone
+from django.urls import reverse
+
+from calendario.event_types.models import EventType, EnlaceUnico
 from calendario.users.models import User
 from .correos import enviar_confirmacion_host, enviar_confirmacion_invitado
 from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
@@ -225,6 +228,8 @@ class BookingPageView(View):
             'tz_host': host.timezone,
             'tz_visitante': str(tz_visitante),
             'hoy': hoy_local,
+            'form_action_url': reverse('public_booking:booking_submit', kwargs={'user_slug': host.slug, 'event_type_slug': event_type.slug}),
+            'slots_url': reverse('public_booking:slots_mes_json', kwargs={'user_slug': host.slug, 'event_type_slug': event_type.slug}),
         }
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
         return render(request, 'pages/public/booking/page.html', ctx)
@@ -286,6 +291,8 @@ class BookingFormView(View):
             'notas': request.POST.get('notas', ''),
             'inicio_utc_str': request.POST.get('inicio_utc', ''),
             'slot_label': inicio.astimezone(tz_visitante).strftime('%H:%M') + ' h' if inicio else '',
+            'form_action_url': reverse('public_booking:booking_submit', kwargs={'user_slug': host.slug, 'event_type_slug': event_type.slug}),
+            'slots_url': reverse('public_booking:slots_mes_json', kwargs={'user_slug': host.slug, 'event_type_slug': event_type.slug}),
         }
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
         if duplicado is not None:
@@ -351,6 +358,8 @@ class TeamBookingPageView(View):
             'tz_visitante': str(tz_visitante),
             'hoy': hoy_local,
             'is_team': True,
+            'form_action_url': reverse('public_team:booking_submit', kwargs={'slug_equipo': event_type.slug_equipo}),
+            'slots_url': reverse('public_team:slots_mes_json', kwargs={'slug_equipo': event_type.slug_equipo}),
         }
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
         return render(request, 'pages/public/booking/page.html', ctx)
@@ -411,6 +420,8 @@ class TeamBookingFormView(View):
             'inicio_utc_str': request.POST.get('inicio_utc', ''),
             'slot_label': inicio.astimezone(tz_visitante).strftime('%H:%M') + ' h' if inicio else '',
             'is_team': True,
+            'form_action_url': reverse('public_team:booking_submit', kwargs={'slug_equipo': event_type.slug_equipo}),
+            'slots_url': reverse('public_team:slots_mes_json', kwargs={'slug_equipo': event_type.slug_equipo}),
         }
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
         if duplicado is not None:
@@ -507,3 +518,159 @@ class ReemplazarPublicaView(View):
 
         transaction.on_commit(lambda: _enviar_correos_confirmacion(nueva.pk))
         return redirect('public_token:confirmacion', token=nueva.confirmacion_token)
+
+
+# ── Enlace único de un solo uso ───────────────────────────────────────────────
+
+class EnlaceUnicoPageView(View):
+
+    def get(self, request, token):
+        enlace = get_object_or_404(EnlaceUnico, token=token)
+        if enlace.usado:
+            return render(request, 'pages/public/booking/enlace_expirado.html', status=410)
+
+        event_type = enlace.event_type
+        if not event_type.activo:
+            return render(request, 'pages/public/booking/enlace_expirado.html', status=410)
+
+        tz_ref = ZoneInfo(event_type.host.timezone)
+        tz_visitante = _tz_visitante(request, tz_ref)
+        hoy_local = datetime.now(tz_visitante).date()
+        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
+
+        fecha_str = request.GET.get('fecha', '')
+        try:
+            fecha = date.fromisoformat(fecha_str) if fecha_str else None
+        except ValueError:
+            fecha = None
+        if fecha and (fecha < hoy_local or fecha > max_fecha):
+            fecha = None
+
+        mes_str = request.GET.get('mes', '')
+        try:
+            mes_base = date.fromisoformat(mes_str).replace(day=1) if mes_str else None
+        except ValueError:
+            mes_base = None
+        if not mes_base:
+            mes_base = fecha.replace(day=1) if fecha else hoy_local.replace(day=1)
+
+        slots_local = []
+        if fecha:
+            slots_local = _slots_template(
+                _slots_dia_visitante(event_type, fecha, tz_visitante),
+                tz_visitante,
+            )
+
+        ctx = {
+            'event_type': event_type,
+            'host': event_type.host,
+            'fecha': fecha,
+            'fecha_iso': fecha.isoformat() if fecha else '',
+            'min_fecha_iso': hoy_local.isoformat(),
+            'max_fecha_iso': max_fecha.isoformat(),
+            'slots_local': slots_local,
+            'tz_host': event_type.host.timezone,
+            'tz_visitante': str(tz_visitante),
+            'hoy': hoy_local,
+            'form_action_url': reverse('public_enlace_unico:booking_submit', kwargs={'token': token}),
+            'slots_url': reverse('public_enlace_unico:slots_mes_json', kwargs={'token': token}),
+        }
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
+        return render(request, 'pages/public/booking/page.html', ctx)
+
+
+class EnlaceUnicoFormView(View):
+
+    def post(self, request, token):
+        enlace = get_object_or_404(EnlaceUnico, token=token)
+        if enlace.usado:
+            return render(request, 'pages/public/booking/enlace_expirado.html', status=410)
+
+        event_type = enlace.event_type
+        if not event_type.activo:
+            return render(request, 'pages/public/booking/enlace_expirado.html', status=410)
+
+        form = BookingForm(request.POST)
+        if not form.is_valid():
+            return self._render_with_errors(request, enlace, event_type, form)
+
+        tz_ref = ZoneInfo(event_type.host.timezone)
+        tz_visitante = _tz_visitante(request, tz_ref)
+        try:
+            reserva = crear_reserva(
+                event_type=event_type,
+                inicio_utc=form.cleaned_data['inicio_utc'],
+                nombre_invitado=form.cleaned_data['nombre_invitado'],
+                email_invitado=form.cleaned_data['email_invitado'],
+                telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
+                notas=form.cleaned_data.get('notas', ''),
+                timezone_invitado=str(tz_visitante),
+            )
+        except ReservaDuplicadaError as e:
+            return self._render_with_errors(request, enlace, event_type, form, duplicado=e.reserva_existente)
+        except SlotNoDisponibleError as e:
+            form.add_error(None, str(e))
+            return self._render_with_errors(request, enlace, event_type, form)
+
+        enlace.usado = True
+        enlace.usado_en = dj_timezone.now()
+        enlace.save(update_fields=['usado', 'usado_en'])
+
+        transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
+        return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
+
+    def _render_with_errors(self, request, enlace, event_type, form, duplicado=None):
+        inicio = form.cleaned_data.get('inicio_utc') if form.is_bound and form.cleaned_data else None
+        tz_ref = ZoneInfo(event_type.host.timezone)
+        tz_visitante = _tz_visitante(request, tz_ref)
+        hoy_local = datetime.now(tz_visitante).date()
+        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
+        fecha = inicio.astimezone(tz_visitante).date() if inicio else hoy_local
+        mes_base = fecha.replace(day=1)
+        slots = _slots_dia_visitante(event_type, fecha, tz_visitante)
+        token = str(enlace.token)
+
+        ctx = {
+            'event_type': event_type,
+            'host': event_type.host,
+            'fecha': fecha,
+            'fecha_iso': fecha.isoformat(),
+            'min_fecha_iso': hoy_local.isoformat(),
+            'max_fecha_iso': max_fecha.isoformat(),
+            'slots_local': _slots_template(slots, tz_visitante),
+            'tz_host': event_type.host.timezone,
+            'tz_visitante': str(tz_visitante),
+            'hoy': hoy_local,
+            'form_errors': form.errors,
+            'nombre_invitado': request.POST.get('nombre_invitado', ''),
+            'email_invitado': request.POST.get('email_invitado', ''),
+            'telefono_invitado': request.POST.get('telefono_invitado', ''),
+            'notas': request.POST.get('notas', ''),
+            'inicio_utc_str': request.POST.get('inicio_utc', ''),
+            'slot_label': inicio.astimezone(tz_visitante).strftime('%H:%M') + ' h' if inicio else '',
+            'form_action_url': reverse('public_enlace_unico:booking_submit', kwargs={'token': token}),
+            'slots_url': reverse('public_enlace_unico:slots_mes_json', kwargs={'token': token}),
+        }
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
+        if duplicado is not None:
+            ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
+        return render(request, 'pages/public/booking/page.html', ctx, status=400 if not duplicado else 200)
+
+
+class EnlaceUnicoSlotsView(View):
+
+    def get(self, request, token):
+        enlace = get_object_or_404(EnlaceUnico, token=token)
+        if enlace.usado:
+            return JsonResponse({'error': 'enlace expirado'}, status=410)
+
+        event_type = enlace.event_type
+        tz_ref = ZoneInfo(event_type.host.timezone)
+        tz_visitante = _tz_visitante(request, tz_ref)
+        hoy_local = datetime.now(tz_visitante).date()
+        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
+        data = _calcular_slots_mes_json(
+            event_type, tz_visitante, hoy_local, max_fecha,
+            request.GET.get('mes', ''),
+        )
+        return JsonResponse(data)

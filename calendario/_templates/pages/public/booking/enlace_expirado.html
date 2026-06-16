@@ -1,0 +1,57 @@
+{% extends 'layout/master.html' %}
+{% block title %}Enlace no disponible — {% endblock %}
+
+{% block layout %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+<style>
+:root {
+  --bk-blue: #0069ff;
+  --bk-text: #1a1a2e;
+  --bk-muted: #8a8a8a;
+  --bk-bg: #f0f2f5;
+  --bk-font: 'Funnel Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+html, body { margin: 0 !important; padding: 0 !important; }
+body { background: var(--bk-bg) !important; font-family: var(--bk-font); }
+.exp-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+.exp-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 12px rgba(0,0,0,.10);
+  padding: 56px 48px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+.exp-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--bk-text);
+  margin: 0 0 12px;
+}
+.exp-desc {
+  color: var(--bk-muted);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+}
+</style>
+
+<div class="exp-wrapper">
+  <div class="exp-card">
+    <h1 class="exp-title">Lo sentimos, este enlace ya no existe</h1>
+    <p class="exp-desc">
+      Este enlace era de un solo uso y ya fue utilizado para agendar una reunión,
+      o ha sido desactivado. Si necesitas reservar una nueva cita, contacta con
+      la persona que te lo envió.
+    </p>
+  </div>
+</div>
+{% endblock %}

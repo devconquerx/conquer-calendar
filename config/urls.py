@@ -32,6 +32,7 @@ urlpatterns = [
     path('panel/grupos/', include('calendario.grupos.urls')),
     path('', RedirectView.as_view(url='/panel/', permanent=False)),
     path('r/', include('calendario.bookings.urls_public_token')),
+    path('u/<uuid:token>/', include('calendario.bookings.urls_public_enlace_unico')),
     path('e/<slug:slug_equipo>/', include('calendario.bookings.urls_public_team')),
     path('f/', include('calendario.funnels.urls')),
     # Panel interno de estado de los funnels (lista escuelas + enlaces).

@@ -559,7 +559,7 @@ body { background: var(--bk-bg) !important; }
 
       {# STEP 3: Form #}
       <div id="step-form">
-        <form method="post" action="{% if is_team %}{% url 'public_team:booking_submit' slug_equipo=event_type.slug_equipo %}{% else %}{% url 'public_booking:booking_submit' user_slug=host.slug event_type_slug=event_type.slug %}{% endif %}">
+        <form method="post" action="{{ form_action_url }}">
           {% csrf_token %}
           <input type="hidden" id="inicio_utc" name="inicio_utc" value="{{ inicio_utc_str|default:'' }}">
           <input type="hidden" name="tz" value="{{ tz_visitante }}">
@@ -756,11 +756,7 @@ document.querySelector('.bk-card').classList.remove('has-slots');
 (function () {
   if (window.location.pathname.endsWith('/reservar/')) return;
 
-  {% if is_team %}
-  var SLOTS_URL = '{% url "public_team:slots_mes_json" slug_equipo=event_type.slug_equipo %}';
-  {% else %}
-  var SLOTS_URL = '{% url "public_booking:slots_mes_json" user_slug=host.slug event_type_slug=event_type.slug %}';
-  {% endif %}
+  var SLOTS_URL = '{{ slots_url }}';
 
   var SP  = new URLSearchParams(window.location.search);
   var TZ  = SP.get('tz') || '{{ tz_visitante }}';

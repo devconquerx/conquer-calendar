@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
@@ -131,3 +133,32 @@ class EventTypeXHost(models.Model):
 
     def __str__(self):
         return f"{self.event_type.nombre} ↔ {self.host.username}"
+
+
+class EnlaceUnico(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    event_type = models.ForeignKey(
+        EventType,
+        on_delete=models.CASCADE,
+        related_name='enlaces_unicos',
+    )
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='enlaces_unicos_creados',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+    usado = models.BooleanField(default=False)
+    usado_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'event_type_enlaces_unicos'
+        ordering = ['-creado_en']
+        verbose_name = 'enlace único'
+        verbose_name_plural = 'enlaces únicos'
+        indexes = [
+            models.Index(fields=['token'], name='ix_enlace_unico_token'),
+        ]
+
+    def __str__(self):
+        return f"EnlaceUnico({self.token}) → {self.event_type.nombre}"
