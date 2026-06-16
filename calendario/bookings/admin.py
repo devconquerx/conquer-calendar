@@ -8,6 +8,8 @@ from django.urls import path, reverse
 from django.utils.html import format_html, mark_safe
 
 from .models import ConfigCorreoDefault, ConfigCorreoEvento, ConfigCorreoGrupo, LogCorreo, PlantillaCorreo, Reserva
+from calendario.leads.admin import _tag_check
+from calendario.monitoring.models import TaskFailureLog, AlertLog
 
 
 VARIABLES_CORREO = [
@@ -252,11 +254,51 @@ class LogCorreoAdmin(admin.ModelAdmin):
         return False
 
 
+class ReservaTaskFailureInline(admin.TabularInline):
+    model = TaskFailureLog
+    fk_name = 'reserva'
+    extra = 0
+    fields = ('created', 'task_name', 'exception_type', 'exception_message', 'sentry_link')
+    readonly_fields = ('created', 'task_name', 'exception_type', 'exception_message', 'sentry_link')
+    ordering = ('-created',)
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def sentry_link(self, obj):
+        if obj.sentry_url:
+            return format_html('<a href="{}" target="_blank">Ver en Sentry</a>', obj.sentry_url)
+        return '—'
+    sentry_link.short_description = 'Sentry'
+
+
+class ReservaAlertLogInline(admin.TabularInline):
+    model = AlertLog
+    fk_name = 'reserva'
+    extra = 0
+    fields = ('created', 'metric', 'message')
+    readonly_fields = ('created', 'metric', 'message')
+    ordering = ('-created',)
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+def _sch_source(obj):
+    """utm_source normalizado de la reserva, para decidir qué columnas de ads aplican."""
+    return (obj.utm_source or '').lower()
+
+
 @admin.register(Reserva)
 class ReservaAdmin(admin.ModelAdmin):
     list_display = (
         'nombre_invitado', 'email_invitado', 'event_type', 'host',
-        'inicio_utc', 'estado', 'google_sync_estado', 'fecha_creacion',
+        'inicio_utc', 'estado', 'google_sync_estado',
+        'col_meta', 'col_tiktok', 'col_google', 'col_ac',
+        'col_respondio', 'col_crm', 'col_supabase',
+        'fecha_creacion',
     )
     list_filter = ('estado', 'google_sync_estado', 'event_type', 'host', 'fecha_creacion', 'tags')
     search_fields = (
@@ -267,10 +309,73 @@ class ReservaAdmin(admin.ModelAdmin):
     ordering = ('-fecha_creacion',)
     raw_id_fields = ('event_type', 'host')
     list_select_related = ('event_type', 'host')
+    inlines = [ReservaTaskFailureInline, ReservaAlertLogInline]
     readonly_fields = (
         'confirmacion_token', 'google_event_id', 'google_event_link',
         'google_meet_url', 'fecha_creacion', 'fecha_actualizacion',
+        'tag_chips_detail',
     )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('event_type', 'host').prefetch_related('tags')
+
+    # Columnas tri-estado de ejecución de las tareas de conversión del schedule.
+    # Mismo factory que LeadAdmin: ✅ done / ⚠️ failed (link Sentry) / ⏳ pendiente / — no aplica.
+    # Meta/TikTok/Google aplican según utm_source; AC con email; Respondio con teléfono;
+    # CRM solo si el event_type tiene marcado "Notificar al CRM" (si no, queda en —).
+    col_meta = _tag_check('sch_meta_capi_done', 'sch_meta_capi_failed', 'process_schedule_meta_capi', 'Meta', applies=lambda r: _sch_source(r) == 'metaads')
+    col_tiktok = _tag_check('sch_tiktok_events_done', 'sch_tiktok_events_failed', 'process_schedule_tiktok_events', 'TikTok', applies=lambda r: 'tiktok' in _sch_source(r))
+    col_google = _tag_check('sch_google_ads_done', 'sch_google_ads_failed', 'process_schedule_google_ads', 'Google', applies=lambda r: _sch_source(r) == 'googleads')
+    col_ac = _tag_check('sch_activecampaign_done', 'sch_activecampaign_failed', 'process_schedule_activecampaign', 'AC', applies=lambda r: bool(r.email_invitado))
+    col_respondio = _tag_check('sch_respondio_done', 'sch_respondio_failed', 'process_schedule_respondio', 'Respondio', applies=lambda r: bool(r.telefono_invitado))
+    col_crm = _tag_check('sch_crm_done', 'sch_crm_failed', 'process_schedule_crm', 'CRM', applies=lambda r: bool(r.event_type and r.event_type.notificar_crm))
+    col_supabase = _tag_check('sch_supabase_done', 'sch_supabase_failed', 'process_schedule_supabase', 'SP')
+
+    def _render_chips(self, obj):
+        colors = {
+            'sch_meta_capi_done': '#1877F2',
+            'sch_tiktok_events_done': '#000000',
+            'sch_google_ads_done': '#4285F4',
+            'sch_respondio_done': '#00C853',
+            'sch_activecampaign_done': '#356AE6',
+            'sch_crm_done': '#FF6F00',
+            'sch_supabase_done': '#3ECF8E',
+        }
+        chips = []
+        for tag in obj.tags.all():
+            color = colors.get(tag.name, '#666')
+            chips.append(
+                f'<span style="display:inline-block;padding:3px 10px;margin:2px;'
+                f'border-radius:12px;font-size:11px;font-weight:600;'
+                f'color:#fff;background:{color}">{tag.name}</span>'
+            )
+        return format_html(''.join(chips)) if chips else format_html('<span style="color:#999">—</span>')
+
+    def tag_chips_detail(self, obj):
+        return self._render_chips(obj)
+    tag_chips_detail.short_description = 'Processing Tags'
+
+    def changelist_view(self, request, extra_context=None):
+        """Inyecta tags y fallos prefetcheados en cada reserva para las columnas tri-estado."""
+        response = super().changelist_view(request, extra_context)
+        if hasattr(response, 'context_data') and 'cl' in response.context_data:
+            reserva_ids = [obj.pk for obj in response.context_data['cl'].result_list]
+            failures_by_reserva = {}
+            if reserva_ids:
+                failures = TaskFailureLog.objects.filter(reserva_id__in=reserva_ids).order_by('-created')
+                for f in failures:
+                    key = (f.reserva_id, f.task_name)
+                    if key not in failures_by_reserva:
+                        failures_by_reserva[key] = f
+
+            for obj in response.context_data['cl'].result_list:
+                obj._prefetched_tag_names = set(t.name for t in obj.tags.all())
+                obj._prefetched_failures = {}
+                for (reserva_id, task_name), failure in failures_by_reserva.items():
+                    if reserva_id == obj.pk:
+                        short_name = task_name.rsplit('.', 1)[-1] if '.' in task_name else task_name
+                        obj._prefetched_failures[short_name] = failure
+        return response
     fieldsets = (
         ('Invitado', {
             'fields': ('nombre_invitado', 'email_invitado', 'telefono_invitado',
@@ -294,7 +399,7 @@ class ReservaAdmin(admin.ModelAdmin):
             ),
         }),
         ('Metadatos', {
-            'fields': ('confirmacion_token', 'tags', 'fecha_creacion', 'fecha_actualizacion'),
+            'fields': ('confirmacion_token', 'tag_chips_detail', 'tags', 'fecha_creacion', 'fecha_actualizacion'),
         }),
     )
 
