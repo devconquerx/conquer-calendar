@@ -54,6 +54,16 @@ class EventType(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(365)],
         help_text="Rango máximo (rolling) en días contados al minuto desde el momento actual.",
     )
+    FORMATO_TITULO_CHOICES = [
+        ('evento_invitado', 'Evento · Invitado  (ej: "Consultoría con Juan")'),
+        ('invitado_evento', 'Invitado · Evento  (ej: "Juan - Consultoría")'),
+    ]
+    formato_titulo_gcal = models.CharField(
+        max_length=20,
+        choices=FORMATO_TITULO_CHOICES,
+        default='evento_invitado',
+        help_text="Orden del título que aparece en Google Calendar / Google Meet.",
+    )
     slug_equipo = models.SlugField(max_length=120, blank=True, null=True, unique=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     activo = models.BooleanField(default=True)

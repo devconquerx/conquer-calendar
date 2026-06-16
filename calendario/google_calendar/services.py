@@ -146,6 +146,13 @@ def obtener_busy_intervalos_local(host, time_min_utc, time_max_utc):
     return list(eventos)
 
 
+def _titulo_evento(reserva):
+    fmt = reserva.event_type.formato_titulo_gcal
+    if fmt == 'invitado_evento':
+        return f'{reserva.nombre_invitado} - {reserva.event_type.nombre}'
+    return f'{reserva.event_type.nombre} con {reserva.nombre_invitado}'
+
+
 def _extraer_meet_uri(conference_data):
     for ep in conference_data.get('entryPoints', []):
         if ep.get('entryPointType') == 'video' and ep.get('uri'):
@@ -184,7 +191,7 @@ def crear_evento_google(reserva_pk):
         try:
             servicio = obtener_servicio_calendar(host_email)
             body = {
-                'summary': f'{reserva.event_type.nombre} con {reserva.nombre_invitado}',
+                'summary': _titulo_evento(reserva),
                 'description': '\n'.join(filter(None, [
                     f"Teléfono: {reserva.telefono_invitado}" if reserva.telefono_invitado else None,
                     f"Email: {reserva.email_invitado}",
@@ -294,7 +301,7 @@ def cancelar_evento_google(reserva_pk):
             calendarId='primary',
             eventId=reserva.google_event_id,
             body={
-                'summary': f'Cancelado: {reserva.event_type.nombre} con {reserva.nombre_invitado}',
+                'summary': f'Cancelado: {_titulo_evento(reserva)}',
                 'transparency': 'transparent',
                 'attendees': attendees_declinados,
             },

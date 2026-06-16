@@ -13,7 +13,7 @@ class EventTypeAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
     fields = ('id', 'host', 'nombre', 'slug', 'slug_equipo', 'descripcion', 'duracion_minutos',
               'buffer_antes_minutos', 'buffer_despues_minutos', 'aviso_minimo_minutos',
-              'aviso_maximo_dias', 'precio', 'activo', 'notificar_crm')
+              'aviso_maximo_dias', 'precio', 'activo', 'notificar_crm', 'formato_titulo_gcal')
     inlines = [ConfigCorreoEventoInline]
 
 
