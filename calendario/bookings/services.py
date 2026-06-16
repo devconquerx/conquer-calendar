@@ -98,6 +98,21 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     ):
         overrides_por_fecha[b.fecha].append(b)
 
+    # Si este EventTypeXHost tiene disponibilidad específica configurada,
+    # reemplaza el horario semanal global y agrega sus overrides de fecha.
+    etxh = EventTypeXHost.objects.filter(event_type=event_type, host=host).first()
+    if etxh:
+        franjas_etxh = list(etxh.disponibilidad.all())
+        if franjas_etxh:
+            bloques_por_dia = defaultdict(list)
+            for f in franjas_etxh:
+                bloques_por_dia[f.dia_semana].append(f)
+        for f in etxh.disponibilidad_fechas.filter(fecha__range=(fecha_desde, fecha_hasta)):
+            if f.hora_inicio and f.hora_fin:
+                overrides_por_fecha[f.fecha] = [f]
+            else:
+                overrides_por_fecha[f.fecha] = []  # día bloqueado
+
     desde_utc = datetime.combine(fecha_desde, datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
     hasta_utc = datetime.combine(fecha_hasta + timedelta(days=1), datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
 

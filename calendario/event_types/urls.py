@@ -9,4 +9,5 @@ urlpatterns = [
     path('<int:pk>/toggle/', views.EventTypeToggleActivoView.as_view(), name='event_type_toggle_activo'),
     path('<int:pk>/eliminar/', views.EventTypeDeleteView.as_view(), name='event_type_delete'),
     path('<int:pk>/enlace-unico/', views.generar_enlace_unico, name='generar_enlace_unico'),
+    path('<int:pk>/disponibilidad-host/<int:host_pk>/', views.disponibilidad_etxh_view, name='disponibilidad_etxh'),
 ]

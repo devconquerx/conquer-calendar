@@ -325,6 +325,16 @@
                 {% if form.hosts.errors %}
                 <div class="text-danger fs-7 mt-2">{{ form.hosts.errors|join:", " }}</div>
                 {% endif %}
+
+                {% if object and request.user.es_admin %}
+                <div class="mt-5 pt-4 border-top">
+                    <button type="button" class="btn-ghost" id="btn-disponibilidad"
+                            data-bs-toggle="modal" data-bs-target="#modalDisponibilidad"
+                            data-et-id="{{ object.pk }}">
+                        <i class="ki-outline ki-time fs-5"></i> Configurar disponibilidad por organizador
+                    </button>
+                </div>
+                {% endif %}
             </div>
 
             {{ hosts_disponibles|json_script:"hosts-data" }}
@@ -593,4 +603,580 @@
   }
 })();
 </script>
+
+{% if object and request.user.es_admin %}
+
+<!-- Modal Disponibilidad por organizador -->
+<div class="modal fade" id="modalDisponibilidad" tabindex="-1"
+     data-base-url="/panel/event-types/{{ object.pk }}/disponibilidad-host/"
+     aria-labelledby="modalDisponibilidadLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:860px;">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="modalDisponibilidadLabel">
+          <i class="ki-outline ki-time fs-3 me-2 text-primary"></i>Disponibilidad por organizador
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body pt-4">
+
+        <div class="mb-5">
+          <label class="form-label fw-semibold">Organizador</label>
+          <select id="disp-host-select" class="form-select form-select-solid">
+            <option value="">Seleccionar organizador…</option>
+          </select>
+        </div>
+
+        <div id="disp-loading" class="text-center py-6 d-none">
+          <span class="spinner-border text-primary"></span>
+        </div>
+        <div id="disp-error" class="alert alert-danger fs-7 py-2 d-none"></div>
+        <div id="disp-hint" class="text-center text-muted fs-7 py-4">
+          Selecciona un organizador para ver su disponibilidad.
+        </div>
+
+        <div id="disp-content" class="d-none">
+
+          <!-- Horario semanal -->
+          <div class="mb-2">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="fw-bold mb-0">Horario semanal</h6>
+              <span class="text-muted fs-7">Sin configuración = usa el calendario del organizador</span>
+            </div>
+            <div id="disp-weekly-grid"></div>
+          </div>
+
+          <div class="separator separator-dashed my-6"></div>
+
+          <!-- Fechas específicas -->
+          <div>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h6 class="fw-bold mb-0">Fechas específicas</h6>
+              <span class="text-muted fs-7">Sobreescribe el horario semanal para ese día</span>
+            </div>
+            <div class="d-flex gap-5 flex-wrap align-items-start">
+              <div id="disp-calendar" style="min-width:248px; flex-shrink:0;"></div>
+              <div class="flex-grow-1">
+                <div class="d-flex flex-wrap gap-2 align-items-end mb-4">
+                  <div>
+                    <label class="form-label fw-semibold fs-7 mb-1">Fecha</label>
+                    <input type="date" id="disp-fecha-input" class="form-control form-control-sm" style="width:145px;">
+                  </div>
+                  <div>
+                    <label class="form-label fw-semibold fs-7 mb-1">De</label>
+                    <input type="time" id="disp-fecha-hi" class="form-control form-control-sm" style="width:105px;" value="09:00">
+                  </div>
+                  <div>
+                    <label class="form-label fw-semibold fs-7 mb-1">A</label>
+                    <input type="time" id="disp-fecha-hf" class="form-control form-control-sm" style="width:105px;" value="17:00">
+                  </div>
+                  <button type="button" class="btn btn-sm btn-primary" id="disp-add-fecha-btn">Añadir</button>
+                </div>
+                <div id="disp-fechas-list"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-primary" id="disp-save-btn" disabled>Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Day cards */
+.disp-day-card { border:1px solid #e1e3ea; border-radius:8px; padding:12px 14px; }
+.disp-day-card.is-off { background:#fafafa; }
+.disp-day-header { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.disp-day-header .form-check-input { width:17px; height:17px; flex-shrink:0; cursor:pointer; }
+.disp-day-name { font-weight:600; font-size:13px; color:#374151; }
+.disp-slots { display:flex; flex-direction:column; gap:5px; margin-bottom:6px; }
+.disp-day-card.is-off .disp-slots,
+.disp-day-card.is-off .disp-add-slot { display:none; }
+.disp-slot { display:flex; align-items:center; gap:5px; }
+.disp-slot input[type="time"] {
+  border:1px solid #e1e3ea; border-radius:6px; padding:4px 6px;
+  font-size:12px; color:#374151; width:90px;
+}
+.disp-slot .sep { color:#9ca3af; font-size:12px; }
+.disp-slot-rm { border:none; background:none; color:#9ca3af; cursor:pointer; font-size:17px; line-height:1; padding:0 3px; }
+.disp-slot-rm:hover { color:#f1416c; }
+.disp-add-slot { border:none; background:none; color:#009ef7; font-size:12px; font-weight:500; cursor:pointer; padding:0; }
+.disp-add-slot:hover { color:#0077c8; }
+/* Calendar */
+.disp-cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.disp-cal-nav button { border:none; background:none; cursor:pointer; color:#6b7280; font-size:18px; line-height:1; padding:2px 6px; }
+.disp-cal-nav button:hover { color:#374151; }
+.disp-cal-title { font-size:13px; font-weight:600; color:#374151; }
+.disp-cal-grid { display:grid; grid-template-columns:repeat(7,34px); gap:2px; }
+.disp-cal-dow { text-align:center; font-size:11px; font-weight:600; color:#9ca3af; padding:2px 0; }
+.disp-cal-day { width:34px; height:34px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; color:#374151; }
+.disp-cal-day:hover:not(.past) { background:#f3f4f6; }
+.disp-cal-day.other-month { color:#d1d5db; }
+.disp-cal-day.today { border:2px solid #009ef7; font-weight:700; }
+.disp-cal-day.available { background:#dbeafe; }
+.disp-cal-day.has-override { background:#fef3c7; }
+.disp-cal-day.past { opacity:.35; pointer-events:none; }
+.disp-cal-legend { display:flex; gap:12px; margin-top:6px; font-size:11px; color:#6b7280; }
+.disp-cal-legend span { display:inline-flex; align-items:center; gap:4px; }
+.disp-cal-legend i { display:inline-block; width:10px; height:10px; border-radius:3px; }
+/* Date list */
+.disp-fecha-item { display:flex; align-items:center; gap:8px; padding:5px 10px; border-radius:6px; background:#f9fafb; margin-bottom:5px; font-size:13px; }
+.disp-fecha-label { font-weight:600; min-width:90px; }
+.disp-fecha-range { color:#6b7280; flex:1; }
+.disp-fecha-rm { border:none; background:none; color:#9ca3af; cursor:pointer; font-size:17px; line-height:1; padding:0 3px; }
+.disp-fecha-rm:hover { color:#f1416c; }
+</style>
+
+<script>
+(function () {
+  var DIAS_NOMBRES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+  var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var MESES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  var modalEl = document.getElementById('modalDisponibilidad');
+  var baseUrl = modalEl.getAttribute('data-base-url');
+  var currentHostId = null;
+
+  // State
+  var weeklyData = {};   // {dia: [{hi,hf}, ...]}  — empty array = off
+  var fechasData = {};   // {dateStr: [{hi,hf}, ...]}
+  var calYear, calMonth;
+
+  // Hosts
+  var allHosts = JSON.parse((document.getElementById('hosts-data') || {textContent:'[]'}).textContent);
+  var selectedIds = new Set(
+    JSON.parse((document.getElementById('hosts-initial') || {textContent:'[]'}).textContent).map(String)
+  );
+  var hostsById = {};
+  allHosts.forEach(function(h) { hostsById[String(h.id)] = h; });
+
+  var sel = document.getElementById('disp-host-select');
+
+  function repoblarSelect() {
+    while (sel.options.length > 1) sel.remove(1);
+    selectedIds.forEach(function(id) {
+      var h = hostsById[id];
+      if (!h) return;
+      var opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = h.nombre;
+      sel.appendChild(opt);
+    });
+  }
+  repoblarSelect();
+
+  modalEl.addEventListener('show.bs.modal', function() {
+    var committed = document.getElementById('hosts-hidden-inputs');
+    if (committed) {
+      selectedIds = new Set(
+        Array.from(committed.querySelectorAll('input[name="hosts"]')).map(function(i) { return i.value; })
+      );
+    }
+    repoblarSelect();
+  });
+
+  // Section visibility
+  function showSection(name) {
+    ['disp-loading','disp-content','disp-hint','disp-error'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.add('d-none');
+    });
+    var t = document.getElementById('disp-' + name);
+    if (t) t.classList.remove('d-none');
+  }
+
+  // ---- WEEKLY GRID ----
+  function renderWeekly() {
+    var grid = document.getElementById('disp-weekly-grid');
+    grid.innerHTML = '';
+    [[0,1],[2,3],[4,5],[6,null]].forEach(function(pair) {
+      var row = document.createElement('div');
+      row.className = 'd-flex gap-3 mb-3';
+      pair.forEach(function(dia) {
+        var col = document.createElement('div');
+        col.style.flex = '1';
+        if (dia !== null) col.appendChild(renderDayCard(dia));
+        row.appendChild(col);
+      });
+      grid.appendChild(row);
+    });
+  }
+
+  function renderDayCard(dia) {
+    var slots = weeklyData[dia] || [];
+    var isOn = slots.length > 0;
+
+    var card = document.createElement('div');
+    card.className = 'disp-day-card' + (isOn ? '' : ' is-off');
+
+    var header = document.createElement('div');
+    header.className = 'disp-day-header';
+
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'form-check-input disp-day-cb';
+    cb.checked = isOn;
+    cb.addEventListener('change', function() {
+      if (cb.checked) {
+        weeklyData[dia] = [{hi:'09:00', hf:'17:00'}];
+        card.classList.remove('is-off');
+      } else {
+        weeklyData[dia] = [];
+        card.classList.add('is-off');
+      }
+      renderSlots(dia, slotsContainer);
+      renderCalendar();
+    });
+
+    var nameEl = document.createElement('span');
+    nameEl.className = 'disp-day-name';
+    nameEl.textContent = DIAS_NOMBRES[dia];
+    header.appendChild(cb);
+    header.appendChild(nameEl);
+    card.appendChild(header);
+
+    var slotsContainer = document.createElement('div');
+    slotsContainer.className = 'disp-slots';
+    renderSlots(dia, slotsContainer);
+    card.appendChild(slotsContainer);
+
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'disp-add-slot';
+    addBtn.textContent = '+ Añadir franja';
+    addBtn.addEventListener('click', function() {
+      if (!weeklyData[dia] || weeklyData[dia].length === 0) {
+        weeklyData[dia] = [];
+        cb.checked = true;
+        card.classList.remove('is-off');
+      }
+      weeklyData[dia].push({hi:'09:00', hf:'17:00'});
+      renderSlots(dia, slotsContainer);
+      renderCalendar();
+    });
+    card.appendChild(addBtn);
+
+    return card;
+  }
+
+  function renderSlots(dia, container) {
+    container.innerHTML = '';
+    var slots = weeklyData[dia] || [];
+    slots.forEach(function(slot, idx) {
+      var row = document.createElement('div');
+      row.className = 'disp-slot';
+
+      var hiInput = document.createElement('input');
+      hiInput.type = 'time';
+      hiInput.value = slot.hi;
+      hiInput.addEventListener('change', function() {
+        if (weeklyData[dia] && weeklyData[dia][idx]) weeklyData[dia][idx].hi = hiInput.value;
+        renderCalendar();
+      });
+
+      var sep = document.createElement('span');
+      sep.className = 'sep';
+      sep.textContent = '—';
+
+      var hfInput = document.createElement('input');
+      hfInput.type = 'time';
+      hfInput.value = slot.hf;
+      hfInput.addEventListener('change', function() {
+        if (weeklyData[dia] && weeklyData[dia][idx]) weeklyData[dia][idx].hf = hfInput.value;
+        renderCalendar();
+      });
+
+      var rmBtn = document.createElement('button');
+      rmBtn.type = 'button';
+      rmBtn.className = 'disp-slot-rm';
+      rmBtn.innerHTML = '&times;';
+      rmBtn.addEventListener('click', function() {
+        weeklyData[dia].splice(idx, 1);
+        if (weeklyData[dia].length === 0) {
+          var card = container.closest('.disp-day-card');
+          if (card) {
+            card.classList.add('is-off');
+            var cb2 = card.querySelector('.disp-day-cb');
+            if (cb2) cb2.checked = false;
+          }
+        }
+        renderSlots(dia, container);
+        renderCalendar();
+      });
+
+      row.appendChild(hiInput);
+      row.appendChild(sep);
+      row.appendChild(hfInput);
+      row.appendChild(rmBtn);
+      container.appendChild(row);
+    });
+  }
+
+  // ---- CALENDAR ----
+  function toDateStr(date) {
+    return date.getFullYear() + '-' +
+      String(date.getMonth()+1).padStart(2,'0') + '-' +
+      String(date.getDate()).padStart(2,'0');
+  }
+
+  function renderCalendar() {
+    var calEl = document.getElementById('disp-calendar');
+    if (!calEl) return;
+
+    var today = new Date();
+    var todayStr = toDateStr(today);
+
+    var nav = document.createElement('div');
+    nav.className = 'disp-cal-nav';
+    var prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.textContent = '‹';
+    prevBtn.addEventListener('click', function() {
+      calMonth--; if (calMonth < 0) { calMonth=11; calYear--; } renderCalendar();
+    });
+    var nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.textContent = '›';
+    nextBtn.addEventListener('click', function() {
+      calMonth++; if (calMonth > 11) { calMonth=0; calYear++; } renderCalendar();
+    });
+    var titleEl = document.createElement('span');
+    titleEl.className = 'disp-cal-title';
+    titleEl.textContent = MESES[calMonth] + ' ' + calYear;
+    nav.appendChild(prevBtn);
+    nav.appendChild(titleEl);
+    nav.appendChild(nextBtn);
+
+    var gridEl = document.createElement('div');
+    gridEl.className = 'disp-cal-grid';
+    ['L','M','X','J','V','S','D'].forEach(function(d) {
+      var dw = document.createElement('div');
+      dw.className = 'disp-cal-dow';
+      dw.textContent = d;
+      gridEl.appendChild(dw);
+    });
+
+    var firstDay = new Date(calYear, calMonth, 1);
+    var startDow = (firstDay.getDay()+6) % 7;
+    var daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+    var daysInPrev = new Date(calYear, calMonth, 0).getDate();
+
+    for (var i=0; i<startDow; i++) {
+      var el = document.createElement('div');
+      el.className = 'disp-cal-day other-month';
+      el.textContent = daysInPrev - startDow + 1 + i;
+      gridEl.appendChild(el);
+    }
+    for (var day=1; day<=daysInMonth; day++) {
+      var date = new Date(calYear, calMonth, day);
+      var dateStr = toDateStr(date);
+      var dow = (date.getDay()+6) % 7;
+      var isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      var el = document.createElement('div');
+      el.className = 'disp-cal-day';
+      el.textContent = day;
+      if (isPast) { el.classList.add('past'); }
+      if (dateStr === todayStr) el.classList.add('today');
+      if (fechasData[dateStr] !== undefined) {
+        el.classList.add('has-override');
+      } else {
+        var ws = weeklyData[dow];
+        if (ws && ws.length > 0) el.classList.add('available');
+      }
+      if (!isPast) {
+        (function(ds) {
+          el.addEventListener('click', function() {
+            document.getElementById('disp-fecha-input').value = ds;
+          });
+        })(dateStr);
+      }
+      gridEl.appendChild(el);
+    }
+    var totalCells = startDow + daysInMonth;
+    var remaining = totalCells%7 === 0 ? 0 : 7 - (totalCells%7);
+    for (var j=1; j<=remaining; j++) {
+      var el = document.createElement('div');
+      el.className = 'disp-cal-day other-month';
+      el.textContent = j;
+      gridEl.appendChild(el);
+    }
+
+    var legend = document.createElement('div');
+    legend.className = 'disp-cal-legend';
+    legend.innerHTML = '<span><i style="background:#dbeafe;"></i> Disponible</span><span><i style="background:#fef3c7;"></i> Excepción</span>';
+
+    calEl.innerHTML = '';
+    calEl.appendChild(nav);
+    calEl.appendChild(gridEl);
+    calEl.appendChild(legend);
+  }
+
+  // ---- DATES LIST ----
+  function renderFechasList() {
+    var list = document.getElementById('disp-fechas-list');
+    list.innerHTML = '';
+    var sorted = Object.keys(fechasData).sort();
+    if (sorted.length === 0) {
+      list.innerHTML = '<p class="text-muted fs-7 mb-0">Sin excepciones configuradas.</p>';
+      return;
+    }
+    sorted.forEach(function(dateStr) {
+      var slots = fechasData[dateStr] || [];
+      var item = document.createElement('div');
+      item.className = 'disp-fecha-item';
+
+      var parts = dateStr.split('-');
+      var labelEl = document.createElement('span');
+      labelEl.className = 'disp-fecha-label';
+      labelEl.textContent = parseInt(parts[2],10) + ' ' + MESES_SHORT[parseInt(parts[1],10)-1] + ' ' + parts[0];
+
+      var rangeEl = document.createElement('span');
+      rangeEl.className = 'disp-fecha-range';
+      rangeEl.textContent = slots.length === 0 ? 'Cerrado' : slots.map(function(s) { return s.hi+' – '+s.hf; }).join(', ');
+
+      var rmBtn = document.createElement('button');
+      rmBtn.type = 'button';
+      rmBtn.className = 'disp-fecha-rm';
+      rmBtn.innerHTML = '&times;';
+      (function(ds) {
+        rmBtn.addEventListener('click', function() {
+          delete fechasData[ds];
+          renderFechasList();
+          renderCalendar();
+        });
+      })(dateStr);
+
+      item.appendChild(labelEl);
+      item.appendChild(rangeEl);
+      item.appendChild(rmBtn);
+      list.appendChild(item);
+    });
+  }
+
+  // Add date
+  document.getElementById('disp-add-fecha-btn').addEventListener('click', function() {
+    var dateInput = document.getElementById('disp-fecha-input');
+    var hiInput   = document.getElementById('disp-fecha-hi');
+    var hfInput   = document.getElementById('disp-fecha-hf');
+    var dateStr   = dateInput.value;
+    if (!dateStr) { dateInput.focus(); return; }
+    if (!fechasData[dateStr]) fechasData[dateStr] = [];
+    var hi = hiInput.value, hf = hfInput.value;
+    if (hi && hf) fechasData[dateStr].push({hi: hi, hf: hf});
+    renderFechasList();
+    renderCalendar();
+    dateInput.value = '';
+  });
+
+  // ---- LOAD ----
+  sel.addEventListener('change', function() {
+    currentHostId = sel.value || null;
+    document.getElementById('disp-save-btn').disabled = !currentHostId;
+    if (!currentHostId) { showSection('hint'); return; }
+
+    showSection('loading');
+    fetch(baseUrl + currentHostId + '/', {headers:{'X-Requested-With':'XMLHttpRequest'}})
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      weeklyData = {};
+      (data.franjas || []).forEach(function(f) {
+        var d = f.dia_semana;
+        if (!weeklyData[d]) weeklyData[d] = [];
+        weeklyData[d].push({hi: f.hora_inicio, hf: f.hora_fin});
+      });
+      fechasData = {};
+      (data.fechas || []).forEach(function(f) {
+        if (!fechasData[f.fecha]) fechasData[f.fecha] = [];
+        if (f.hora_inicio && f.hora_fin) fechasData[f.fecha].push({hi: f.hora_inicio, hf: f.hora_fin});
+      });
+      var now = new Date();
+      calYear = now.getFullYear();
+      calMonth = now.getMonth();
+      renderWeekly();
+      renderCalendar();
+      renderFechasList();
+      showSection('content');
+    })
+    .catch(function(err) {
+      document.getElementById('disp-error').textContent =
+        'Error al cargar la disponibilidad: ' + err.message +
+        '. Asegúrate de guardar el evento primero si acabas de añadir este organizador.';
+      showSection('error');
+    });
+  });
+
+  // ---- COLLECT & SAVE ----
+  function collectData() {
+    var franjas = [];
+    Object.keys(weeklyData).forEach(function(d) {
+      (weeklyData[d] || []).forEach(function(s) {
+        if (s.hi && s.hf) franjas.push({dia_semana: parseInt(d,10), hora_inicio: s.hi, hora_fin: s.hf});
+      });
+    });
+    var fechas = [];
+    Object.keys(fechasData).forEach(function(dateStr) {
+      var slots = fechasData[dateStr] || [];
+      if (slots.length === 0) {
+        fechas.push({fecha: dateStr, hora_inicio: null, hora_fin: null});
+      } else {
+        slots.forEach(function(s) { fechas.push({fecha: dateStr, hora_inicio: s.hi, hora_fin: s.hf}); });
+      }
+    });
+    return {franjas: franjas, fechas: fechas};
+  }
+
+  function getCsrfToken() {
+    var el = document.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
+  }
+
+  document.getElementById('disp-save-btn').addEventListener('click', function() {
+    if (!currentHostId) return;
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    fetch(baseUrl + currentHostId + '/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken(),'X-Requested-With':'XMLHttpRequest'},
+      body: JSON.stringify(collectData()),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        bootstrap.Modal.getInstance(modalEl).hide();
+      } else {
+        alert('Error al guardar: ' + (data.error || 'Error desconocido'));
+        btn.disabled = false;
+        btn.textContent = 'Guardar';
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.textContent = 'Guardar';
+    });
+  });
+
+  // Reset on close
+  modalEl.addEventListener('hidden.bs.modal', function() {
+    sel.value = '';
+    currentHostId = null;
+    weeklyData = {};
+    fechasData = {};
+    document.getElementById('disp-save-btn').disabled = true;
+    showSection('hint');
+  });
+})();
+</script>
+{% endif %}
+
 {% endblock content %}
