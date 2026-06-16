@@ -46,7 +46,7 @@ class CalcularSlotsTest(TestCase):
 
     def test_aviso_minimo_excluye_slots_proximos(self):
         et = crear_event_type(self.host, duracion=30)
-        et.aviso_minimo_horas = 48
+        et.aviso_minimo_minutos = 48 * 60
         et.save()
         crear_disponibilidad(self.host, dia=0, inicio=time(9, 0), fin=time(18, 0))
         crear_disponibilidad(self.host, dia=1, inicio=time(9, 0), fin=time(18, 0))

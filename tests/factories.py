@@ -48,7 +48,7 @@ def crear_event_type(host, nombre='Reunión test', duracion=30):
             'duracion_minutos': duracion,
             'buffer_antes_minutos': 0,
             'buffer_despues_minutos': 0,
-            'aviso_minimo_horas': 0,
+            'aviso_minimo_minutos': 0,
             'activo': True,
         },
     )
