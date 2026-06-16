@@ -25,6 +25,20 @@ def _parse_evento(item):
     estado = item.get('status', 'confirmed')
     transparencia = item.get('transparency', 'opaque')
 
+    # Un evento cancelado/eliminado llega en el sync incremental como
+    # {id, status: 'cancelled'} SIN start/end. Hay que devolver los campos
+    # mínimos para que _upsert_evento lo borre de la copia local; si cayera
+    # por el parseo normal de fechas devolvería None y la cancelación se
+    # perdería, dejando un evento fantasma que bloquea slots para siempre.
+    if estado == 'cancelled':
+        return {
+            'inicio_utc': None,
+            'fin_utc': None,
+            'es_todo_el_dia': False,
+            'transparencia': transparencia,
+            'estado': estado,
+        }
+
     start = item.get('start', {})
     end = item.get('end', {})
 

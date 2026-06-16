@@ -218,9 +218,21 @@ def invalidar_slots(event_type_id):
 
 
 def invalidar_slots_por_host(host_id):
-    et_ids = (EventTypeXHost.objects
-              .filter(host_id=host_id)
-              .values_list('event_type_id', flat=True))
+    # El host bloquea slots tanto en los event_types donde es dueño directo
+    # (eventos personales, sin fila en EventTypeXHost) como en aquellos donde
+    # participa en el pool de round-robin. Hay que invalidar ambos: si solo
+    # miráramos EventTypeXHost, los eventos personales nunca refrescarían su
+    # caché tras un cambio en Google Calendar.
+    et_ids = set(
+        EventTypeXHost.objects
+        .filter(host_id=host_id)
+        .values_list('event_type_id', flat=True)
+    )
+    et_ids.update(
+        EventType.objects
+        .filter(host_id=host_id)
+        .values_list('id', flat=True)
+    )
     for et_id in et_ids:
         invalidar_slots(et_id)
 
