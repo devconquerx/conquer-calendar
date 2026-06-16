@@ -1,4 +1,5 @@
 import logging
+import math
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
@@ -140,7 +141,8 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
         else:
             bloques_del_dia = bloques_por_dia[fecha_actual.weekday()]
         for bloque in bloques_del_dia:
-            cursor_local = datetime.combine(fecha_actual, bloque.hora_inicio).replace(tzinfo=tz_host)
+            block_start = datetime.combine(fecha_actual, bloque.hora_inicio).replace(tzinfo=tz_host)
+            cursor_local = block_start
             fin_local = datetime.combine(fecha_actual, bloque.hora_fin).replace(tzinfo=tz_host)
             while cursor_local + timedelta(minutes=duracion) <= fin_local:
                 slot_utc = cursor_local.astimezone(UTC)
@@ -182,7 +184,13 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
                             break
                 if not conflict:
                     slots.append(slot_utc)
-                cursor_local = next_cursor
+                # Grid estricto: si saltamos por un conflicto, re-alineamos al
+                # siguiente punto de la cuadrícula (block_start + n * step).
+                elapsed_secs = (next_cursor - block_start).total_seconds()
+                step_secs = incremento * 60
+                n = math.ceil(elapsed_secs / step_secs)
+                snapped = block_start + timedelta(seconds=int(n * step_secs))
+                cursor_local = max(next_cursor, snapped)
         fecha_actual += timedelta(days=1)
 
     return slots
