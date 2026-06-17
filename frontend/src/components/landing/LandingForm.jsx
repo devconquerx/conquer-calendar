@@ -74,10 +74,14 @@ export default function LandingForm({ program, region, formConfig, school, nextU
   const landing = formConfig?.landing || formConfig?.welcome || {}
   const buttonText = landing.buttonText || 'Ver video gratis'
 
-  // Check opcional "Envíame la repetición por WhatsApp". Activo en Conquer Legal
-  // por defecto (o forzable por config con landing.whatsappOptin). Al marcarlo se
-  // revela el campo de teléfono para capturar el número de WhatsApp del lead.
-  const showWhatsappOptin = landing.whatsappOptin != null ? !!landing.whatsappOptin : theme.id === 'conquerlegal'
+  // Check opcional "Envíame la repetición por WhatsApp". Al marcarlo se revela el
+  // campo de teléfono para capturar el número de WhatsApp del lead. Activo en
+  // Conquer Legal y en Conquer Blocks EU (igual que el funnel de referencia, donde
+  // el check solo existe en EU). Forzable por config con landing.whatsappOptin.
+  const isEuRegion = String(region || '').toLowerCase() === 'eu'
+  const showWhatsappOptin = landing.whatsappOptin != null
+    ? !!landing.whatsappOptin
+    : (theme.id === 'conquerlegal' || (theme.id === 'conquerblocks' && isEuRegion))
 
   // Mostrar campo de teléfono visible: por config (showPhone) o al marcar el check
   // de WhatsApp. Si no es visible, el teléfono se captura por honeypot/autofill.
