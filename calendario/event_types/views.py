@@ -24,7 +24,7 @@ class EventTypeListView(RequierePermisoMixin, ListView):
     model = EventType
     template_name = 'pages/panel/event_types/list.html'
     context_object_name = 'event_types'
-    paginate_by = 25
+    paginate_by = 24
 
     def get_queryset(self):
         if self.request.user.es_admin:
