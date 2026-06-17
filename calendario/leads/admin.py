@@ -69,7 +69,7 @@ class LeadAdmin(admin.ModelAdmin):
         'col_ac', 'col_nb', 'col_crm', 'col_supabase',
         'created',
     )
-    list_filter = ('school', 'utm_source', 'is_form_vsl_processed', 'setter_conversation_status', 'tags')
+    list_filter = ('school', 'utm_source', 'is_form_vsl_processed', 'setter_conversation_status', 'wants_whatsapp', 'tags')
     search_fields = ('email', 'full_name', 'journey_id')
     readonly_fields = ('created', 'modified', 'tag_chips_detail')
     ordering = ('-created',)

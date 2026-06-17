@@ -19,7 +19,7 @@ MAX_BODY_SIZE = 32 * 1024  # 32 KB
 # Campos que mapean directamente del payload al modelo Lead
 DIRECT_FIELDS = [
     'email', 'original_email', 'full_name', 'last_name',
-    'lead_phone', 'lead_phone_prefix', 'lead_country',
+    'lead_phone', 'lead_phone_prefix', 'lead_country', 'wants_whatsapp',
     # UTMs
     'utm_source', 'utm_campaign', 'utm_medium', 'utm_content', 'utm_term',
     'utm_idcampaign', 'utm_adsetid', 'utm_adid',

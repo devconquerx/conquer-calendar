@@ -146,7 +146,7 @@ export default {
   // tarjetas grises, borde arena, tinta casi negra). El acento de color va
   // por `accent`, no por estos tokens.
   landing: {
-    contentWidth: '1280px',
+    contentWidth: '1024px',
     logoHeight: '39px',
     // 4 racimos de pixeles (2 izq / 2 der, escalonados) como producción.
     decoPixels: ['top-[-70px] left-[8%]', 'top-[270px] right-[12%]', 'top-[830px] right-[20%]', 'top-[1140px] left-[24%]'],
