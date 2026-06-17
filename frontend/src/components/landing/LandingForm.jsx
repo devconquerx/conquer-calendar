@@ -58,6 +58,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
   const [search, setSearch] = useState('')
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
+  const [wantsWhatsapp, setWantsWhatsapp] = useState(false)
   const honeypotRef = useRef(null)
   const phoneHoneypotRef = useRef(null)
   const dropdownRef = useRef(null)
@@ -73,9 +74,16 @@ export default function LandingForm({ program, region, formConfig, school, nextU
   const landing = formConfig?.landing || formConfig?.welcome || {}
   const buttonText = landing.buttonText || 'Ver video gratis'
 
-  // Mostrar campo de teléfono visible (config). Si no, se captura por honeypot/autofill.
+  // Check opcional "Envíame la repetición por WhatsApp". Activo en Conquer Legal
+  // por defecto (o forzable por config con landing.whatsappOptin). Al marcarlo se
+  // revela el campo de teléfono para capturar el número de WhatsApp del lead.
+  const showWhatsappOptin = landing.whatsappOptin != null ? !!landing.whatsappOptin : theme.id === 'conquerlegal'
+
+  // Mostrar campo de teléfono visible: por config (showPhone) o al marcar el check
+  // de WhatsApp. Si no es visible, el teléfono se captura por honeypot/autofill.
   const showPhone = !!landing.showPhone
-  const enablePhoneHoneypot = !showPhone
+  const phoneVisible = showPhone || (showWhatsappOptin && wantsWhatsapp)
+  const enablePhoneHoneypot = !phoneVisible
 
   // País desde geo
   useEffect(() => {
@@ -86,26 +94,27 @@ export default function LandingForm({ program, region, formConfig, school, nextU
   }, [geoCountryCode, geoLoading, selectedCountry])
 
   useEffect(() => {
-    if (!showPhone) return
+    if (!phoneVisible) return
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setDropdownOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [showPhone])
+  }, [phoneVisible])
 
   useEffect(() => {
     if (dropdownOpen) setTimeout(() => searchInputRef.current?.focus(), 50)
   }, [dropdownOpen])
 
   const phonePlaceholder = useMemo(() => {
+    if (showWhatsappOptin) return 'Número de WhatsApp'
     if (!selectedCountry?.iso2) return 'Teléfono *'
     try {
       const ex = getExampleNumber(selectedCountry.iso2, examples)
       if (ex) return ex.format('NATIONAL')
     } catch {}
     return 'Teléfono *'
-  }, [selectedCountry])
+  }, [selectedCountry, showWhatsappOptin])
 
   const filteredCountries = useMemo(() => {
     if (!search) return countries
@@ -147,11 +156,15 @@ export default function LandingForm({ program, region, formConfig, school, nextU
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = 'Correo electronico no valido'
     }
-    if (showPhone && phone.trim()) {
+    if (phoneVisible) {
       const digits = phone.replace(/\D/g, '')
-      const fullNumber = `+${selectedCountry?.phoneCode || ''}${digits}`
-      if (digits && !isPossiblePhoneNumber(fullNumber)) {
-        newErrors.phone = 'Teléfono no válido'
+      if (wantsWhatsapp && !digits) {
+        newErrors.phone = 'Ingresa tu número de WhatsApp'
+      } else if (digits) {
+        const fullNumber = `+${selectedCountry?.phoneCode || ''}${digits}`
+        if (!isPossiblePhoneNumber(fullNumber)) {
+          newErrors.phone = 'Teléfono no válido'
+        }
       }
     }
     setErrors(newErrors)
@@ -174,7 +187,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
     let phonePrefix = ''
     let phoneCountry = ''
 
-    if (showPhone && phone.trim() && selectedCountry) {
+    if (phoneVisible && phone.trim() && selectedCountry) {
       phoneDigits = phone.replace(/\D/g, '')
       phonePrefix = `+${selectedCountry.phoneCode}`
       phoneData = `${phonePrefix}${phoneDigits}`
@@ -206,6 +219,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
       body.lead_country = phoneCountry
     }
     if (wasCorrected) body.original_email = originalEmail
+    if (showWhatsappOptin) body.wants_whatsapp = wantsWhatsapp
 
     // Fire-and-forget: crea el Lead en backend (dispara tareas Celery del lado lead)
     registerLead(body)
@@ -258,15 +272,15 @@ export default function LandingForm({ program, region, formConfig, school, nextU
     </div>
   ) : null
 
-  const phoneField = showPhone ? (
+  const phoneField = phoneVisible ? (
     <div>
-      <div className="flex gap-1">
+      <div className={`flex ${isPaper ? '' : 'gap-1'}`}>
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className={isPaper
-              ? `flex items-center gap-1.5 px-2 py-2 rounded border bg-white text-base text-black shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] min-w-[90px] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
+              ? `flex items-center gap-1.5 px-2 py-2 rounded-l rounded-r-none border border-r-0 bg-white text-base text-black shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] min-w-[90px] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
               : `flex items-center gap-1.5 px-3 py-3.5 rounded-xl border text-sm min-w-[100px] ${errors.phone ? t.inputError : t.input}`
             }
           >
@@ -318,13 +332,36 @@ export default function LandingForm({ program, region, formConfig, school, nextU
           onChange={handlePhoneChange}
           style={isPaper ? { '--tw-ring-color': accent.ring } : undefined}
           className={isPaper
-            ? `flex-1 px-3 py-2 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 placeholder:text-sm placeholder:font-light focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
+            ? `flex-1 px-3 py-2 rounded-r rounded-l-none border border-l-0 bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 placeholder:text-sm placeholder:font-light focus:outline-none shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
             : `flex-1 px-4 py-3.5 rounded-xl border focus:outline-none text-sm transition-colors ${errors.phone ? t.inputError : t.input}`
           }
         />
       </div>
       {errors.phone && <p className={`text-xs mt-1 ${isPaper ? 'text-red-500' : 'text-red-400'}`}>{errors.phone}</p>}
     </div>
+  ) : null
+
+  // Check opcional para recibir la repetición por WhatsApp (Conquer Legal).
+  const whatsappOptinField = showWhatsappOptin ? (
+    <label className="flex items-start gap-2 cursor-pointer select-none">
+      <input
+        type="checkbox"
+        checked={wantsWhatsapp}
+        onChange={(e) => {
+          const checked = e.target.checked
+          setWantsWhatsapp(checked)
+          if (!checked) {
+            setPhone('')
+            setErrors((prev) => ({ ...prev, phone: undefined }))
+          }
+        }}
+        className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer"
+        style={{ accentColor: accent.ring || '#1845D6' }}
+      />
+      <span className={`text-[15px] font-medium leading-snug ${isPaper ? 'text-black' : t.consent}`}>
+        OPCIONAL: Envíame un acceso directo a la repetición por WhatsApp
+      </span>
+    </label>
   ) : null
 
   // ── CB layout ──
@@ -334,7 +371,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
         {honeypotField}
         {phoneHoneypotField}
 
-        <div className={`grid grid-cols-1 gap-4 ${showPhone ? 'md:grid-cols-3' : 'md:grid-cols-2'} md:gap-6`}>
+        <div className={`grid grid-cols-1 gap-4 ${phoneVisible ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
           <div>
             <input
               type="text"
@@ -342,7 +379,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
               value={name}
               onChange={(e) => setName(e.target.value)}
               style={{ '--tw-ring-color': accent.ring }}
-              className={`w-full px-3 py-2 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 placeholder:text-sm placeholder:font-light focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.name ? 'border-red-500' : 'border-[#404040]'}`}
+              className={`w-full px-3 py-2 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 placeholder:text-sm placeholder:font-light focus:outline-none shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.name ? 'border-red-500' : 'border-[#404040]'}`}
             />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
@@ -354,13 +391,15 @@ export default function LandingForm({ program, region, formConfig, school, nextU
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={{ '--tw-ring-color': accent.ring }}
-              className={`w-full px-3 py-2 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 placeholder:text-sm placeholder:font-light focus:outline-none focus:ring-2 shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.email ? 'border-red-500' : 'border-[#404040]'}`}
+              className={`w-full px-3 py-2 rounded border bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 placeholder:text-sm placeholder:font-light focus:outline-none shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.email ? 'border-red-500' : 'border-[#404040]'}`}
             />
             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
 
           {phoneField}
         </div>
+
+        {whatsappOptinField && <div className="mt-3">{whatsappOptinField}</div>}
 
         <div className="mt-3 text-xs text-black leading-relaxed">
           <p className="mb-0">
@@ -415,6 +454,8 @@ export default function LandingForm({ program, region, formConfig, school, nextU
       </div>
 
       {phoneField}
+
+      {whatsappOptinField}
 
       <button
         type="submit"

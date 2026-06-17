@@ -27,6 +27,7 @@ class Lead(models.Model):
     lead_phone = models.CharField(max_length=255, null=True, blank=True, help_text='Teléfono del cliente')
     lead_phone_prefix = models.CharField(max_length=255, null=True, blank=True, help_text='Prefijo del teléfono del cliente')
     lead_country = models.CharField(max_length=255, null=True, blank=True, help_text='País del cliente')
+    wants_whatsapp = models.BooleanField(default=False, help_text='El lead pidió recibir la repetición por WhatsApp (check opcional de la landing)')
 
     # Setter (CRM parity)
     setter_conversation_status = models.CharField(max_length=50, null=True, blank=True, choices=SETTER_STATUS_CHOICES, help_text='Estado de conversación con el Setter')
