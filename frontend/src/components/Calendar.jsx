@@ -64,7 +64,7 @@ function tzLabel(tz, now) {
   } catch { return city }
 }
 
-function TzCombo({ tz, onChange }) {
+function TzCombo({ tz, onChange, accent = '#0069ff' }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [now, setNow] = useState(() => new Date())
@@ -93,7 +93,7 @@ function TzCombo({ tz, onChange }) {
             <input ref={inputRef} type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar zona…" style={{ width: '100%', border: '1px solid #e2e5e9', borderRadius: 4, padding: '5px 8px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} onBlur={() => setTimeout(() => setOpen(false), 150)} />
           </div>
           {filtered.slice(0, 120).map(z => (
-            <div key={z} onMouseDown={e => { e.preventDefault(); onChange(z); setOpen(false); setQuery('') }} style={{ padding: '7px 12px', fontSize: 12.5, cursor: 'pointer', background: z === tz ? '#e8f0fe' : undefined, color: z === tz ? '#0069ff' : '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div key={z} onMouseDown={e => { e.preventDefault(); onChange(z); setOpen(false); setQuery('') }} style={{ padding: '7px 12px', fontSize: 12.5, cursor: 'pointer', background: z === tz ? '#e8f0fe' : undefined, color: z === tz ? accent : '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {z}
             </div>
           ))}
@@ -103,7 +103,16 @@ function TzCombo({ tz, onChange }) {
   )
 }
 
-export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSelected }) {
+export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSelected, theme, funnelFont }) {
+  // Variante "paperboard": cuando el calendario se muestra dentro de un funnel
+  // con tema de marca (Legal/Blocks), adopta su línea de diseño. Para el resto
+  // (tema default, uso suelto) conserva el look genérico actual.
+  const paperboard = !!theme?.paperboard
+  const accent = theme?.cssVars?.['--theme-accent'] || '#0069ff'
+  const brandLogo = theme?.assets?.logo
+  const wrapStyle = paperboard && funnelFont
+    ? { fontFamily: `'${funnelFont}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif` }
+    : undefined
   const [tz, setTz] = useState(detectTZ)
   const [mes, setMes] = useState(currentMonthStr)
   const [slotsData, setSlotsData] = useState(null)
@@ -155,7 +164,8 @@ export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSe
   const canNext = mesData?.mes_siguiente != null
 
   return (
-    <div className="bk-wrapper">
+    <div className={`bk-wrapper${paperboard ? ' bk-paperboard' : ''}`} style={wrapStyle}>
+      {paperboard && brandLogo && <img className="bk-brand-logo" src={brandLogo} alt="" />}
       <div className={`bk-card${selectedDate ? ' has-slots' : ''}`}>
 
         <LeftPanel eventoInfo={eventoInfo} />
@@ -215,7 +225,7 @@ export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSe
                     <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
                     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                   </svg>
-                  <TzCombo tz={tz} onChange={tz => { setTz(tz); setSelectedDate(null); }} />
+                  <TzCombo tz={tz} accent={accent} onChange={tz => { setTz(tz); setSelectedDate(null); }} />
                 </div>
               </div>
             </div>

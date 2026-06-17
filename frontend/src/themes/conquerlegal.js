@@ -198,6 +198,7 @@ export default {
   },
 
   cssVars: {
+    '--theme-page-bg': '#F5EDE3',
     '--theme-accent': '#1845D6',
     '--theme-accent-hover': '#0033CC',
     '--theme-accent-bg': '#EFF4FF',

@@ -268,7 +268,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
 
   if (phase === 'outcome') {
     if (outcome.resultado === 'rechazado') {
-      return <RejectScreen cancelScreen={outcome.cancel_screen} />
+      return <RejectScreen cancelScreen={outcome.cancel_screen} theme={theme} funnelFont={funnelFont} />
     }
     if (outcome.resultado === 'calendario') {
       // Modo Calendly: embebe el widget del rango (no usamos el calendario local aún).
@@ -284,6 +284,8 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
             prellamadaToken={outcome.prellamada_token}
             funnelSlug={slug}
             escuela={escuelaProp || escuela}
+            theme={theme}
+            funnelFont={funnelFont}
             onBack={() => setSelectedSlot(null)}
             onBooked={goToConfirmation}
           />
@@ -294,6 +296,8 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
           hostSlug={outcome.host_slug}
           eventTypeSlug={outcome.event_type_slug}
           eventoInfo={outcome.evento_info}
+          theme={theme}
+          funnelFont={funnelFont}
           onSlotSelected={setSelectedSlot}
         />
       )
