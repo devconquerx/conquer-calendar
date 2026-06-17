@@ -18,16 +18,21 @@ CUSTOM_FIELD_MAP = {
     'fbclid': '68',
 }
 
-# Tag IDs per funnel (school-region)
+# Tag por funnel (school-region). El valor puede ser un ID numérico de
+# ActiveCampaign o el NOMBRE del tag (se resuelve a ID por nombre en runtime,
+# igual que conquer-crm). Conquer Legal (cg) usa el nombre porque su tag se
+# gestiona por nombre en AC.
 FUNNEL_TAG_MAP = {
     'cb-latam': '449', 'cb-eu': '451', 'cb-us': '452', 'cb-ge': '459',
     'fi-latam': '454', 'fi-eu': '456', 'fi-us': '457',
     'cf-latam': '454', 'cf-eu': '456', 'cf-us': '457',
     'cl-latam': '465', 'cl-eu': '466', 'cl-us': '468',
+    'cg-latam': 'cg-latam', 'cg-eu': 'cg-eu', 'cg-us': 'cg-us',
 }
 
-# All school tag IDs (to remove old ones before adding new)
-ALL_SCHOOL_TAGS = set(FUNNEL_TAG_MAP.values())
+# IDs numéricos conocidos (para quitar tags de escuela previos antes de añadir
+# el nuevo). Los valores por nombre se resuelven aparte en push_lead.
+ALL_SCHOOL_TAG_IDS = {tag for tag in FUNNEL_TAG_MAP.values() if str(tag).isdigit()}
 
 # List IDs per school
 SCHOOL_LIST_MAP = {
@@ -81,6 +86,19 @@ class ActiveCampaignClient:
             return resp.json().get('contactTags', [])
         return []
 
+    def get_tag_by_name(self, name):
+        """Find an exact tag by name. Returns the tag dict or None."""
+        if not name:
+            return None
+        resp = self._get('/tags', params={'search': str(name).strip()})
+        if resp.status_code != 200:
+            return None
+        normalized = str(name).strip().lower()
+        for tag in resp.json().get('tags', []):
+            if str(tag.get('tag') or '').strip().lower() == normalized:
+                return tag
+        return None
+
     def add_tag(self, contact_id, tag_id):
         """Add a tag to a contact."""
         self._post('/contactTags', json={'contactTag': {'contact': str(contact_id), 'tag': str(tag_id)}})
@@ -94,6 +112,23 @@ class ActiveCampaignClient:
         self._post('/contactLists', json={
             'contactList': {'list': str(list_id), 'contact': str(contact_id), 'status': status}
         })
+
+
+def _resolve_tag_id(client, tag_value):
+    """Resuelve un valor de FUNNEL_TAG_MAP a un ID numérico de tag de AC.
+
+    Si el valor ya es numérico se usa tal cual; si es un nombre (p. ej.
+    'cg-eu') se busca por nombre en ActiveCampaign. Devuelve None si no se
+    encuentra. Espeja el patrón de conquer-crm.
+    """
+    value = str(tag_value or '').strip()
+    if not value:
+        return None
+    if value.isdigit():
+        return value
+    tag = client.get_tag_by_name(value)
+    tag_id = str((tag or {}).get('id') or '').strip()
+    return tag_id or None
 
 
 def push_lead(lead):
@@ -133,13 +168,20 @@ def push_lead(lead):
             return
 
         if funnel_key and funnel_key in FUNNEL_TAG_MAP:
-            existing_tags = client.get_contact_tags(contact_id)
-            for ct in existing_tags:
-                tag_id = ct.get('tag')
-                if tag_id in ALL_SCHOOL_TAGS:
-                    client.remove_tag(ct.get('id'))
+            target_tag_id = _resolve_tag_id(client, FUNNEL_TAG_MAP[funnel_key])
+            if target_tag_id:
+                tags_to_clear = ALL_SCHOOL_TAG_IDS | {str(target_tag_id)}
+                existing_tags = client.get_contact_tags(contact_id)
+                for ct in existing_tags:
+                    if str(ct.get('tag')) in tags_to_clear:
+                        client.remove_tag(ct.get('id'))
 
-            client.add_tag(contact_id, FUNNEL_TAG_MAP[funnel_key])
+                client.add_tag(contact_id, target_tag_id)
+            else:
+                logger.warning(
+                    f'[ActiveCampaign] Lead {lead.pk}: no se pudo resolver el tag '
+                    f'para funnel "{funnel_key}" (valor={FUNNEL_TAG_MAP[funnel_key]!r})'
+                )
 
         list_id = SCHOOL_LIST_MAP.get(school_code)
         if list_id:

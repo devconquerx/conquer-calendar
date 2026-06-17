@@ -59,10 +59,19 @@ SCHOOL_VIDEO_URLS = {
 SCHOOL_SLUG_TO_CODE = {
     'conquer-blocks': 'cb',
     'conquerblocks': 'cb',
+    # Especialización es una variante de Conquer Blocks: usa las mismas tags (cb),
+    # igual que el CRM (no existe una escuela/tag 'esp' separada).
+    'conquer-blocks-esp': 'cb',
+    'conquerblocksesp': 'cb',
     'conquer-finance': 'cf',
     'conquerfinance': 'cf',
     'conquer-languages': 'cl',
     'conquerlanguages': 'cl',
+    # Languages for Kids es una variante de Conquer Languages: usa las tags (cl).
+    'conquer-languages-kids': 'cl',
+    'conquerlanguageskids': 'cl',
+    'conquer-legal': 'cg',
+    'conquerlegal': 'cg',
 }
 
 
@@ -100,15 +109,18 @@ def get_school_code(lead):
         return SCHOOL_SLUG_TO_CODE[school]
 
     # Already a code?
-    if school in ('cb', 'cf', 'cl', 'fi'):
+    if school in ('cb', 'cf', 'cl', 'fi', 'cg'):
         return school
 
-    # Try funnel field (e.g., 'cb-eu', 'fi-latam')
+    # Try funnel field (e.g., 'cb-eu', 'fi-latam', 'legal-eu')
     funnel = (lead.funnel or '').lower().strip()
     if '-' in funnel:
         code = funnel.split('-')[0]
-        if code in ('cb', 'cf', 'cl', 'fi'):
+        if code in ('cb', 'cf', 'cl', 'fi', 'cg'):
             return code
+        # El slug del funnel de Conquer Legal es 'legal-<region>'.
+        if code == 'legal':
+            return 'cg'
 
     # Try mapping form keys to schools
     funnel_upper = lead.funnel or ''
