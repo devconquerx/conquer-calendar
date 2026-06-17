@@ -347,12 +347,13 @@ _VIDEO_DEFAULTS = {
         ],
         'buttonPercent': 75,
     },
-    # Conquer Legal aún no tiene VSL propia: reutiliza el vídeo de conquer-blocks
-    # como plantilla temporal para que la landing encadene a la página de vídeo.
+    # VSL propia de Conquer Legal, optimizada a H.264 High 1080p (8-bit, AAC,
+    # faststart) y servida como MP4 directo desde el mismo pull zone público que
+    # el resto de escuelas (vslconquerx.b-cdn.net), que el reproductor VSL carga
+    # en un <video> nativo.
     'conquer-legal': {
         'videoUrls': [
-            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4',
-            'https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain.mp4',
+            'https://vslconquerx.b-cdn.net/Conquerlegal/Conquer%20Legal%20VSL%20-%20V1%20-%20WEB-1080p-h264.mp4',
         ],
         'buttonPercent': 75,
     },
