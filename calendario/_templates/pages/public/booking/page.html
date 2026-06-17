@@ -12,7 +12,7 @@
   --bk-text:       #1a1a2e;
   --bk-muted:      #8a8a8a;
   --bk-border:     #e2e5e9;
-  --bk-bg:         #f0f2f5;
+  --bk-bg:         #F5EDE3;
   --bk-font:         'Funnel Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --bk-font-heading: 'Termina', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -24,7 +24,13 @@ html, body {
   max-width: 100% !important;
   overflow-x: hidden;
 }
-body { background: var(--bk-bg) !important; }
+body {
+  background-color: var(--bk-bg) !important;
+  background-image: url('{% static "img/paperboard-texture.avif" %}');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
 
 .bk-wrapper {
   min-height: 100vh;
