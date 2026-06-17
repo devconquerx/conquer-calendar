@@ -112,6 +112,32 @@ def process_schedule_crm(self, reserva_id):
 
 
 @shared_task(**RETRY_POLICY)
+def process_onboarding_session(self, reserva_id):
+    """Envía la Reserva al CRM como OnboardingSession (nuestro endpoint, en lugar del
+    de Schedule de Andres). Mismo doble gate:
+    1. CRM_INGEST_ENABLED (interruptor global).
+    2. EventType.notificar_crm: solo las reservas marcadas para el CRM.
+    El código de `process_schedule_crm` (Andres) se mantiene intacto pero ya no se
+    despacha; este es el método que usamos ahora."""
+    if not settings.CRM_INGEST_ENABLED:
+        logger.info('Reserva %s: ONB send SKIPPED (CRM_INGEST_ENABLED=False)', reserva_id)
+        return
+
+    from .models import Reserva
+    from .conversions.services import onboarding
+
+    reserva = Reserva.objects.select_related('event_type').get(pk=reserva_id)
+    if not (reserva.event_type and reserva.event_type.notificar_crm):
+        logger.info('Reserva %s: ONB send SKIPPED (event_type sin "Notificar al CRM")', reserva_id)
+        reserva.tags.add('sch_onboarding_skipped')
+        return
+
+    onboarding.push_onboarding_session(reserva)
+    reserva.tags.add('sch_onboarding_done')
+    logger.info('Reserva %s: sch_onboarding_done', reserva_id)
+
+
+@shared_task(**RETRY_POLICY)
 def process_schedule_supabase(self, reserva_id):
     """Respaldo de la Reserva en Supabase. Independiente del CRM: se ejecuta
     siempre, aunque el envío al CRM esté desactivado."""
@@ -169,9 +195,10 @@ def dispatch_schedule_tasks(reserva_id):
     if s.lead_phone_number:
         process_schedule_respondio.delay(reserva_id)
 
-    # CRM directo (sin dual-source de Calendly). Disabled-for-testing por dentro.
-    process_schedule_crm.delay(reserva_id)
-    reserva.tags.add('sch_crm_dispatched')
+    # CRM: enviamos a OnboardingSession con NUESTRO endpoint (no el de Schedule de
+    # Andres, que queda en el código pero ya no se despacha).
+    process_onboarding_session.delay(reserva_id)
+    reserva.tags.add('sch_onboarding_dispatched')
 
     logger.info('Reserva %s: dispatched processing tasks', reserva_id)
 
@@ -230,11 +257,11 @@ def sweep_incomplete_reservas():
             process_schedule_respondio.delay(reserva.pk)
             requeued += 1
 
-        # CRM ingest: re-encola si no se completó/falló/despachó (parity con funnels).
-        if ('sch_crm_done' not in tag_names and 'sch_crm_failed' not in tag_names
-                and 'sch_crm_dispatched' not in tag_names):
-            process_schedule_crm.delay(reserva.pk)
-            reserva.tags.add('sch_crm_dispatched')
+        # CRM (OnboardingSession): re-encola si no se completó/falló/despachó.
+        if ('sch_onboarding_done' not in tag_names and 'sch_onboarding_failed' not in tag_names
+                and 'sch_onboarding_dispatched' not in tag_names):
+            process_onboarding_session.delay(reserva.pk)
+            reserva.tags.add('sch_onboarding_dispatched')
             requeued += 1
 
     logger.info('[Sweep] Checked reservas since %s, requeued %d tasks', cutoff_old, requeued)
