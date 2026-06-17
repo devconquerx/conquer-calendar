@@ -72,7 +72,7 @@ class ActiveCampaignClient:
             contact['fieldValues'] = [{'field': k, 'value': v} for k, v in field_values.items() if v]
 
         resp = self._post('/contact/sync', json={'contact': contact})
-        if resp.status_code == (200 or 201):
+        if resp.status_code in (200, 201):
             return resp.json().get('contact')
         resp = self._post('/contacts', json={'contact': contact})
         if resp.status_code in (200, 201):
