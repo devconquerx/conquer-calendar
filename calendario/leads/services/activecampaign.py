@@ -99,6 +99,19 @@ class ActiveCampaignClient:
                 return tag
         return None
 
+    def create_tag(self, name):
+        """Create a contact tag by name. Returns the tag dict or None."""
+        if not name:
+            return None
+        resp = self._post('/tags', json={'tag': {'tag': str(name).strip(), 'tagType': 'contact'}})
+        if resp.status_code in (200, 201):
+            return resp.json().get('tag')
+        return None
+
+    def get_or_create_tag(self, name):
+        """Find a tag by name, creating it if it doesn't exist. Returns the tag dict or None."""
+        return self.get_tag_by_name(name) or self.create_tag(name)
+
     def add_tag(self, contact_id, tag_id):
         """Add a tag to a contact."""
         self._post('/contactTags', json={'contactTag': {'contact': str(contact_id), 'tag': str(tag_id)}})
@@ -118,15 +131,15 @@ def _resolve_tag_id(client, tag_value):
     """Resuelve un valor de FUNNEL_TAG_MAP a un ID numérico de tag de AC.
 
     Si el valor ya es numérico se usa tal cual; si es un nombre (p. ej.
-    'cg-eu') se busca por nombre en ActiveCampaign. Devuelve None si no se
-    encuentra. Espeja el patrón de conquer-crm.
+    'cg-eu') se busca por nombre en ActiveCampaign y, si no existe, se crea.
+    Así el tag siempre se aplica. Espeja el patrón de conquer-crm.
     """
     value = str(tag_value or '').strip()
     if not value:
         return None
     if value.isdigit():
         return value
-    tag = client.get_tag_by_name(value)
+    tag = client.get_or_create_tag(value)
     tag_id = str((tag or {}).get('id') or '').strip()
     return tag_id or None
 
