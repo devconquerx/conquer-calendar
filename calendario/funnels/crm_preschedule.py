@@ -49,6 +49,20 @@ def push_pre_schedule(prellamada):
             val = val[0] if val else None
         return str(val) if val not in (None, '') else None
 
+    # Estado de agenda para el CRM (campo `assistance`):
+    #   7 = Pendiente de agendar · 8 = Agendada · 6 = Cancelada por el sistema
+    # El listado de prellamadas del CRM SOLO muestra las que tienen assistance=7;
+    # sin este campo el ingest las crea con NULL y nunca aparecen (que era el caso
+    # de Conquer Legal). Igual que conquerx-funnels: el form manda 7/6 y el CRM
+    # promueve a 8 al vincular la reserva. Lo derivamos del estado de la Prellamada
+    # para no pisar el 8 en los reenvíos posteriores a la reserva.
+    if prellamada.reserva_id:
+        assistance = 8
+    elif prellamada.resultado == 'rechazado':
+        assistance = 6
+    else:
+        assistance = 7
+
     payload = {
         # El ingest del CRM hace upsert del PreSchedule por `uuid` (campo
         # obligatorio). Usamos el token estable de la Prellamada como uuid: es
@@ -63,6 +77,8 @@ def push_pre_schedule(prellamada):
         'token': str(prellamada.token),
         'form': prellamada.funnel.key if prellamada.funnel_id else None,
         'resultado': prellamada.resultado,
+        # Pendiente de agendar / Agendada / Cancelada — sin esto el CRM no la lista.
+        'assistance': assistance,
         'lead_scoring_score': float(prellamada.score) if prellamada.score is not None else None,
         # Respuestas mapeadas a los campos que el CRM espera (q1..q6 según q_order).
         'q1_answer': _answer(0),
