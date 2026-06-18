@@ -584,6 +584,7 @@ class FunnelStatusView(View):
                 'landing_url': _landing_url(f.escuela, f.region, base=base),
                 'video_url': _video_url(f.escuela, f.region, base=base),
                 'stepform_url': stepform_url(f.escuela, f.region, base=base) or '',
+                'confirmation_url': confirmacion_url(f.escuela, f.region, base=base),
             })
         return render(request, 'pages/public/funnel/status.html', {
             'filas': filas,
