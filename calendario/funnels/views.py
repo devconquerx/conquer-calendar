@@ -1,5 +1,6 @@
 import json
 import logging
+import uuid
 from datetime import datetime, timezone as dt_timezone
 
 from django.conf import settings
@@ -53,21 +54,39 @@ PRELLAMADA_TRACKING_FIELDS = (
 )
 
 
-def _upsert_prellamada(funnel, journey_id, **fields):
-    """Crea o actualiza la Prellamada por `journey_id` (upsert), igual que
-    conquerx-funnels-new. Todas las llamadas de un mismo recorrido (las
-    intermedias por pregunta + la final) convergen a la misma fila. Sin
-    journey_id no se puede deduplicar: se crea una fila nueva."""
+def _upsert_prellamada(funnel, journey_id, prellamada_uuid, **fields):
+    """Crea o actualiza la Prellamada por su `uuid` de cliente (guardado en
+    `token`), igual que conquerx-funnels-new: el front genera `uuidv4()` por
+    montaje del formulario (cambia en cada recarga del navegador), así que todas
+    las llamadas de un mismo montaje (las intermedias por pregunta + la final)
+    comparten el uuid y convergen a la misma fila, y una recarga genera un uuid
+    nuevo → fila nueva. Sin uuid válido caemos al `journey_id` (compatibilidad) y,
+    sin ninguno, se crea una fila nueva."""
     # Snapshot del tracking a columnas (además del JSON `tracking`).
     tr = fields.get('tracking') if isinstance(fields.get('tracking'), dict) else {}
     cols = {f: (tr.get(f) or '') for f in PRELLAMADA_TRACKING_FIELDS}
+    defaults = {'funnel': funnel, 'journey_id': journey_id, **fields, **cols}
+
+    token = None
+    if prellamada_uuid:
+        try:
+            token = uuid.UUID(prellamada_uuid)
+        except (ValueError, AttributeError, TypeError):
+            token = None
+
+    if token is not None:
+        prellamada, _ = Prellamada.objects.update_or_create(
+            token=token,
+            defaults=defaults,
+        )
+        return prellamada
     if journey_id:
         prellamada, _ = Prellamada.objects.update_or_create(
             journey_id=journey_id,
-            defaults={'funnel': funnel, **fields, **cols},
+            defaults=defaults,
         )
         return prellamada
-    return Prellamada.objects.create(funnel=funnel, journey_id='', **fields, **cols)
+    return Prellamada.objects.create(**defaults)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -96,12 +115,15 @@ class ResolverView(View):
         email = respuestas.get('email', '')
         telefono = respuestas.get('phone', '') or respuestas.get('telefono', '')
         journey_id = (tracking.get('journey_id') or '').strip()
+        # uuid de cliente: clave de upsert (token). Se genera por montaje del
+        # formulario (cambia en cada recarga), igual que conquerx-funnels-new.
+        prellamada_uuid = (tracking.get('uuid') or '').strip()
 
         # Pre-schedule intermedio: solo captura/actualiza el lead. No puntúa ni
         # resuelve evento (lo hará la llamada final).
         if not final:
             prellamada = _upsert_prellamada(
-                funnel, journey_id,
+                funnel, journey_id, prellamada_uuid,
                 nombre=nombre, email=email, telefono=telefono,
                 respuestas=respuestas, tracking=tracking,
                 resultado=Prellamada.Resultado.PENDIENTE,
@@ -121,7 +143,7 @@ class ResolverView(View):
             ).first()
 
         prellamada = _upsert_prellamada(
-            funnel, journey_id,
+            funnel, journey_id, prellamada_uuid,
             nombre=nombre, email=email, telefono=telefono,
             respuestas=respuestas,
             score=outcome['promedio'] if outcome['promedio'] else None,

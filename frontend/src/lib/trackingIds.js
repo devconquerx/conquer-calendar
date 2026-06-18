@@ -55,3 +55,22 @@ export function getOrCreateJourneyId() {
 export function generateScheduleEventId() {
   return `${Date.now()}_${randomSuffix()}`
 }
+
+/**
+ * UUID de la Prellamada — clave de upsert en el CRM (campo `uuid`).
+ * Se genera nuevo por montaje del formulario y NO se persiste, así que cambia
+ * en cada recarga del navegador, igual que el `useState(uuidv4())` de
+ * conquerx-funnels-new. Todas las llamadas de un mismo montaje comparten este
+ * uuid; una recarga genera uno nuevo (fila nueva en el CRM).
+ */
+export function generatePrellamadaUuid() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  // Fallback UUID v4 para navegadores/entornos sin crypto.randomUUID.
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}

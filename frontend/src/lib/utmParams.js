@@ -53,10 +53,12 @@ export function getClickIds() {
 /**
  * Build a flat tracking payload combining UTMs + click IDs + pixel cookies + tracking IDs.
  */
-export function buildTrackingPayload({ eventId, journeyId, utmParams, clickIds, pixelCookies }) {
+export function buildTrackingPayload({ eventId, journeyId, uuid, utmParams, clickIds, pixelCookies }) {
   return {
     event_id: eventId,
     journey_id: journeyId,
+    // uuid de la Prellamada (clave de upsert en el CRM). Solo se incluye si viene.
+    ...(uuid ? { uuid } : {}),
     ...utmParams,
     ...clickIds,
     _fbc: pixelCookies?._fbc || '',
