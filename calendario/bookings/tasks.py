@@ -164,43 +164,50 @@ def dispatch_schedule_tasks(reserva_id):
         return
     reserva.tags.add('sch_tasks_dispatched')
 
-    # Respaldo en Supabase: siempre, independiente del origen y del CRM.
+    # Respaldo en Supabase: siempre, independiente del origen, del CRM y del destino.
     process_schedule_supabase.delay(reserva_id)
 
-    s = build_schedule_ctx(reserva)
-    lead = s.lead
+    et = reserva.event_type
+    is_schedule = bool(et and et.crm_destino == 'schedule')
 
-    # Tareas de plataformas de ads (condicionadas por la fuente de tráfico). Si no
-    # hay Lead emparejado, se usa el utm_source del tracking como fallback (igual
-    # que funnels), para no perder conversiones de reservas sin Lead.
-    if lead:
-        if is_from_meta(lead):
-            process_schedule_meta_capi.delay(reserva_id)
-        if is_from_tiktok(lead):
-            process_schedule_tiktok_events.delay(reserva_id)
-        if is_from_google(lead):
-            process_schedule_google_ads.delay(reserva_id)
-    else:
-        src = (s.utm_source or '').lower()
-        if src == 'metaads':
-            process_schedule_meta_capi.delay(reserva_id)
-        if 'tiktok' in src:
-            process_schedule_tiktok_events.delay(reserva_id)
-        if src == 'googleads':
-            process_schedule_google_ads.delay(reserva_id)
+    # Conversiones a plataformas de ads (Meta/TikTok/Google) + ActiveCampaign +
+    # Respond.io: SOLO para reservas que se notifican al CRM como Schedule (hoy, la
+    # consultoría de ConquerLegal). Para el resto (onboarding o sin CRM) no se
+    # disparan: esas reservas solo van a Supabase (+ su envío al CRM si aplica).
+    if is_schedule:
+        s = build_schedule_ctx(reserva)
+        lead = s.lead
 
-    if s.lead_email:
-        process_schedule_activecampaign.delay(reserva_id)
+        # Plataformas de ads condicionadas por la fuente de tráfico. Sin Lead
+        # emparejado, se usa el utm_source del tracking como fallback (igual que
+        # funnels), para no perder conversiones de reservas sin Lead.
+        if lead:
+            if is_from_meta(lead):
+                process_schedule_meta_capi.delay(reserva_id)
+            if is_from_tiktok(lead):
+                process_schedule_tiktok_events.delay(reserva_id)
+            if is_from_google(lead):
+                process_schedule_google_ads.delay(reserva_id)
+        else:
+            src = (s.utm_source or '').lower()
+            if src == 'metaads':
+                process_schedule_meta_capi.delay(reserva_id)
+            if 'tiktok' in src:
+                process_schedule_tiktok_events.delay(reserva_id)
+            if src == 'googleads':
+                process_schedule_google_ads.delay(reserva_id)
 
-    if s.lead_phone_number:
-        process_schedule_respondio.delay(reserva_id)
+        if s.lead_email:
+            process_schedule_activecampaign.delay(reserva_id)
+
+        if s.lead_phone_number:
+            process_schedule_respondio.delay(reserva_id)
 
     # CRM: el destino depende del tipo de evento (EventType.crm_destino):
     #   'schedule'   → tabla Schedules del CRM (llamada de venta) vía process_schedule_crm
     #   'onboarding' → tabla OnboardingSession (default) vía process_onboarding_session
     # El gate notificar_crm lo revisa cada task internamente.
-    et = reserva.event_type
-    if et and et.crm_destino == 'schedule':
+    if is_schedule:
         process_schedule_crm.delay(reserva_id)
         reserva.tags.add('sch_crm_dispatched')
     else:
@@ -231,43 +238,48 @@ def sweep_incomplete_reservas():
     requeued = 0
     for reserva in reservas.iterator(chunk_size=200):
         tag_names = set(reserva.tags.names())
-        s = build_schedule_ctx(reserva)
-        lead = s.lead
+        et = reserva.event_type
+        is_schedule = bool(et and et.crm_destino == 'schedule')
 
+        # Supabase: siempre.
         if 'sch_supabase_done' not in tag_names and 'sch_supabase_failed' not in tag_names:
             process_schedule_supabase.delay(reserva.pk)
             requeued += 1
 
-        # Plataformas de ads: por Lead si existe, si no por utm_source (fallback).
-        if lead:
-            meta_on = is_from_meta(lead)
-            tiktok_on = is_from_tiktok(lead)
-            google_on = is_from_google(lead)
-        else:
-            src = (s.utm_source or '').lower()
-            meta_on = src == 'metaads'
-            tiktok_on = 'tiktok' in src
-            google_on = src == 'googleads'
+        # Ads (Meta/TikTok/Google) + ActiveCampaign + Respond.io: SOLO reservas Schedule.
+        if is_schedule:
+            s = build_schedule_ctx(reserva)
+            lead = s.lead
 
-        if meta_on and 'sch_meta_capi_done' not in tag_names and 'sch_meta_capi_failed' not in tag_names:
-            process_schedule_meta_capi.delay(reserva.pk)
-            requeued += 1
-        if tiktok_on and 'sch_tiktok_events_done' not in tag_names and 'sch_tiktok_events_failed' not in tag_names:
-            process_schedule_tiktok_events.delay(reserva.pk)
-            requeued += 1
-        if google_on and 'sch_google_ads_done' not in tag_names and 'sch_google_ads_failed' not in tag_names:
-            process_schedule_google_ads.delay(reserva.pk)
-            requeued += 1
-        if s.lead_email and 'sch_activecampaign_done' not in tag_names and 'sch_activecampaign_failed' not in tag_names:
-            process_schedule_activecampaign.delay(reserva.pk)
-            requeued += 1
-        if s.lead_phone_number and 'sch_respondio_done' not in tag_names and 'sch_respondio_failed' not in tag_names:
-            process_schedule_respondio.delay(reserva.pk)
-            requeued += 1
+            # Plataformas de ads: por Lead si existe, si no por utm_source (fallback).
+            if lead:
+                meta_on = is_from_meta(lead)
+                tiktok_on = is_from_tiktok(lead)
+                google_on = is_from_google(lead)
+            else:
+                src = (s.utm_source or '').lower()
+                meta_on = src == 'metaads'
+                tiktok_on = 'tiktok' in src
+                google_on = src == 'googleads'
+
+            if meta_on and 'sch_meta_capi_done' not in tag_names and 'sch_meta_capi_failed' not in tag_names:
+                process_schedule_meta_capi.delay(reserva.pk)
+                requeued += 1
+            if tiktok_on and 'sch_tiktok_events_done' not in tag_names and 'sch_tiktok_events_failed' not in tag_names:
+                process_schedule_tiktok_events.delay(reserva.pk)
+                requeued += 1
+            if google_on and 'sch_google_ads_done' not in tag_names and 'sch_google_ads_failed' not in tag_names:
+                process_schedule_google_ads.delay(reserva.pk)
+                requeued += 1
+            if s.lead_email and 'sch_activecampaign_done' not in tag_names and 'sch_activecampaign_failed' not in tag_names:
+                process_schedule_activecampaign.delay(reserva.pk)
+                requeued += 1
+            if s.lead_phone_number and 'sch_respondio_done' not in tag_names and 'sch_respondio_failed' not in tag_names:
+                process_schedule_respondio.delay(reserva.pk)
+                requeued += 1
 
         # CRM: el destino (schedule vs onboarding) depende del EventType.crm_destino.
-        et = reserva.event_type
-        if et and et.crm_destino == 'schedule':
+        if is_schedule:
             if ('sch_crm_done' not in tag_names and 'sch_crm_failed' not in tag_names
                     and 'sch_crm_dispatched' not in tag_names):
                 process_schedule_crm.delay(reserva.pk)
