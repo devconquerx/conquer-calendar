@@ -61,10 +61,13 @@ const gradText = (grad) => ({
 // pequeño de texto. `padClass`/`sizeClass`/`weightClass` permiten al tema fijar
 // los valores exactos de producción (Blocks: 20px/500, padding 4px 16px).
 // `texture` aplica el papel paperboard de fondo.
-function StepBadge({ children, icon, big, texture, padClass, sizeClass, weightClass }) {
+function StepBadge({ children, icon, big, texture, padClass, sizeClass, weightClass, wrap }) {
   const pad = padClass || (big ? 'px-4 py-1 rounded-2xl' : 'px-5 py-1.5 rounded-full')
   const size = sizeClass || (big ? 'text-2xl md:text-[32px]' : 'text-base md:text-lg')
   const weight = weightClass || 'font-semibold'
+  // Por defecto el badge no parte línea; con `wrap` (p.ej. badges largos en móvil)
+  // se permite que envuelva, centrado, como en producción.
+  const wrapCls = wrap ? 'text-center' : 'whitespace-nowrap'
   return (
     <div
       className={`relative inline-flex items-center gap-3 ${pad} border border-[#BBB49B] ${cardShadow} overflow-hidden`}
@@ -80,7 +83,7 @@ function StepBadge({ children, icon, big, texture, padClass, sizeClass, weightCl
         }}
       />
       <p
-        className={`relative font-['Funnel_Display',sans-serif] ${weight} ${size} leading-[1.25] text-black whitespace-nowrap`}
+        className={`relative font-['Funnel_Display',sans-serif] ${weight} ${size} leading-[1.25] text-black ${wrapCls}`}
       >
         {children}
       </p>
@@ -202,9 +205,9 @@ function PaperboardConfirmation({ theme, assets }) {
 
       {/* ═══ SECTION 1: Hero ═══ */}
       <section className={`relative bg-[#F5EDE3] px-4 lg:px-16 ${c.heroSectionPad || 'pt-12 pb-12'}`} style={paperboardBg}>
-        {px.deco2 &&
+        {(c.heroDecoImg || px.deco2) &&
           (c.heroDecos || ['top-8 left-6 w-24 opacity-40', 'top-16 right-6 w-28 opacity-20']).map((cls, i) => (
-            <img key={i} src={px.deco2} alt="" className={`absolute ${cls} pointer-events-none hidden lg:block`} />
+            <img key={i} src={c.heroDecoImg || px.deco2} alt="" className={`absolute ${cls} pointer-events-none hidden lg:block`} />
           ))}
 
         {/* Navbar con logo. En Blocks (navbarLogoOnly) solo el logo centrado, sin
@@ -233,8 +236,8 @@ function PaperboardConfirmation({ theme, assets }) {
             </div>
           )}
 
-          <h1 className={`text-3xl md:text-[40px] ${heroWeight} leading-[1.2] text-black ${c.heroTitleMb || 'mb-8'}`}>
-            <span className="block text-4xl md:text-[40px]" style={gradText(c.felicidadesGradient)}>
+          <h1 className={`${c.heroTitleSize || 'text-3xl md:text-[40px]'} ${heroWeight} ${c.heroTitleLeading || 'leading-[1.2]'} text-black ${c.heroTitleMb || 'mb-8'}`}>
+            <span className={`block ${c.felicidadesSize || 'text-4xl md:text-[40px]'}`} style={gradText(c.felicidadesGradient)}>
               {c.felicidades}
             </span>
             {c.heroTitle}
@@ -247,7 +250,7 @@ function PaperboardConfirmation({ theme, assets }) {
             className={`relative w-full mx-auto`}
             style={{ maxWidth: c.boxMaxWidth || '640px' }}
           >
-            <div className={`relative rounded-xl overflow-hidden ${cardShadow} px-8 md:px-12 ${c.boxPadY || 'py-6'}`} style={boxBg}>
+            <div className={`relative rounded-xl overflow-hidden ${c.boxShadowClass ?? cardShadow} ${c.boxPadX || 'px-8 md:px-12'} ${c.boxPadY || 'py-6'}`} style={boxBg}>
               <p className={`font-semibold text-white text-2xl md:text-[32px] leading-[1.15] text-center ${c.importanteTitleMb || 'mb-2'}`}>
                 {c.importanteTitle}
               </p>
@@ -277,7 +280,7 @@ function PaperboardConfirmation({ theme, assets }) {
       <section className={`relative bg-black px-4 lg:px-16 ${c.paso1SectionPad || 'py-20 lg:py-28'}`} style={gridBg}>
         <div className="relative z-10 max-w-[1280px] mx-auto text-center">
           <div className={c.paso1BadgeMb || 'mb-8'}>
-            <StepBadge big={c.badgeBig} icon={c.paso1BadgeIcon} texture={texture} padClass={c.badgePad} sizeClass={c.badgeText} weightClass={c.badgeWeight}>
+            <StepBadge big={c.badgeBig} icon={c.paso1BadgeIcon} texture={texture} padClass={c.badgePad} sizeClass={c.badgeText} weightClass={c.badgeWeight} wrap={c.badgeWrap}>
               {c.paso1Badge}
             </StepBadge>
           </div>
@@ -313,7 +316,7 @@ function PaperboardConfirmation({ theme, assets }) {
         )}
         <div className="relative z-10 max-w-[1280px] mx-auto">
           <div className={`text-center ${c.paso2BadgeMb || 'mb-16'}`}>
-            <StepBadge big={c.badgeBig} icon={c.paso2BadgeIcon} texture={texture} padClass={c.badgePad} sizeClass={c.badgeText} weightClass={c.badgeWeight}>
+            <StepBadge big={c.badgeBig} icon={c.paso2BadgeIcon} texture={texture} padClass={c.badgePad} sizeClass={c.badgeText} weightClass={c.badgeWeight} wrap={c.badgeWrap}>
               {c.paso2Badge}
             </StepBadge>
           </div>
@@ -379,7 +382,7 @@ function PaperboardConfirmation({ theme, assets }) {
         )}
         <div className="relative z-10 max-w-[1280px] mx-auto text-center">
           <div className={c.paso3BadgeMb || 'mb-8'}>
-            <StepBadge big={c.badgeBig} icon={c.paso3BadgeIcon} texture={texture} padClass={c.badgePad} sizeClass={c.badgeText} weightClass={c.badgeWeight}>
+            <StepBadge big={c.badgeBig} icon={c.paso3BadgeIcon} texture={texture} padClass={c.badgePad} sizeClass={c.badgeText} weightClass={c.badgeWeight} wrap={c.badgeWrap}>
               {c.paso3Badge}
             </StepBadge>
           </div>

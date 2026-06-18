@@ -34,7 +34,7 @@
 <body>
   <div class="wrap">
     <h1>Estado de funnels</h1>
-    <p class="sub">{{ filas|length }} funnels registrados · enlaces directos a landing, vídeo y StepForm de cada escuela.</p>
+    <p class="sub">{{ filas|length }} funnels registrados · enlaces directos a landing, vídeo, StepForm y confirmación de cada escuela.</p>
     <table>
       <thead>
         <tr>
@@ -59,7 +59,8 @@
           <td>
             <a class="link" href="{{ f.landing_url }}" target="_blank" rel="noopener">landing</a> ·
             <a class="link" href="{{ f.video_url }}" target="_blank" rel="noopener">vídeo</a> ·
-            {% if f.stepform_url %}<a class="link" href="{{ f.stepform_url }}" target="_blank" rel="noopener">stepform</a>{% else %}<span class="link muted">stepform</span>{% endif %}
+            {% if f.stepform_url %}<a class="link" href="{{ f.stepform_url }}" target="_blank" rel="noopener">stepform</a>{% else %}<span class="link muted">stepform</span>{% endif %} ·
+            <a class="link" href="{{ f.confirmation_url }}" target="_blank" rel="noopener">confirmación</a>
           </td>
         </tr>
         {% endfor %}

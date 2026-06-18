@@ -16,6 +16,18 @@ import confMovil from '../assets/img/legal/confirmation/conquie-movil2.svg'
 import confPlay from '../assets/img/legal/confirmation/conquie-play.svg'
 import confEmpathy from '../assets/img/legal/confirmation/empathy.avif'
 import confThumb from '../assets/img/legal/confirmation/paso3-thumbnail.jpg'
+// Imagen de degradado azul de la caja "Importante"/recordatorio (PNG real de
+// producción, conquer-blocks-gradient.png pero en azul para Legal).
+import confBoxGradient from '../assets/img/legal/confirmation/box-gradient.png'
+// Textura paperboard de la confirmación: byte-idéntica a la de Conquer Blocks
+// (neutra/monocroma, compartida), tileada al 50% como en producción.
+import confPaperboard from '../assets/img/cb/confirmation/paperboard-texture.avif'
+// Rasgado (torn) exacto de producción (descargado de conquerlegal.com): es el que
+// combina con el paperboard; difiere del torn genérico de cb/.
+import confTorn from '../assets/img/legal/confirmation/torn-transition.png'
+// Máscara pixelada inferior para la foto del Paso 2 en móvil (borde abajo en vez
+// de a la derecha, como producción). Forma neutra compartida con Conquer Blocks.
+import confMaskBottom from '../assets/img/cb/confirmation/instructor-mask-bottom.svg'
 import logo from '../assets/img/legal/logo.png'
 import bulletReloj from '../assets/img/legal/conquie-reloj2.svg'
 import bulletEscribir from '../assets/img/legal/conquie-escribir.svg'
@@ -23,6 +35,10 @@ import bulletDocumento from '../assets/img/legal/conquie-documento1.svg'
 import instructorPhoto from '../assets/img/legal/ignacio.avif'
 import pixelDeco from '../assets/img/legal/pixel-6x6-2.svg'
 import pixelDeco2 from '../assets/img/legal/pixel-5x5-5.svg'
+// Píxeles del footer (descargados de conquerlegal.com): cluster grande a la
+// derecha (px-lg-8) y cluster pequeño a la izquierda asomando arriba (px-sm-7).
+import pxLg8 from '../assets/img/legal/px-lg-8.svg'
+import pxSm7 from '../assets/img/legal/px-sm-7.svg'
 
 const legalShadow =
   '0px 2px 5px rgba(0,0,0,0.1), 0px 9px 9px rgba(0,0,0,0.09), 0px 20px 12px rgba(0,0,0,0.05), 0px 36px 14px rgba(0,0,0,0.01)'
@@ -73,42 +89,134 @@ export default {
     heroIcon: confApreton,
     heroIconSmall: null,
     felicidades: '¡Felicidades!',
+    // Degradado de texto "conquer-gradient" medido en producción (azul Legal).
     felicidadesGradient: 'linear-gradient(135deg,#0040FF,#00BFFF)',
     heroTitle: 'Tu sesión estratégica ha sido reservada',
     importanteTitle: 'Importante',
     importanteText: 'Sigue los pasos indicados para preparar tu llamada con nuestro equipo experto.',
+    // Caja "Importante"/recordatorio: imagen de degradado azul (PNG de producción),
+    // sin sombra (en Webflow el box-shadow es none). boxGradient queda de respaldo.
+    boxImage: confBoxGradient,
     boxGradient: 'linear-gradient(120deg,#1FB0FF 0%,#0A82FF 100%)',
+    boxShadowClass: '',
     accentGradient: 'linear-gradient(135deg,#0040FF,#00BFFF)',
     badgeBig: false,
     heroWeight: 'font-medium',
+    // ── Hero (sección 1) medido 1:1 en conquerlegal.webflow.io/hub/confirmacion ──
+    // Fondo paperboard tileado al 50% con velo blanco 0.4 sobre #FAFAFA.
+    texture: confPaperboard,
+    paperboardTiled: true,
+    // Rasgado exacto de producción (en vez del torn genérico de cb/).
+    torn: confTorn,
+    // Navbar: solo el logo centrado (125×39), sin tarjeta. Logo a 32px del borde,
+    // sin margen hasta el contenido (el icono abre el bloque a 87px).
+    navbarLogoOnly: true,
+    // Logo: móvil 100×31 (h31) / desktop 125×39 (h39).
+    navLogoHeight: 'h-[31px] md:h-[39px] w-auto',
+    heroSectionPad: 'pt-4 pb-8',
+    navbarMb: 'mb-0',
+    heroMaxWidth: '1024px',
+    // Ritmo vertical: icono móvil 72px / desktop 128px; gap móvil 18px / desktop
+    // 40px (icono→título y título→caja); título móvil 32px / desktop 40px, 500,
+    // lh1.1; caja padding móvil 16px / desktop 48px, radio 12px, gap 16px.
+    heroIconSize: 'w-[72px] h-[72px] md:w-32 md:h-32',
+    heroIconMb: 'mb-[18px] md:mb-10',
+    heroTitleSize: 'text-[32px] md:text-[40px]',
+    felicidadesSize: 'text-[32px] md:text-[40px]',
+    heroTitleLeading: 'leading-[1.1]',
+    heroTitleMb: 'mb-[18px] md:mb-10',
+    boxMaxWidth: '780px',
+    boxPadX: 'px-4 md:px-12',
+    boxPadY: 'py-4 md:py-12',
+    importanteTitleMb: 'mb-4',
+    importanteTextSize: 'text-[18px]', // 18px móvil y desktop
+    // Píxeles decorativos del hero: 150px, opacidad 0.2, pegados a los bordes
+    // (izq top 58px / dcha top 117px), patrón pixel-6x6-2 azul.
+    heroDecoImg: pixelDeco,
+    heroDecos: ['top-[58px] left-0 w-[150px] opacity-20', 'top-[117px] right-0 w-[150px] opacity-20'],
+    // Badges de los pasos (1/2/3): móvil 16px / desktop 20px, peso 500, pill,
+    // padding 4px 16px (medido en producción).
+    badgePad: 'px-4 py-1 rounded-full',
+    badgeText: 'text-[16px] md:text-[20px]',
+    badgeWeight: 'font-medium',
+    // Permite que el badge largo (Paso 3) envuelva a 2 líneas en móvil, como producción.
+    badgeWrap: true,
     paso1Badge: 'Paso 1 • Mira este vídeo',
     paso1BadgeIcon: null,
     paso1Text: 'Ve este vídeo de 47 segundos para entender cómo prepararte para la sesión y asegurar el diagnóstico de tu empresa.',
+    // Texto del paso 1: móvil 14px / desktop 16px, peso 300, "47 segundos" en negrita.
+    paso1TextClass: 'font-light text-[14px] md:text-[16px] leading-[1.25]',
+    paso1TextBold: '47 segundos',
+    // Ritmo móvil medido en Webflow: rasgado→badge ~24px, badge→texto 28px,
+    // texto→vídeo 62px, vídeo→rasgado ~72px. Desktop sin cambios (md:/lg:).
+    paso1SectionPad: 'pt-6 pb-[72px] md:py-20 lg:py-28',
+    paso1BadgeMb: 'mb-7 md:mb-8',
+    paso1TextMb: 'mb-[62px] md:mb-12',
     paso1Video:
       'https://iframe.mediadelivery.net/embed/146448/b13e87cd-570a-4f6b-aba2-23f2bbdebd8e?autoplay=false&loop=false&muted=false&preload=true&responsive=true',
     videoFrame: null,
     paso2Badge: 'Paso 2 • Confirma tu cita',
     paso2BadgeIcon: null,
+    // Card + caja recordatorio a 1024px centrado (como producción); sin esto el
+    // contenido se explayaba hasta los ~1280px del contenedor.
+    paso2CardMax: 'max-w-[1024px] mx-auto',
+    // Sección Paso 2: padding móvil ~16px / desktop 80px; badge→card 28px móvil;
+    // card→recordatorio 28px móvil. En móvil la tarjeta se apila (foto cuadrada
+    // arriba), el padding interno baja a 24px y el icono del teléfono se oculta.
+    paso2SectionPad: 'py-4 md:py-20',
+    paso2BadgeMb: 'mb-7 md:mb-16',
+    paso2ReminderMt: 'mt-7 md:mt-12',
+    paso2MobileBox: 'aspect-square lg:aspect-auto',
+    paso2MaskMobile: confMaskBottom,
+    paso2ContentPad: 'p-6 lg:p-12',
     paso2Image: confEmpathy,
     paso2ImageMode: 'photo',
     paso2HeadingIcon: confMovil,
     paso2Heading: 'Mantente al tanto de tu teléfono',
+    // Tipografía del card medida en producción (en local salía más grande/pesada):
+    // título móvil 32px / desktop 40px /500 lh1.1; icono teléfono 93×132 (oculto en
+    // móvil, como producción); párrafos móvil 14px / desktop 16px /300 lh1.25 #171717.
+    paso2HeadingClass: 'text-[32px] md:text-[40px] font-medium leading-[1.1]',
+    paso2IconClass: 'w-[93px] h-auto hidden lg:block',
+    paso2ParagraphClass: 'text-[14px] md:text-[16px] text-[#171717] leading-[1.25] font-light space-y-5',
     paso2Paragraphs: [
       'Un estratega de nuestro equipo te contactará directamente para validar los datos de tu empresa antes de la sesión. Una vez confirmada tu asistencia, te enviaremos el enlace privado de acceso a la videollamada.',
       'Es obligatorio responder a la confirmación. Debido a la alta demanda y al análisis personalizado que realiza nuestro equipo, solo mantenemos la agenda con fundadores comprometidos con la rentabilidad y el crecimiento de su negocio.',
     ],
     paso2Divider: true,
     reminderText: 'Recuerda conectarte puntual, en un espacio privado, tranquilo y si lo necesitas, con la información relevante a la mano.',
+    // Recordatorio: móvil 20px / desktop 24px /500 lh1.1 centrado; padding 24px móvil.
+    reminderTextClass: 'text-center font-medium text-xl md:text-[24px] leading-[1.1]',
+    reminderPad: 'px-6 md:px-12 py-6',
     paso3Badge: 'Paso 3 • Perspectivas adicionales',
     paso3BadgeIcon: null,
     paso3TitlePre: 'Descubre cómo reestructurar la legalidad de tu negocio para ',
     paso3TitleAccent: 'escalarlo sin frenos',
     paso3Subtitle: 'Accede a esta presentación exclusiva donde revelamos los errores estructurales más comunes que cometen los fundadores y cómo funciona nuestra metodología de consultoría por dentro.',
     paso3SubtitleAccent: null,
+    // Móvil medido en Webflow: título 36px/600 lh1.1; subtítulo 14px/300; sección
+    // padding ~56px; gaps badge→título / título→sub / sub→thumb = 28px. Desktop md:.
+    paso3TitleSize: 'text-[36px] md:text-[40px]',
+    paso3TitleLeading: 'leading-[1.1]',
+    paso3SubtitleClass: 'text-white font-light text-[14px] md:text-[16px] leading-[1.25]',
+    paso3SectionPad: 'py-14 md:py-20 lg:py-28',
+    paso3BadgeMb: 'mb-7 md:mb-8',
+    paso3TitleMb: 'mb-7 md:mb-6',
+    paso3SubtitleBlockMb: 'mb-7 md:mb-12',
     paso3Thumbnail: confThumb,
     paso3PlayIcon: confPlay,
     paso3Video: 'https://youtu.be/70NzkcJa5oA',
+    // Footer: logo CONQUER Legal centrado, móvil 125×39 (h39) / desktop 280×88 (h88),
+    // padding 32px arriba/abajo, sobre paperboard tileado. Dos píxeles: cluster a la
+    // derecha (px-lg-8, móvil 75px / desktop 100px, opacidad 0.2) y pequeño a la
+    // izquierda asomando por arriba (px-sm-7, móvil 100px / desktop 150px).
     footerMode: 'minimal',
+    footerPadY: 'py-8',
+    footerLogoHeight: 'h-[39px] md:h-[88px] w-auto',
+    footerDecos: [
+      { img: 'pxLg8', cls: 'top-[9px] right-[30px] w-[75px] md:right-[15px] md:w-[100px] opacity-20' },
+      { img: 'pxSm7', cls: 'top-0 left-[31px] w-[100px] -translate-y-[80%] md:left-[150px] md:w-[150px]' },
+    ],
   },
 
   // Fondo de página paperboard (usado por el StepForm).
@@ -128,7 +236,7 @@ export default {
     tornTransition2000,
     gridBackground,
     // El badge/sm7/lg8 de la página de vídeo reutilizan los píxeles azules de Legal.
-    pixels: { deco: pixelDeco, deco2: pixelDeco2, sm7: pixelDeco, lg8: pixelDeco2 },
+    pixels: { deco: pixelDeco, deco2: pixelDeco2, sm7: pixelDeco, lg8: pixelDeco2, pxLg8, pxSm7 },
     bulletIcons: [bulletReloj, bulletEscribir, bulletDocumento],
     instructorMask,
     instructorPhoto,
