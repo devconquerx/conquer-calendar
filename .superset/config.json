@@ -1,0 +1,4 @@
+{
+  "setup": ["bash \"$SUPERSET_ROOT_PATH/.superset/worktree-setup.sh\""],
+  "teardown": ["bash \"$SUPERSET_ROOT_PATH/.superset/worktree-teardown.sh\""]
+}

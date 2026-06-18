@@ -1,0 +1,37 @@
+# Override de desarrollo para el flujo con Traefik + worktrees (NO toca local.yml).
+# local.yml queda igual para el equipo; esto se usa solo vía COMPOSE_FILE en el .env:
+#   COMPOSE_FILE=local.yml:superset.yml  ->  docker compose up -d  ->  http://${APP_HOST}
+#
+# Requiere el proxy global (~/.local-proxy/traefik.yml) y las redes externas
+# `proxy` y `conquercalendar-db` (docker network create proxy / conquercalendar-db).
+
+networks:
+  proxy:
+    external: true
+  conquercalendar-db:
+    external: true
+
+services:
+  django:
+    # Sin puertos del host: se accede por Traefik en http://${APP_HOST}.
+    ports: !reset []
+    networks:
+      - default
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-conquercalendar}.rule=Host(`${APP_HOST:-calendar.localhost}`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-conquercalendar}.entrypoints=web"
+      - "traefik.http.services.${COMPOSE_PROJECT_NAME:-conquercalendar}.loadbalancer.server.port=8000"
+
+  postgres:
+    # Sin puerto del host. En `conquercalendar-db` tiene alias `postgres`: los worktrees lo comparten.
+    ports: !reset []
+    networks:
+      - default
+      - conquercalendar-db
+
+  redis:
+    # Sin puerto del host (interno).
+    ports: !reset []

@@ -1,0 +1,43 @@
+# Override que SOLO usan los worktrees (vía COMPOSE_FILE en su .env autogenerado:
+# COMPOSE_FILE=local.yml:superset.yml:superset.shared.yml).
+#
+# Modelo "DB compartida + Celery propio":
+#   - django, redis, celeryworker y celerybeat corren PROPIOS del worktree.
+#   - NO se levanta postgres: se comparte el del principal vía la red `conquercalendar-db`
+#     (alias `postgres`), así DATABASE/host `postgres` resuelve a la DB principal.
+#   - django NO corre `migrate` (runserver directo) para no mutar la DB compartida.
+#
+# OJO: celerybeat propio dispara tareas periódicas contra la DB compartida (se duplican
+# con las del principal). Si molesta, comenta el bloque `celerybeat` de abajo.
+services:
+  django:
+    depends_on: !reset
+      - redis
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      # django_vite apunta al Vite propio del worktree (puerto único en su .env).
+      DJANGO_SETTINGS_MODULE: config.settings.superset_worktree
+      DJANGO_VITE_DEV_SERVER_PORT: "${VITE_PORT:-5173}"
+    networks:
+      - default
+      - proxy
+      - conquercalendar-db
+
+  celeryworker:
+    depends_on: !reset
+      - redis
+    networks:
+      - default
+      - conquercalendar-db
+
+  celerybeat:
+    depends_on: !reset
+      - redis
+    networks:
+      - default
+      - conquercalendar-db
+
+  # postgres deshabilitado en worktrees (se usa el del principal).
+  postgres:
+    profiles:
+      - disabled
