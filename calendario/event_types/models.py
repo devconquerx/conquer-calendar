@@ -68,6 +68,21 @@ class EventType(models.Model):
     precio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     activo = models.BooleanField(default=True)
     notificar_crm = models.BooleanField(default=False)
+
+    class CrmDestino(models.TextChoices):
+        ONBOARDING = 'onboarding', 'Onboarding'
+        SCHEDULE = 'schedule', 'Schedule (llamada)'
+
+    crm_destino = models.CharField(
+        max_length=20,
+        choices=CrmDestino.choices,
+        default=CrmDestino.ONBOARDING,
+        help_text=(
+            "A qué tabla del CRM se envía la reserva (solo aplica si 'Notificar al CRM' "
+            "está activo): Onboarding (default) o Schedule (la llamada de venta)."
+        ),
+    )
+
     unico_por_invitado = models.BooleanField(
         default=True,
         help_text="Si está activo, un mismo email no puede reservar este evento dos veces mientras tenga una reserva futura confirmada.",

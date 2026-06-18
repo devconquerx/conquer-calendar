@@ -297,7 +297,7 @@ class ReservaAdmin(admin.ModelAdmin):
         'nombre_invitado', 'email_invitado', 'event_type', 'host',
         'inicio_utc', 'estado', 'google_sync_estado',
         'col_meta', 'col_tiktok', 'col_google', 'col_ac',
-        'col_respondio', 'col_crm', 'col_supabase',
+        'col_respondio', 'col_crm', 'col_onboarding', 'col_supabase',
         'fecha_creacion',
     )
     list_filter = ('estado', 'google_sync_estado', 'event_type', 'host', 'fecha_creacion', 'tags')
@@ -328,7 +328,9 @@ class ReservaAdmin(admin.ModelAdmin):
     col_google = _tag_check('sch_google_ads_done', 'sch_google_ads_failed', 'process_schedule_google_ads', 'Google', applies=lambda r: _sch_source(r) == 'googleads')
     col_ac = _tag_check('sch_activecampaign_done', 'sch_activecampaign_failed', 'process_schedule_activecampaign', 'AC', applies=lambda r: bool(r.email_invitado))
     col_respondio = _tag_check('sch_respondio_done', 'sch_respondio_failed', 'process_schedule_respondio', 'Respondio', applies=lambda r: bool(r.telefono_invitado))
-    col_crm = _tag_check('sch_crm_done', 'sch_crm_failed', 'process_schedule_crm', 'CRM', applies=lambda r: bool(r.event_type and r.event_type.notificar_crm))
+    # CRM: el destino depende de event_type.crm_destino. Cada columna aplica solo a su destino.
+    col_crm = _tag_check('sch_crm_done', 'sch_crm_failed', 'process_schedule_crm', 'CRM·Sched', applies=lambda r: bool(r.event_type and r.event_type.notificar_crm and r.event_type.crm_destino == 'schedule'))
+    col_onboarding = _tag_check('sch_onboarding_done', 'sch_onboarding_failed', 'process_onboarding_session', 'CRM·ONB', applies=lambda r: bool(r.event_type and r.event_type.notificar_crm and r.event_type.crm_destino == 'onboarding'))
     col_supabase = _tag_check('sch_supabase_done', 'sch_supabase_failed', 'process_schedule_supabase', 'SP')
 
     def _render_chips(self, obj):
@@ -339,6 +341,7 @@ class ReservaAdmin(admin.ModelAdmin):
             'sch_respondio_done': '#00C853',
             'sch_activecampaign_done': '#356AE6',
             'sch_crm_done': '#FF6F00',
+            'sch_onboarding_done': '#FF6F00',
             'sch_supabase_done': '#3ECF8E',
         }
         chips = []

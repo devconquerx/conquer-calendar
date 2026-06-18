@@ -156,7 +156,7 @@ def dispatch_schedule_tasks(reserva_id):
     from .conversions.services.utils import build_schedule_ctx
     from calendario.leads.services.utils import is_from_meta, is_from_tiktok, is_from_google
 
-    reserva = Reserva.objects.prefetch_related('tags').get(pk=reserva_id)
+    reserva = Reserva.objects.select_related('event_type').prefetch_related('tags').get(pk=reserva_id)
 
     # Guard: evita doble despacho
     if 'sch_tasks_dispatched' in set(reserva.tags.names()):
@@ -195,10 +195,17 @@ def dispatch_schedule_tasks(reserva_id):
     if s.lead_phone_number:
         process_schedule_respondio.delay(reserva_id)
 
-    # CRM: enviamos a OnboardingSession con NUESTRO endpoint (no el de Schedule de
-    # Andres, que queda en el código pero ya no se despacha).
-    process_onboarding_session.delay(reserva_id)
-    reserva.tags.add('sch_onboarding_dispatched')
+    # CRM: el destino depende del tipo de evento (EventType.crm_destino):
+    #   'schedule'   → tabla Schedules del CRM (llamada de venta) vía process_schedule_crm
+    #   'onboarding' → tabla OnboardingSession (default) vía process_onboarding_session
+    # El gate notificar_crm lo revisa cada task internamente.
+    et = reserva.event_type
+    if et and et.crm_destino == 'schedule':
+        process_schedule_crm.delay(reserva_id)
+        reserva.tags.add('sch_crm_dispatched')
+    else:
+        process_onboarding_session.delay(reserva_id)
+        reserva.tags.add('sch_onboarding_dispatched')
 
     logger.info('Reserva %s: dispatched processing tasks', reserva_id)
 
@@ -217,6 +224,7 @@ def sweep_incomplete_reservas():
     reservas = (
         Reserva.objects
         .filter(fecha_creacion__gte=cutoff_old, fecha_creacion__lte=cutoff_recent)
+        .select_related('event_type')
         .prefetch_related('tags')
     )
 
@@ -257,12 +265,20 @@ def sweep_incomplete_reservas():
             process_schedule_respondio.delay(reserva.pk)
             requeued += 1
 
-        # CRM (OnboardingSession): re-encola si no se completó/falló/despachó.
-        if ('sch_onboarding_done' not in tag_names and 'sch_onboarding_failed' not in tag_names
-                and 'sch_onboarding_dispatched' not in tag_names):
-            process_onboarding_session.delay(reserva.pk)
-            reserva.tags.add('sch_onboarding_dispatched')
-            requeued += 1
+        # CRM: el destino (schedule vs onboarding) depende del EventType.crm_destino.
+        et = reserva.event_type
+        if et and et.crm_destino == 'schedule':
+            if ('sch_crm_done' not in tag_names and 'sch_crm_failed' not in tag_names
+                    and 'sch_crm_dispatched' not in tag_names):
+                process_schedule_crm.delay(reserva.pk)
+                reserva.tags.add('sch_crm_dispatched')
+                requeued += 1
+        else:
+            if ('sch_onboarding_done' not in tag_names and 'sch_onboarding_failed' not in tag_names
+                    and 'sch_onboarding_dispatched' not in tag_names):
+                process_onboarding_session.delay(reserva.pk)
+                reserva.tags.add('sch_onboarding_dispatched')
+                requeued += 1
 
     logger.info('[Sweep] Checked reservas since %s, requeued %d tasks', cutoff_old, requeued)
     return requeued
