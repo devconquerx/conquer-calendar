@@ -129,7 +129,7 @@ def _tag_col(done_tag, failed_tag, short_description, gated_setting=None):
 class PrellamadaAdmin(admin.ModelAdmin):
     list_display = (
         'nombre', 'email', 'resultado', 'score', 'event_type', 'reserva',
-        'col_supabase', 'col_crm', 'creado_en',
+        'col_supabase', 'col_crm', 'col_respondio', 'creado_en',
     )
     list_filter = ('resultado', 'funnel', 'creado_en', 'tags')
     search_fields = ('nombre', 'email', 'telefono', 'token', 'journey_id', 'event_id')
@@ -146,6 +146,7 @@ class PrellamadaAdmin(admin.ModelAdmin):
 
     col_supabase = _tag_col('supabase_done', 'supabase_failed', 'Supabase')
     col_crm = _tag_col('crm_done', 'crm_failed', 'CRM', gated_setting='CRM_INGEST_ENABLED')
+    col_respondio = _tag_col('respondio_done', 'respondio_failed', 'Respondio')
     formfield_overrides = {
         models.JSONField: {'widget': JSONEditorWidget},
     }

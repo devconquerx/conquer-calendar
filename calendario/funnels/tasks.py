@@ -49,6 +49,21 @@ def process_pre_schedule_supabase(self, prellamada_id):
     logger.info('Prellamada %s: supabase_done', prellamada_id)
 
 
+@shared_task(**RETRY_POLICY)
+def process_pre_schedule_respondio(self, prellamada_id):
+    """Asegura el contacto en Respond.io y le pone las etiquetas de pre-schedule
+    (`preschedule-<ABBR>`, `send-to-respond`). Task independiente: un fallo aquí
+    no afecta el envío operativo al CRM. Se aplica una sola vez (no se reencola en
+    cada update; las etiquetas de escuela no cambian con las respuestas)."""
+    from .models import Prellamada
+    from . import respondio_preschedule
+
+    prellamada = Prellamada.objects.select_related('funnel').get(pk=prellamada_id)
+    respondio_preschedule.push_pre_schedule(prellamada)
+    prellamada.tags.add('respondio_done')
+    logger.info('Prellamada %s: respondio_done', prellamada_id)
+
+
 # ---------------------------------------------------------------------------
 # Sweep — red de seguridad: reencola los envíos que no completaron.
 # Una prellamada está pendiente para un destino si no tiene `<dest>_done` ni
@@ -57,8 +72,8 @@ def process_pre_schedule_supabase(self, prellamada_id):
 
 @shared_task
 def sweep_incomplete_prellamadas():
-    """Reencola CRM/Supabase para prellamadas de las últimas 24 h (creadas hace
-    > 2 min) que no tengan su tag `<dest>_done` ni `<dest>_failed`."""
+    """Reencola CRM/Supabase/Respond.io para prellamadas de las últimas 24 h
+    (creadas hace > 2 min) que no tengan su tag `<dest>_done` ni `<dest>_failed`."""
     from .models import Prellamada
 
     now = timezone.now()
@@ -82,6 +97,11 @@ def sweep_incomplete_prellamadas():
 
         if crm_on and 'crm_done' not in names and 'crm_failed' not in names:
             process_pre_schedule_crm.delay(p.pk)
+            requeued += 1
+
+        # Respond.io (WhatsApp): solo prellamadas con teléfono.
+        if p.telefono and 'respondio_done' not in names and 'respondio_failed' not in names:
+            process_pre_schedule_respondio.delay(p.pk)
             requeued += 1
 
     logger.info('[Sweep] Prellamadas revisadas desde %s, re-encoladas %d', cutoff_old, requeued)

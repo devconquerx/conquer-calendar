@@ -18,8 +18,17 @@ def on_prellamada_saved(sender, instance, created, **kwargs):
 
     En un update reseteamos los tags de estado a 'pendiente' antes de reencolar:
     así, si el envío de ESE update falla, la prellamada queda sin `<dest>_done` y
-    el sweep la agarra (no solo las nunca sincronizadas)."""
-    from .tasks import process_pre_schedule_crm, process_pre_schedule_supabase
+    el sweep la agarra (no solo las nunca sincronizadas).
+
+    Respond.io es la excepción: sus etiquetas de pre-schedule (`preschedule-<ABBR>`)
+    se aplican UNA sola vez (no cambian con las respuestas del formulario), así que
+    no se resetea ni se reencola en cada update — solo se despacha si aún no se
+    aplicó/falló y hay teléfono (es WhatsApp)."""
+    from .tasks import (
+        process_pre_schedule_crm,
+        process_pre_schedule_supabase,
+        process_pre_schedule_respondio,
+    )
 
     if not created:
         instance.tags.remove('supabase_done', 'supabase_failed', 'crm_done', 'crm_failed')
@@ -29,3 +38,14 @@ def on_prellamada_saved(sender, instance, created, **kwargs):
             task.delay(instance.pk)
         except Exception:
             logger.exception('No se pudo encolar %s para prellamada %s', task.name, instance.pk)
+
+    if instance.telefono:
+        names = set(instance.tags.names())
+        if 'respondio_done' not in names and 'respondio_failed' not in names:
+            try:
+                process_pre_schedule_respondio.delay(instance.pk)
+            except Exception:
+                logger.exception(
+                    'No se pudo encolar %s para prellamada %s',
+                    process_pre_schedule_respondio.name, instance.pk,
+                )

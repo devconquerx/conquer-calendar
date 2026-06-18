@@ -42,6 +42,7 @@ TASK_FAILURE_TAGS = {
     'calendario.bookings.tasks.process_schedule_supabase': ('bookings.Reserva', 'sch_supabase_failed'),
     'calendario.funnels.tasks.process_pre_schedule_supabase': ('funnels.Prellamada', 'supabase_failed'),
     'calendario.funnels.tasks.process_pre_schedule_crm': ('funnels.Prellamada', 'crm_failed'),
+    'calendario.funnels.tasks.process_pre_schedule_respondio': ('funnels.Prellamada', 'respondio_failed'),
 }
 
 
