@@ -213,7 +213,7 @@ export default function LandingForm({ program, region, formConfig, school, nextU
       name: trimmedName,
       email: trimmedEmail,
       escuela: school?.slug || '',
-      funnel: formConfig?.key || funnelSlug || '',
+      funnel: funnelSlug,
       last_name: honeypotRef.current?.value || '',
     }
 
