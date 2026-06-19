@@ -5,6 +5,7 @@
 import paperboardTexture from '../assets/img/cb/paperboard-texture.avif'
 import cardBackground from '../assets/img/cb/card-background.png'
 import instructorMask from '../assets/img/cb/instructor-mask-right.svg'
+import instructorMaskBottom from '../assets/img/cb/instructor-mask-bottom.svg'
 // Activos neutros de la página de vídeo (papel rasgado crema + retícula oscura);
 // son monocromos y se comparten con Conquer Blocks.
 import tornTransition from '../assets/img/cb/torn-transition.png'
@@ -239,6 +240,7 @@ export default {
     pixels: { deco: pixelDeco, deco2: pixelDeco2, sm7: pixelDeco, lg8: pixelDeco2, pxLg8, pxSm7 },
     bulletIcons: [bulletReloj, bulletEscribir, bulletDocumento],
     instructorMask,
+    instructorMaskBottom, // borde pixelado abajo (móvil); el derecho es para desktop
     instructorPhoto,
   },
 
