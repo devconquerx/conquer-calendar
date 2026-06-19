@@ -68,8 +68,10 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
   const instructorPhoto = assets?.instructorPhoto || instructor?.imageUrl
   // Borde pixelado: en móvil la tarjeta se apila (imagen arriba), así que el
   // borde va ABAJO; en desktop (md+) va a la DERECHA. Si el tema trae la máscara
-  // inferior, se cambia por CSS var (clase `md:[--imask:...]` en la imagen); si
-  // no, usa siempre la derecha. El volteo está dentro del propio SVG.
+  // inferior, `--imask` se conmuta por clases (`[--imask:bottom] md:[--imask:right]`
+  // en la imagen): se hace por CLASE y NO inline, porque un estilo inline ganaría
+  // siempre y el breakpoint md no podría sobreescribirlo. El volteo está dentro
+  // del propio SVG.
   const maskRight = assets?.instructorMask ? `url(${assets.instructorMask})` : undefined
   const maskBottom = assets?.instructorMaskBottom ? `url(${assets.instructorMaskBottom})` : undefined
   const pixelMaskStyle = maskRight ? {
@@ -80,7 +82,6 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
     ...(maskBottom ? {
       '--imask-right': maskRight,
       '--imask-bottom': maskBottom,
-      '--imask': 'var(--imask-bottom)',
       WebkitMaskImage: 'var(--imask)',
       maskImage: 'var(--imask)',
     } : { WebkitMaskImage: maskRight, maskImage: maskRight }),
@@ -149,7 +150,7 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
                 <img
                   src={instructorPhoto}
                   alt={instructor.name}
-                  className="w-full h-full object-cover object-top bg-black md:[--imask:var(--imask-right)]"
+                  className="w-full h-full object-cover object-top bg-black [--imask:var(--imask-bottom)] md:[--imask:var(--imask-right)]"
                   style={pixelMaskStyle}
                 />
               )}
