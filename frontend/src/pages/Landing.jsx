@@ -176,7 +176,7 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
           </p>
         )}
         <div className="border-t border-[#404040] my-6" />
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm font-light text-cb-ink2 leading-tight">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-light text-cb-ink2 leading-tight">
           <p className="text-center md:text-left">
             {footer.copyrightBrand || 'Conquer'} {new Date().getFullYear()} &reg; | ConquerX LLC | 16192 Coastal Highway, Lewes 19958, Delaware, USA
           </p>
