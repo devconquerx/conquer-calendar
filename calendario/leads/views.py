@@ -81,6 +81,15 @@ def register_lead(request):
     if 'url' in data and 'page_url' not in data:
         data['page_url'] = data['url']
 
+    # Normalizar el funnel a su slug canónico: si llega el `key` del FunnelForm
+    # (p.ej. 'LegalEu'), guardamos el slug ('legal-eu') para que el CRM y el
+    # resto de integraciones reciban siempre el slug, sin depender del frontend.
+    if data.get('funnel'):
+        from calendario.funnels.models import FunnelForm
+        ff = FunnelForm.objects.filter(key=data['funnel']).only('slug').first()
+        if ff and ff.slug:
+            data['funnel'] = ff.slug
+
     fields = {}
     for field in DIRECT_FIELDS:
         if field in data and data[field]:
