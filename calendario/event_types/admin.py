@@ -7,13 +7,13 @@ from .models import EventType, EventTypeXHost
 
 @admin.register(EventType)
 class EventTypeAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'host', 'duracion_minutos', 'slug_equipo', 'activo', 'notificar_crm', 'crm_destino', 'fecha_actualizacion')
-    list_filter = ('activo', 'notificar_crm', 'crm_destino')
+    list_display = ('nombre', 'host', 'duracion_minutos', 'slug_equipo', 'activo', 'crm_destino', 'fecha_actualizacion')
+    list_filter = ('activo', 'crm_destino')
     search_fields = ('nombre', 'host__username', 'host__email')
     readonly_fields = ('id',)
     fields = ('id', 'host', 'nombre', 'slug', 'slug_equipo', 'descripcion', 'duracion_minutos',
               'buffer_antes_minutos', 'buffer_despues_minutos', 'aviso_minimo_minutos',
-              'aviso_maximo_dias', 'precio', 'activo', 'notificar_crm', 'crm_destino', 'formato_titulo_gcal')
+              'aviso_maximo_dias', 'precio', 'activo', 'crm_destino', 'formato_titulo_gcal')
     inlines = [ConfigCorreoEventoInline]
 
 

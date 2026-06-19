@@ -72,11 +72,11 @@ class EventTypeForm(forms.ModelForm):
             'incremento_inicio_minutos',
             'buffer_antes_minutos', 'buffer_despues_minutos',
             'aviso_minimo_minutos', 'aviso_maximo_dias', 'activo',
-            'notificar_crm', 'unico_por_invitado',
+            'crm_destino', 'unico_por_invitado',
         ]
         widgets = {'descripcion': forms.Textarea(attrs={'rows': 3})}
         labels = {
-            'notificar_crm': 'Notificar al CRM',
+            'crm_destino': 'Destino en el CRM',
             'unico_por_invitado': 'Solo una reserva por invitado',
         }
 

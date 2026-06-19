@@ -207,19 +207,22 @@
             </div>
             <!--end::Row aviso + rango + activo-->
 
-            <!--begin::Notificar CRM-->
+            <!--begin::Destino CRM-->
             <div class="d-flex align-items-start gap-4 mb-7">
-                <div class="form-check form-check-custom form-check-solid form-check-lg mt-1">
-                    <input class="form-check-input" type="checkbox" name="notificar_crm" id="notificar_crm"
-                           {% if form.notificar_crm.value %}checked{% endif %} />
-                    <label class="form-check-label fw-semibold ms-3" for="notificar_crm">Notificar al CRM</label>
+                <div style="min-width: 220px;">
+                    <label class="form-label fw-semibold" for="crm_destino">Destino en el CRM</label>
+                    <select class="form-select" name="crm_destino" id="crm_destino">
+                        <option value="none" {% if not form.crm_destino.value or form.crm_destino.value == 'none' %}selected{% endif %}>No enviar al CRM</option>
+                        <option value="onboarding" {% if form.crm_destino.value == 'onboarding' %}selected{% endif %}>Onboarding</option>
+                        <option value="schedule" {% if form.crm_destino.value == 'schedule' %}selected{% endif %}>Schedule (llamada)</option>
+                    </select>
                 </div>
-                <div class="text-muted fs-7" style="max-width: 480px;">
-                    Cuando se agende una reserva de este tipo de evento, se enviará una
-                    notificación al CRM para crear automáticamente la sesión de onboarding.
+                <div class="text-muted fs-7 mt-8" style="max-width: 480px;">
+                    A qué tabla del CRM se envía la reserva al agendarse.
+                    <b>Schedule</b> además dispara las conversiones (redes, ActiveCampaign, Respond.io).
                 </div>
             </div>
-            <!--end::Notificar CRM-->
+            <!--end::Destino CRM-->
 
             <!--begin::Único por invitado-->
             <div class="d-flex align-items-start gap-4 mb-7">

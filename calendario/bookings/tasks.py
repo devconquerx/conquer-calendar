@@ -86,11 +86,11 @@ def process_schedule_respondio(self, reserva_id):
 
 @shared_task(**RETRY_POLICY)
 def process_schedule_crm(self, reserva_id):
-    """Envía la Reserva al CRM ingest. Doble gate:
+    """Envía la Reserva al CRM ingest (tabla Schedules). Doble gate:
     1. CRM_INGEST_ENABLED (interruptor global).
-    2. EventType.notificar_crm: solo se envían las reservas cuyo tipo de evento
-       está marcado como "Notificar al CRM" (la casilla de las llamadas de
-       venta). El resto (tutorías, team calls, internos) no va al CRM.
+    2. EventType.crm_destino == 'schedule': solo las reservas cuyo tipo de evento
+       tiene el destino del CRM en 'Schedule' (la llamada de venta). El resto
+       (onboarding, no enviar) no va por acá.
     Mientras no aplique hace no-op (el sweep no reintenta: sch_crm_dispatched ya
     está puesto en el dispatch)."""
     if not settings.CRM_INGEST_ENABLED:
@@ -101,8 +101,8 @@ def process_schedule_crm(self, reserva_id):
     from .conversions.services import crm
 
     reserva = Reserva.objects.select_related('event_type').get(pk=reserva_id)
-    if not (reserva.event_type and reserva.event_type.notificar_crm):
-        logger.info('Reserva %s: CRM send SKIPPED (event_type sin "Notificar al CRM")', reserva_id)
+    if not (reserva.event_type and reserva.event_type.crm_destino == 'schedule'):
+        logger.info('Reserva %s: CRM send SKIPPED (crm_destino != schedule)', reserva_id)
         reserva.tags.add('sch_crm_skipped')
         return
 
@@ -113,12 +113,11 @@ def process_schedule_crm(self, reserva_id):
 
 @shared_task(**RETRY_POLICY)
 def process_onboarding_session(self, reserva_id):
-    """Envía la Reserva al CRM como OnboardingSession (nuestro endpoint, en lugar del
-    de Schedule de Andres). Mismo doble gate:
+    """Envía la Reserva al CRM como OnboardingSession. Doble gate:
     1. CRM_INGEST_ENABLED (interruptor global).
-    2. EventType.notificar_crm: solo las reservas marcadas para el CRM.
-    El código de `process_schedule_crm` (Andres) se mantiene intacto pero ya no se
-    despacha; este es el método que usamos ahora."""
+    2. EventType.crm_destino == 'onboarding': solo las reservas cuyo tipo de evento
+       tiene el destino del CRM en 'Onboarding'. El resto (schedule, no enviar) no
+       va por acá."""
     if not settings.CRM_INGEST_ENABLED:
         logger.info('Reserva %s: ONB send SKIPPED (CRM_INGEST_ENABLED=False)', reserva_id)
         return
@@ -127,8 +126,8 @@ def process_onboarding_session(self, reserva_id):
     from .conversions.services import onboarding
 
     reserva = Reserva.objects.select_related('event_type').get(pk=reserva_id)
-    if not (reserva.event_type and reserva.event_type.notificar_crm):
-        logger.info('Reserva %s: ONB send SKIPPED (event_type sin "Notificar al CRM")', reserva_id)
+    if not (reserva.event_type and reserva.event_type.crm_destino == 'onboarding'):
+        logger.info('Reserva %s: ONB send SKIPPED (crm_destino != onboarding)', reserva_id)
         reserva.tags.add('sch_onboarding_skipped')
         return
 
@@ -203,14 +202,14 @@ def dispatch_schedule_tasks(reserva_id):
         if s.lead_phone_number:
             process_schedule_respondio.delay(reserva_id)
 
-    # CRM: el destino depende del tipo de evento (EventType.crm_destino):
-    #   'schedule'   → tabla Schedules del CRM (llamada de venta) vía process_schedule_crm
-    #   'onboarding' → tabla OnboardingSession (default) vía process_onboarding_session
-    # El gate notificar_crm lo revisa cada task internamente.
+    # CRM: el destino lo decide EventType.crm_destino:
+    #   'schedule'   → tabla Schedules del CRM (+ conversiones, despachadas arriba)
+    #   'onboarding' → tabla OnboardingSession
+    #   'none'       → no se envía al CRM
     if is_schedule:
         process_schedule_crm.delay(reserva_id)
         reserva.tags.add('sch_crm_dispatched')
-    else:
+    elif et and et.crm_destino == 'onboarding':
         process_onboarding_session.delay(reserva_id)
         reserva.tags.add('sch_onboarding_dispatched')
 
@@ -278,14 +277,14 @@ def sweep_incomplete_reservas():
                 process_schedule_respondio.delay(reserva.pk)
                 requeued += 1
 
-        # CRM: el destino (schedule vs onboarding) depende del EventType.crm_destino.
+        # CRM: el destino lo decide EventType.crm_destino (schedule / onboarding / none).
         if is_schedule:
             if ('sch_crm_done' not in tag_names and 'sch_crm_failed' not in tag_names
                     and 'sch_crm_dispatched' not in tag_names):
                 process_schedule_crm.delay(reserva.pk)
                 reserva.tags.add('sch_crm_dispatched')
                 requeued += 1
-        else:
+        elif et and et.crm_destino == 'onboarding':
             if ('sch_onboarding_done' not in tag_names and 'sch_onboarding_failed' not in tag_names
                     and 'sch_onboarding_dispatched' not in tag_names):
                 process_onboarding_session.delay(reserva.pk)

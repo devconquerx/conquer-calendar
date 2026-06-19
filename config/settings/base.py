@@ -257,8 +257,8 @@ FUNNEL_BASE_PATHS = env.list('CALENDARIO_FUNNEL_BASE_PATHS', default=['/preview'
 
 # ──────────────────────────────────────────────────────────────────────
 # Tracking / conversiones (lead + schedule). Todas las claves tienen
-# default '' → si faltan, cada integración hace no-op y loguea (igual que
-# notificar_crm). El flujo de lead/booking nunca se rompe por falta de claves.
+# default '' → si faltan, cada integración hace no-op y loguea. El flujo de
+# lead/booking nunca se rompe por falta de claves.
 # ──────────────────────────────────────────────────────────────────────
 META_ACCESS_TOKEN = env.str('META_ACCESS_TOKEN', default='')
 ACTIVECAMPAIGN_API_URL = env.str('ACTIVECAMPAIGN_API_URL', default='')

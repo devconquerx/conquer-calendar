@@ -329,8 +329,8 @@ class ReservaAdmin(admin.ModelAdmin):
     col_ac = _tag_check('sch_activecampaign_done', 'sch_activecampaign_failed', 'process_schedule_activecampaign', 'AC', applies=lambda r: bool(r.email_invitado))
     col_respondio = _tag_check('sch_respondio_done', 'sch_respondio_failed', 'process_schedule_respondio', 'Respondio', applies=lambda r: bool(r.telefono_invitado))
     # CRM: el destino depende de event_type.crm_destino. Cada columna aplica solo a su destino.
-    col_crm = _tag_check('sch_crm_done', 'sch_crm_failed', 'process_schedule_crm', 'CRM·Sched', applies=lambda r: bool(r.event_type and r.event_type.notificar_crm and r.event_type.crm_destino == 'schedule'))
-    col_onboarding = _tag_check('sch_onboarding_done', 'sch_onboarding_failed', 'process_onboarding_session', 'CRM·ONB', applies=lambda r: bool(r.event_type and r.event_type.notificar_crm and r.event_type.crm_destino == 'onboarding'))
+    col_crm = _tag_check('sch_crm_done', 'sch_crm_failed', 'process_schedule_crm', 'CRM·Sched', applies=lambda r: bool(r.event_type and r.event_type.crm_destino == 'schedule'))
+    col_onboarding = _tag_check('sch_onboarding_done', 'sch_onboarding_failed', 'process_onboarding_session', 'CRM·ONB', applies=lambda r: bool(r.event_type and r.event_type.crm_destino == 'onboarding'))
     col_supabase = _tag_check('sch_supabase_done', 'sch_supabase_failed', 'process_schedule_supabase', 'SP')
 
     def _render_chips(self, obj):
