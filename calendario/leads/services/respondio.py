@@ -66,6 +66,11 @@ def _ensure_contact(email, first_name=None, phone=None, country_code=None):
 
     resp = requests.post(f'{API_BASE}/contact/email:{email}', json=body, headers=hdrs, timeout=10)
     if resp.status_code in (200, 201):
+        # Respond.io necesita unos segundos tras crear el contacto antes de poder
+        # aplicarle etiquetas/custom fields; si se taggea de inmediato la etiqueta
+        # se pierde (mismo comportamiento conocido en Make). Por eso el sleep va
+        # aquí, antes de devolver, y no después del POST de tags en cada caller.
+        time.sleep(2)
         return f'email:{email}', True
 
     logger.warning(f'[Respond.io] Create contact failed: {resp.status_code} {resp.text[:200]}')
@@ -97,7 +102,7 @@ def push_lead(lead):
     first_name = lead.full_name.split()[0] if lead.full_name else None
 
     try:
-        identifier, was_created = _ensure_contact(
+        identifier, _ = _ensure_contact(
             email=lead.email,
             first_name=first_name,
             phone=phone,
@@ -128,9 +133,6 @@ def push_lead(lead):
             headers=hdrs,
             timeout=10,
         )
-
-        if was_created:
-            time.sleep(2)
 
         logger.info(f'[Respond.io] Lead {lead.pk} synced to {identifier}')
 

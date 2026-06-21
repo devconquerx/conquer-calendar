@@ -1,5 +1,4 @@
 import logging
-import time
 
 import requests
 from django.conf import settings
@@ -52,7 +51,7 @@ def push_schedule(reserva):
     first_name = s.lead_name.split()[0] if s.lead_name and s.lead_name.strip() else ''
 
     try:
-        identifier, was_created = _ensure_contact(
+        identifier, _ = _ensure_contact(
             email=email,
             first_name=first_name or None,
             phone=s.lead_phone_number,
@@ -103,9 +102,6 @@ def push_schedule(reserva):
             headers=hdrs,
             timeout=10,
         )
-
-        if was_created:
-            time.sleep(2)
 
         logger.info('[Respond.io] Reserva %s synced to %s', reserva.pk, identifier)
 

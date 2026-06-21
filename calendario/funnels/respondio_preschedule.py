@@ -10,7 +10,6 @@ schedule-not-show, etc.) NO se mueven aquí: dependen de acciones del setter sob
 un registro ya creado y siguen viviendo en el CRM.
 """
 import logging
-import time
 
 import requests
 from django.conf import settings
@@ -53,7 +52,7 @@ def push_pre_schedule(prellamada):
     phone = prellamada.telefono or None
 
     try:
-        identifier, was_created = _ensure_contact(
+        identifier, _ = _ensure_contact(
             email=email,
             first_name=first_name,
             phone=phone,
@@ -68,9 +67,6 @@ def push_pre_schedule(prellamada):
             headers=_headers(),
             timeout=10,
         )
-
-        if was_created:
-            time.sleep(2)
 
         logger.info(
             '[Respond.io] Prellamada %s synced to %s (preschedule-%s)',
