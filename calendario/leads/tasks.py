@@ -157,9 +157,11 @@ def dispatch_lead_tasks(lead_id):
         process_tiktok_events.delay(lead_id)
     if is_from_google(lead):
         process_google_ads.delay(lead_id)
-    if lead.lead_phone:
-        process_respondio.delay(lead_id)
+    # Respond.io: las etiquetas de lead (lead-<ABBR>, <ABBR>, región) se asignan
+    # al crear el lead, tenga teléfono o no. Si llega sin teléfono, el contacto se
+    # crea por email y el número se reconcilia luego (prellamada/reserva).
     if lead.email:
+        process_respondio.delay(lead_id)
         process_activecampaign.delay(lead_id)
         process_neverbounce.delay(lead_id)
 
@@ -206,7 +208,7 @@ def sweep_incomplete_leads():
             process_google_ads.delay(lead.pk)
             requeued += 1
 
-        if lead.lead_phone and 'respondio_done' not in tag_names and 'respondio_failed' not in tag_names:
+        if lead.email and 'respondio_done' not in tag_names and 'respondio_failed' not in tag_names:
             process_respondio.delay(lead.pk)
             requeued += 1
 

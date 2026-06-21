@@ -23,16 +23,36 @@ def _ensure_contact(email, first_name=None, phone=None, country_code=None):
     """Check if contact exists, create if not. Returns (identifier, was_created)."""
     hdrs = _headers()
 
+    def _reconcile(identifier):
+        # El contacto ya existe: completar phone/countryCode que pudieran faltar.
+        # El contacto puede haber nacido en la etapa de lead (sin teléfono) y este
+        # llega después con la prellamada/reserva; sin esto quedaría sin número y
+        # no se le podría enviar WhatsApp.
+        patch = {}
+        if phone:
+            patch['phone'] = phone
+        if country_code and country_code != 'Número inválido':
+            patch['countryCode'] = country_code
+        if patch:
+            try:
+                requests.put(f'{API_BASE}/contact/{identifier}', json=patch, headers=hdrs, timeout=10)
+            except Exception as e:
+                logger.warning(f'[Respond.io] No se pudo reconciliar phone/country para {email}: {e}')
+
     resp = requests.get(f'{API_BASE}/contact/email:{email}', headers=hdrs, timeout=10)
     if resp.status_code == 200:
-        return f'email:{email}', False
+        identifier = f'email:{email}'
+        _reconcile(identifier)
+        return identifier, False
 
     if resp.status_code == 404:
         try:
             data = resp.json()
             primary_id = data.get('primaryId')
             if primary_id:
-                return f'id:{primary_id}', False
+                identifier = f'id:{primary_id}'
+                _reconcile(identifier)
+                return identifier, False
         except Exception as e:
             logger.warning(f'[Respond.io] Error parsing 404 response for {email}: {e}')
 
