@@ -289,28 +289,14 @@ function PaperboardConfirmation({ theme, assets }) {
           </p>
           <div className="max-w-[1024px] mx-auto">
             <VideoFrame frame={c.videoFrame} accent={theme.accent} borderColor={c.videoBorderColor} glow={c.videoGlow}>
-              {/* Si la URL es un MP4 directo (CDN) usamos <video> nativo —
-                  compatible con todos los navegadores; si no, el embed en iframe. */}
-              {/\.mp4(\?|$)/i.test(c.paso1Video) ? (
-                <video
-                  src={c.paso1Video}
-                  className="w-full h-full relative z-0 bg-black"
-                  controls
-                  playsInline
-                  preload="metadata"
-                  poster={c.paso1Poster}
-                  title="Paso 1"
-                />
-              ) : (
-                <iframe
-                  src={c.paso1Video}
-                  className="w-full h-full relative z-0"
-                  allow="autoplay; fullscreen; picture-in-picture"
-                  allowFullScreen
-                  title="Paso 1"
-                  style={{ border: 'none' }}
-                />
-              )}
+              <iframe
+                src={c.paso1Video}
+                className="w-full h-full relative z-0"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                title="Paso 1"
+                style={{ border: 'none' }}
+              />
             </VideoFrame>
           </div>
         </div>
