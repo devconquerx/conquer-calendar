@@ -153,8 +153,7 @@ export default {
     paso1SectionPad: 'pt-6 pb-[72px] md:py-20 lg:py-28',
     paso1BadgeMb: 'mb-7 md:mb-8',
     paso1TextMb: 'mb-[62px] md:mb-12',
-    paso1Video:
-      'https://iframe.mediadelivery.net/embed/146448/b13e87cd-570a-4f6b-aba2-23f2bbdebd8e?autoplay=false&loop=false&muted=false&preload=true&responsive=true',
+    paso1Video: 'https://vslconquerx.b-cdn.net/Conquerlegal/RESPUESTA-2_1080p.mp4',
     videoFrame: null,
     paso2Badge: 'Paso 2 • Confirma tu cita',
     paso2BadgeIcon: null,
