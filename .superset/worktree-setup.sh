@@ -73,6 +73,9 @@ if docker info >/dev/null 2>&1; then
   echo "▶ Asegurando postgres del principal ($MAIN_PROJECT) en la red compartida…"
   docker compose -p "$MAIN_PROJECT" -f "$ROOT/local.yml" -f "$ROOT/superset.yml" up -d postgres >/dev/null 2>&1 || \
     echo "⚠️  No pude levantar el postgres del principal; asegúrate de tenerlo arriba antes de usar el worktree."
+  # Asegurar (idempotente) que el postgres del principal esté en la red compartida,
+  # aunque se haya levantado sin superset.yml (con local.yml pelado).
+  docker network connect conquercalendar-db "${MAIN_PROJECT}-postgres-1" --alias postgres >/dev/null 2>&1 || true
 else
   echo "⚠️  Docker no está corriendo; solo dejé los archivos listos."
 fi
