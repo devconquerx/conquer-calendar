@@ -77,6 +77,12 @@ GTM_CONFIG = {
         'loader_domain': 'load.somos.conquerfinance.com',
         'loader_path': '6mxiahxsef.js',
     },
+    'conquer-legal': {
+        'id': 'GTM-P3QS7P4F',
+        'st': 'P3QS7P4F',
+        'loader_domain': 'somos.conquerlegal.com',
+        'loader_path': 'lgxbqmtv.js',
+    },
 }
 
 # Alias sin guion (por si algún FunnelForm usa la forma de funnels).
@@ -84,6 +90,7 @@ GTM_CONFIG.update({
     'conquerblocks': GTM_CONFIG['conquer-blocks'],
     'conquerfinance': GTM_CONFIG['conquer-finance'],
     'conquerlanguages': GTM_CONFIG['conquer-languages'],
+    'conquerlegal': GTM_CONFIG['conquer-legal'],
 })
 
 
