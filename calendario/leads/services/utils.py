@@ -30,6 +30,7 @@ SCHOOL_CUSTOMER_GOOGLE = {
     'cl': '1164152552',
     'cf': '1192352539',
     'fi': '1192352539',
+    'cg': '1328896929',  # Conquer Legal
 }
 
 SCHOOL_CONVERSION_ACTIONS = {
@@ -37,6 +38,8 @@ SCHOOL_CONVERSION_ACTIONS = {
     'cl': {'registro-lead': 7478389619, 'llamada-agendada': 7478647338, 'venta': 7470199894},
     'cf': {'registro-lead': 7478395177, 'llamada-agendada': 7478652894, 'venta': 7470245510},
     'fi': {'registro-lead': 7478395177, 'llamada-agendada': 7478652894, 'venta': 7470245510},
+    # Conquer Legal: solo lead y schedule (la venta/reserva las envía el CRM).
+    'cg': {'registro-lead': 7658662713, 'llamada-agendada': 7658662719},
 }
 
 SCHOOL_NAMES = {
@@ -44,6 +47,7 @@ SCHOOL_NAMES = {
     'cl': 'Languages',
     'cf': 'Finance',
     'fi': 'Finance',
+    'cg': 'Legal',
 }
 
 SCHOOL_VIDEO_URLS = {
