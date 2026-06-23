@@ -70,6 +70,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'calendario.users.middleware.StripTrailingDotHostMiddleware',
     'calendario.funnels.middleware.AppBasePathMiddleware',
+    'calendario.funnels.middleware.FunnelPublicCoopMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
