@@ -30,6 +30,10 @@ import confTorn from '../assets/img/legal/confirmation/torn-transition.png'
 // de a la derecha, como producción). Forma neutra compartida con Conquer Blocks.
 import confMaskBottom from '../assets/img/cb/confirmation/instructor-mask-bottom.svg'
 import logo from '../assets/img/legal/logo.png'
+// Favicon de marca: mismo PNG que sirve conquerlegal.com ("Favicon - Conquer
+// Business"). Se inyecta en <head> en runtime para todas las etapas del funnel
+// de Legal (landing, vídeo, stepform, confirmación).
+import favicon from '../assets/img/legal/favicon.png'
 import bulletReloj from '../assets/img/legal/conquie-reloj2.svg'
 import bulletEscribir from '../assets/img/legal/conquie-escribir.svg'
 import bulletDocumento from '../assets/img/legal/conquie-documento1.svg'
@@ -47,6 +51,11 @@ const legalShadow =
 export default {
   id: 'conquerlegal',
   paperboard: true,
+
+  // Favicon de marca (mismo PNG que conquerlegal.com). FunnelApp lo inyecta en
+  // <head> en runtime para todas las etapas del funnel de Legal. Las demás
+  // escuelas no definen `favicon`, así que conservan el favicon por defecto.
+  favicon,
 
   // Acento de marca (azul). Mismos slots que conquerblocks.
   accent: {

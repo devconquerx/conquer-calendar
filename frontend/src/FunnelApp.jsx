@@ -1,8 +1,26 @@
+import { useEffect } from 'react'
 import { useRouter } from './lib/router'
+import { getTheme } from './themes'
 import Landing from './pages/Landing'
 import VideoPage from './pages/VideoPage'
 import Funnel from './Funnel'
 import Confirmation from './components/Confirmation'
+
+/* Aplica el favicon del tema (si lo define) a <head>. El shell del funnel no
+   trae <link rel="icon">, así que solo las escuelas con favicon propio —hoy
+   Conquer Legal— lo reciben; el resto conserva el favicon por defecto.
+   Reemplaza el link existente si lo hubiera (p.ej. el genérico del backend). */
+function applyFavicon(favicon) {
+  if (!favicon) return
+  let link = document.querySelector("link[rel~='icon']")
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'icon'
+    document.head.appendChild(link)
+  }
+  link.type = 'image/png'
+  link.href = favicon
+}
 
 /* Shell de la SPA del funnel: renderiza la etapa activa según el router.
    Todas las etapas comparten bundle, TrackingProvider y query string (el
@@ -10,6 +28,12 @@ import Confirmation from './components/Confirmation'
 export default function FunnelApp({ slug, escuela, region, program, formConfig, videoEnabled }) {
   const { stage } = useRouter()
   const school = { slug: escuela }
+
+  // El favicon depende de la escuela (no de la etapa): se aplica una vez para
+  // landing, vídeo, stepform y confirmación.
+  useEffect(() => {
+    applyFavicon(getTheme(escuela, slug).favicon)
+  }, [escuela, slug])
 
   if (stage === 'landing') {
     return (
