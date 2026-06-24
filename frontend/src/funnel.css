@@ -1,7 +1,28 @@
-/* @import url('https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300;400;500;600;700&display=swap'); */
+/* Funnel Display (cuerpo del calendario de reserva) — misma fuente que el
+   estándar page.html, para que el calendario del funnel comparta su línea. */
+@import url('https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300;400;500;600;700&display=swap');
 /* Montserrat para el CTA pixelado (800) y el badge "Vídeo de 15 minutos" (500),
    la sans geométrica que más se acerca a la "Termina" de producción */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap');
+
+/* Termina (títulos del calendario de reserva) — mismos .otf que sirve el backend
+   en page.html, empaquetados en el bundle para que el calendario del funnel use
+   EXACTAMENTE la misma tipografía de títulos que la página suelta del host. */
+@font-face {
+  font-family: 'Termina';
+  src: url('./assets/fonts/Termina-Regular.otf') format('opentype');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Termina';
+  src: url('./assets/fonts/Termina-Medium.otf') format('opentype');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Termina';
+  src: url('./assets/fonts/Termina-Bold.otf') format('opentype');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
 
 @tailwind base;
 @tailwind components;
@@ -239,13 +260,14 @@ body { background: #fff; }
 
 /* ── Booking layout (reutilizado del page.html) ─────────── */
 
-/* Tokens del calendario. Por defecto reproducen el look genérico (Calendly-like).
-   La variante .bk-paperboard los sobrescribe con los tokens del tema del funnel
-   (crema + textura + acento de marca) para que el calendario siga la misma línea
-   de diseño que la landing / vídeo / stepform. Nada fuera de .bk-paperboard
-   cambia respecto al diseño anterior. */
+/* Tokens del calendario. MISMA línea de diseño que el estándar (page.html, la
+   página suelta del host): fondo crema paperboard (#F5EDE3 + textura),
+   tipografías 'Funnel Display' (cuerpo) y 'Termina' (títulos), tarjeta blanca.
+   Lo único que sigue a la marca es el color de acento: los tokens lo consumen
+   desde las variables --theme-* que <Funnel> publica en :root (azul Legal /
+   naranja Blocks) con fallback al azul estándar (#0069ff) para funnels sin marca. */
 .bk-wrapper {
-  --bk-page-bg: #f0f2f5;
+  --bk-page-bg: #F5EDE3;
   --bk-card-bg: #fff;
   --bk-card-border: transparent;
   --bk-card-border-w: 0px;
@@ -254,14 +276,15 @@ body { background: #fff; }
   --bk-divider: #e2e5e9;
   --bk-text: #1a1a2e;
   --bk-muted: #8a8a8a;
-  --bk-accent: #0069ff;
-  --bk-accent-hover: #0052cc;
-  --bk-accent-light: #e8f0fe;
+  --bk-accent: var(--theme-accent, #0069ff);
+  --bk-accent-hover: var(--theme-accent-hover, #0052cc);
+  --bk-accent-light: var(--theme-accent-bg, #e8f0fe);
   --bk-sel-bg: var(--bk-accent);
   --bk-btn-bg: var(--bk-accent);
   --bk-btn-bg-hover: var(--bk-accent-hover);
   --bk-input-bg: #fff;
-  --bk-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --bk-font: 'Funnel Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --bk-font-heading: 'Termina', 'Funnel Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   min-height: 100vh;
   width: 100%;
@@ -271,40 +294,19 @@ body { background: #fff; }
   justify-content: center;
   padding: 32px 16px;
   font-family: var(--bk-font);
+  letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   color: var(--bk-text);
-  background: var(--bk-page-bg);
-}
-
-/* Variante "paperboard": el calendario adopta la línea de diseño del funnel.
-   Lee los tokens de marca que <Funnel> publica en :root (--theme-*). El acento
-   se adapta solo (azul Legal / naranja Blocks). */
-.bk-wrapper.bk-paperboard {
-  /* Mismo overlay translúcido que la tarjeta del StepForm (--theme-form-bg ≈ 60%):
-     deja translucir un poco la textura de papel del fondo. */
-  --bk-card-bg: linear-gradient(var(--theme-form-bg, rgba(255,255,255,.6)), var(--theme-form-bg, rgba(255,255,255,.6))), var(--theme-form-texture, none);
-  --bk-card-border: var(--theme-form-border, #BBB49B);
-  --bk-card-border-w: 1px;
-  --bk-card-shadow: var(--theme-form-shadow, 0 1px 12px rgba(0,0,0,.10));
-  --bk-card-radius: 16px;
-  --bk-divider: rgba(187,180,155,.55);
-  --bk-accent: var(--theme-accent, #0069ff);
-  --bk-accent-hover: var(--theme-accent-hover, #0052cc);
-  --bk-accent-light: var(--theme-accent-bg, #e8f0fe);
-  --bk-sel-bg: var(--theme-btn-gradient, var(--bk-accent));
-  --bk-btn-bg: var(--theme-btn-gradient, var(--bk-accent));
-  --bk-btn-bg-hover: var(--theme-btn-gradient, var(--bk-accent-hover));
-  --bk-input-bg: rgba(255,255,255,.8);
-
-  flex-direction: column;
-  gap: 22px;
-  background-color: var(--theme-page-bg, #F5EDE3);
-  background-image: var(--theme-form-texture, none);
+  background-color: var(--bk-page-bg);
+  background-image: url('./assets/img/cb/paperboard-texture.avif');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
-.bk-brand-logo { height: 39px; width: auto; display: block; flex-shrink: 0; }
+/* Toda la UI del calendario usa la fuente de cuerpo; los títulos la sobreescriben
+   con la de encabezados (Termina) por orden de cascada. Igual que page.html. */
+.bk-wrapper, .bk-wrapper * { font-family: var(--bk-font); }
 
 .bk-card {
   background: var(--bk-card-bg);
@@ -331,7 +333,7 @@ body { background: #fff; }
 }
 .bk-card.has-slots .bk-left { flex: 0 0 320px; }
 
-.bk-title   { font-size: 26px; font-weight: 700; color: var(--bk-text); margin: 0 0 16px; line-height: 1.25; letter-spacing: -0.02em; }
+.bk-title   { font-size: 26px; font-weight: 500; font-family: var(--bk-font-heading); color: var(--bk-text); margin: 0 0 16px; line-height: 1.25; letter-spacing: -0.02em; }
 .bk-meta    { display: flex; align-items: center; gap: 7px; color: var(--bk-muted); font-size: 15px; margin-bottom: 8px; }
 .bk-meta svg{ flex-shrink: 0; }
 .bk-desc    { color: #4a4a4a; font-size: 15px; line-height: 1.55; margin-top: 18px; flex: 1; }
@@ -345,7 +347,7 @@ body { background: #fff; }
 .bk-date-inner   { display: flex; gap: 0; flex: 1; min-height: 0; }
 .bk-cal-col      { flex: 1; min-width: 240px; display: flex; flex-direction: column; }
 .bk-card.has-slots .bk-cal-col { padding-right: 20px; padding-bottom: 32px; }
-.bk-step-title   { font-size: 18px; font-weight: 700; color: var(--bk-text); margin: 0 0 22px; letter-spacing: -0.01em; }
+.bk-step-title   { font-size: 18px; font-weight: 500; font-family: var(--bk-font-heading); color: var(--bk-text); margin: 0 0 22px; letter-spacing: -0.01em; }
 
 .bk-month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .bk-month-label { font-weight: 400; font-size: 15px; text-transform: capitalize; color: var(--bk-text); }
@@ -613,6 +615,10 @@ body { background: #fff; }
 }
 
 /* Reject screen */
+/* Logo de marca: la página de reserva ya no lo usa (diseño estandarizado), pero
+   la pantalla de rechazo sí lo muestra en su variante paperboard. */
+.bk-brand-logo { height: 39px; width: auto; display: block; flex-shrink: 0; }
+
 .reject-wrap {
   --rj-page-bg: var(--cal-bg);
   --rj-card-bg: #fff;

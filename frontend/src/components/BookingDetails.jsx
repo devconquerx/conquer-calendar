@@ -31,15 +31,10 @@ function LeftPanel({ eventoInfo }) {
   )
 }
 
-export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaToken, funnelSlug, escuela = '', theme, funnelFont, onBack, onBooked }) {
+export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaToken, funnelSlug, escuela = '', onBack, onBooked }) {
   const tracking = useTracking()
-  // Misma variante "paperboard" que <Calendar>: dentro del funnel adopta la
-  // línea de diseño de la marca; fuera conserva el look genérico.
-  const paperboard = !!theme?.paperboard
-  const brandLogo = theme?.assets?.logo
-  const wrapStyle = paperboard && funnelFont
-    ? { fontFamily: `'${funnelFont}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif` }
-    : undefined
+  // Diseño ÚNICO estandarizado (look Calendly) para todas las marcas. El color
+  // de acento sigue a la marca vía los tokens --theme-* que consume .bk-wrapper.
   const [nombre, setNombre] = useState(prefill?.nombre || '')
   const [email, setEmail] = useState(prefill?.email || '')
   const [telefono, setTelefono] = useState(prefill?.telefono || '')
@@ -96,8 +91,7 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
   }
 
   return (
-    <div className={`bk-wrapper${paperboard ? ' bk-paperboard' : ''}`} style={wrapStyle}>
-      {paperboard && brandLogo && <img className="bk-brand-logo" src={brandLogo} alt="" />}
+    <div className="bk-wrapper">
       <div className="bk-card">
         <LeftPanel eventoInfo={eventoInfo} />
 

@@ -103,16 +103,13 @@ function TzCombo({ tz, onChange, accent = '#0069ff' }) {
   )
 }
 
-export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSelected, theme, funnelFont }) {
-  // Variante "paperboard": cuando el calendario se muestra dentro de un funnel
-  // con tema de marca (Legal/Blocks), adopta su línea de diseño. Para el resto
-  // (tema default, uso suelto) conserva el look genérico actual.
-  const paperboard = !!theme?.paperboard
+export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSelected, theme }) {
+  // Diseño ÚNICO estandarizado para todas las marcas (look Calendly: tarjeta
+  // blanca, fondo gris). Lo único que sigue a la marca es el color de acento,
+  // que viaja por los tokens --theme-* publicados en :root y que .bk-wrapper
+  // consume con fallback genérico. Aquí solo lo leemos para el combo de zona
+  // horaria (highlight de la opción seleccionada).
   const accent = theme?.cssVars?.['--theme-accent'] || '#0069ff'
-  const brandLogo = theme?.assets?.logo
-  const wrapStyle = paperboard && funnelFont
-    ? { fontFamily: `'${funnelFont}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif` }
-    : undefined
   const [tz, setTz] = useState(detectTZ)
   const [mes, setMes] = useState(currentMonthStr)
   const [slotsData, setSlotsData] = useState(null)
@@ -164,8 +161,7 @@ export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSe
   const canNext = mesData?.mes_siguiente != null
 
   return (
-    <div className={`bk-wrapper${paperboard ? ' bk-paperboard' : ''}`} style={wrapStyle}>
-      {paperboard && brandLogo && <img className="bk-brand-logo" src={brandLogo} alt="" />}
+    <div className="bk-wrapper">
       <div className={`bk-card${selectedDate ? ' has-slots' : ''}`}>
 
         <LeftPanel eventoInfo={eventoInfo} />
