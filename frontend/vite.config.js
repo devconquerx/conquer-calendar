@@ -22,6 +22,10 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    // Django (django-vite) busca el dev server fijo en :5173. strictPort hace
+    // que Vite falle ruidosamente si 5173 está ocupado (p.ej. un Vite zombi) en
+    // vez de derivar a 5174/5175 en silencio y dejar a Django sin bundle.
+    strictPort: true,
     cors: true,
     origin: 'http://localhost:5173',
     hmr: {
