@@ -152,6 +152,16 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     const params = new URLSearchParams(window.location.search)
     params.set('event_id', tracking.eventId)
     params.set('journey_id', tracking.journeyId)
+    const etUrl = outcome?.evento_info?.confirmacion_tipo === 'url' && outcome?.evento_info?.confirmacion_url
+    if (etUrl) {
+      if (router) {
+        router.navigateRaw(etUrl, { search: `?${params.toString()}` })
+        return
+      }
+      const sep = etUrl.includes('?') ? '&' : '?'
+      window.location.href = `${etUrl}${sep}${params.toString()}`
+      return
+    }
     if (router) {
       router.navigate('confirmation', { search: `?${params.toString()}` })
       return
@@ -161,10 +171,9 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
       window.location.href = `${confirmationUrl}${sep}${params.toString()}`
       return
     }
-    // Fallback: render local si no hay router ni URL de confirmación.
     setPhase('confirmation')
     window.scrollTo({ top: 0, behavior: 'auto' })
-  }, [router, confirmationUrl, tracking.eventId, tracking.journeyId])
+  }, [router, confirmationUrl, tracking.eventId, tracking.journeyId, outcome])
 
   const submitResolver = async (finalRespuestas) => {
     setPhase('resolving')

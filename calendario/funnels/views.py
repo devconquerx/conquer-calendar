@@ -166,6 +166,8 @@ class ResolverView(View):
                 'duracion_minutos': event_type.duracion_minutos,
                 'descripcion': event_type.descripcion or '',
                 'precio': str(event_type.precio) if event_type.precio else None,
+                'confirmacion_tipo': event_type.confirmacion_tipo,
+                'confirmacion_url': event_type.confirmacion_url or '',
             }
 
         return JsonResponse({

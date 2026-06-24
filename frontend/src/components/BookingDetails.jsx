@@ -79,7 +79,11 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
             calendlyEventUuid: '',
             scheduleEventId: (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_schedule_event_id')) || '',
           })
-          window.location.href = apiUrl(`/r/${result.confirmacion_token}/`)
+          if (eventoInfo?.confirmacion_tipo === 'url' && eventoInfo?.confirmacion_url) {
+            window.location.href = eventoInfo.confirmacion_url
+          } else {
+            window.location.href = apiUrl(`/r/${result.confirmacion_token}/`)
+          }
         }
       } else {
         setError(result.mensaje || 'Error al crear la reserva. Inténtalo de nuevo.')

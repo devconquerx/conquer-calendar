@@ -20,6 +20,12 @@ from .models import Reserva
 from .services import calcular_slots, calcular_slots_cacheado, cancelar_reserva, crear_reserva, reemplazar_reserva
 
 
+def _redirect_confirmacion(event_type, reserva):
+    if event_type.confirmacion_tipo == 'url' and event_type.confirmacion_url:
+        return redirect(event_type.confirmacion_url)
+    return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
+
+
 def _enviar_correos_confirmacion(reserva_pk):
     """Envía correos de confirmación con la reserva ya refrescada de BD (google_event_id poblado)."""
     try:
@@ -261,7 +267,7 @@ class BookingFormView(View):
             form.add_error(None, str(e))
             return self._render_with_errors(request, host, event_type, form)
         transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
-        return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
+        return _redirect_confirmacion(event_type, reserva)
 
     def _render_with_errors(self, request, host, event_type, form, duplicado=None):
         inicio = form.cleaned_data.get('inicio_utc') if form.is_bound and form.cleaned_data else None
@@ -390,7 +396,7 @@ class TeamBookingFormView(View):
             form.add_error(None, str(e))
             return self._render_with_errors(request, event_type, form)
         transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
-        return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
+        return _redirect_confirmacion(event_type, reserva)
 
     def _render_with_errors(self, request, event_type, form, duplicado=None):
         inicio = form.cleaned_data.get('inicio_utc') if form.is_bound and form.cleaned_data else None
@@ -517,7 +523,7 @@ class ReemplazarPublicaView(View):
             return redirect('public_token:confirmacion', token=vieja.confirmacion_token)
 
         transaction.on_commit(lambda: _enviar_correos_confirmacion(nueva.pk))
-        return redirect('public_token:confirmacion', token=nueva.confirmacion_token)
+        return _redirect_confirmacion(vieja.event_type, nueva)
 
 
 # ── Enlace único de un solo uso ───────────────────────────────────────────────
@@ -617,7 +623,7 @@ class EnlaceUnicoFormView(View):
         enlace.save(update_fields=['usado', 'usado_en'])
 
         transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
-        return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
+        return _redirect_confirmacion(event_type, reserva)
 
     def _render_with_errors(self, request, enlace, event_type, form, duplicado=None):
         inicio = form.cleaned_data.get('inicio_utc') if form.is_bound and form.cleaned_data else None

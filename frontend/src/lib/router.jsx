@@ -50,6 +50,17 @@ export default function FunnelRouter({ initialStage, urls, children }) {
     [urls]
   )
 
+  const navigateRaw = useCallback(
+    (path, { search, stage: targetStage = 'confirmation' } = {}) => {
+      const qs = search !== undefined ? search : window.location.search || ''
+      window.history.pushState({ stage: targetStage }, '', `${path}${qs}`)
+      setStage(targetStage)
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      fireAllPageView()
+    },
+    []
+  )
+
   useEffect(() => {
     const onPop = () => {
       setStage(stageFromPath(window.location.pathname, urls, initialStage))
@@ -58,7 +69,7 @@ export default function FunnelRouter({ initialStage, urls, children }) {
     return () => window.removeEventListener('popstate', onPop)
   }, [urls, initialStage])
 
-  const value = useMemo(() => ({ stage, navigate, urls }), [stage, navigate, urls])
+  const value = useMemo(() => ({ stage, navigate, navigateRaw, urls }), [stage, navigate, navigateRaw, urls])
 
   return <RouterContext.Provider value={value}>{children}</RouterContext.Provider>
 }

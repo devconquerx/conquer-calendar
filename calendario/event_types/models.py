@@ -85,6 +85,25 @@ class EventType(models.Model):
         ),
     )
 
+    class ConfirmacionTipo(models.TextChoices):
+        DEFAULT = 'default', 'Página de confirmación'
+        URL = 'url', 'URL personalizada'
+
+    confirmacion_tipo = models.CharField(
+        max_length=10,
+        choices=ConfirmacionTipo.choices,
+        default=ConfirmacionTipo.DEFAULT,
+        verbose_name='Redirección post-reserva',
+        help_text='A dónde se lleva al invitado después de reservar.',
+    )
+    confirmacion_url = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        verbose_name='Path de confirmación',
+        help_text='Path interno (ej: /conquer-blocks/confirmacion-llamada-latam/). Solo aplica si el tipo es "URL personalizada".',
+    )
+
     unico_por_invitado = models.BooleanField(
         default=True,
         help_text="Si está activo, un mismo email no puede reservar este evento dos veces mientras tenga una reserva futura confirmada.",
