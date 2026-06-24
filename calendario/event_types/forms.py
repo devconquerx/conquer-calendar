@@ -73,6 +73,7 @@ class EventTypeForm(forms.ModelForm):
             'buffer_antes_minutos', 'buffer_despues_minutos',
             'aviso_minimo_minutos', 'aviso_maximo_dias', 'activo',
             'crm_destino', 'unico_por_invitado',
+            'confirmacion_tipo', 'confirmacion_url',
         ]
         widgets = {'descripcion': forms.Textarea(attrs={'rows': 3})}
         labels = {
