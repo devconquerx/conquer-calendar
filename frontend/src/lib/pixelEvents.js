@@ -45,12 +45,23 @@ export function fireAllPageView() {
   })
 }
 
+// Guard anti doble-disparo: el Lead debe contar UNA sola vez por recorrido.
+// Algunos funnels llaman a fireAllLead en dos puntos (al enviar la landing y
+// de nuevo tras el resolver del StepForm). Como el SPA es un único page-load
+// por recorrido, deduplicamos por journey_id con un Set a nivel de módulo (que
+// persiste durante toda la sesión); el primer disparo gana y los siguientes son
+// no-op. Así no se cuenta el lead dos veces en GA4/Google Ads.
+const _leadFiredJourneys = new Set()
+
 /**
  * Lead / SubmitForm — al enviar el formulario.
  * GTM mapea este evento a Meta Lead, GA4 generate_lead, Google Ads (lead) y
- * TikTok SubmitForm, enviándolos al server-side GTM.
+ * TikTok SubmitForm, enviándolos al server-side GTM. Idempotente por journey_id.
  */
 export function fireAllLead({ eventId, journeyId, email, phone, name, schoolSlug, fbp, fbc }) {
+  const journeyKey = journeyId || '__no_journey__'
+  if (_leadFiredJourneys.has(journeyKey)) return
+  _leadFiredJourneys.add(journeyKey)
   pushToDataLayer({
     event: 'form_submit_lead',
     school: normalizeSchool(schoolSlug),
