@@ -29,6 +29,7 @@ def push_onboarding_session(reserva):
         'lead_email': reserva.email_invitado or '',
         'lead_phone_number': reserva.telefono_invitado or '',
         'event_name': reserva.event_type.nombre if reserva.event_type_id else '',
+        'onboarder_email': reserva.host.email if reserva.host_id else '',
     }
 
     payload = {k: v for k, v in payload.items() if v is not None}
