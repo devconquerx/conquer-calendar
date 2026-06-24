@@ -91,6 +91,10 @@ export default {
     glow: '0 2px 20px 6px rgba(62,118,255,0.30)',
     headerLogoWidth: '125px',
     footerLogoWidth: '240px',
+    // Al venir del submit de la landing (navegación SPA), arrancar el vídeo con
+    // sonido automáticamente, sin overlay de "activar sonido". Si el navegador
+    // bloquea el audio (carga directa sin gesto), cae al autoplay muted + overlay.
+    autoplayUnmuted: true,
   },
 
   // Página de confirmación de llamada — réplica de conquerlegal.com/hub/confirmacion.

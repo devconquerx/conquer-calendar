@@ -64,6 +64,12 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
     const stored = getStoredProgress(videoUrl)
     const isReturning = stored && stored.progress_percent > 0
 
+    // Conquer Legal: al llegar desde el submit de la landing (navegación SPA, mismo
+    // documento) el navegador conserva la activación de usuario, así que el vídeo
+    // puede arrancar CON sonido sin overlay. Solo para visitantes nuevos.
+    const autoplayUnmuted = !!theme?.video?.autoplayUnmuted
+    const tryUnmuted = autoplayUnmuted && !isReturning
+
     if (isReturning) {
       setStoredData(stored)
       setShowReturning(true)
@@ -77,7 +83,9 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
       if (onShowButton) onShowButton()
     } else {
       storeProgress(videoUrl, { visit_number: 1 })
-      setShowUnmute(true)
+      // Con autoplay con sonido no mostramos el overlay de unmute; solo cae a él
+      // si el navegador acaba bloqueando la reproducción con audio (más abajo).
+      if (!tryUnmuted) setShowUnmute(true)
     }
 
     videoRef.current.src = videoUrl
@@ -145,8 +153,22 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
       if (onAgendarClick) onAgendarClick()
     })
 
-    // Always autoplay muted — even with returning overlay showing
-    player.play()?.catch(() => {})
+    if (tryUnmuted) {
+      // Intento de autoplay CON sonido. Si el navegador lo bloquea (p.ej. carga
+      // directa de la URL, sin gesto previo) volvemos al autoplay muted + overlay.
+      player.muted = false
+      const played = player.play()
+      if (played && played.catch) {
+        played.catch(() => {
+          player.muted = true
+          player.play()?.catch(() => {})
+          setShowUnmute(true)
+        })
+      }
+    } else {
+      // Always autoplay muted — even with returning overlay showing
+      player.play()?.catch(() => {})
+    }
 
     return () => {
       player.destroy()
