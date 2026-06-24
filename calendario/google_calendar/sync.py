@@ -356,7 +356,7 @@ def renovar_canales_por_expirar(margen_horas=24):
         logger.warning("renovar_canales: GCAL_WEBHOOK_URL no configurada, omitiendo renovación")
         return 0, 0, []
 
-    limite = django_tz.now() + timedelta(hours=margen_horas)
+    limite = django_tz.now() + timedelta(hours=margen_horas, minutes=30)
     por_renovar = list(
         GoogleCalendarSyncEstado.objects.filter(
             canal_expira_utc__lte=limite,
