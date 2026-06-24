@@ -27,17 +27,15 @@ def forward(apps, schema_editor):
     )
 
     for et_id in et_ids:
-        pares = (
+        pares = set(
             Prellamada.objects
             .filter(event_type_id=et_id)
             .exclude(funnel=None)
             .values_list('funnel__escuela', 'funnel__region')
-            .distinct()
         )
-        pares = list(pares)
         if len(pares) != 1:
             continue
-        escuela, region = pares[0]
+        escuela, region = pares.pop()
         url = _confirmacion_url(escuela, region)
         EventType.objects.filter(pk=et_id).update(
             confirmacion_tipo='url',
