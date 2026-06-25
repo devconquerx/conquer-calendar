@@ -255,6 +255,11 @@ export default {
     instructorMask,
     instructorMaskBottom, // borde pixelado abajo (móvil); el derecho es para desktop
     instructorPhoto,
+    // La foto de Legal se pinta como background del cuadro: bgSize = zoom (la foto
+    // es cuadrada y "alejada"), bgPosition = punto focal (centra a Ignacio sin
+    // recortar la cabeza ni dejar huecos). Valores afinados en vivo.
+    instructorBgSize: '140%',
+    instructorBgPosition: '70% 18%',
   },
 
   layout: {

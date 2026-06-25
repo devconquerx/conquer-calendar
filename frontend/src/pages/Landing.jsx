@@ -147,11 +147,16 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
           <div className="mt-10 animate-fade-in rounded-2xl border border-cb-line overflow-hidden flex flex-col md:flex-row md:min-h-[426px]" style={cardStyle}>
             <div className="w-full aspect-square md:aspect-auto md:w-[426px] md:h-[426px] flex-shrink-0 self-start">
               {instructorPhoto && (
-                <img
-                  src={instructorPhoto}
-                  alt={instructor.name}
-                  className="w-full h-full object-cover object-top bg-black [--imask:var(--imask-bottom)] md:[--imask:var(--imask-right)]"
-                  style={pixelMaskStyle}
+                <div
+                  role="img"
+                  aria-label={instructor.name}
+                  className="w-full h-full bg-black bg-no-repeat [--imask:var(--imask-bottom)] md:[--imask:var(--imask-right)]"
+                  style={{
+                    ...pixelMaskStyle,
+                    backgroundImage: `url(${instructorPhoto})`,
+                    backgroundSize: assets?.instructorBgSize || 'cover',
+                    backgroundPosition: assets?.instructorBgPosition || 'center top',
+                  }}
                 />
               )}
             </div>
