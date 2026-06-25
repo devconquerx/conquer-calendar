@@ -13,6 +13,7 @@ SCHEDULE_SCHOOL_TAG_MAP = {
     'cf': '464',   # Finance
     'fi': '464',   # Finance
     'cl': '477',   # Languages
+    'cg': '513',   # Legal
 }
 
 
