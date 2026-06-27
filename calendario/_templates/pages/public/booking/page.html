@@ -96,12 +96,22 @@ body {
 .bk-footer a:hover { text-decoration: underline; }
 
 /* ── RIGHT PANEL ── */
-.bk-right { flex: 1; padding: 40px 32px; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.bk-right { flex: 1; padding: 40px 32px; min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; }
 .bk-card.has-slots .bk-right { padding: 44px 5px 0 32px; }
 
+/* Toast flotante: no ocupa espacio del layout (no empuja el botón). */
 .bk-error {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  z-index: 50; width: max-content; max-width: calc(100% - 24px);
+  display: flex; align-items: flex-start; gap: 10px;
   background: #fff5f5; border: 1px solid #fcc; border-radius: 8px;
-  padding: 12px 16px; color: #c00; font-size: 14px; margin-bottom: 18px;
+  padding: 12px 14px; color: #c00; font-size: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.14);
+  transition: opacity .3s ease;
+}
+.bk-error-close {
+  background: none; border: none; color: #c00; cursor: pointer;
+  font-size: 18px; line-height: 1; padding: 0; margin: -2px -2px 0 4px;
 }
 
 /* ── Calendar + slots inner layout ── */
@@ -253,7 +263,9 @@ body {
 .bk-empty { color: var(--bk-muted); font-size: 13px; }
 
 /* ── Form step ── */
-#step-form { display: none; flex-direction: column; padding-bottom: 32px; }
+/* margin-top negativo: sube el formulario ~13px sin tocar el padding compartido
+   de .bk-right (así el calendario no se ve afectado). */
+#step-form { display: none; flex-direction: column; margin-top: -13px; padding-bottom: 32px; }
 .bk-back {
   display: inline-flex; align-items: center; gap: 5px;
   background: none; border: none; color: var(--bk-blue); font-size: 14px;
@@ -459,8 +471,11 @@ body {
     <div class="bk-right">
 
       {% if form_errors %}
-      <div class="bk-error">
-        {% for errors in form_errors.values %}{% for msg in errors %}<p style="margin:0">{{ msg }}</p>{% endfor %}{% endfor %}
+      <div class="bk-error" id="bk-error" role="alert">
+        <div class="bk-error-msgs">
+          {% for errors in form_errors.values %}{% for msg in errors %}<p style="margin:0">{{ msg }}</p>{% endfor %}{% endfor %}
+        </div>
+        <button type="button" class="bk-error-close" aria-label="Cerrar" onclick="this.parentElement.remove()">&times;</button>
       </div>
       {% endif %}
 
@@ -747,13 +762,26 @@ document.getElementById('step-form').style.display  = 'flex';
 document.querySelector('.bk-card').classList.remove('has-slots');
 {% endif %}
 
+{% if form_errors %}
+// El toast de error se auto-oculta a los 5s (también se puede cerrar con la X).
+setTimeout(function () {
+  var e = document.getElementById('bk-error');
+  if (!e) return;
+  e.style.opacity = '0';
+  setTimeout(function () { if (e) e.remove(); }, 300);
+}, 5000);
+{% endif %}
+
+{# Ensancha solo en calendario+slots; tras error en el FORMULARIO no, en calendario sí. #}
 {% if fecha %}
+{% if form_errors and inicio_utc_str %}{# en el formulario: mantener angosto #}{% else %}
 (function () {
   var card = document.querySelector('.bk-card');
   card.classList.remove('has-slots');
   void card.offsetWidth;
   card.classList.add('has-slots');
 })();
+{% endif %}
 {% endif %}
 
 /* ─────────────────────────────────────────────
