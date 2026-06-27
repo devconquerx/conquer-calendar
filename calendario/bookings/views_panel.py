@@ -12,7 +12,7 @@ from django.views.generic import ListView, DetailView
 from calendario.permisos.mixins import RequierePermisoMixin
 from calendario.users.models import User
 from .models import Reserva
-from .services import cancelar_reserva_solo_bd, eliminar_reserva
+from .services import cancelar_reserva, eliminar_reserva
 
 
 def _miembros_grupo(user):
@@ -252,6 +252,6 @@ class ReservaCancelarView(RequierePermisoMixin, View):
                 return redirect('panel_reservas:reserva_detail', pk=pk)
         qs = Reserva.objects.all() if request.user.tiene_permiso('reservas.ver_todas') else Reserva.objects.filter(host=request.user)
         reserva = get_object_or_404(qs, pk=pk)
-        cancelar_reserva_solo_bd(reserva)
+        cancelar_reserva(reserva)
         messages.success(request, f"Reserva de '{reserva.nombre_invitado}' cancelada.")
         return redirect('panel_reservas:reserva_detail', pk=pk)

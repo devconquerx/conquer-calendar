@@ -458,18 +458,6 @@ def cancelar_reserva(reserva):
     return reserva
 
 
-def cancelar_reserva_solo_bd(reserva):
-    """
-    Marca la reserva como cancelada en BD únicamente.
-    El evento de Google Calendar queda intacto.
-    """
-    if reserva.estado == Reserva.Estado.CANCELADA:
-        return reserva
-    reserva.estado = Reserva.Estado.CANCELADA
-    reserva.save(update_fields=['estado', 'fecha_actualizacion'])
-    return reserva
-
-
 def eliminar_reserva(reserva):
     """
     Elimina la reserva de la BD y borra el evento de Google Calendar si existe.
