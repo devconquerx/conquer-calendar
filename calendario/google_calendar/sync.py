@@ -215,9 +215,15 @@ def sincronizar_host_incremental(host):
                 return
 
             try:
+                # singleEvents=True DEBE coincidir con el sync completo, que
+                # genera el syncToken con ese mismo parámetro. Si no coincide,
+                # Google deja de propagar bien los cambios de eventos recurrentes
+                # (cancelaciones/movimientos de instancias), dejando eventos
+                # fantasma en la copia local que bloquean slots para siempre.
                 request = servicio.events().list(
                     calendarId='primary',
                     syncToken=sync_estado.sync_token,
+                    singleEvents=True,
                 )
                 next_sync_token = None
                 hay_cambios = False
@@ -248,9 +254,14 @@ def sincronizar_host_incremental(host):
                 logger.info("sync_incremental: OK host=%s cambios=%s", host.email, hay_cambios)
 
             except HttpError as e:
-                if e.resp.status == 410:
+                # 410 Gone: syncToken caducado. 400: syncToken inválido o
+                # incompatible con los parámetros (p.ej. tras cambiar
+                # singleEvents). En ambos casos la recuperación es un resync
+                # completo, que reconstruye la copia local desde cero.
+                if e.resp.status in (400, 410):
                     logger.warning(
-                        "sync_incremental: 410 Gone para %s, resync completo", host.email
+                        "sync_incremental: syncToken inválido/caducado (HTTP %s) para %s, resync completo",
+                        e.resp.status, host.email,
                     )
                     # Salimos del atomic para hacer sync completo sin lock anidado
                     raise _ResyncNecesario()
