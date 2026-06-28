@@ -127,8 +127,8 @@ dc run --rm -T "$SERVICE" python manage.py collectstatic --noinput </dev/null
 #    manifest-list y `up --force-recreate` no siempre la adopta (deja corriendo
 #    el contenedor viejo). Por eso recreamos de forma explícita: parar+quitar y
 #    levantar de nuevo desde la imagen recién construida. Caída de ~segundos.
-say "Reiniciando contenedores (django + celery worker/beat)…"
-dc rm -sf django celeryworker celerybeat
+say "Reiniciando contenedores (django + celery worker/beat + node-ssr)…"
+dc rm -sf django celeryworker celerybeat node-ssr
 dc up -d --remove-orphans
 
 # 4) Healthcheck

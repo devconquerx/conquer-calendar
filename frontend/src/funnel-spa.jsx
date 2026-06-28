@@ -1,14 +1,12 @@
 import './lib/sentry'
-import React from 'react'
-import { createRoot } from 'react-dom/client'
-import FunnelApp from './FunnelApp'
-import FunnelRouter from './lib/router'
-import TrackingProvider from './components/tracking/TrackingProvider'
+import { createRoot, hydrateRoot } from 'react-dom/client'
+import FunnelRoot from './app/FunnelRoot'
 import './funnel.css'
 
-/* Entry único del funnel SPA. El backend sirve este mismo shell en las cuatro
-   etapas (landing, video, stepform, confirmación) indicando en data-stage cuál
-   renderizar; la navegación entre ellas es client-side (pushState). */
+/* Bootstrap cliente del funnel SPA. AQUÍ viven todas las lecturas del DOM
+   (data-*, funnel-config, window.location). Si el #funnel-root ya trae HTML del
+   servidor (SSR) hidratamos; si está vacío (flag SSR off, o el render del Node
+   falló) hacemos createRoot → CSR idéntico al de hoy. */
 
 const container = document.getElementById('funnel-root')
 const d = container.dataset
@@ -30,17 +28,49 @@ const urls = {
   confirmation: d.confirmationUrl || '',
 }
 
-createRoot(container).render(
-  <TrackingProvider>
-    <FunnelRouter initialStage={d.stage || 'landing'} urls={urls}>
-      <FunnelApp
-        slug={d.slug || ''}
-        escuela={d.escuela || ''}
-        region={d.region || ''}
-        program={d.program || ''}
-        formConfig={formConfig}
-        videoEnabled={d.videoEnabled === '1'}
-      />
-    </FunnelRouter>
-  </TrackingProvider>
-)
+const stage = d.stage || 'landing'
+
+const props = {
+  stage,
+  slug: d.slug || '',
+  escuela: d.escuela || '',
+  region: d.region || '',
+  program: d.program || '',
+  formConfig,
+  videoEnabled: d.videoEnabled === '1',
+  urls,
+  // Mismo query string que usó el servidor para el SSR → prefill consistente.
+  search: window.location.search,
+}
+
+// Las etapas no-landing son lazy. Para hidratar/renderizar la etapa inicial de
+// forma SÍNCRONA (y que coincida con el HTML del servidor), cargamos su chunk
+// ANTES de montar y lo pasamos como initialStageComponent.
+const STAGE_LOADERS = {
+  video: () => import('./pages/VideoPage'),
+  stepform: () => import('./Funnel'),
+  confirmation: () => import('./components/Confirmation'),
+}
+
+async function boot() {
+  let initialStageComponent
+  const loader = STAGE_LOADERS[stage]
+  if (loader) {
+    try {
+      const mod = await loader()
+      initialStageComponent = mod.default
+    } catch (e) {
+      console.error('[Funnel] No se pudo cargar la etapa inicial', stage, e)
+    }
+  }
+
+  const tree = <FunnelRoot {...props} initialStageComponent={initialStageComponent} />
+
+  if (container.firstElementChild) {
+    hydrateRoot(container, tree)
+  } else {
+    createRoot(container).render(tree)
+  }
+}
+
+boot()

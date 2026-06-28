@@ -1,4 +1,7 @@
-import DOMPurify from 'dompurify'
+// isomorphic-dompurify: en el build cliente resuelve al DOMPurify del navegador
+// (sin jsdom, vía el campo "browser"); en el build SSR usa jsdom. Así `safeHtml`
+// produce la MISMA salida en servidor y cliente y no hay hydration mismatch.
+import DOMPurify from 'isomorphic-dompurify'
 
 /**
  * Sanitiza HTML para usar con dangerouslySetInnerHTML. Solo formato básico.

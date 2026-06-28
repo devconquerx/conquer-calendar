@@ -6,6 +6,9 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/django/Dockerfile
+      # El Dockerfile ahora tiene 3 etapas (frontend, django, node-ssr); fijamos
+      # el target para que esta imagen sea la de Django y no la última etapa.
+      target: django
       args:
         # Se lee del .env del directorio del compose (/home/conquer-calendar/app/.env).
         # Vite lo embebe en el bundle del frontend en build time.
@@ -23,6 +26,7 @@ services:
       - /etc/conquer:/etc/conquer:ro
     depends_on:
       - redis
+      - node-ssr
     environment:
       CELERY_BROKER_URL: "redis://redis:6379/0"
       CELERY_RESULT_BACKEND: "redis://redis:6379/0"
@@ -32,6 +36,26 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
+  # Servicio de render SSR del funnel (interno; Django le hace POST /render).
+  # Si está caído, Django cae a CSR (root vacío), por eso NO bloquea el deploy.
+  node-ssr:
+    build:
+      context: .
+      dockerfile: ./compose/production/django/Dockerfile
+      target: node-ssr
+      args:
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+    image: conquer_calendario_node_ssr
+    restart: unless-stopped
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   celeryworker:
     image: conquer_calendario_production_django

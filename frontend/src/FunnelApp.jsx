@@ -35,9 +35,15 @@ function applyFavicon(favicon) {
 }
 
 /* Shell de la SPA del funnel: renderiza la etapa activa según el router.
-   Todas las etapas comparten bundle, TrackingProvider y query string (el
-   prefill + tracking viajan por la URL igual que en el flujo multipágina). */
-export default function FunnelApp({ slug, escuela, region, program, formConfig, videoEnabled }) {
+   Todas las etapas comparten TrackingProvider y query string (el prefill +
+   tracking viajan por la URL igual que en el flujo multipágina).
+
+   SSR: la etapa inicial (la que pidió la URL) se renderiza con un componente
+   NO-lazy (`initialStageComponent`) y SIN <Suspense>, para que `renderToString`
+   la serialice de verdad y el cliente la hidrate igual. Las etapas alcanzadas
+   por navegación client-side siguen siendo lazy + Suspense (un spinner ahí es
+   aceptable y no hay HTML del servidor que igualar). */
+export default function FunnelApp({ slug, escuela, region, program, formConfig, videoEnabled, search, initialStage, initialStageComponent }) {
   const { stage } = useRouter()
   const school = { slug: escuela }
 
@@ -47,18 +53,15 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
     applyFavicon(getTheme(escuela, slug).favicon)
   }, [escuela, slug])
 
-  // En la landing, precargamos en segundo plano los chunks de las etapas
-  // siguientes para que el salto a vídeo/stepform sea instantáneo. Lo
-  // disparamos con el primer gesto del usuario (o tras unos segundos como
-  // respaldo), ya superado el LCP, para no competir con la carga inicial.
+  // En la landing, precargamos los chunks de las etapas siguientes al primer
+  // gesto del usuario (hover/tap/tecla) para que el salto a vídeo/stepform sea
+  // instantáneo. Solo con interacción: así no compite con la carga inicial ni
+  // se cuela en la medición de performance (que no interactúa con la página).
   useEffect(() => {
     if (stage !== 'landing') return
     let done = false
     const events = ['pointerdown', 'keydown', 'touchstart']
-    const cleanup = () => {
-      events.forEach((e) => window.removeEventListener(e, prefetch))
-      clearTimeout(timer)
-    }
+    const cleanup = () => events.forEach((e) => window.removeEventListener(e, prefetch))
     const prefetch = () => {
       if (done) return
       done = true
@@ -66,7 +69,6 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
       import('./Funnel')
       if (videoEnabled) import('./pages/VideoPage')
     }
-    const timer = setTimeout(prefetch, 5000)
     events.forEach((e) => window.addEventListener(e, prefetch, { passive: true }))
     return cleanup
   }, [stage, videoEnabled])
@@ -84,22 +86,34 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
     )
   }
 
+  // Renderiza la etapa no-landing con el componente dado (lazy o no), con sus
+  // props correctas. Solo una etapa se renderiza a la vez.
   const video = formConfig?.video || {}
-  return (
-    <Suspense fallback={stageFallback}>
-      {stage === 'video' ? (
-        <VideoPage
+  const renderStage = (Comp) => {
+    if (stage === 'video') {
+      return (
+        <Comp
           school={school}
           region={region}
           formConfig={formConfig}
           videoUrls={video.videoUrls || []}
           buttonPercent={video.buttonPercent || 75}
+          search={search}
         />
-      ) : stage === 'confirmation' ? (
-        <Confirmation escuela={escuela} slug={slug} />
-      ) : (
-        <Funnel slug={slug} escuela={escuela} formConfig={formConfig} />
-      )}
-    </Suspense>
-  )
+      )
+    }
+    if (stage === 'confirmation') {
+      return <Comp escuela={escuela} slug={slug} />
+    }
+    return <Comp slug={slug} escuela={escuela} formConfig={formConfig} search={search} />
+  }
+
+  // Etapa SSR'd inicial → componente no-lazy, render síncrono sin Suspense.
+  if (stage === initialStage && initialStageComponent) {
+    return renderStage(initialStageComponent)
+  }
+
+  // Etapa por navegación client-side → lazy + Suspense.
+  const Lazy = stage === 'video' ? VideoPage : stage === 'confirmation' ? Confirmation : Funnel
+  return <Suspense fallback={stageFallback}>{renderStage(Lazy)}</Suspense>
 }

@@ -18,7 +18,11 @@ import { getTheme, ThemeContext } from './themes'
 import { useRouter } from './lib/router'
 import './funnel.css'
 
-export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUrl = '', formConfig = null }) {
+export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUrl = '', formConfig = null, search }) {
+  // `search` lo inyecta el entry SSR (query string del request) para que el
+  // prefill server == cliente y no haya hydration mismatch. En CSR cae a
+  // window.location.search (comportamiento actual).
+  const initialSearch = search ?? (typeof window !== 'undefined' ? window.location.search : '')
   const router = useRouter()
   const tracking = useTracking()
   // Config del formulario embebida en el shell (funnel-config): cuando está
@@ -36,7 +40,9 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   // Django, que lo genera en `trackingParams` al montar el form).
   const scheduleEventId = useMemo(() => {
     const id = tracking.generateScheduleEventId()
-    try { localStorage.setItem('cqx_schedule_event_id', id) } catch (_) {}
+    if (typeof localStorage !== 'undefined') {
+      try { localStorage.setItem('cqx_schedule_event_id', id) } catch (_) {}
+    }
     return id
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -48,7 +54,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   const [direction, setDirection] = useState('forward')
   // Prefill desde el query string que propaga la landing (name/email/phone),
   // igual que el funnel de Django. Los ids de bloque son name/email/phone.
-  const [respuestas, setRespuestas] = useState(() => getPrefillRespuestas(window.location.search))
+  const [respuestas, setRespuestas] = useState(() => getPrefillRespuestas(initialSearch))
   const [phase, setPhase] = useState(embedded ? 'form' : 'loading')
   const [outcome, setOutcome] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)

@@ -30,6 +30,7 @@ const CLICK_ID_KEYS = [
 
 /** Read UTM params from current URL */
 export function getUtmParams() {
+  if (typeof window === 'undefined') return {}
   const params = new URLSearchParams(window.location.search)
   const result = {}
   for (const key of TRACKING_QUERY_KEYS) {
@@ -41,6 +42,7 @@ export function getUtmParams() {
 
 /** Read ad platform click IDs from current URL */
 export function getClickIds() {
+  if (typeof window === 'undefined') return {}
   const params = new URLSearchParams(window.location.search)
   const result = {}
   for (const key of CLICK_ID_KEYS) {

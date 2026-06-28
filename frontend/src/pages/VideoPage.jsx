@@ -11,7 +11,7 @@ import { useRouter } from '../lib/router'
    Muestra el video (autoplay muted + overlays), revela el botón al alcanzar el
    buttonPercent y, al pulsarlo, redirige al StepForm conservando el query string
    (name/email/phone/event_id/journey_id que vienen de la landing). */
-export default function VideoPage({ school, region, formConfig, videoUrls, buttonPercent, nextUrl }) {
+export default function VideoPage({ school, region, formConfig, videoUrls, buttonPercent, nextUrl, search }) {
   const router = useRouter()
   const [showButton, setShowButton] = useState(false)
 
@@ -25,9 +25,11 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   const landing = formConfig?.landing || formConfig?.welcome || {}
 
   // Email para el tracking de progreso (viene como query param desde la landing).
+  // `search` lo inyecta el entry SSR; en CSR cae a window.location.search.
+  const initialSearch = search ?? (typeof window !== 'undefined' ? window.location.search : '')
   const email = useMemo(
-    () => new URLSearchParams(window.location.search).get('email') || '',
-    []
+    () => new URLSearchParams(initialSearch).get('email') || '',
+    [initialSearch]
   )
 
   const handleShowButton = useCallback(() => setShowButton(true), [])

@@ -121,6 +121,17 @@ DJANGO_VITE = {
     }
 }
 
+# SSR del funnel (servicio Node). FUNNEL_SSR_ENABLED es el switch maestro; el
+# allowlist (set de "escuela:stage", o "*" para todas) controla el rollout
+# gradual. Si está off / no allowlisted / el servicio falla, Django sirve
+# #funnel-root vacío → CSR (el comportamiento de hoy). Reversible sin redeploy.
+FUNNEL_SSR_ENABLED = env.bool("FUNNEL_SSR_ENABLED", default=False)
+FUNNEL_SSR_URL = env("FUNNEL_SSR_URL", default="http://node-ssr:3000/render")
+FUNNEL_SSR_TIMEOUT = env.float("FUNNEL_SSR_TIMEOUT", default=0.4)
+FUNNEL_SSR_ALLOWLIST = set(
+    env.list("FUNNEL_SSR_ALLOWLIST", default=["conquer-legal:landing"])
+)
+
 MEDIA_ROOT = "/calendario-media"
 MEDIA_URL = "/media/"
 

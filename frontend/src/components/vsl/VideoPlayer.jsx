@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import Plyr from 'plyr'
 import 'plyr/dist/plyr.css'
 import UnmuteOverlay from './UnmuteOverlay'
 import ReturningOverlay from './ReturningOverlay'
@@ -95,83 +94,94 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
     // progreso/seek, tiempos, etc.) para poder navegar el vídeo durante pruebas.
     const isDebug = new URLSearchParams(window.location.search).get('debug') === '1'
 
-    const player = new Plyr(videoRef.current, {
-      hideControls: false,
-      autoplay: true,
-      muted: true,
-      controls: isDebug
-        ? ['play-large', 'restart', 'rewind', 'play', 'fast-forward', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen']
-        : ['play', 'mute', 'volume', 'fullscreen'],
-    })
+    // Plyr toca `document` al importarse, así que lo cargamos dinámicamente (solo
+    // en cliente, dentro del efecto) para que este módulo sea SSR-safe. El setup
+    // síncrono de arriba (overlays, src) ya corrió; solo se difiere el reproductor.
+    let player = null
+    let cancelled = false
 
-    playerRef.current = player
+    import('plyr').then(({ default: Plyr }) => {
+      if (cancelled || !videoRef.current) return
 
-    // Ensure muted state after Plyr wraps the element
-    player.muted = true
+      player = new Plyr(videoRef.current, {
+        hideControls: false,
+        autoplay: true,
+        muted: true,
+        controls: isDebug
+          ? ['play-large', 'restart', 'rewind', 'play', 'fast-forward', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen']
+          : ['play', 'mute', 'volume', 'fullscreen'],
+      })
 
-    player.on('timeupdate', () => {
-      if (!player.duration) return
-      const percent = (player.currentTime / player.duration) * 100
+      playerRef.current = player
 
-      // Only update progress_percent if higher (never decrease on replay/reload)
-      const current = getStoredProgress(videoUrl)
-      const maxPercent = current && current.progress_percent > percent
-        ? current.progress_percent
-        : percent
+      // Ensure muted state after Plyr wraps the element
+      player.muted = true
 
-      const updates = {
-        time: player.currentTime,
-        progress_percent: maxPercent,
-        unmuted: !player.muted,
-      }
+      player.on('timeupdate', () => {
+        if (!player.duration) return
+        const percent = (player.currentTime / player.duration) * 100
 
-      // Only track progress_latest_visit when unmuted (user is actively watching)
-      if (!player.muted) {
-        updates.progress_latest_visit = player.currentTime
-      }
+        // Only update progress_percent if higher (never decrease on replay/reload)
+        const current = getStoredProgress(videoUrl)
+        const maxPercent = current && current.progress_percent > percent
+          ? current.progress_percent
+          : percent
 
-      storeProgress(videoUrl, updates)
+        const updates = {
+          time: player.currentTime,
+          progress_percent: maxPercent,
+          unmuted: !player.muted,
+        }
 
-      if (percent >= buttonPercent && !buttonShownRef.current) {
-        buttonShownRef.current = true
-        if (onShowButton) onShowButton()
-      }
+        // Only track progress_latest_visit when unmuted (user is actively watching)
+        if (!player.muted) {
+          updates.progress_latest_visit = player.currentTime
+        }
 
-      // Report progress every 10% (for ActiveCampaign / lead tracking)
-      if (onProgress) {
-        for (const p of [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]) {
-          if (maxPercent >= p && !milestonesReportedRef.current.has(`p${p}`)) {
-            milestonesReportedRef.current.add(`p${p}`)
-            onProgress(p)
+        storeProgress(videoUrl, updates)
+
+        if (percent >= buttonPercent && !buttonShownRef.current) {
+          buttonShownRef.current = true
+          if (onShowButton) onShowButton()
+        }
+
+        // Report progress every 10% (for ActiveCampaign / lead tracking)
+        if (onProgress) {
+          for (const p of [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]) {
+            if (maxPercent >= p && !milestonesReportedRef.current.has(`p${p}`)) {
+              milestonesReportedRef.current.add(`p${p}`)
+              onProgress(p)
+            }
           }
         }
+
+      })
+
+      player.on('ended', () => {
+        if (onAgendarClick) onAgendarClick()
+      })
+
+      if (tryUnmuted) {
+        // Intento de autoplay CON sonido. Si el navegador lo bloquea (p.ej. carga
+        // directa de la URL, sin gesto previo) volvemos al autoplay muted + overlay.
+        player.muted = false
+        const played = player.play()
+        if (played && played.catch) {
+          played.catch(() => {
+            player.muted = true
+            player.play()?.catch(() => {})
+            setShowUnmute(true)
+          })
+        }
+      } else {
+        // Always autoplay muted — even with returning overlay showing
+        player.play()?.catch(() => {})
       }
-
     })
-
-    player.on('ended', () => {
-      if (onAgendarClick) onAgendarClick()
-    })
-
-    if (tryUnmuted) {
-      // Intento de autoplay CON sonido. Si el navegador lo bloquea (p.ej. carga
-      // directa de la URL, sin gesto previo) volvemos al autoplay muted + overlay.
-      player.muted = false
-      const played = player.play()
-      if (played && played.catch) {
-        played.catch(() => {
-          player.muted = true
-          player.play()?.catch(() => {})
-          setShowUnmute(true)
-        })
-      }
-    } else {
-      // Always autoplay muted — even with returning overlay showing
-      player.play()?.catch(() => {})
-    }
 
     return () => {
-      player.destroy()
+      cancelled = true
+      if (player) player.destroy()
     }
   }, [videoUrl])
 

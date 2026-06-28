@@ -24,6 +24,9 @@ export function generateEventId() {
  * el mismo efecto propagando el event_id por la URL.
  */
 export function getOrCreateEventId() {
+  // En SSR no hay URL ni se renderiza este valor al DOM; el cliente recalcula
+  // el real al hidratar. Devolvemos uno desechable para no romper el render.
+  if (typeof window === 'undefined') return generateEventId()
   const urlParams = new URLSearchParams(window.location.search)
   const urlEventId = urlParams.get('event_id')
   if (urlEventId) return urlEventId
@@ -36,6 +39,9 @@ export function getOrCreateEventId() {
  * Format: "jrn_{timestamp}_{random6}" — never expires.
  */
 export function getOrCreateJourneyId() {
+  // En SSR (sin window/localStorage) devolvemos uno desechable; el cliente lo
+  // recalcula/persiste al hidratar. No se renderiza al DOM.
+  if (typeof window === 'undefined') return `jrn_${Date.now()}_${randomSuffix()}`
   const urlParams = new URLSearchParams(window.location.search)
   const urlJourneyId = urlParams.get('journey_id')
   if (urlJourneyId) {

@@ -3,6 +3,7 @@
  */
 
 export function readCookie(name) {
+  if (typeof document === 'undefined') return ''
   const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'))
   return match ? decodeURIComponent(match[1]) : ''
 }
@@ -14,6 +15,7 @@ export function readCookie(name) {
  * _ttp: reads TikTok Pixel browser cookie.
  */
 export function getPixelCookies() {
+  if (typeof window === 'undefined') return { _fbc: '', _fbp: '', _ttp: '' }
   const _fbp = readCookie('_fbp')
 
   let _fbc = readCookie('_fbc')

@@ -21,8 +21,8 @@ function startGeoFetch() {
   return geoPromise
 }
 
-// Fire immediately on import
-startGeoFetch()
+// Fire immediately on import (solo en cliente; en SSR no hay fetch ni red de IP)
+if (typeof window !== 'undefined') startGeoFetch()
 
 export default function useGeoLocation() {
   const [countryCode, setCountryCode] = useState(cachedResult.countryCode)

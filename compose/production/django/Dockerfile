@@ -15,12 +15,14 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ ./
 RUN npm run build
+# Bundle de servidor para el SSR del funnel (dist-ssr/funnel-ssr.js).
+RUN npm run build:ssr
 
 
 # ─────────────────────────────────────────────────────────────
 # Etapa 2: runtime Django (sin Node).
 # ─────────────────────────────────────────────────────────────
-FROM python:3.12-slim
+FROM python:3.12-slim AS django
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -59,3 +61,19 @@ COPY . /app
 COPY --from=frontend /app/frontend/dist /app/frontend/dist
 
 ENTRYPOINT ["/entrypoint"]
+
+
+# ─────────────────────────────────────────────────────────────
+# Etapa 3: servicio Node SSR del funnel.
+# Renderiza los componentes React (renderToString) que Django consume vía
+# POST /render. jsdom (isomorphic-dompurify) no se puede bundlear, así que el
+# bundle externaliza las deps y este runtime corre con node_modules.
+# ─────────────────────────────────────────────────────────────
+FROM node:20-slim AS node-ssr
+ENV NODE_ENV=production
+WORKDIR /app/frontend
+COPY --from=frontend /app/frontend/node_modules ./node_modules
+COPY --from=frontend /app/frontend/dist-ssr ./dist-ssr
+COPY --from=frontend /app/frontend/server ./server
+EXPOSE 3000
+CMD ["node", "server/ssr-server.mjs"]

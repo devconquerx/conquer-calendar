@@ -3,6 +3,8 @@ import logging
 import uuid
 from datetime import datetime, timezone as dt_timezone
 
+import requests
+
 from django.conf import settings
 from django.db import transaction
 from django.http import Http404, JsonResponse
@@ -405,6 +407,45 @@ _VIDEO_TEMPLATE_POR_ESCUELA = {
 }
 
 
+def _render_ssr(*, stage, slug, escuela, region, program,
+                form_config, video_enabled, urls, search):
+    """Pide al servicio Node SSR el HTML inicial de #funnel-root para esta etapa.
+
+    Devuelve '' (→ CSR en el cliente, el comportamiento de hoy) si el SSR está
+    deshabilitado, si la combinación escuela:stage no está en el allowlist, o si
+    el servicio falla o tarda más del timeout. Nunca propaga errores ni añade
+    latencia perceptible: el fallback a CSR es seguro.
+    """
+    if not getattr(settings, 'FUNNEL_SSR_ENABLED', False):
+        return ''
+    allowlist = getattr(settings, 'FUNNEL_SSR_ALLOWLIST', set())
+    # '*' en el allowlist = todas las combinaciones (rollout completo).
+    if '*' not in allowlist and f'{escuela}:{stage}' not in allowlist:
+        return ''
+    payload = {
+        'stage': stage,
+        'slug': slug,
+        'escuela': escuela,
+        'region': region,
+        'program': program,
+        'formConfig': form_config,
+        'videoEnabled': video_enabled,
+        'urls': urls,
+        'search': search,
+    }
+    try:
+        resp = requests.post(
+            settings.FUNNEL_SSR_URL,
+            json=payload,
+            timeout=(0.3, getattr(settings, 'FUNNEL_SSR_TIMEOUT', 0.4)),
+        )
+        resp.raise_for_status()
+        return resp.json().get('html', '') or ''
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning('SSR fallback a CSR (%s:%s): %s', escuela, stage, exc)
+        return ''
+
+
 def _spa_render(request, funnel, stage, escuela=None, region=None):
     """Renderiza el shell único de la SPA del funnel en la etapa indicada.
 
@@ -420,25 +461,56 @@ def _spa_render(request, funnel, stage, escuela=None, region=None):
     cfg = dict((funnel.config if funnel else None) or {})
     if not cfg.get('video') and escuela in _VIDEO_DEFAULTS:
         cfg['video'] = _VIDEO_DEFAULTS[escuela]
+
+    slug = funnel.slug if funnel else ''
+    program = PRODUCTO_POR_ESCUELA.get(escuela, '')
+    video_enabled = bool(cfg.get('video'))
+    landing_url = _landing_url(escuela, region, base=base) if region else ''
+    video_url = _video_url(escuela, region, base=base) if region else ''
+    stepform_u = stepform_url(escuela, region, base=base)
+    confirmation_url = confirmacion_url(escuela, region, base=base) if region else ''
+
+    # HTML del SSR para #funnel-root (vacío → CSR). El query string se pasa con
+    # el '?' inicial para que coincida exactamente con window.location.search del
+    # cliente y el prefill server == cliente (sin hydration mismatch).
+    qs = request.META.get('QUERY_STRING', '')
+    ssr_html = _render_ssr(
+        stage=stage,
+        slug=slug,
+        escuela=escuela,
+        region=region,
+        program=program,
+        form_config=cfg,
+        video_enabled=video_enabled,
+        urls={
+            'landing': landing_url,
+            'video': video_url,
+            'stepform': stepform_u,
+            'confirmation': confirmation_url,
+        },
+        search=('?' + qs) if qs else '',
+    )
+
     return render(
         request,
         'pages/public/funnel/spa.html',
         {
             'funnel': funnel,
-            'slug': funnel.slug if funnel else '',
+            'slug': slug,
             'escuela': escuela,
             'region': region,
-            'program': PRODUCTO_POR_ESCUELA.get(escuela, ''),
+            'program': program,
             'stage': stage,
             'funnel_config': cfg,
-            'video_enabled': bool(cfg.get('video')),
-            'landing_url': _landing_url(escuela, region, base=base) if region else '',
-            'video_url': _video_url(escuela, region, base=base) if region else '',
-            'stepform_url': stepform_url(escuela, region, base=base),
-            'confirmation_url': confirmacion_url(escuela, region, base=base) if region else '',
+            'video_enabled': video_enabled,
+            'landing_url': landing_url,
+            'video_url': video_url,
+            'stepform_url': stepform_u,
+            'confirmation_url': confirmation_url,
             'pixel_ids': get_pixel_ids(escuela),
             'gtm': get_gtm_config(escuela),
             'app_base_path': base,
+            'ssr_html': ssr_html,
         },
     )
 
