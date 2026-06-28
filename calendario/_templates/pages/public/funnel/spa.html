@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% if funnel %}{{ funnel.nombre }} — {% endif %}Conquer</title>
 
+  {% comment %}
+    Preload de la imagen LCP de la landing: la textura paperboard de la tarjeta
+    del formulario se aplica como background-image vía CSS/React, así que el
+    navegador no la descubre hasta que el bundle monta. Precargarla aquí la baja
+    en paralelo con el JS. Solo en la landing y en marcas con tema paperboard
+    (legal/blocks); el resto usa el tema blanco y no la necesita.
+  {% endcomment %}
+  {% if stage == 'landing' %}
+    {% if 'legal' in escuela or 'blocks' in escuela or 'legal' in slug or 'blocks' in slug %}
+  <link rel="preload" as="image" href="{% vite_asset_url 'src/assets/img/cb/paperboard-texture.avif' %}" fetchpriority="high">
+    {% endif %}
+  {% endif %}
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">

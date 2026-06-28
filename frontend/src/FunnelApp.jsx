@@ -1,10 +1,22 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { useRouter } from './lib/router'
 import { getTheme } from './themes'
 import Landing from './pages/Landing'
-import VideoPage from './pages/VideoPage'
-import Funnel from './Funnel'
-import Confirmation from './components/Confirmation'
+import Spinner from './components/shared/Spinner'
+
+/* Etapas posteriores a la landing: se cargan bajo demanda (code-splitting) para
+   que la landing —la ruta crítica del LCP— no arrastre en su bundle el
+   reproductor de vídeo (Plyr), el motor de formularios ni el widget de
+   calendario, que ahí no se usan. Cada una viaja en su propio chunk. */
+const VideoPage = lazy(() => import('./pages/VideoPage'))
+const Funnel = lazy(() => import('./Funnel'))
+const Confirmation = lazy(() => import('./components/Confirmation'))
+
+const stageFallback = (
+  <div className="flex min-h-screen items-center justify-center">
+    <Spinner className="w-8 h-8" />
+  </div>
+)
 
 /* Aplica el favicon del tema (si lo define) a <head>. El shell del funnel no
    trae <link rel="icon">, así que solo las escuelas con favicon propio —hoy
@@ -35,6 +47,30 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
     applyFavicon(getTheme(escuela, slug).favicon)
   }, [escuela, slug])
 
+  // En la landing, precargamos en segundo plano los chunks de las etapas
+  // siguientes para que el salto a vídeo/stepform sea instantáneo. Lo
+  // disparamos con el primer gesto del usuario (o tras unos segundos como
+  // respaldo), ya superado el LCP, para no competir con la carga inicial.
+  useEffect(() => {
+    if (stage !== 'landing') return
+    let done = false
+    const events = ['pointerdown', 'keydown', 'touchstart']
+    const cleanup = () => {
+      events.forEach((e) => window.removeEventListener(e, prefetch))
+      clearTimeout(timer)
+    }
+    const prefetch = () => {
+      if (done) return
+      done = true
+      cleanup()
+      import('./Funnel')
+      if (videoEnabled) import('./pages/VideoPage')
+    }
+    const timer = setTimeout(prefetch, 5000)
+    events.forEach((e) => window.addEventListener(e, prefetch, { passive: true }))
+    return cleanup
+  }, [stage, videoEnabled])
+
   if (stage === 'landing') {
     return (
       <Landing
@@ -48,22 +84,22 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
     )
   }
 
-  if (stage === 'video') {
-    const video = formConfig?.video || {}
-    return (
-      <VideoPage
-        school={school}
-        region={region}
-        formConfig={formConfig}
-        videoUrls={video.videoUrls || []}
-        buttonPercent={video.buttonPercent || 75}
-      />
-    )
-  }
-
-  if (stage === 'confirmation') {
-    return <Confirmation escuela={escuela} slug={slug} />
-  }
-
-  return <Funnel slug={slug} escuela={escuela} formConfig={formConfig} />
+  const video = formConfig?.video || {}
+  return (
+    <Suspense fallback={stageFallback}>
+      {stage === 'video' ? (
+        <VideoPage
+          school={school}
+          region={region}
+          formConfig={formConfig}
+          videoUrls={video.videoUrls || []}
+          buttonPercent={video.buttonPercent || 75}
+        />
+      ) : stage === 'confirmation' ? (
+        <Confirmation escuela={escuela} slug={slug} />
+      ) : (
+        <Funnel slug={slug} escuela={escuela} formConfig={formConfig} />
+      )}
+    </Suspense>
+  )
 }
