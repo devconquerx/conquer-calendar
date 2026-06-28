@@ -60,7 +60,7 @@ class CrearReservaTimezoneTest(TestCase):
         for dia in range(5):
             crear_disponibilidad(self.host, dia=dia)
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     @patch('calendario.bookings.services.obtener_busy_intervalos', return_value=[])
     def test_guarda_timezone_invitado_cuando_se_provee(self, mock_busy, mock_gcal, mock_freebusy):
@@ -74,7 +74,7 @@ class CrearReservaTimezoneTest(TestCase):
         )
         self.assertEqual(reserva.timezone_invitado, TZ_VISITANTE)
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     @patch('calendario.bookings.services.obtener_busy_intervalos', return_value=[])
     def test_timezone_invitado_vacio_por_defecto(self, mock_busy, mock_gcal, mock_freebusy):
@@ -88,7 +88,7 @@ class CrearReservaTimezoneTest(TestCase):
         )
         self.assertEqual(reserva.timezone_invitado, '')
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     @patch('calendario.bookings.services.obtener_busy_intervalos', return_value=[])
     def test_timezone_invitado_persiste_en_bd(self, mock_busy, mock_gcal, mock_freebusy):
@@ -224,7 +224,7 @@ class BookingFormViewTimezoneTest(TestCase):
             'event_type_slug': self.et.slug,
         })
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     @patch('calendario.bookings.services.obtener_busy_intervalos', return_value=[])
     def test_post_guarda_tz_visitante_desde_query_param(self, mock_busy, mock_gcal, mock_freebusy):
@@ -244,7 +244,7 @@ class BookingFormViewTimezoneTest(TestCase):
         self.assertIsNotNone(reserva)
         self.assertEqual(reserva.timezone_invitado, TZ_VISITANTE)
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     @patch('calendario.bookings.services.obtener_busy_intervalos', return_value=[])
     def test_post_guarda_tz_visitante_desde_post_body(self, mock_busy, mock_gcal, mock_freebusy):
@@ -263,7 +263,7 @@ class BookingFormViewTimezoneTest(TestCase):
         reserva = Reserva.objects.filter(email_invitado=EMAIL_INVITADO).last()
         self.assertEqual(reserva.timezone_invitado, TZ_VISITANTE)
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     @patch('calendario.bookings.services.obtener_busy_regionalos', return_value=[], create=True)
     @patch('calendario.bookings.services.obtener_busy_intervalos', return_value=[])
@@ -301,7 +301,7 @@ class FlujoCompletoTimezoneTest(TestCase):
         for dia in range(5):
             crear_disponibilidad(self.host, dia=dia)
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     @patch('calendario.bookings.services.obtener_busy_intervalos', return_value=[])
     def test_flujo_venezolano_en_mexico(self, mock_busy, mock_gcal, mock_freebusy):

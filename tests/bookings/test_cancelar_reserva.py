@@ -17,7 +17,7 @@ class CancelarReservaTest(TestCase):
             crear_disponibilidad(self.host, dia=dia)
 
     def _reserva(self, inicio=None):
-        with patch('calendario.bookings.services.consultar_freebusy', return_value=False), \
+        with patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False), \
              patch('calendario.bookings.services.crear_evento_google'):
             return crear_reserva(self.et, inicio_utc=inicio or slot_futuro())
 
@@ -51,7 +51,7 @@ class CancelarReservaTest(TestCase):
         with patch('calendario.bookings.services.eliminar_evento_google'):
             cancelar_reserva(reserva)
 
-        with patch('calendario.bookings.services.consultar_freebusy', return_value=False), \
+        with patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False), \
              patch('calendario.bookings.services.crear_evento_google'):
             nueva = crear_reserva(self.et, inicio_utc=inicio)
 

@@ -23,7 +23,7 @@ class CrearReservaTest(TestCase):
         crear_disponibilidad(self.host, dia=3)
         crear_disponibilidad(self.host, dia=4)
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_reserva_confirmada(self, mock_evento, mock_freebusy):
         inicio = slot_futuro()
@@ -35,7 +35,7 @@ class CrearReservaTest(TestCase):
         self.assertEqual(reserva.host, self.host)
         self.assertIsNotNone(reserva.confirmacion_token)
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_no_duplica_mismo_slot(self, mock_evento, mock_freebusy):
         inicio = slot_futuro()
@@ -44,7 +44,7 @@ class CrearReservaTest(TestCase):
         with self.assertRaises(SlotNoDisponibleError):
             crear_reserva(self.et, inicio_utc=inicio)
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=True)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=True)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_freebusy_ocupado_bloquea_reserva(self, mock_evento, mock_freebusy):
         inicio = slot_futuro()
@@ -52,7 +52,7 @@ class CrearReservaTest(TestCase):
         with self.assertRaises(SlotNoDisponibleError):
             crear_reserva(self.et, inicio_utc=inicio)
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_fin_utc_calculado_correctamente(self, mock_evento, mock_freebusy):
         inicio = slot_futuro()
@@ -61,7 +61,7 @@ class CrearReservaTest(TestCase):
         esperado = inicio + timedelta(minutes=self.et.duracion_minutos)
         self.assertEqual(reserva.fin_utc, esperado)
 
-    @patch('calendario.bookings.services.consultar_freebusy', return_value=False)
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_google_sync_pendiente_al_crear(self, mock_evento, mock_freebusy):
         inicio = slot_futuro()

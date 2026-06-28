@@ -15,7 +15,7 @@ from calendario.event_types.models import EventType, EventTypeXHost
 from calendario.google_calendar.services import (
     cancelar_evento_google, crear_evento_google,
     eliminar_evento_google, hay_conflicto_calendario, obtener_busy_intervalos,
-    obtener_busy_intervalos_local, obtener_google_event_ids_liberados,
+    obtener_busy_intervalos_local,
 )
 from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .models import Reserva
@@ -132,17 +132,14 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
         ).select_related('event_type').order_by('inicio_utc')
     )
 
-    # Reglas free/busy: una reserva cuyo evento de Google Calendar fue marcado
-    # con el candado (título matchea las palabras) deja de bloquear el slot, así
-    # se puede reservar encima (igual que Calendly reserva sobre sus propias
-    # reuniones marcadas). Sin palabras configuradas, no se filtra nada.
-    if palabras_ignorar:
-        liberados = obtener_google_event_ids_liberados(
-            host, desde_utc - timedelta(hours=24), hasta_utc + timedelta(hours=24),
-            palabras_ignorar,
-        )
-        if liberados:
-            reservas = [r for r in reservas if r.google_event_id not in liberados]
+    # Reglas free/busy (estilo Calendly): una reserva "abierta"
+    # (permite_overbooking=True) no bloquea el slot, así entran varias reservas
+    # encima. La reserva nace abierta cuando su tipo de evento tiene palabras
+    # configuradas (su título lleva la palabra/emoji desde el inicio); el sync la
+    # cierra (permite_overbooking=False) en cuanto se le quita esa palabra al
+    # evento en Google Calendar. Sin palabras configuradas, ninguna reserva está
+    # abierta y el comportamiento es el de siempre.
+    reservas = [r for r in reservas if not r.permite_overbooking]
 
     # Los eventos externos de GCal bloquean solo su tiempo real, sin buffer.
     # El buffer solo aplica alrededor de reservas confirmadas (igual que Calendly).
@@ -404,6 +401,11 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
             telefono_invitado=telefono_invitado.strip(),
             notas=notas.strip(),
             timezone_invitado=timezone_invitado,
+            # Reglas free/busy (estilo Calendly): si el tipo de evento tiene
+            # palabras configuradas, la reserva nace "abierta" para permitir
+            # reservar encima. El host cierra el slot quitándole la palabra al
+            # evento en Google Calendar (el sync apaga este flag).
+            permite_overbooking=bool(et.gcal_palabras_ignorar_lista),
             **_tracking_kwargs(tracking),
         )
         et_id = et.pk

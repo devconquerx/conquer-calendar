@@ -251,10 +251,22 @@ def obtener_busy_intervalos_local(host, time_min_utc, time_max_utc, palabras_ign
 
 
 def _titulo_evento(reserva):
-    fmt = reserva.event_type.formato_titulo_gcal
+    et = reserva.event_type
+    fmt = et.formato_titulo_gcal
     if fmt == 'invitado_evento':
-        return f'{reserva.nombre_invitado} - {reserva.event_type.nombre}'
-    return f'{reserva.event_type.nombre} con {reserva.nombre_invitado}'
+        titulo = f'{reserva.nombre_invitado} - {et.nombre}'
+    else:
+        titulo = f'{et.nombre} con {reserva.nombre_invitado}'
+    # Reglas free/busy (estilo Calendly): si el tipo de evento tiene palabras
+    # configuradas, la reserva nace "abierta" con la primera palabra/emoji en el
+    # título, para que se pueda reservar encima. El host cierra el slot quitándole
+    # esa palabra al evento en Google Calendar.
+    palabras = et.gcal_palabras_ignorar_lista
+    if palabras:
+        marcador = palabras[0]
+        if marcador.casefold() not in titulo.casefold():
+            titulo = f'{marcador} {titulo}'
+    return titulo
 
 
 def _extraer_meet_uri(conference_data):
