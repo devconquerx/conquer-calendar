@@ -12,9 +12,43 @@
     gtm.loader_domain → dominio first-party del sGTM
     gtm.loader_path   → nombre del archivo cloaked (p.ej. tiehtchn.js)
 
+  CARGA DIFERIDA: el contenedor de GTM (que a su vez baja GA/Cookiebot) NO se
+  inyecta de forma síncrona en el <head> —ahí compite con el render inicial y
+  hunde el FCP/LCP en mobile—. Inicializamos `dataLayer` y empujamos `gtm.start`
+  de inmediato (barato, sin red), pero la inyección del script del contenedor se
+  difiere al primer gesto del usuario o, como respaldo, a unos segundos en idle.
+  `dataLayer` es un array: cualquier evento que la app empuje antes (event_id,
+  form_submit_lead, etc.) queda encolado y GTM lo procesa al cargar, así que NO
+  se pierden conversiones. El submit del form siempre ocurre tras interactuar, o
+  sea con GTM ya cargado. Para quitar el diferido, basta volver al snippet
+  síncrono de siempre.
+
   Se "enchufa/desenchufa" desde aquí: sin gtm.id no se emite nada.
 {% endcomment %}{% if gtm.id %}
-<!-- Google Tag Manager (first-party sGTM loader) -->
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://{{ gtm.loader_domain }}/{{ gtm.loader_path }}?st='+i+dl+'';f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','{{ gtm.st }}');</script>
+<!-- Google Tag Manager (first-party sGTM loader, carga diferida) -->
+<script>
+(function (w, d, s, l) {
+  w[l] = w[l] || [];
+  w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+  var domain = '{{ gtm.loader_domain }}', path = '{{ gtm.loader_path }}', st = '{{ gtm.st }}';
+  var evs = ['pointerdown', 'keydown', 'touchstart', 'scroll', 'mousemove'];
+  var loaded = false;
+  function cleanup() { evs.forEach(function (e) { w.removeEventListener(e, load); }); }
+  function load() {
+    if (loaded) return;
+    loaded = true;
+    cleanup();
+    var f = d.getElementsByTagName(s)[0], j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : '';
+    j.async = true;
+    j.src = 'https://' + domain + '/' + path + '?st=' + st + dl;
+    f.parentNode.insertBefore(j, f);
+  }
+  // Primer gesto del usuario → carga inmediata. Respaldo en idle (timeout 3.5s)
+  // para quien no interactúa, de modo que el page-view igual se dispare pronto.
+  evs.forEach(function (e) { w.addEventListener(e, load, { passive: true }); });
+  if ('requestIdleCallback' in w) { w.requestIdleCallback(load, { timeout: 3500 }); }
+  else { w.addEventListener('load', function () { setTimeout(load, 2500); }); }
+})(window, document, 'script', 'dataLayer');
+</script>
 <!-- End Google Tag Manager -->
 {% endif %}
