@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone as django_tz
 from googleapiclient.errors import HttpError
 
@@ -32,6 +32,7 @@ def _parse_evento(item):
     # perdería, dejando un evento fantasma que bloquea slots para siempre.
     if estado == 'cancelled':
         return {
+            'titulo': '',
             'inicio_utc': None,
             'fin_utc': None,
             'es_todo_el_dia': False,
@@ -39,6 +40,7 @@ def _parse_evento(item):
             'estado': estado,
         }
 
+    titulo = (item.get('summary') or '').strip()
     start = item.get('start', {})
     end = item.get('end', {})
 
@@ -69,12 +71,61 @@ def _parse_evento(item):
         return None
 
     return {
+        'titulo': titulo,
         'inicio_utc': inicio_utc,
         'fin_utc': fin_utc,
         'es_todo_el_dia': es_todo_el_dia,
         'transparencia': transparencia,
         'estado': estado,
     }
+
+
+def _reconciliar_overbooking(host, titulos_por_event_id):
+    """
+    Actualiza Reserva.permite_overbooking según las reglas free/busy: una reserva
+    cuyo evento de Google Calendar tiene en el título alguna de las palabras/emojis
+    configuradas en su tipo de evento puede reservarse encima (overbooking).
+
+    `titulos_por_event_id`: dict {google_event_id: titulo} de los eventos
+    sincronizados en esta pasada. Solo toca reservas confirmadas del host cuyo
+    google_event_id esté en ese dict. Idempotente: solo escribe si el flag cambia.
+    """
+    if not titulos_por_event_id:
+        return
+    from calendario.bookings.models import Reserva
+    from .services import titulo_libera_horario
+
+    reservas = (
+        Reserva.objects
+        .filter(
+            host=host,
+            estado=Reserva.Estado.CONFIRMADA,
+            google_event_id__in=list(titulos_por_event_id.keys()),
+        )
+        .select_related('event_type')
+    )
+    for r in reservas:
+        titulo = titulos_por_event_id.get(r.google_event_id, '')
+        palabras = r.event_type.gcal_palabras_ignorar_lista
+        nuevo = titulo_libera_horario(titulo, palabras)
+        if nuevo == r.permite_overbooking:
+            continue
+        # Savepoint por reserva: si quitar la palabra a esta reserva dejaría DOS
+        # exclusivas (sin palabra) en el mismo slot, la restricción de unicidad
+        # lo rechaza. Lo aislamos para NO romper el sync del host: se loguea y la
+        # reserva se queda con su flag anterior (sigue como overbooking). Igual
+        # que Calendly: no se traba, queda para que un humano lo resuelva.
+        try:
+            with transaction.atomic():
+                r.permite_overbooking = nuevo
+                r.save(update_fields=['permite_overbooking'])
+        except IntegrityError:
+            logger.warning(
+                "overbooking: no se pudo poner permite_overbooking=%s en reserva %s "
+                "(host=%s, inicio=%s) — ya hay otra reserva exclusiva en ese slot. "
+                "Se deja como estaba; resolver los títulos en Google Calendar.",
+                nuevo, r.pk, host.email, r.inicio_utc,
+            )
 
 
 def _upsert_evento(host, google_event_id, campos):
@@ -160,6 +211,13 @@ def sincronizar_host_completo(host):
             sync_estado.ultima_sync_utc = django_tz.now()
             sync_estado.save(update_fields=['sync_token', 'estado', 'ultima_sync_utc'])
 
+            # Reglas free/busy: reconciliar el flag de overbooking de las reservas
+            # según el título actual de su evento en GCal.
+            _reconciliar_overbooking(
+                host,
+                {gid: c.get('titulo', '') for gid, c in nuevos_eventos.items()},
+            )
+
         logger.info(
             "sync_completo: OK host=%s eventos_activos=%d sync_token=%s",
             host.email,
@@ -227,6 +285,7 @@ def sincronizar_host_incremental(host):
                 )
                 next_sync_token = None
                 hay_cambios = False
+                titulos_por_event_id = {}
 
                 while request is not None:
                     response = request.execute()
@@ -238,6 +297,7 @@ def sincronizar_host_incremental(host):
                         if campos is None:
                             continue
                         _upsert_evento(host, google_event_id, campos)
+                        titulos_por_event_id[google_event_id] = campos.get('titulo', '')
                         hay_cambios = True
 
                     next_sync_token = response.get('nextSyncToken')
@@ -247,6 +307,10 @@ def sincronizar_host_incremental(host):
                 sync_estado.ultima_sync_utc = django_tz.now()
                 sync_estado.estado = GoogleCalendarSyncEstado.ACTIVO
                 sync_estado.save(update_fields=['sync_token', 'ultima_sync_utc', 'estado'])
+
+                # Reglas free/busy: reconciliar el flag de overbooking de las
+                # reservas tocadas en este sync incremental.
+                _reconciliar_overbooking(host, titulos_por_event_id)
 
                 if hay_cambios:
                     _invalidar_cache_por_host(host)

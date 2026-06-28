@@ -13,9 +13,9 @@ from django.utils import timezone
 from calendario.availability.models import BloqueHorarioSemanal, BloqueHorarioFecha
 from calendario.event_types.models import EventType, EventTypeXHost
 from calendario.google_calendar.services import (
-    cancelar_evento_google, consultar_freebusy, crear_evento_google,
-    eliminar_evento_google, obtener_busy_intervalos,
-    obtener_busy_intervalos_local,
+    cancelar_evento_google, crear_evento_google,
+    eliminar_evento_google, hay_conflicto_calendario, obtener_busy_intervalos,
+    obtener_busy_intervalos_local, obtener_google_event_ids_liberados,
 )
 from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .models import Reserva
@@ -46,16 +46,21 @@ def _obtener_hosts_pool(event_type):
     return hosts
 
 
-def _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc):
+def _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc, palabras_ignorar=None):
     """
     Devuelve intervalos busy del host intentando primero la copia local.
     Fallback a freeBusy en vivo si el host no tiene sync activo (regla #2).
+
+    `palabras_ignorar` (reglas free/busy del tipo de evento) solo se aplica en
+    la copia local, que es la que guarda el título del evento. El fallback
+    freeBusy en vivo no devuelve títulos, así que no puede filtrar: para hosts
+    sin sync activo la regla no aplica (degradación documentada).
     """
     from calendario.google_calendar.models import GoogleCalendarSyncEstado
     try:
         sync_estado = GoogleCalendarSyncEstado.objects.get(host=host)
         if sync_estado.estado == GoogleCalendarSyncEstado.ACTIVO:
-            return obtener_busy_intervalos_local(host, desde_utc, hasta_utc)
+            return obtener_busy_intervalos_local(host, desde_utc, hasta_utc, palabras_ignorar)
     except GoogleCalendarSyncEstado.DoesNotExist:
         pass
     return obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
@@ -117,6 +122,8 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     desde_utc = datetime.combine(fecha_desde, datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
     hasta_utc = datetime.combine(fecha_hasta + timedelta(days=1), datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
 
+    palabras_ignorar = event_type.gcal_palabras_ignorar_lista
+
     reservas = list(
         Reserva.objects.filter(
             host=host, estado=Reserva.Estado.CONFIRMADA,
@@ -125,12 +132,26 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
         ).select_related('event_type').order_by('inicio_utc')
     )
 
+    # Reglas free/busy: una reserva cuyo evento de Google Calendar fue marcado
+    # con el candado (título matchea las palabras) deja de bloquear el slot, así
+    # se puede reservar encima (igual que Calendly reserva sobre sus propias
+    # reuniones marcadas). Sin palabras configuradas, no se filtra nada.
+    if palabras_ignorar:
+        liberados = obtener_google_event_ids_liberados(
+            host, desde_utc - timedelta(hours=24), hasta_utc + timedelta(hours=24),
+            palabras_ignorar,
+        )
+        if liberados:
+            reservas = [r for r in reservas if r.google_event_id not in liberados]
+
     # Los eventos externos de GCal bloquean solo su tiempo real, sin buffer.
     # El buffer solo aplica alrededor de reservas confirmadas (igual que Calendly).
     if busy_override is not None:
         busy_intervalos = list(busy_override)
     else:
-        busy_intervalos = list(_obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc))
+        busy_intervalos = list(_obtener_busy_intervalos_con_fallback(
+            host, desde_utc, hasta_utc, palabras_ignorar,
+        ))
 
     slots = []
     step = timedelta(minutes=incremento)
@@ -368,7 +389,9 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         host_elegido = _seleccionar_host_round_robin(et, candidatos)
         fin_utc = inicio_utc + timedelta(minutes=et.duracion_minutos)
 
-        if consultar_freebusy(host_elegido.email, inicio_utc, fin_utc):
+        if hay_conflicto_calendario(
+            host_elegido.email, inicio_utc, fin_utc, et.gcal_palabras_ignorar_lista,
+        ):
             raise SlotNoDisponibleError("Ese slot ya no está disponible.")
 
         reserva = Reserva.objects.create(

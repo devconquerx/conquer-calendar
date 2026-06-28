@@ -74,8 +74,12 @@ class EventTypeForm(forms.ModelForm):
             'aviso_minimo_minutos', 'aviso_maximo_dias', 'activo',
             'crm_destino', 'unico_por_invitado',
             'confirmacion_tipo', 'confirmacion_url',
+            'gcal_palabras_ignorar',
         ]
-        widgets = {'descripcion': forms.Textarea(attrs={'rows': 3})}
+        widgets = {
+            'descripcion': forms.Textarea(attrs={'rows': 3}),
+            'gcal_palabras_ignorar': forms.Textarea(attrs={'rows': 3}),
+        }
         labels = {
             'crm_destino': 'Destino en el CRM',
             'unico_por_invitado': 'Solo una reserva por invitado',

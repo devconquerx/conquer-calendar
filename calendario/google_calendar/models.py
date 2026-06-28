@@ -13,6 +13,13 @@ class GoogleCalendarEvento(models.Model):
         related_name='eventos_gcal',
     )
     google_event_id = models.CharField(max_length=1024)
+    titulo = models.CharField(
+        max_length=1024,
+        blank=True,
+        default='',
+        help_text="Título (summary) del evento en Google Calendar. Se usa para "
+                  "las reglas free/busy por palabra/emoji del tipo de evento.",
+    )
     inicio_utc = models.DateTimeField()
     fin_utc = models.DateTimeField()
     es_todo_el_dia = models.BooleanField(default=False)

@@ -74,6 +74,61 @@ def consultar_freebusy(host_email, inicio_utc, fin_utc):
         return False
 
 
+def hay_conflicto_calendario(host_email, inicio_utc, fin_utc, palabras_ignorar=None):
+    """
+    Chequeo de conflicto en vivo para la confirmación de una reserva, que
+    respeta las reglas free/busy del tipo de evento.
+
+    - Sin `palabras_ignorar`: delega en freeBusy (idéntico al comportamiento
+      histórico; freeBusy no devuelve títulos pero es más barato).
+    - Con `palabras_ignorar`: usa events.list (que sí trae el título) y reporta
+      conflicto solo si hay un evento que se solapa cuyo título NO contiene
+      ninguna de las palabras/emojis. Así un evento "liberado" no rechaza la
+      reserva en la confirmación, igual que no la rechazó al pintar el slot.
+    Fail-open: si Google falla, devuelve False (sin conflicto) y loguea WARNING.
+    """
+    if not palabras_ignorar:
+        return consultar_freebusy(host_email, inicio_utc, fin_utc)
+
+    try:
+        servicio = obtener_servicio_calendar(host_email)
+    except (ServiceAccountNoConfiguradaError, EmailFueraDeDominioError) as e:
+        logger.warning(
+            "conflicto_calendario: no se puede consultar para %s — %s. Fail-open.",
+            host_email, e.__class__.__name__,
+        )
+        return False
+
+    try:
+        resp = servicio.events().list(
+            calendarId='primary',
+            singleEvents=True,
+            timeMin=inicio_utc.isoformat(),
+            timeMax=fin_utc.isoformat(),
+            maxResults=50,
+        ).execute()
+        for item in resp.get('items', []):
+            if item.get('status') == 'cancelled':
+                continue
+            if item.get('transparency', 'opaque') == 'transparent':
+                continue
+            if titulo_libera_horario(item.get('summary', ''), palabras_ignorar):
+                continue
+            return True
+        return False
+    except HttpError as e:
+        logger.warning(
+            "conflicto_calendario: query falló para %s (HTTP %s). Fail-open.",
+            host_email, e.resp.status,
+        )
+        return False
+    except Exception:
+        logger.exception(
+            "conflicto_calendario: error inesperado para %s. Fail-open.", host_email,
+        )
+        return False
+
+
 def obtener_busy_intervalos(host_email, time_min_utc, time_max_utc):
     """
     Devuelve lista ordenada de (inicio_utc, fin_utc) ocupados en el calendario
@@ -124,14 +179,58 @@ def obtener_busy_intervalos(host_email, time_min_utc, time_max_utc):
         return []
 
 
-def obtener_busy_intervalos_local(host, time_min_utc, time_max_utc):
+def titulo_libera_horario(titulo, palabras_ignorar):
+    """
+    True si el título de un evento de Google Calendar contiene alguna de las
+    `palabras_ignorar` (regla free/busy del tipo de evento). Match 'includes'
+    (substring) e insensible a mayúsculas, igual que el operador "Includes" de
+    Calendly. Lista vacía -> nunca libera (comportamiento histórico).
+    """
+    if not palabras_ignorar:
+        return False
+    t = (titulo or '').casefold()
+    return any(p.casefold() in t for p in palabras_ignorar if p)
+
+
+def obtener_google_event_ids_liberados(host, time_min_utc, time_max_utc, palabras_ignorar):
+    """
+    Conjunto de google_event_id de la copia local cuyo título matchea alguna de
+    las `palabras_ignorar` (reglas free/busy). Sirve para que una Reserva cuyo
+    evento de Google Calendar fue marcado con el candado deje de bloquear el
+    slot (igual que Calendly, que reserva por encima de sus propias reuniones si
+    el título matchea). Lista vacía -> conjunto vacío.
+    """
+    if not palabras_ignorar:
+        return set()
+    from .models import GoogleCalendarEvento
+    filas = (
+        GoogleCalendarEvento.objects
+        .filter(
+            host=host,
+            inicio_utc__lt=time_max_utc,
+            fin_utc__gt=time_min_utc,
+        )
+        .exclude(estado='cancelled')
+        .values_list('google_event_id', 'titulo')
+    )
+    return {
+        gid for gid, titulo in filas
+        if titulo_libera_horario(titulo, palabras_ignorar)
+    }
+
+
+def obtener_busy_intervalos_local(host, time_min_utc, time_max_utc, palabras_ignorar=None):
     """
     Devuelve lista ordenada de (inicio_utc, fin_utc) ocupados leyendo la copia
     local (GoogleCalendarEvento). Misma estructura que obtener_busy_intervalos.
     Solo considera eventos opaque y no cancelados.
+
+    `palabras_ignorar`: si se pasa una lista no vacía, los eventos cuyo título
+    contenga alguna de esas palabras/emojis NO se cuentan como ocupados (reglas
+    free/busy). Sin palabras -> comportamiento idéntico al histórico.
     """
     from .models import GoogleCalendarEvento
-    eventos = (
+    qs = (
         GoogleCalendarEvento.objects
         .filter(
             host=host,
@@ -141,9 +240,14 @@ def obtener_busy_intervalos_local(host, time_min_utc, time_max_utc):
         )
         .exclude(estado='cancelled')
         .order_by('inicio_utc')
-        .values_list('inicio_utc', 'fin_utc')
     )
-    return list(eventos)
+    if not palabras_ignorar:
+        return list(qs.values_list('inicio_utc', 'fin_utc'))
+    return [
+        (inicio, fin)
+        for titulo, inicio, fin in qs.values_list('titulo', 'inicio_utc', 'fin_utc')
+        if not titulo_libera_horario(titulo, palabras_ignorar)
+    ]
 
 
 def _titulo_evento(reserva):

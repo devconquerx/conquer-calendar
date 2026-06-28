@@ -104,6 +104,15 @@ class Reserva(models.Model):
     )
     recordatorio_1_enviado = models.BooleanField(default=False)
     recordatorio_2_enviado = models.BooleanField(default=False)
+
+    # Reglas free/busy: cuando el evento de esta reserva en Google Calendar lleva
+    # alguna de las palabras/emojis configuradas en el tipo de evento, el sync
+    # marca este flag y la reserva deja de contar para la unicidad (host,
+    # inicio_utc), permitiendo reservar encima (overbooking, como Calendly).
+    # Default False -> los eventos normales mantienen la protección anti doble
+    # booking intacta.
+    permite_overbooking = models.BooleanField(default=False)
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -118,7 +127,7 @@ class Reserva(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['host', 'inicio_utc'],
-                condition=Q(estado='confirmada'),
+                condition=Q(estado='confirmada', permite_overbooking=False),
                 name='uq_reserva_host_inicio_confirmada',
             ),
             models.CheckConstraint(

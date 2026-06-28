@@ -239,6 +239,26 @@
             </div>
             <!--end::Único por invitado-->
 
+            <!--begin::Reglas free/busy (palabras que liberan el horario)-->
+            <div class="separator separator-dashed my-8"></div>
+            <div class="fv-row mb-7">
+                <label class="form-label fw-semibold" for="gcal_palabras_ignorar">
+                    Reglas de disponibilidad (libre / ocupado)
+                </label>
+                <textarea name="gcal_palabras_ignorar" id="gcal_palabras_ignorar" rows="3"
+                          class="form-control form-control-lg{% if form.gcal_palabras_ignorar.errors %} is-invalid{% endif %}">{{ form.gcal_palabras_ignorar.value|default:'' }}</textarea>
+                {% if form.gcal_palabras_ignorar.errors %}
+                <div class="invalid-feedback">{{ form.gcal_palabras_ignorar.errors|join:", " }}</div>
+                {% endif %}
+                <div class="text-muted fs-7 mt-1">
+                    Una por línea. Si un evento de Google Calendar contiene alguna de estas
+                    palabras o emojis en su <b>título</b>, no bloqueará los horarios: se podrá
+                    agendar encima (doble booking). Al quitarle la palabra al evento en Google
+                    Calendar, vuelve a bloquear.
+                </div>
+            </div>
+            <!--end::Reglas free/busy-->
+
             <!--begin::Confirmación post-reserva-->
             <div class="separator separator-dashed my-8"></div>
             <div class="d-flex align-items-start gap-4 mb-7">

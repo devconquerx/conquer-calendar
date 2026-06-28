@@ -108,6 +108,20 @@ class EventType(models.Model):
         default=True,
         help_text="Si está activo, un mismo email no puede reservar este evento dos veces mientras tenga una reserva futura confirmada.",
     )
+
+    gcal_palabras_ignorar = models.TextField(
+        blank=True,
+        default='',
+        verbose_name='Palabras/emojis que liberan el horario',
+        help_text=(
+            "Reglas free/busy: si un evento de Google Calendar contiene alguna de "
+            "estas palabras o emojis en su título, NO bloqueará los horarios (se "
+            "podrá agendar encima). Una por línea. Si se le quita la palabra al "
+            "evento en Google Calendar, vuelve a bloquear. Solo aplica a hosts con "
+            "sincronización de calendario activa."
+        ),
+    )
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -143,6 +157,20 @@ class EventType(models.Model):
     def clean(self):
         if self.precio is not None and self.precio < 0:
             raise ValidationError({'precio': 'El precio no puede ser negativo.'})
+
+    @property
+    def gcal_palabras_ignorar_lista(self):
+        """Lista normalizada de palabras/emojis que liberan el horario.
+
+        Cada línea es una regla independiente. Se ignoran líneas vacías. El
+        match contra el título del evento es 'includes' (substring) e
+        insensible a mayúsculas; ver `titulo_libera_horario` en services.
+        """
+        return [
+            linea.strip()
+            for linea in (self.gcal_palabras_ignorar or '').splitlines()
+            if linea.strip()
+        ]
 
     def __str__(self):
         return f"{self.nombre} ({self.duracion_minutos} min)"
