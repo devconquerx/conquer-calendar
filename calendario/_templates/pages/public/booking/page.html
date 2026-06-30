@@ -1325,18 +1325,18 @@ setTimeout(function () {
 </style>
 <div class="bk-modal-backdrop" id="bk-modal-dup">
   <div class="bk-modal" role="dialog" aria-modal="true" aria-labelledby="bk-modal-title">
-    <h3 id="bk-modal-title">Ya tenés una reserva</h3>
+    <h3 id="bk-modal-title">Ya tienes una reserva</h3>
     <p>
-      Detectamos que ya tenés una reserva confirmada para <strong>{{ event_type.nombre }}</strong>:
+      Detectamos que ya tienes una reserva confirmada para <strong>{{ event_type.nombre }}</strong>:
     </p>
     <div class="bk-modal-existing">
       <strong>{{ duplicado_inicio_dia }}</strong><br>
-      <strong>{{ duplicado_inicio_hora }} h</strong>
+      <strong>{{ duplicado_inicio_hora }} h</strong>{% if tz_ciudad %} <span style="color:#6b7280;font-weight:normal">(hora de {{ tz_ciudad }})</span>{% endif %}
       &middot; con {{ duplicado.host.nombre_display }}
     </div>
     <p>
-      ¿Querés <strong>cancelar esa reserva</strong> y agendar esta nueva
-      {% if nuevo_inicio_dia %}para el <strong>{{ nuevo_inicio_dia }} a las {{ nuevo_inicio_hora }} h</strong>{% endif %}?
+      ¿Quieres <strong>cancelar esa reserva</strong> y agendar esta nueva
+      {% if nuevo_inicio_dia %}para el <strong>{{ nuevo_inicio_dia }} a las {{ nuevo_inicio_hora }} h</strong>{% if tz_ciudad %} <span style="color:#6b7280">(hora de {{ tz_ciudad }})</span>{% endif %}{% endif %}?
     </p>
     <form method="post" action="{% url 'public_token:reemplazar_publica' token=duplicado_token %}" style="margin:0">
       {% csrf_token %}

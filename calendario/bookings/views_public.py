@@ -307,8 +307,9 @@ class BookingFormView(View):
 
 
 def _duplicado_ctx(duplicado, inicio_nuevo_utc, tz_ref):
-    tz_dup = ZoneInfo(duplicado.host.timezone)
-    dup_local = duplicado.inicio_utc.astimezone(tz_dup)
+    # Ambas horas en la zona del visitante (tz_ref), igual que la grilla de slots,
+    # para que coincidan con lo que la persona eligió (estilo Calendly).
+    dup_local = duplicado.inicio_utc.astimezone(tz_ref)
     nuevo_local = inicio_nuevo_utc.astimezone(tz_ref) if inicio_nuevo_utc else None
     return {
         'mostrar_modal_duplicado': True,
@@ -316,8 +317,9 @@ def _duplicado_ctx(duplicado, inicio_nuevo_utc, tz_ref):
         'duplicado_inicio_dia': date_format(dup_local, r"l, j \d\e F"),
         'duplicado_inicio_hora': dup_local.strftime('%H:%M'),
         'duplicado_token': str(duplicado.confirmacion_token),
-        'nuevo_inicio_dia': date_format(nuevo_local, r"j \d\e F") if nuevo_local else '',
+        'nuevo_inicio_dia': date_format(nuevo_local, r"l, j \d\e F") if nuevo_local else '',
         'nuevo_inicio_hora': nuevo_local.strftime('%H:%M') if nuevo_local else '',
+        'tz_ciudad': str(tz_ref).split('/')[-1].replace('_', ' '),
     }
 
 
