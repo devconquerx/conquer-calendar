@@ -65,12 +65,51 @@ def _slots_template(slots_utc, tz_visitante):
     ]
 
 
-def _build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha_sel):
+def _siguiente_mes(mes):
+    """Primer día del mes siguiente a `mes` (que ya es un día-1)."""
+    return (mes.replace(day=28) + timedelta(days=4)).replace(day=1)
+
+
+def _mes_tiene_slots(event_type, tz_visitante, hoy_local, max_fecha, mes_base):
+    """True si el mes `mes_base` tiene al menos un slot dentro de la ventana reservable."""
+    ultimo_dia = _siguiente_mes(mes_base) - timedelta(days=1)
+    desde = max(mes_base, hoy_local)
+    hasta = min(ultimo_dia, max_fecha)
+    if desde > hasta:
+        return False
+    for s in calcular_slots_cacheado(event_type, desde - timedelta(days=1), hasta + timedelta(days=1)):
+        d = s.astimezone(tz_visitante).date()
+        if desde <= d <= hasta:
+            return True
+    return False
+
+
+def _primer_mes_con_slots(event_type, tz_visitante, hoy_local, max_fecha, mes_base):
+    """Avanza desde `mes_base` al primer mes con disponibilidad, acotado por `max_fecha`.
+    Si ningún mes de la ventana tiene slots, devuelve `mes_base` sin cambios (se queda
+    en el mes actual mostrándolo vacío, como antes)."""
+    mes_max = max_fecha.replace(day=1)
+    mes = mes_base
+    while mes <= mes_max:
+        if _mes_tiene_slots(event_type, tz_visitante, hoy_local, max_fecha, mes):
+            return mes
+        mes = _siguiente_mes(mes)
+    return mes_base
+
+
+def _build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha_sel,
+                        auto_avanzar=False):
     """Construye el contexto de calendario (grid + días con slots) para el template.
-    Todas las fechas se agrupan en la TZ del visitante."""
+    Todas las fechas se agrupan en la TZ del visitante.
+
+    Si `auto_avanzar` es True (solo en la primera carga, sin mes/fecha explícitos), y el
+    mes base no tiene disponibilidad, se salta al primer mes que sí la tenga."""
     mes_min = hoy_local.replace(day=1)
     mes_max = max_fecha.replace(day=1)
     mes_base = max(mes_min, min(mes_max, mes_base))
+
+    if auto_avanzar:
+        mes_base = _primer_mes_con_slots(event_type, tz_visitante, hoy_local, max_fecha, mes_base)
 
     # Días con slots en el mes visible. Pedimos ±1 día al servicio para no
     # perder slots que cruzan la frontera de día entre TZ del host y del visitante.
@@ -237,7 +276,9 @@ class BookingPageView(View):
             'form_action_url': reverse('public_booking:booking_submit', kwargs={'user_slug': host.slug, 'event_type_slug': event_type.slug}),
             'slots_url': reverse('public_booking:slots_mes_json', kwargs={'user_slug': host.slug, 'event_type_slug': event_type.slug}),
         }
-        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
+        auto_avanzar = not request.GET.get('mes') and not fecha
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha,
+                                       auto_avanzar=auto_avanzar))
         return render(request, 'pages/public/booking/page.html', ctx)
 
 
@@ -369,7 +410,9 @@ class TeamBookingPageView(View):
             'form_action_url': reverse('public_team:booking_submit', kwargs={'slug_equipo': event_type.slug_equipo}),
             'slots_url': reverse('public_team:slots_mes_json', kwargs={'slug_equipo': event_type.slug_equipo}),
         }
-        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
+        auto_avanzar = not request.GET.get('mes') and not fecha
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha,
+                                       auto_avanzar=auto_avanzar))
         return render(request, 'pages/public/booking/page.html', ctx)
 
 
@@ -583,7 +626,9 @@ class EnlaceUnicoPageView(View):
             'form_action_url': reverse('public_enlace_unico:booking_submit', kwargs={'token': token}),
             'slots_url': reverse('public_enlace_unico:slots_mes_json', kwargs={'token': token}),
         }
-        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
+        auto_avanzar = not request.GET.get('mes') and not fecha
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha,
+                                       auto_avanzar=auto_avanzar))
         return render(request, 'pages/public/booking/page.html', ctx)
 
 

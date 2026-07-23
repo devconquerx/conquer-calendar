@@ -795,9 +795,12 @@ setTimeout(function () {
   var SP  = new URLSearchParams(window.location.search);
   var TZ  = SP.get('tz') || '{{ tz_visitante }}';
   var HOY = '{{ hoy|date:"Y-m-d" }}';
+  // Mes realmente renderizado por el servidor: puede diferir del actual si en la
+  // primera carga se auto-saltó al primer mes con disponibilidad.
+  var MES_INICIAL = '{{ mes_base|date:"Y-m" }}';
 
   var cache     = {};
-  var mesActual = (SP.get('mes') || HOY).slice(0, 7);
+  var mesActual = (SP.get('mes') || MES_INICIAL).slice(0, 7);
   var fechaSel  = SP.get('fecha') || null;
 
   var MESES_CAP = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
