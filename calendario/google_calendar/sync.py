@@ -16,6 +16,21 @@ logger = logging.getLogger(__name__)
 _VENTANA_SYNC_DIAS = 90
 
 
+def _host_declino(item):
+    """
+    True si el dueño del calendario rechazó la invitación al evento.
+
+    El attendee con `self: True` es el propio host. Google mantiene el evento
+    en su calendario (lo muestra tachado) pero freebusy NO lo cuenta como
+    ocupado, así que la copia local debe tratarlo igual o bloquearía slots
+    que en realidad están libres.
+    """
+    return any(
+        a.get('self') and a.get('responseStatus') == 'declined'
+        for a in item.get('attendees', [])
+    )
+
+
 def _parse_evento(item):
     """
     Extrae campos relevantes de un item de events.list.
@@ -24,6 +39,12 @@ def _parse_evento(item):
     """
     estado = item.get('status', 'confirmed')
     transparencia = item.get('transparency', 'opaque')
+
+    # Un evento rechazado por el host no ocupa su agenda: se guarda como
+    # 'transparent' para que el cálculo de slots lo ignore, igual que hace
+    # freebusy de Google. Sin esto la copia local bloquea huecos libres.
+    if estado != 'cancelled' and _host_declino(item):
+        transparencia = 'transparent'
 
     # Un evento cancelado/eliminado llega en el sync incremental como
     # {id, status: 'cancelled'} SIN start/end. Hay que devolver los campos
