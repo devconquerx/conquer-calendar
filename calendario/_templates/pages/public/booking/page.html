@@ -26,10 +26,11 @@ html, body {
 }
 body {
   background-color: var(--bk-bg) !important;
-  background-image: url('{% static "img/paperboard-texture.avif" %}');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+  /* Papel a tamaño nativo y en mosaico (igual que la academia): 1px de imagen =
+     1px de pantalla, así el grano queda nítido. Con `cover` se estiraba y se veía
+     borroso, porque la foto (1567x898) es más pequeña que un viewport de escritorio. */
+  background-image: url('{% static "img/paperboard-academia.avif" %}');
+  background-repeat: repeat;
 }
 
 .bk-wrapper {

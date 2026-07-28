@@ -299,10 +299,11 @@ body { background: #fff; }
   -moz-osx-font-smoothing: grayscale;
   color: var(--bk-text);
   background-color: var(--bk-page-bg);
-  background-image: url('./assets/img/cb/paperboard-texture.avif');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+  /* Papel a tamaño nativo y en mosaico (igual que la academia): 1px de imagen =
+     1px de pantalla, así el grano queda nítido. Con `cover` se estiraba y se veía
+     borroso, porque la foto (1567x898) es más pequeña que un viewport de escritorio. */
+  background-image: url('./assets/img/cb/paperboard-academia.avif');
+  background-repeat: repeat;
 }
 /* Toda la UI del calendario usa la fuente de cuerpo; los títulos la sobreescriben
    con la de encabezados (Termina) por orden de cascada. Igual que page.html. */
