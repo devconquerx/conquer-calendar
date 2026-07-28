@@ -257,6 +257,24 @@
                     Calendar, vuelve a bloquear.
                 </div>
             </div>
+            <div class="fv-row mb-7" style="max-width: 260px;">
+                <label class="form-label fw-semibold" for="max_reservas_por_slot">
+                    Máximo de reservas por horario
+                </label>
+                <input type="number" name="max_reservas_por_slot" id="max_reservas_por_slot"
+                       min="1" max="20" step="1"
+                       value="{{ form.max_reservas_por_slot.value|default:2 }}"
+                       class="form-control form-control-lg{% if form.max_reservas_por_slot.errors %} is-invalid{% endif %}">
+                {% if form.max_reservas_por_slot.errors %}
+                <div class="invalid-feedback">{{ form.max_reservas_por_slot.errors|join:", " }}</div>
+                {% endif %}
+                <div class="text-muted fs-7 mt-1">
+                    Cuántas reservas activas admite un mismo horario mientras la regla de arriba
+                    lo mantiene abierto. Al llegar al tope el horario <b>se cierra solo</b>, sin
+                    tener que tocar Google Calendar. Solo cuentan las confirmadas: si una se
+                    cancela vuelve a quedar sitio. Con <b>1</b> no se admite ninguna encima.
+                </div>
+            </div>
             <!--end::Reglas free/busy-->
 
             <!--begin::Confirmación post-reserva-->

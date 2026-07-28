@@ -1,6 +1,6 @@
 import logging
 import math
-from collections import defaultdict
+from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -139,7 +139,25 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     # cierra (permite_overbooking=False) en cuanto se le quita esa palabra al
     # evento en Google Calendar. Sin palabras configuradas, ninguna reserva está
     # abierta y el comportamiento es el de siempre.
-    reservas = [r for r in reservas if not r.permite_overbooking]
+    #
+    # El tope `max_reservas_por_slot` del tipo de evento cierra el horario solo:
+    # mientras las abiertas que arrancan a esa hora no lleguen al tope no bloquean;
+    # al alcanzarlo vuelven a bloquear como una reserva normal. Se agrupan por hora
+    # de inicio, igual que la restricción de unicidad (host + inicio_utc), y solo
+    # cuentan las confirmadas — el queryset de arriba ya excluye las canceladas, así
+    # que cancelar una deja hueco para otra sin tocar Google Calendar.
+    #
+    # Ojo: al llegar al tope NO se puede apagar `permite_overbooking`, porque dos
+    # reservas exclusivas en el mismo slot violarían esa restricción. Por eso el
+    # tope se aplica aquí, en el cálculo, y no en la BD.
+    abiertas_por_inicio = Counter(
+        r.inicio_utc for r in reservas if r.permite_overbooking
+    )
+    reservas = [
+        r for r in reservas
+        if not r.permite_overbooking
+        or abiertas_por_inicio[r.inicio_utc] >= r.event_type.max_reservas_por_slot
+    ]
 
     # Los eventos externos de GCal bloquean solo su tiempo real, sin buffer.
     # El buffer solo aplica alrededor de reservas confirmadas (igual que Calendly).

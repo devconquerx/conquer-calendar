@@ -122,6 +122,19 @@ class EventType(models.Model):
         ),
     )
 
+    max_reservas_por_slot = models.PositiveSmallIntegerField(
+        default=2,
+        validators=[MinValueValidator(1), MaxValueValidator(20)],
+        verbose_name='Máximo de reservas por horario',
+        help_text=(
+            "Cuántas reservas activas admite un mismo horario mientras las reglas "
+            "de arriba lo mantienen abierto. Al llegar al tope el horario se cierra "
+            "solo, sin tener que tocar Google Calendar. Solo cuentan las "
+            "confirmadas: si una se cancela vuelve a quedar sitio para otra. Con "
+            "el valor 1 no se admite ninguna reserva encima."
+        ),
+    )
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 

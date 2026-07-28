@@ -74,7 +74,7 @@ class EventTypeForm(forms.ModelForm):
             'aviso_minimo_minutos', 'aviso_maximo_dias', 'activo',
             'crm_destino', 'unico_por_invitado',
             'confirmacion_tipo', 'confirmacion_url',
-            'gcal_palabras_ignorar',
+            'gcal_palabras_ignorar', 'max_reservas_por_slot',
         ]
         widgets = {
             'descripcion': forms.Textarea(attrs={'rows': 3}),
@@ -83,6 +83,7 @@ class EventTypeForm(forms.ModelForm):
         labels = {
             'crm_destino': 'Destino en el CRM',
             'unico_por_invitado': 'Solo una reserva por invitado',
+            'max_reservas_por_slot': 'Máximo de reservas por horario',
         }
 
     def __init__(self, *args, **kwargs):
