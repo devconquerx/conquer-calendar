@@ -257,24 +257,6 @@
                     Calendar, vuelve a bloquear.
                 </div>
             </div>
-            <div class="fv-row mb-7" style="max-width: 260px;">
-                <label class="form-label fw-semibold" for="max_reservas_por_slot">
-                    Máximo de reservas por horario
-                </label>
-                <input type="number" name="max_reservas_por_slot" id="max_reservas_por_slot"
-                       min="1" max="20" step="1"
-                       value="{{ form.max_reservas_por_slot.value|default:2 }}"
-                       class="form-control form-control-lg{% if form.max_reservas_por_slot.errors %} is-invalid{% endif %}">
-                {% if form.max_reservas_por_slot.errors %}
-                <div class="invalid-feedback">{{ form.max_reservas_por_slot.errors|join:", " }}</div>
-                {% endif %}
-                <div class="text-muted fs-7 mt-1">
-                    Cuántas reservas activas admite un mismo horario mientras la regla de arriba
-                    lo mantiene abierto. Al llegar al tope el horario <b>se cierra solo</b>, sin
-                    tener que tocar Google Calendar. Solo cuentan las confirmadas: si una se
-                    cancela vuelve a quedar sitio. Con <b>1</b> no se admite ninguna encima.
-                </div>
-            </div>
             <!--end::Reglas free/busy-->
 
             <!--begin::Confirmación post-reserva-->
@@ -327,10 +309,16 @@
             <div id="organizadores-section" class="et-collapsible">
             <div class="separator separator-dashed mt-8 mb-4"></div>
             <div class="mb-8">
-                <label class="form-label fw-semibold mb-5 d-flex align-items-center justify-content-between">
+                <div class="form-label fw-semibold mb-5 d-flex align-items-center justify-content-between">
                     <span>Organizadores</span>
-                    <span class="text-muted fs-7" id="hosts-counter">0 seleccionados</span>
-                </label>
+                    <span class="d-flex align-items-center gap-3">
+                        <span class="text-muted fs-7" id="hosts-counter">0 seleccionados</span>
+                        {% if puede_prioridad %}
+                        <button type="button" class="btn btn-primary btn-sm py-1 px-3 fs-8 fw-semibold"
+                                id="prioridad-open">Configurar prioridad</button>
+                        {% endif %}
+                    </span>
+                </div>
 
                 <div id="hosts-selected-list" class="d-flex flex-wrap gap-2 mb-3"></div>
                 <div id="hosts-hidden-inputs"></div>
@@ -398,7 +386,41 @@
 
             </div>
 
+            <!--begin::Modal prioridad round-robin-->
+            {% if puede_prioridad %}
+            <div id="prioridad-modal" class="d-none position-fixed top-0 start-0 w-100 h-100"
+                 style="background: rgba(0,0,0,.4); z-index: 1060;">
+                <div class="card shadow-lg position-absolute top-50 start-50 translate-middle d-flex flex-column"
+                     style="width: min(560px, calc(100vw - 2rem)); max-height: calc(100vh - 4rem);">
+                    <div class="card-header py-4 min-h-auto d-flex align-items-center justify-content-between">
+                        <h3 class="fs-5 fw-bold mb-0">Prioridad de los organizadores</h3>
+                        <button type="button" class="btn btn-icon btn-sm btn-active-light"
+                                id="prioridad-close" aria-label="Cerrar">
+                            <i class="ki-outline ki-cross fs-2"></i>
+                        </button>
+                    </div>
+                    <div class="card-body py-4 overflow-auto">
+                        <div class="text-muted fs-7 mb-4">
+                            De <b>1</b> a <b>3</b>, donde <b>3</b> es la más alta. Cuando varios
+                            organizadores están libres a la misma hora, la reserva se asigna al de
+                            mayor prioridad. A igualdad de prioridad decide el reparto de carga de
+                            siempre, así que si los dejas todos en <b>1</b> no cambia nada.
+                        </div>
+                        <div id="prioridad-list"></div>
+                        <div id="prioridad-vacio" class="text-muted text-center py-4 d-none">
+                            Añade organizadores para poder darles prioridad.
+                        </div>
+                    </div>
+                    <div class="card-footer py-3 d-flex justify-content-end">
+                        <button type="button" class="btn btn-primary btn-sm" id="prioridad-done">Listo</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            <!--end::Modal prioridad round-robin-->
+
             {{ hosts_disponibles|json_script:"hosts-data" }}
+            {{ prioridades_iniciales|json_script:"prioridades-initial" }}
             <script id="hosts-initial" type="application/json">
               [{% for hid in form.hosts.value|default_if_none:'' %}{{ hid }}{% if not forloop.last %},{% endif %}{% endfor %}]
             </script>
@@ -509,6 +531,21 @@
     JSON.parse(initNode.textContent || '[]').map(String)
   );
 
+  // Prioridad round-robin por host (1..3, 3 = más alta). Se guarda aparte de
+  // `committed` para que quitar y volver a añadir un organizador no la pierda.
+  var PRIO_MIN = 1, PRIO_MAX = 3, PRIO_DEF = 1;
+  var prioNode = document.getElementById('prioridades-initial');
+  var prioridades = {};
+  if (prioNode) {
+    var crudas = JSON.parse(prioNode.textContent || '{}');
+    Object.keys(crudas).forEach(function (k) { prioridades[String(k)] = crudas[k]; });
+  }
+
+  function prioridadDe(id) {
+    var v = parseInt(prioridades[id], 10);
+    return (v >= PRIO_MIN && v <= PRIO_MAX) ? v : PRIO_DEF;
+  }
+
   var trigger = document.getElementById('hosts-picker-trigger');
   var popover = document.getElementById('hosts-picker-popover');
   var listEl = document.getElementById('hosts-list');
@@ -537,14 +574,27 @@
       hidden.value = id;
       hiddenEl.appendChild(hidden);
 
+      var hiddenPrio = document.createElement('input');
+      hiddenPrio.type = 'hidden';
+      hiddenPrio.name = 'prioridad_' + id;
+      hiddenPrio.value = String(prioridadDe(id));
+      hiddenEl.appendChild(hiddenPrio);
+
       var chip = document.createElement('span');
       chip.className = 'hosts-chip';
       var avatarHTML = h.avatar
         ? '<img src="' + h.avatar + '" class="rounded-circle" width="28" height="28" alt="">'
         : '<span class="hosts-avatar sm">' + h.iniciales + '</span>';
+      // Solo se marca la prioridad cuando alguien la ha subido: con todos en el
+      // valor por defecto no hay nada que señalar y los chips quedan como siempre.
+      var prio = prioridadDe(id);
+      var badgeHTML = prio > PRIO_DEF
+        ? '<span class="badge badge-light-primary fs-9 fw-bold" title="Prioridad ' + prio + '">P' + prio + '</span>'
+        : '';
       chip.innerHTML =
         avatarHTML +
         '<span class="fw-semibold fs-7 text-gray-800">' + h.nombre + '</span>' +
+        badgeHTML +
         '<button type="button" class="hosts-chip-remove" data-remove="' + id + '" aria-label="Quitar">' +
           '<i class="ki-outline ki-cross fs-5"></i>' +
         '</button>';
@@ -648,6 +698,96 @@
   });
 
   cancelBtn.addEventListener('click', closePopover);
+
+  // --- Modal de prioridad round-robin ---
+  var prioModal = document.getElementById('prioridad-modal');
+  var prioOpenBtn = document.getElementById('prioridad-open');
+  var prioCloseBtn = document.getElementById('prioridad-close');
+  var prioDoneBtn = document.getElementById('prioridad-done');
+  var prioListEl = document.getElementById('prioridad-list');
+  var prioVacioEl = document.getElementById('prioridad-vacio');
+
+  function filaPrioridad(id, h) {
+    var row = document.createElement('div');
+    row.className = 'd-flex align-items-center gap-3 py-3 border-bottom';
+
+    if (h.avatar) {
+      var img = document.createElement('img');
+      img.src = h.avatar;
+      img.className = 'rounded-circle';
+      img.width = 36; img.height = 36; img.alt = '';
+      row.appendChild(img);
+    } else {
+      var av = document.createElement('span');
+      av.className = 'hosts-avatar';
+      av.textContent = h.iniciales;
+      row.appendChild(av);
+    }
+
+    // textContent y no innerHTML: el nombre y el email vienen de la BD.
+    var info = document.createElement('span');
+    info.className = 'flex-grow-1 min-w-0';
+    var nombre = document.createElement('span');
+    nombre.className = 'd-block fw-semibold text-gray-800 text-truncate';
+    nombre.textContent = h.nombre;
+    var email = document.createElement('span');
+    email.className = 'd-block text-muted fs-7 text-truncate';
+    email.textContent = h.email;
+    info.appendChild(nombre);
+    info.appendChild(email);
+    row.appendChild(info);
+
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.min = String(PRIO_MIN);
+    input.max = String(PRIO_MAX);
+    input.step = '1';
+    input.className = 'form-control form-control-sm text-center flex-shrink-0';
+    input.style.width = '76px';
+    input.value = String(prioridadDe(id));
+    input.setAttribute('data-prio-for', id);
+    input.setAttribute('aria-label', 'Prioridad de ' + h.nombre);
+    row.appendChild(input);
+
+    return row;
+  }
+
+  function renderPrioridades() {
+    prioListEl.innerHTML = '';
+    var ids = Array.from(committed);
+    prioVacioEl.classList.toggle('d-none', ids.length > 0);
+    ids.forEach(function (id) {
+      var h = hostsById[id];
+      if (h) prioListEl.appendChild(filaPrioridad(id, h));
+    });
+  }
+
+  // Se normaliza al cerrar y no mientras se teclea: si no, borrar el campo para
+  // escribir otro número lo resetearía a 1 en mitad de la edición.
+  function cerrarPrioridad() {
+    prioListEl.querySelectorAll('[data-prio-for]').forEach(function (input) {
+      var v = parseInt(input.value, 10);
+      prioridades[input.getAttribute('data-prio-for')] =
+        (v >= PRIO_MIN && v <= PRIO_MAX) ? v : PRIO_DEF;
+    });
+    renderChips();
+    prioModal.classList.add('d-none');
+  }
+
+  if (prioOpenBtn) {
+    prioOpenBtn.addEventListener('click', function () {
+      renderPrioridades();
+      prioModal.classList.remove('d-none');
+    });
+    prioCloseBtn.addEventListener('click', cerrarPrioridad);
+    prioDoneBtn.addEventListener('click', cerrarPrioridad);
+    prioModal.addEventListener('click', function (e) {
+      if (e.target === prioModal) cerrarPrioridad();  // clic en el fondo
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !prioModal.classList.contains('d-none')) cerrarPrioridad();
+    });
+  }
 
   renderChips();
 

@@ -122,19 +122,6 @@ class EventType(models.Model):
         ),
     )
 
-    max_reservas_por_slot = models.PositiveSmallIntegerField(
-        default=2,
-        validators=[MinValueValidator(1), MaxValueValidator(20)],
-        verbose_name='Máximo de reservas por horario',
-        help_text=(
-            "Cuántas reservas activas admite un mismo horario mientras las reglas "
-            "de arriba lo mantienen abierto. Al llegar al tope el horario se cierra "
-            "solo, sin tener que tocar Google Calendar. Solo cuentan las "
-            "confirmadas: si una se cancela vuelve a quedar sitio para otra. Con "
-            "el valor 1 no se admite ninguna reserva encima."
-        ),
-    )
-
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -190,6 +177,14 @@ class EventType(models.Model):
 
 
 class EventTypeXHost(models.Model):
+    # Prioridad en el reparto round-robin. Rango cerrado 1..3, sin valor centinela:
+    # todos los organizadores nacen en PRIORIDAD_DEFECTO, así que mientras nadie la
+    # toque el criterio es constante y no desempata nada (el reparto se comporta
+    # exactamente igual que antes de existir este campo).
+    PRIORIDAD_MIN = 1
+    PRIORIDAD_MAX = 3
+    PRIORIDAD_DEFECTO = 1
+
     event_type = models.ForeignKey(
         EventType,
         on_delete=models.CASCADE,
@@ -199,6 +194,19 @@ class EventTypeXHost(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='event_types_round_robin',
+    )
+    prioridad = models.PositiveSmallIntegerField(
+        default=PRIORIDAD_DEFECTO,
+        validators=[
+            MinValueValidator(PRIORIDAD_MIN),
+            MaxValueValidator(PRIORIDAD_MAX),
+        ],
+        verbose_name='Prioridad en el round-robin',
+        help_text=(
+            "De 1 a 3, donde 3 es la más alta. Cuando varios organizadores están "
+            "libres a la misma hora, la reserva se asigna al de mayor prioridad; a "
+            "igualdad de prioridad decide el reparto de carga de siempre."
+        ),
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 

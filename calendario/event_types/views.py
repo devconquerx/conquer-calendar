@@ -125,6 +125,47 @@ def _hosts_disponibles_context():
     ]
 
 
+def _puede_configurar_prioridad(user, event_type):
+    """
+    Quién puede repartir la prioridad del round-robin de un evento:
+
+      - el administrador general, en cualquier evento;
+      - quien creó el evento;
+      - el supervisor del grupo al que pertenece el creador.
+
+    Un organizador que solo está en el pool queda fuera: ve el evento, pero no
+    decide el reparto. `event_type=None` es el alta, donde el creador es por
+    definición quien lo está creando.
+    """
+    if getattr(user, 'es_admin', False):
+        return True
+    if event_type is None or event_type.host_id == user.pk:
+        return True
+    from calendario.grupos.utils import miembros_de_mis_grupos
+    return event_type.host_id in miembros_de_mis_grupos(user)
+
+
+def _prioridades_del_post(post, host_ids):
+    """
+    Lee las prioridades que envía el modal de organizadores ('prioridad_<host_id>').
+
+    Todo lo que falte, no sea un entero o se salga del rango 1..3 cae a la prioridad
+    por defecto: el modal es la única vía normal de tocar esto, pero un POST a mano
+    no debe poder meter valores raros en la BD.
+    """
+    minimo = EventTypeXHost.PRIORIDAD_MIN
+    maximo = EventTypeXHost.PRIORIDAD_MAX
+    defecto = EventTypeXHost.PRIORIDAD_DEFECTO
+    prioridades = {}
+    for hid in host_ids:
+        try:
+            valor = int(post.get(f'prioridad_{hid}', defecto))
+        except (TypeError, ValueError):
+            valor = defecto
+        prioridades[hid] = valor if minimo <= valor <= maximo else defecto
+    return prioridades
+
+
 class EventTypeCreateView(RequierePermisoMixin, CreateView):
     permiso_requerido = 'event_types.crear'
     model = EventType
@@ -135,6 +176,8 @@ class EventTypeCreateView(RequierePermisoMixin, CreateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['hosts_disponibles'] = _hosts_disponibles_context()
+        ctx['prioridades_iniciales'] = {}
+        ctx['puede_prioridad'] = _puede_configurar_prioridad(self.request.user, None)
         return ctx
 
     def dispatch(self, request, *args, **kwargs):
@@ -163,10 +206,14 @@ class EventTypeCreateView(RequierePermisoMixin, CreateView):
             list(form.cleaned_data.get('hosts') or [])
             if form.cleaned_data.get('es_equipo') else []
         )
+        prioridades = _prioridades_del_post(
+            self.request.POST, [h.pk for h in hosts_seleccionados],
+        )
         with transaction.atomic():
             obj.save()
             EventTypeXHost.objects.bulk_create([
-                EventTypeXHost(event_type=obj, host=h) for h in hosts_seleccionados
+                EventTypeXHost(event_type=obj, host=h, prioridad=prioridades[h.pk])
+                for h in hosts_seleccionados
             ])
         self.object = obj
         messages.success(self.request, f"Tipo de evento '{obj.nombre}' creado.")
@@ -217,6 +264,12 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
         ctx = super().get_context_data(**kwargs)
         ctx['hosts_disponibles'] = _hosts_disponibles_context()
         ctx['readonly'] = self._es_solo_lectura()
+        ctx['prioridades_iniciales'] = dict(
+            EventTypeXHost.objects
+            .filter(event_type=self.object)
+            .values_list('host_id', 'prioridad')
+        )
+        ctx['puede_prioridad'] = _puede_configurar_prioridad(self.request.user, self.object)
         return ctx
 
     def form_valid(self, form):
@@ -238,17 +291,39 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
             list(form.cleaned_data.get('hosts') or [])
             if form.cleaned_data.get('es_equipo') else []
         )
+        nuevos_ids = {h.pk for h in hosts_seleccionados}
+        # Ocultar el botón no basta: sin permiso se ignoran las prioridades que
+        # venga trayendo el POST y las filas existentes se quedan como estaban.
+        puede_prioridad = _puede_configurar_prioridad(self.request.user, obj)
+        prioridades = (
+            _prioridades_del_post(self.request.POST, nuevos_ids)
+            if puede_prioridad else {}
+        )
+        defecto = EventTypeXHost.PRIORIDAD_DEFECTO
         with transaction.atomic():
             obj.save()
             existing_ids = set(
                 EventTypeXHost.objects.filter(event_type=obj).values_list('host_id', flat=True)
             )
-            nuevos_ids = {h.pk for h in hosts_seleccionados}
             EventTypeXHost.objects.filter(event_type=obj, host_id__in=existing_ids - nuevos_ids).delete()
             EventTypeXHost.objects.bulk_create([
-                EventTypeXHost(event_type=obj, host_id=hid)
+                EventTypeXHost(event_type=obj, host_id=hid,
+                               prioridad=prioridades.get(hid, defecto))
                 for hid in nuevos_ids - existing_ids
             ])
+            # Los que ya estaban en el pool conservan su fila (y con ella el orden
+            # de entrada, que sigue siendo el último desempate): solo se reescribe
+            # la prioridad, y únicamente si cambió.
+            if puede_prioridad:
+                cambiadas = []
+                for pivot in EventTypeXHost.objects.filter(
+                    event_type=obj, host_id__in=nuevos_ids & existing_ids,
+                ):
+                    if pivot.prioridad != prioridades[pivot.host_id]:
+                        pivot.prioridad = prioridades[pivot.host_id]
+                        cambiadas.append(pivot)
+                if cambiadas:
+                    EventTypeXHost.objects.bulk_update(cambiadas, ['prioridad'])
         self.object = obj
         messages.success(self.request, f"Tipo de evento '{obj.nombre}' actualizado.")
         return redirect(self.get_success_url())

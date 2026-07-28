@@ -6,9 +6,9 @@ Tests de la feature free/busy estilo Calendly (Opción A):
   la palabra/emoji y se puede reservar encima (varias reservas en el mismo slot).
 - Cuando el host le QUITA la palabra al evento en Google Calendar, el sync pone
   `permite_overbooking=False` y el slot se cierra (deja de admitir reservas).
-- El horario también se cierra SOLO al llegar a `max_reservas_por_slot` (2 por
-  defecto), sin tocar Google Calendar. Solo cuentan las confirmadas: cancelar una
-  vuelve a dejar hueco.
+- El horario también se cierra SOLO al llegar a MAX_RESERVAS_POR_SLOT (2, fijo),
+  sin tocar Google Calendar. Solo cuentan las confirmadas: cancelar una vuelve a
+  dejar hueco.
 - Sin palabras configuradas, el comportamiento es el de siempre (un slot = una
   reserva).
 """
@@ -19,7 +19,7 @@ from django.test import TestCase
 
 from calendario.bookings.exceptions import SlotNoDisponibleError
 from calendario.bookings.models import Reserva
-from calendario.bookings.services import cancelar_reserva
+from calendario.bookings.services import MAX_RESERVAS_POR_SLOT, cancelar_reserva
 from calendario.bookings.services import crear_reserva as svc_crear
 from calendario.google_calendar.services import _titulo_evento
 from calendario.google_calendar.sync import _reconciliar_overbooking
@@ -62,17 +62,13 @@ class OverbookingFreeBusyTest(TestCase):
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_varias_reservas_en_el_mismo_slot(self, _ev, _conf):
-        # Con el tope subido a 3, las tres entran en el mismo horario.
-        self.et.max_reservas_por_slot = 3
-        self.et.save(update_fields=['max_reservas_por_slot'])
         inicio = slot_futuro()
         _reservar(self.et, inicio, 'a@x.com')
         _reservar(self.et, inicio, 'b@x.com')
-        _reservar(self.et, inicio, 'c@x.com')
         n = Reserva.objects.filter(
             host=self.host, inicio_utc=inicio, estado=Reserva.Estado.CONFIRMADA,
         ).count()
-        self.assertEqual(n, 3)
+        self.assertEqual(n, MAX_RESERVAS_POR_SLOT)
 
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
@@ -88,8 +84,8 @@ class OverbookingFreeBusyTest(TestCase):
 
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
-    def test_tope_por_defecto_son_dos(self, _ev, _conf):
-        self.assertEqual(self.et.max_reservas_por_slot, 2)
+    def test_tope_son_dos(self, _ev, _conf):
+        self.assertEqual(MAX_RESERVAS_POR_SLOT, 2)
         inicio = slot_futuro()
         _reservar(self.et, inicio, 'a@x.com')
         _reservar(self.et, inicio, 'b@x.com')
@@ -115,16 +111,6 @@ class OverbookingFreeBusyTest(TestCase):
         # Y con el cupo lleno otra vez, la siguiente vuelve a rebotar.
         with self.assertRaises(SlotNoDisponibleError):
             _reservar(self.et, inicio, 'd@x.com')
-
-    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
-    @patch('calendario.bookings.services.crear_evento_google')
-    def test_tope_uno_no_admite_ninguna_encima(self, _ev, _conf):
-        self.et.max_reservas_por_slot = 1
-        self.et.save(update_fields=['max_reservas_por_slot'])
-        inicio = slot_futuro()
-        _reservar(self.et, inicio, 'a@x.com')
-        with self.assertRaises(SlotNoDisponibleError):
-            _reservar(self.et, inicio, 'b@x.com')
 
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')

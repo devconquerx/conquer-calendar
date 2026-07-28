@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 MAX_VENTANA_DIAS = 60
 UTC = ZoneInfo('UTC')
 
+# Tope de reservas activas que admite un mismo horario cuando las reglas free/busy
+# lo dejan abierto. Configurar palabras en el tipo de evento ya significa "aquí se
+# puede reservar encima"; el tope no se expone en el panel porque siempre es 2.
+MAX_RESERVAS_POR_SLOT = 2
+
 
 def _intervals_overlap(a_inicio, a_fin, b_inicio, b_fin):
     return a_inicio < b_fin and b_inicio < a_fin
@@ -140,12 +145,12 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     # evento en Google Calendar. Sin palabras configuradas, ninguna reserva está
     # abierta y el comportamiento es el de siempre.
     #
-    # El tope `max_reservas_por_slot` del tipo de evento cierra el horario solo:
-    # mientras las abiertas que arrancan a esa hora no lleguen al tope no bloquean;
-    # al alcanzarlo vuelven a bloquear como una reserva normal. Se agrupan por hora
-    # de inicio, igual que la restricción de unicidad (host + inicio_utc), y solo
-    # cuentan las confirmadas — el queryset de arriba ya excluye las canceladas, así
-    # que cancelar una deja hueco para otra sin tocar Google Calendar.
+    # El tope MAX_RESERVAS_POR_SLOT cierra el horario solo: mientras las abiertas
+    # que arrancan a esa hora no lleguen al tope no bloquean; al alcanzarlo vuelven
+    # a bloquear como una reserva normal. Se agrupan por hora de inicio, igual que
+    # la restricción de unicidad (host + inicio_utc), y solo cuentan las confirmadas
+    # — el queryset de arriba ya excluye las canceladas, así que cancelar una deja
+    # hueco para otra sin tocar Google Calendar.
     #
     # Ojo: al llegar al tope NO se puede apagar `permite_overbooking`, porque dos
     # reservas exclusivas en el mismo slot violarían esa restricción. Por eso el
@@ -156,7 +161,7 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     reservas = [
         r for r in reservas
         if not r.permite_overbooking
-        or abiertas_por_inicio[r.inicio_utc] >= r.event_type.max_reservas_por_slot
+        or abiertas_por_inicio[r.inicio_utc] >= MAX_RESERVAS_POR_SLOT
     ]
 
     # Los eventos externos de GCal bloquean solo su tiempo real, sin buffer.
@@ -328,8 +333,14 @@ def _candidatos_para_slot(event_type, inicio_utc):
 
 def _seleccionar_host_round_robin(event_type, candidatos):
     """
-    Selecciona el host con menor número de reservas confirmadas para este event_type.
-    Tiebreak: menor pivot.id (orden de añadido al pool).
+    Selecciona el host al que se le asigna la reserva, por este orden:
+
+      1. Mayor `prioridad` en el pool (3 manda sobre 1).
+      2. Menor número de reservas confirmadas para este event_type (reparto de carga).
+      3. Menor pivot.id (orden de añadido al pool).
+
+    Con todos los organizadores en la prioridad por defecto el primer criterio es
+    constante y la elección queda idéntica al reparto histórico por carga.
     Pre-condición: len(candidatos) >= 1.
     """
     if len(candidatos) == 1:
@@ -342,15 +353,23 @@ def _seleccionar_host_round_robin(event_type, candidatos):
                  .values('host_id')
                  .annotate(c=Count('id')))
     counts = {row['host_id']: row['c'] for row in counts_qs}
-    pivot_orden = dict(
-        EventTypeXHost.objects
-        .filter(event_type=event_type, host_id__in=host_ids)
-        .values_list('host_id', 'id')
-    )
-    return min(
-        candidatos,
-        key=lambda h: (counts.get(h.id, 0), pivot_orden[h.id]),
-    )
+    # {host_id: (pivot.id, prioridad)}. Un host sin fila en el pool (evento
+    # personal que llegase aquí) cae al valor por defecto y no se cuela delante.
+    pivots = {
+        host_id: (pivot_id, prioridad)
+        for host_id, pivot_id, prioridad in (
+            EventTypeXHost.objects
+            .filter(event_type=event_type, host_id__in=host_ids)
+            .values_list('host_id', 'id', 'prioridad')
+        )
+    }
+    defecto = (0, EventTypeXHost.PRIORIDAD_DEFECTO)
+
+    def _clave(h):
+        pivot_id, prioridad = pivots.get(h.id, defecto)
+        return (-prioridad, counts.get(h.id, 0), pivot_id)
+
+    return min(candidatos, key=_clave)
 
 
 # Campos de tracking que la Reserva guarda como snapshot (del tracking de la
