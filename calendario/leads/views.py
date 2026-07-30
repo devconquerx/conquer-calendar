@@ -40,6 +40,18 @@ for f in Lead._meta.get_fields():
         _FIELD_MAX_LENGTHS[f.name] = f.max_length
 
 
+# FunnelForm.slug (canónico del calendario) → código de funnel del CRM
+# (vocabulario del proyecto viejo: cb/fi/cl/cg-<region>). Es lo que se guarda
+# en Lead.funnel y viaja al ingest del CRM, a AC y a Respond.io. Sin entrada
+# aquí (especialización, kids) se conserva el slug tal cual.
+_FUNNEL_SLUG_TO_CRM_CODE = {
+    'blocks-latam': 'cb-latam', 'blocks-eu': 'cb-eu', 'blocks-us': 'cb-us',
+    'finance-latam': 'fi-latam', 'finance-eu': 'fi-eu', 'finance-us': 'fi-us',
+    'languages-latam': 'cl-latam', 'languages-eu': 'cl-eu', 'languages-us': 'cl-us',
+    'legal-eu': 'cg-eu',
+}
+
+
 def _truncate_fields(fields):
     for key, value in fields.items():
         if isinstance(value, str) and key in _FIELD_MAX_LENGTHS:
@@ -81,14 +93,19 @@ def register_lead(request):
     if 'url' in data and 'page_url' not in data:
         data['page_url'] = data['url']
 
-    # Normalizar el funnel a su slug canónico: si llega el `key` del FunnelForm
-    # (p.ej. 'LegalEu'), guardamos el slug ('legal-eu') para que el CRM y el
-    # resto de integraciones reciban siempre el slug, sin depender del frontend.
+    # Normalizar el funnel: si llega el `key` del FunnelForm (p.ej. 'LegalEu'),
+    # se resuelve primero a su slug ('legal-eu'), y después el slug se traduce
+    # al código de funnel del vocabulario del CRM (cb/fi/cl/cg-<region>, el del
+    # proyecto viejo de funnels). El CRM indexa TODO por esos códigos
+    # (FUNNEL_TAG_MAPPING, STANDARD_LEAD_FUNNELS, guardas de deduplicación como
+    # `funnel == 'cg-eu'`): mandar el slug largo ('finance-latam') deja al lead
+    # sin tag/lista y fuera de los listados de setters.
     if data.get('funnel'):
         from calendario.funnels.models import FunnelForm
         ff = FunnelForm.objects.filter(key=data['funnel']).only('slug').first()
         if ff and ff.slug:
             data['funnel'] = ff.slug
+        data['funnel'] = _FUNNEL_SLUG_TO_CRM_CODE.get(data['funnel'], data['funnel'])
 
     fields = {}
     for field in DIRECT_FIELDS:
