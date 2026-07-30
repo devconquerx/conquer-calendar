@@ -398,6 +398,10 @@ export default function LandingForm({ program, region, formConfig, school, nextU
           <div>
             <input
               type="email"
+              // id="email": el contenedor GTM heredado de Webflow lee el email
+              // del lead con document.querySelector('#email') para las
+              // enhanced conversions de Google Ads. Sin este id llega vacío.
+              id="email"
               placeholder="Tu mejor email *"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

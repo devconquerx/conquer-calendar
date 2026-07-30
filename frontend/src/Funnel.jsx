@@ -154,10 +154,22 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   // Lleva a la página de confirmación del funnel (la misma para Calendly y para
   // el calendario nativo). El evento Schedule lo dispara <Confirmation> al
   // montar, así que aquí no se dispara (evita doble disparo).
+  // Brand theme (conquerblocks paperboard look, etc.) resolved from escuela,
+  // falling back to the funnel slug ('blocks-eu' → conquerblocks). Declarado
+  // antes de goToConfirmation, que lo usa (y lo lista en sus deps).
+  const theme = getTheme(escuela, slug)
+
   const goToConfirmation = useCallback(() => {
     const params = new URLSearchParams(window.location.search)
     params.set('event_id', tracking.eventId)
     params.set('journey_id', tracking.journeyId)
+    // Compat con el contenedor GTM heredado de Webflow (Finance): sus variables
+    // de Schedule leen el email de localStorage.calendly_email; lo dejamos
+    // escrito antes de navegar para que enhanced conversions/CAPI lo lleven.
+    const bookedEmail = outcome?.prefill?.email || params.get('email') || ''
+    if (bookedEmail) {
+      try { localStorage.setItem('calendly_email', bookedEmail) } catch (_) {}
+    }
     const etUrl = outcome?.evento_info?.confirmacion_tipo === 'url' && outcome?.evento_info?.confirmacion_url
     if (etUrl) {
       if (router) {
@@ -166,6 +178,18 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
       }
       const sep = etUrl.includes('?') ? '&' : '?'
       window.location.href = `${etUrl}${sep}${params.toString()}`
+      return
+    }
+    // Hexboard (Finance): navegación REAL a la confirmación, no pushState. El
+    // contenedor GTM de Finance (era Webflow) dispara el Schedule (GA4/Meta/
+    // Twitter) con el trigger "page load en *confirmacion-llamada*": dentro del
+    // SPA ese page-load nunca ocurre y la conversión se pierde. Con la
+    // recarga, el contenedor publicado funciona tal cual (verificado contra el
+    // sGTM). Si algún día el contenedor pasa a escuchar `calendly_scheduled`,
+    // este branch puede volver al router.navigate — no ambos, o duplicaría.
+    if (theme?.hexboard && confirmationUrl) {
+      const sep = confirmationUrl.includes('?') ? '&' : '?'
+      window.location.href = `${confirmationUrl}${sep}${params.toString()}`
       return
     }
     if (router) {
@@ -179,7 +203,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     }
     setPhase('confirmation')
     window.scrollTo({ top: 0, behavior: 'auto' })
-  }, [router, confirmationUrl, tracking.eventId, tracking.journeyId, outcome])
+  }, [router, confirmationUrl, tracking.eventId, tracking.journeyId, outcome, theme])
 
   const submitResolver = async (finalRespuestas) => {
     setPhase('resolving')
@@ -245,9 +269,6 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     document.head.appendChild(link)
   }, [funnelFont])
 
-  // Brand theme (conquerblocks paperboard look, etc.) resolved from escuela,
-  // falling back to the funnel slug ('blocks-eu' → conquerblocks).
-  const theme = getTheme(escuela, slug)
   const pageStyle = {
     ...theme.cssVars,
     ...theme.page,
