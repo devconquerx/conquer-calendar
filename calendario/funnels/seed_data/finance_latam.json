@@ -250,6 +250,32 @@
       "label.button.submitting": "Enviando...",
       "label.button.enterHint": "presiona"
     },
+    "landing": {
+      "subtitle": "· VÍDEO <strong>GRATIS</strong> DE 15 MINUTOS ·",
+      "title": "Genera <strong>un sueldo mensual</strong> con el Trading sin poner en riesgo tu capital, aprendiendo en <strong>7 semanas el método: <em>\"Trading sin Riesgo\"</em></strong>",
+      "description": "... sin importar del capital que dispongas, y aunque no tengas conocimientos previos de finanzas ni inversiones",
+      "bullets": [
+        "Aprende una estrategia ganadora, que te garantiza resultados por contrato.",
+        "Consigue los ingresos y la estabilidad financiera para ti y tu familia que siempre has deseado, gracias a tus inversiones.",
+        "Descubre una nueva vía para generar un sueldo extra mensual, sin invertir tu propio capital."
+      ],
+      "buttonText": "VER VÍDEO GRATIS",
+      "disclaimer": "* El curso y la clase son únicamente educativos e informativos. No constituyen asesoramiento financiero ni laboral. Los resultados no están garantizados y pueden variar según cada persona.",
+      "instructor": {
+        "name": "Félix Fuertes",
+        "role": "",
+        "imageUrl": "https://cdn.prod.website-files.com/66fa7f848e37dcc492c20064/66fa7f848e37dcc492c2012f_felix_1.avif",
+        "description": "Félix es inversor profesional y CEO de Conquer Finance. Con el método que te presentará en el vídeo gratis, ha ayudado a más de <strong>2000 personas a vivir del trading sin poner su capital en riesgo</strong> gracias al método <em>\"Trading sin Riesgo\"</em>."
+      }
+    },
+    "video": {
+      "videoUrls": [
+        "https://vslconquerx.b-cdn.net/fi/VSL%20LATAM%20Tests/Nueva-VSL-CF-Latam-B-Sinparrafo.mp4"
+      ],
+      "buttonPercent": 75,
+      "subtitle": "· VÍDEO DE 15 MINUTOS ·",
+      "title": "<strong>Genera un sueldo mensual</strong> gracias al Trading <strong>en menos de 7 semanas</strong>, sin invertir tu propio capital"
+    },
     "welcome": {
       "title": "La persona promedio que aplicó el método que estás a punto de descubrir, <strong>consiguió los siguientes resultados</strong> tras 7 semanas de aprendizaje",
       "bullets": [

@@ -214,7 +214,8 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
   if (!videoUrl) return null
 
   return (
-    <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+    // Finance (hexboard): el player de producción no lleva esquinas redondeadas.
+    <div className={`relative aspect-video bg-black overflow-hidden ${theme?.hexboard ? '' : 'rounded-lg'}`}>
       <video
         ref={videoRef}
         playsInline

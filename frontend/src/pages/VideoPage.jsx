@@ -69,6 +69,23 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
     )
   }
 
+  if (theme.hexboard) {
+    return (
+      <HexVideoPage
+        assets={assets}
+        video={video}
+        urls={urls}
+        pct={pct}
+        showButton={showButton}
+        onShowButton={handleShowButton}
+        onProgress={handleProgress}
+        goToStepForm={goToStepForm}
+        theme={theme}
+        school={school}
+      />
+    )
+  }
+
   return (
     <div className="min-h-screen overflow-x-hidden relative flex flex-col bg-[#0A0A0A] text-white">
       <main className="relative z-10 flex-1 w-full max-w-[920px] mx-auto px-5 flex flex-col">
@@ -116,6 +133,69 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
     </div>
   )
 }
+
+/* ═══ VSL hexboard (Finance) — réplica 1:1 de conquerfinance.com/video-clase-latam ═══
+   Medida en vivo contra producción (1440 / 768 / 390):
+   body #333 Inter · navbar 70px (75 móvil) con borde #4f4f4f y logo 180×19 ·
+   kicker Oswald 700 24px/lh20 (19px móvil) #345bb8, mt 30 (20 móvil), pb 20 ·
+   H1 Poppins 300 blanca — 30px desktop / 36px tablet / 20px móvil, lh 1.15,
+   pb 20 · player de 940px (95% móvil) con glow rgba(127,193,255,.28) a +10px
+   (0 en móvil) · CTA con mt 2rem / mb 3rem · sin footer visible. */
+function HexVideoPage({ assets, video, urls, pct, showButton, onShowButton, onProgress, goToStepForm, theme, school }) {
+  const v = theme.video || {}
+  const subtitle = video.subtitle || v.subtitle || '· VÍDEO DE 15 MINUTOS ·'
+  const title = video.title || v.title || ''
+  const glow = v.glow || '0 2px 20px 6px rgba(127,193,255,0.28)'
+  const headerLogo = assets.logoInverted || assets.logo
+
+  return (
+    <div
+      className="min-h-[100dvh] overflow-x-hidden relative flex flex-col text-white"
+      style={{ backgroundColor: v.pageBg || '#333333', fontFamily: 'Inter, sans-serif' }}
+    >
+      {/* Navbar: transparente con borde inferior, logo 180px centrado */}
+      <header
+        className="h-[75px] md:h-[70px] flex items-center justify-center border-b"
+        style={{ borderColor: v.navBorder || '#4f4f4f' }}
+      >
+        <img src={headerLogo} alt={school?.slug || ''} className="w-[180px] h-auto" />
+      </header>
+
+      <main className="relative z-10 flex-1 w-full flex flex-col">
+        {/* Kicker + titular */}
+        <div className="text-center mt-[20px] md:mt-[30px]">
+          <p
+            className="text-[19px] sm:text-[24px] font-bold leading-[20px] pb-[20px]"
+            style={{ fontFamily: 'Oswald, sans-serif', color: v.kickerColor || '#345bb8' }}
+          >
+            {subtitle}
+          </p>
+          <h1
+            className="max-w-[960px] mx-auto px-5 text-[20px] md:text-[36px] lg:text-[30px] font-light leading-[1.15] pb-[20px] text-white [&_strong]:font-bold"
+            style={{ fontFamily: 'Poppins, sans-serif' }}
+            dangerouslySetInnerHTML={safeHtml(title)}
+          />
+        </div>
+
+        {/* Reproductor con glow azul (940px, 95% en móvil, +10px en desktop) */}
+        <div className="w-[95%] md:w-full max-w-[940px] mx-auto md:mt-[10px]" style={{ boxShadow: glow }}>
+          <VideoPlayer
+            videoUrls={urls}
+            buttonPercent={pct}
+            onAgendarClick={goToStepForm}
+            onShowButton={onShowButton}
+            onProgress={onProgress}
+            theme={theme}
+          />
+        </div>
+
+        {/* Botón CTA — aparece al alcanzar el buttonPercent */}
+        {showButton && <AgendarButton theme={theme} onClick={goToStepForm} />}
+      </main>
+    </div>
+  )
+}
+
 
 /* ═══ VSL paperboard (Blocks / Legal) — réplica de producción ═══
    Renderer compartido dirigido por tokens del tema (`theme.video` + `accent`):

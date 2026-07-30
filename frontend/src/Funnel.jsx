@@ -281,9 +281,26 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     return <Confirmation escuela={escuelaProp || escuela} slug={slug} />
   }
 
+  // Finance (hexboard): el StepForm de producción vive dentro del shell de la
+  // página de vídeo — navbar oscuro (#333 de body, borde #4f4f4f, logo
+  // invertido 180px) + sección blanca de ~75vh con el form + resto oscuro.
+  // El shell NO se aplica al embed de Calendly (producción oculta navbar y
+  // footer al abrir el widget).
+  const hexShell = (children) => (
+    <div className="min-h-[100dvh] flex flex-col" style={{ backgroundColor: '#333333' }}>
+      <header className="h-[75px] md:h-[70px] flex-shrink-0 flex items-center justify-center border-b border-[#4f4f4f]">
+        <img src={theme.assets?.logoInverted || theme.assets?.logo} alt="" className="w-[180px] h-auto" />
+      </header>
+      {/* La sección blanca crece y deja solo una franja oscura fija abajo. */}
+      <div className="bg-white flex-1 flex flex-col">{children}</div>
+      <div className="h-[80px] flex-shrink-0" aria-hidden="true" />
+    </div>
+  )
+
   if (phase === 'outcome') {
     if (outcome.resultado === 'rechazado') {
-      return <RejectScreen cancelScreen={outcome.cancel_screen} theme={theme} funnelFont={funnelFont} />
+      const reject = <RejectScreen cancelScreen={outcome.cancel_screen} theme={theme} funnelFont={funnelFont} />
+      return theme.hexboard ? hexShell(reject) : reject
     }
     if (outcome.resultado === 'calendario') {
       // Modo Calendly: embebe el widget del rango (no usamos el calendario local aún).
@@ -333,7 +350,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   const renderStep = () => {
     if (!current) return null
     if (isWelcome) {
-      return <WelcomeScreen field={welcomeField} onNext={handleNext} />
+      return <WelcomeScreen field={welcomeField} onNext={handleNext} theme={theme} />
     }
     return (
       <FormStep
@@ -351,25 +368,38 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     )
   }
 
-  return (
-    <ThemeContext.Provider value={theme}>
-      <div className="funnel-wrap" style={pageStyle}>
-        <div
-          className="w-full grow min-h-[100dvh] sm:w-[calc(90vw_-_2rem)] sm:grow-0 sm:min-h-[80vh] px-4 min-[480px]:px-8 sm:px-16 py-10 mx-auto sm:rounded-2xl sm:border sm:shadow-[var(--theme-form-shadow,none)]"
-          style={{
-            borderColor: 'var(--theme-form-border, transparent)',
-            backgroundImage: `linear-gradient(var(--theme-form-bg, transparent), var(--theme-form-bg, transparent)), var(--theme-form-texture, none)`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        >
-          <div className="mt-8 overflow-hidden min-h-[60vh]">
-            <StepTransition stepKey={currentIndex} direction={direction}>
-              {renderStep()}
-            </StepTransition>
-          </div>
+  // Hexboard: el form no ocupa toda la altura (deja ver el fondo oscuro
+  // debajo, como producción) y va anclado arriba, sin tarjeta.
+  const formBody = (
+    <div
+      className="funnel-wrap"
+      style={theme.hexboard
+        // Hexboard: contenido (welcome y preguntas) centrado verticalmente
+        // en la zona blanca.
+        ? { ...pageStyle, minHeight: 'auto', flexGrow: 1, justifyContent: 'center' }
+        : pageStyle}
+    >
+      <div
+        className={`w-full grow sm:w-[calc(90vw_-_2rem)] sm:grow-0 px-4 min-[480px]:px-8 sm:px-16 py-10 mx-auto sm:rounded-2xl sm:border sm:shadow-[var(--theme-form-shadow,none)] ${theme.hexboard ? 'min-h-0 grow-0' : 'min-h-[100dvh] sm:min-h-[80vh]'}`}
+        style={{
+          borderColor: 'var(--theme-form-border, transparent)',
+          backgroundImage: `linear-gradient(var(--theme-form-bg, transparent), var(--theme-form-bg, transparent)), var(--theme-form-texture, none)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div className={`overflow-hidden ${theme.hexboard ? 'min-h-0' : 'mt-8 min-h-[60vh]'}`}>
+          <StepTransition stepKey={currentIndex} direction={direction}>
+            {renderStep()}
+          </StepTransition>
         </div>
       </div>
+    </div>
+  )
+
+  return (
+    <ThemeContext.Provider value={theme}>
+      {theme.hexboard ? hexShell(formBody) : formBody}
 
       {phase === 'form' && !isWelcome && (
         <BottomNavBar
@@ -378,6 +408,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
           onDown={() => handleNext(respuestas[current?.id] || '')}
           canGoUp={currentIndex > 1}
           canGoDown={!isLast && currentValueFilled}
+          bottomOffset={theme.hexboard ? 80 : 0}
         />
       )}
     </ThemeContext.Provider>

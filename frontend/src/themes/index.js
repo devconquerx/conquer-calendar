@@ -1,12 +1,14 @@
 import { createContext, useContext } from 'react'
 import conquerblocks from './conquerblocks'
 import conquerlegal from './conquerlegal'
+import conquerfinance from './conquerfinance'
 import defaultTheme from './default'
 
 const THEMES = {
   conquerblocks,
   conquerlegal,
-  // conquerfinance, conquerlanguages → default (white) for now
+  conquerfinance,
+  // conquerlanguages → default (white) for now
 }
 
 // Strip everything but letters: 'conquer-blocks' / 'blocks-eu' → 'conquerblocks' / 'blockseu'

@@ -11,7 +11,10 @@ export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk
           alignItems: 'center',
           gap: '0.5rem',
           background: isSubmitting ? '#e5e5e5' : 'var(--theme-btn-gradient, linear-gradient(90deg, #ffbf00, #ff4000))',
-          borderRadius: 0,
+          // El clip pixelado y el radio se parametrizan por tema: Blocks/Legal
+          // conservan el borde pixelado (default); Finance define clip none +
+          // radio 10px (botón negro redondeado de producción).
+          borderRadius: 'var(--theme-btn-radius, 0)',
           border: 0,
           boxShadow: 'none',
           fontFamily: '"Funnel Display", Arial, sans-serif',
@@ -26,7 +29,7 @@ export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk
           fontSize: '1.25rem',
           transition: 'opacity 0.2s ease',
           opacity: isSubmitting ? 0.6 : 1,
-          clipPath: 'polygon(97.74% 73.83%, 97.74% 82.56%, 100% 82.56%, 100% 100%, 95.47% 100%, 95.47% 91.28%, 81.5% 91.28%, 81.5% 100%, 19.87% 100%, 19.87% 91.28%, 9.06% 91.28%, 9.06% 100%, 2.26% 100%, 2.26% 80.24%, 0% 80.24%, 0% 26.16%, 2.26% 26.16%, 2.26% 17.44%, 0% 17.44%, 0% 0%, 4.53% 0%, 4.53% 8.72%, 12.82% 8.72%, 12.82% 0%, 72.03% 0%, 72.03% 8.72%, 88.67% 8.72%, 88.67% 0%, 97.74% 0%, 97.74% 8.72%, 100% 8.72%, 100% 73.83%)',
+          clipPath: 'var(--theme-btn-clip, polygon(97.74% 73.83%, 97.74% 82.56%, 100% 82.56%, 100% 100%, 95.47% 100%, 95.47% 91.28%, 81.5% 91.28%, 81.5% 100%, 19.87% 100%, 19.87% 91.28%, 9.06% 91.28%, 9.06% 100%, 2.26% 100%, 2.26% 80.24%, 0% 80.24%, 0% 26.16%, 2.26% 26.16%, 2.26% 17.44%, 0% 17.44%, 0% 0%, 4.53% 0%, 4.53% 8.72%, 12.82% 8.72%, 12.82% 0%, 72.03% 0%, 72.03% 8.72%, 88.67% 8.72%, 88.67% 0%, 97.74% 0%, 97.74% 8.72%, 100% 8.72%, 100% 73.83%))',
         }}
         className="group"
         onMouseEnter={e => { if (!isSubmitting) e.currentTarget.style.opacity = '0.9' }}

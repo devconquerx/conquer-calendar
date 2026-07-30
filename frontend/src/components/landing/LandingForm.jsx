@@ -368,6 +368,84 @@ export default function LandingForm({ program, region, formConfig, school, nextU
     </label>
   ) : null
 
+  // ── Hexboard (Finance): réplica 1:1 del form de producción (cf-form.css +
+  // medidas en vivo): inputs Arial 14 de 34px de alto (radio 20, borde
+  // rgba(0,0,0,.27)), dos columnas con gap de 10px, legales Poppins 12/14px
+  // (+25/+10px de separación) y CTA #1e4bb4 de 38px con su sombra azul. ──
+  if (theme.hexboard) {
+    const hx = theme.landing || {}
+    const inputCls = (hasError) =>
+      `w-full h-[34px] px-4 rounded-[20px] border bg-white text-[14px] text-black placeholder:text-black/50 placeholder:[font-family:Montserrat,sans-serif] focus:outline-none focus:border-black/50 ${hasError ? 'border-red-500' : 'border-black/[0.27]'}`
+    const inputStyle = { fontFamily: 'Arial, sans-serif' }
+    return (
+      <form onSubmit={handleSubmit}>
+        {honeypotField}
+        {phoneHoneypotField}
+
+        <div className={`grid grid-cols-1 gap-[20px] md:gap-[10px] ${phoneVisible ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+          <div>
+            <input
+              type="text"
+              placeholder="Nombre sin apellidos *"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputCls(errors.name)}
+              style={inputStyle}
+            />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+          </div>
+
+          <div>
+            <input
+              type="email"
+              placeholder="Tu mejor email *"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputCls(errors.email)}
+              style={inputStyle}
+            />
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+          </div>
+
+          {phoneField}
+        </div>
+
+        {whatsappOptinField && <div className="mt-3">{whatsappOptinField}</div>}
+
+        <div className="mt-[20px] md:mt-[25px] text-black" style={{ fontFamily: 'Poppins, sans-serif' }}>
+          <p className="text-[12px] leading-[12px]">
+            Al proporcionarnos tu correo electrónico, aceptas recibir comunicaciones comerciales por parte de nuestra empresa.
+          </p>
+          <p className="mt-[10px] text-[12px] leading-[12px]">
+            Al continuar, confirmas que has leído y aceptas nuestra{' '}
+            <a
+              href={school?.privacyPolicyUrl || theme.footer?.legal?.privacy || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+              style={{ color: hx.privacyLinkColor || '#73bac8' }}
+            >
+              política de privacidad.
+            </a>
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="mt-[20px] md:mt-[25px] w-full px-[15px] py-[9px] rounded-[20px] text-white uppercase text-[14px] leading-[14px] md:leading-[20px] font-extrabold flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.99] transition-all disabled:bg-[#e5e5e5] disabled:text-[#8d8d8d] disabled:shadow-none"
+          style={{
+            fontFamily: 'Montserrat, sans-serif',
+            backgroundColor: submitting ? undefined : (hx.buttonBg || '#1e4bb4'),
+            boxShadow: submitting ? undefined : (hx.buttonShadow || 'rgba(0,47,255,0.23) -1px 8px 5px -3px'),
+          }}
+        >
+          {submitting ? <Spinner /> : buttonText}
+        </button>
+      </form>
+    )
+  }
+
   // ── CB layout ──
   if (isPaper) {
     return (

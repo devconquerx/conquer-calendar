@@ -31,7 +31,7 @@ function LeftPanel({ eventoInfo }) {
   )
 }
 
-export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaToken, funnelSlug, escuela = '', onBack, onBooked }) {
+export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaToken, funnelSlug, escuela = '', theme, onBack, onBooked }) {
   const tracking = useTracking()
   // Diseño ÚNICO estandarizado (look Calendly) para todas las marcas. El color
   // de acento sigue a la marca vía los tokens --theme-* que consume .bk-wrapper.
@@ -91,7 +91,7 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
   }
 
   return (
-    <div className="bk-wrapper">
+    <div className={`bk-wrapper ${theme?.hexboard ? 'bk-wrapper--plain' : ''}`}>
       <div className="bk-card">
         <LeftPanel eventoInfo={eventoInfo} />
 

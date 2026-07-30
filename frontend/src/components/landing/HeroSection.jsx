@@ -10,6 +10,39 @@ export default function HeroSection({ formConfig, theme }) {
   const accent = theme.accent || {}
   const tape = theme.assets?.tape1
 
+  // Hexboard (Finance): réplica 1:1 del hero de conquerfinance.com, medida del
+  // CSS de Webflow (.cf-time-vsl / .cf-h1-vsl / .cf-subtitle-vsl):
+  //   eyebrow  Oswald 300 · 24px/lh40 desktop · 18px/lh20 móvil · #2827d6
+  //   H1       Poppins 400 · 25px/lh130% desktop · 20px/lh125% móvil · my 20px
+  //   subtítulo Poppins 500 · 17px/lh40 desktop · 13px/lh20 móvil
+  if (theme.hexboard) {
+    const eyebrowColor = theme.landing?.eyebrowColor || '#2827d6'
+    return (
+      <div className="text-center flex flex-col items-center">
+        {subtitle && (
+          <p
+            className="uppercase text-[18px] leading-[20px] md:text-[24px] md:leading-[40px] font-light [&_strong]:font-medium"
+            style={{ fontFamily: 'Oswald, sans-serif', color: eyebrowColor, letterSpacing: '-0.01px' }}
+            dangerouslySetInnerHTML={safeHtml(subtitle)}
+          />
+        )}
+        <h1
+          className="w-full my-[20px] md:px-5 text-[18px] leading-[1.25] md:text-[25px] md:leading-[1.3] font-normal text-black [&_strong]:font-bold [&_em]:italic"
+          style={{ fontFamily: 'Poppins, sans-serif' }}
+          dangerouslySetInnerHTML={safeHtml(title)}
+        />
+        {description && (
+          <p
+            className="w-full text-[13px] leading-[20px] md:text-[17px] md:leading-[40px] font-medium text-black"
+            style={{ fontFamily: 'Poppins, sans-serif', letterSpacing: '-0.01px' }}
+          >
+            {description}
+          </p>
+        )}
+      </div>
+    )
+  }
+
   // Paperboard (Blocks/Legal): réplica de producción — badge pill + título h5
   // (24px) + descripción. Convención del título: <strong> = degradado de acento;
   // <strong><em> = tinta negra en negrita. El degradado de acento se inyecta por

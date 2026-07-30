@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { getTheme } from '../themes'
 import useTracking from '../hooks/useTracking'
 import { fireAllSchedule } from '../lib/pixelEvents'
+import { safeHtml } from '../lib/sanitize'
 
 // Los assets y textos de la confirmación paperboard viven en el tema
 // (theme.confirmation): cada marca aporta sus iconos, fotos, vídeos y copy.
@@ -37,7 +38,179 @@ export default function Confirmation({ escuela = '', slug = '' }) {
     return <PaperboardConfirmation theme={theme} assets={assets} />
   }
 
+  if (theme.hexboard && theme.confirmation) {
+    return <HexConfirmation theme={theme} assets={assets} />
+  }
+
   return <DefaultConfirmation escuela={escuela} theme={theme} />
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   Hexboard Confirmation (Finance) — réplica 1:1 de
+   conquerfinance.com/confirmacion-llamada (medida en prod a 1440/768/390):
+   fondo hexagonal de página (body contain), confeti + ¡Felicidades! (Ms Madi),
+   banner azul con "Importante:" en rojo, 3 pasos con muescas triangulares
+   entre secciones. Producción NO tiene PASO 4 ni footer.
+   ═══════════════════════════════════════════════════════ */
+
+// Resalta en negrita el fragmento `bold` dentro de `text` (mismo helper que el
+// paperboard, con el peso que usa Finance).
+function hexBold(text, bold) {
+  if (!bold || typeof text !== 'string' || !text.includes(bold)) return text
+  const i = text.indexOf(bold)
+  return (
+    <>
+      {text.slice(0, i)}
+      <strong className="font-bold">{bold}</strong>
+      {text.slice(i + bold.length)}
+    </>
+  )
+}
+
+// Título de paso: "PASO N · resto" — el separador "·" va en Montserrat 700
+// (paso-1-mira-este-video-3 en prod); el resto en Poppins 900 30px (20 móvil).
+function HexStepHeading({ text, color }) {
+  const parts = (text || '').split('·')
+  const pre = parts[0]
+  const post = parts.slice(1).join('·')
+  return (
+    <h2 className="text-[20px] leading-[24px] md:text-[30px] md:leading-[36px] font-black" style={{ color }}>
+      {post ? (
+        <>
+          {pre.trim() + ' '}
+          <span className="font-bold text-[30px] leading-[36px]" style={{ fontFamily: 'Montserrat, sans-serif' }}>·</span>
+          {' ' + post.trim()}
+        </>
+      ) : text}
+    </h2>
+  )
+}
+
+function HexConfirmation({ theme, assets }) {
+  const c = theme.confirmation
+  const pageStyle = {
+    backgroundColor: '#ffffff',
+    ...(assets?.confHexFondo ? {
+      backgroundImage: `url(${assets.confHexFondo})`,
+      backgroundPosition: '50% 0',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'contain',
+    } : {}),
+    fontFamily: 'Poppins, sans-serif',
+  }
+
+  return (
+    <div className="min-h-screen overflow-x-hidden text-[#212121]" style={pageStyle}>
+      {/* Navbar transparente con logo centrado (70px, 75 móvil) */}
+      <header className="h-[75px] md:h-[70px] pt-[10px] md:pt-0 flex items-center justify-center">
+        <img src={assets?.logo} alt="" className="w-[180px] h-auto" />
+      </header>
+
+      {/* ═══ Hero: confeti + ¡Felicidades! + banner Importante + chevron ═══ */}
+      <section className="px-[15px] md:px-[110px] pt-[10px] text-center">
+        <div className="max-w-[806px] mx-auto">
+          <img
+            src={assets?.confetti} alt="" aria-hidden="true"
+            className="mx-auto w-[80px] h-[86px] md:w-[100px] md:h-[106px] object-contain"
+          />
+          <p
+            className="text-[66px] md:text-[73px] leading-[0.8] text-black"
+            style={{ fontFamily: "'Ms Madi', cursive" }}
+          >
+            {c.felicidades || '¡Felicidades!'}
+          </p>
+          <h1 className="mt-[10px] text-[26px] leading-[0.97] md:text-[30px] md:leading-[0.7] font-black text-black">
+            {c.heroTitle || 'Tu llamada ha sido reservada'}
+          </h1>
+          <div
+            className="mt-5 rounded-[20px] md:rounded-[3px] p-5 md:px-[30px] md:py-[11px]"
+            style={{ backgroundImage: c.bannerGradient || 'linear-gradient(90deg, #1c48af 14%, #2e6cff)' }}
+          >
+            <p className="text-[16px] leading-[1.28] font-normal md:text-[18px] md:leading-[27px] md:font-medium text-white">
+              <strong className="font-extrabold text-[18px] leading-[27px]" style={{ color: c.importanteLabelColor || '#f65252' }}>
+                {c.importanteLabel || 'Importante:'}
+              </strong>{' '}
+              {hexBold(c.importanteText, c.importanteTextBold)}
+            </p>
+          </div>
+          <a href="#paso1" aria-label="Ir al paso 1" className="block mx-auto mt-[3px] md:mt-5 w-[86px] h-[57px] md:h-[92px]">
+            <img src={assets?.doubleChevron} alt="" className="w-full h-full object-contain animate-bounce" />
+          </a>
+        </div>
+      </section>
+
+      {/* ═══ PASO 1: vídeo ═══ */}
+      <section id="paso1" className="px-[10px] md:px-6 md:pt-[10px] text-center">
+        <div className="max-w-[960px] mx-auto">
+          <HexStepHeading text={c.paso1Badge} color={c.stepColor || '#1c48b0'} />
+          <p className="mt-6 mx-auto max-w-[610px] text-[16px] leading-6 font-medium">
+            {hexBold(c.paso1Text, c.paso1TextBold)}
+          </p>
+          <div className="mt-10 md:mt-[35px] aspect-video bg-black">
+            <iframe
+              src={c.paso1Video}
+              className="w-full h-full"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              title="Paso 1"
+              style={{ border: 'none' }}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ PASO 2: confirma tu cita (sección gris con muescas) ═══ */}
+      <section className="relative mt-[50px] md:mt-[60px] bg-[#f4f4f4] px-[15px] md:px-6 pt-9 md:pt-[42px] pb-[73px] md:pb-[67px] lg:pb-[51px] text-center">
+        {/* Muesca blanca (triángulo con brightness(2)) sobre el borde superior */}
+        <img
+          src={assets?.notchTriangle} alt="" aria-hidden="true"
+          className="absolute -top-2 left-1/2 -translate-x-1/2 w-14 h-auto brightness-200"
+        />
+        <div className="max-w-[960px] mx-auto">
+          <HexStepHeading text={c.paso2Badge} color={c.step2Color || '#345bb8'} />
+          <div className="mt-6 md:mt-[23px] md:px-10 lg:px-[100px] flex flex-col md:flex-row items-center gap-[30px] text-center md:text-left">
+            {c.paso2Image && (
+              <img src={c.paso2Image} alt="" className="w-[200px] md:w-[377px] h-auto flex-shrink-0" />
+            )}
+            <div className="space-y-[26px]">
+              {(c.paso2Paragraphs || []).map((p, i) => (
+                <p
+                  key={i}
+                  className="text-[17px] leading-[25.5px] font-light [&_strong]:font-bold"
+                  dangerouslySetInnerHTML={safeHtml(p)}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="mt-[37px] md:mt-[25px] inline-block w-full md:w-auto bg-[#e8e8e8] rounded-[20px] p-[10px] md:px-10">
+            <p className="text-[17px] leading-[1.22] md:leading-[1.34] font-medium">
+              {hexBold(c.reminderText, c.reminderTextBold)}
+            </p>
+          </div>
+        </div>
+        {/* Triángulo gris asomando hacia el PASO 3 (prod lo estira a 64×46) */}
+        <img
+          src={assets?.notchTriangle} alt="" aria-hidden="true"
+          className="absolute -bottom-8 md:-bottom-11 left-1/2 -translate-x-1/2 w-16 h-[45px] md:h-[46px]"
+        />
+      </section>
+
+      {/* ═══ PASO 3: entrevista (el thumb trae el play incrustado) ═══ */}
+      <section className="px-[10px] md:px-6 pt-10 md:pt-[59px] pb-16 md:pb-[99px] text-center">
+        <div className="max-w-[960px] mx-auto">
+          <HexStepHeading text={c.paso3Badge} color={c.stepColor || '#1c48b0'} />
+          <div className="mt-6 space-y-6 text-[16px] leading-6 font-medium">
+            {c.paso3Subtitle && <p>{c.paso3Subtitle}</p>}
+            {c.paso3Note && <p>{c.paso3Note}</p>}
+          </div>
+          <a href={c.paso3Video} target="_blank" rel="noopener noreferrer" className="block mt-[60px] md:mt-[35px]">
+            <img src={c.paso3Thumbnail} alt="" className="w-full h-auto" />
+          </a>
+        </div>
+      </section>
+    </div>
+  )
 }
 
 

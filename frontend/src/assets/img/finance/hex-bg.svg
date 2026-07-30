@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Capa_2" data-name="Capa 2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 777.57 562.15">
+  <defs>
+    <filter id="luminosity-noclip" x="-167.95" y="-283.38" width="1584" height="960" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feFlood flood-color="#fff" result="bg"/>
+      <feBlend in="SourceGraphic" in2="bg"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_26" data-name="Degradado sin nombre 26" x1="818.24" y1="89.76" x2="221.27" y2="418.25" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#000"/>
+      <stop offset=".48" stop-color="#fff"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <mask id="mask" x="-167.95" y="-283.38" width="1584" height="960" maskUnits="userSpaceOnUse">
+      <g style="filter: url(#luminosity-noclip);">
+        <rect x="-167.95" y="-283.38" width="1584" height="960" style="fill: url(#Degradado_sin_nombre_26); stroke-width: 0px;"/>
+      </g>
+    </mask>
+    <filter id="drop-shadow-1" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3" data-name="Degradado sin nombre 3" x1="968.51" y1="11.68" x2="19.06" y2="601.87" gradientTransform="translate(-40.9 3.62) rotate(-9.44)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ddd"/>
+      <stop offset="1" stop-color="#fff"/>
+    </linearGradient>
+    <filter id="drop-shadow-2" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-2" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-2" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-2" data-name="Degradado sin nombre 3" x1="928.22" y1="-53.14" x2="-21.23" y2="537.06" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-3" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-3" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-3" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-3" data-name="Degradado sin nombre 3" x1="1049.29" y1="141.63" x2="99.85" y2="731.83" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-4" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-4" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-4" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-4" data-name="Degradado sin nombre 3" x1="1009" y1="76.82" x2="59.56" y2="667.02" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-5" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-5" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-5" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-5" data-name="Degradado sin nombre 3" x1="1130.07" y1="271.59" x2="180.63" y2="861.78" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-6" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-6" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-6" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-6" data-name="Degradado sin nombre 3" x1="1089.78" y1="206.77" x2="140.34" y2="796.97" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-7" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-7" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-7" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-7" data-name="Degradado sin nombre 3" x1="926.39" y1="-56.09" x2="-23.06" y2="534.11" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-8" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-8" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-8" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-8" data-name="Degradado sin nombre 3" x1="1007.17" y1="73.87" x2="57.72" y2="664.06" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-9" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-9" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-9" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-9" data-name="Degradado sin nombre 3" x1="1087.95" y1="203.82" x2="138.51" y2="794.02" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-10" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-10" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-10" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-10" data-name="Degradado sin nombre 3" x1="1047.66" y1="139" x2="98.21" y2="729.2" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-11" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-11" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-11" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-11" data-name="Degradado sin nombre 3" x1="924.64" y1="-58.89" x2="-24.8" y2="531.31" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-12" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-12" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-12" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-12" data-name="Degradado sin nombre 3" x1="1005.42" y1="71.06" x2="55.98" y2="661.26" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-13" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-13" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-13" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-13" data-name="Degradado sin nombre 3" x1="965.13" y1="6.24" x2="15.69" y2="596.44" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-14" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-14" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-14" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-14" data-name="Degradado sin nombre 3" x1="1086.21" y1="201.02" x2="136.76" y2="791.21" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-15" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-15" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-15" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-15" data-name="Degradado sin nombre 3" x1="1045.92" y1="136.2" x2="96.47" y2="726.4" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-16" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-16" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-16" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-16" data-name="Degradado sin nombre 3" x1="923.01" y1="-61.52" x2="-26.44" y2="528.68" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-17" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-17" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-17" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-17" data-name="Degradado sin nombre 3" x1="1044.08" y1="133.25" x2="94.64" y2="723.45" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-18" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-18" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-18" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-18" data-name="Degradado sin nombre 3" x1="1003.79" y1="68.43" x2="54.34" y2="658.63" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-19" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-19" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-19" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-19" data-name="Degradado sin nombre 3" x1="880.77" y1="-129.46" x2="-68.67" y2="460.73" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-20" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-20" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-20" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-20" data-name="Degradado sin nombre 3" x1="840.48" y1="-194.28" x2="-108.96" y2="395.92" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-21" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-21" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-21" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-21" data-name="Degradado sin nombre 3" x1="961.56" y1=".49" x2="12.11" y2="590.69" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-22" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-22" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-22" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-22" data-name="Degradado sin nombre 3" x1="921.27" y1="-64.33" x2="-28.18" y2="525.87" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-23" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-23" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-23" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-23" data-name="Degradado sin nombre 3" x1="838.65" y1="-197.23" x2="-110.8" y2="392.97" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-24" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-24" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-24" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-24" data-name="Degradado sin nombre 3" x1="798.36" y1="-262.04" x2="-151.09" y2="328.15" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-25" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-25" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-25" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-25" data-name="Degradado sin nombre 3" x1="919.43" y1="-67.28" x2="-30.02" y2="522.92" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-26" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-26" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-26" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-26" data-name="Degradado sin nombre 3" x1="879.14" y1="-132.09" x2="-70.3" y2="458.11" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-27" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-27" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-27" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-27" data-name="Degradado sin nombre 3" x1="1000.21" y1="62.68" x2="50.77" y2="652.88" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-28" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-28" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-28" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-28" data-name="Degradado sin nombre 3" x1="959.92" y1="-2.14" x2="10.48" y2="588.06" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-29" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-29" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-29" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-29" data-name="Degradado sin nombre 3" x1="836.91" y1="-200.03" x2="-112.54" y2="390.16" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-30" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-30" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-30" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-30" data-name="Degradado sin nombre 3" x1="796.62" y1="-264.85" x2="-152.83" y2="325.35" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-31" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-31" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-31" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-31" data-name="Degradado sin nombre 3" x1="958.18" y1="-4.94" x2="8.74" y2="585.25" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-32" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-32" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-32" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-32" data-name="Degradado sin nombre 3" x1="794.78" y1="-267.8" x2="-154.66" y2="322.4" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-33" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-33" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-33" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-33" data-name="Degradado sin nombre 3" x1="916.06" y1="-72.71" x2="-33.39" y2="517.49" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-34" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-34" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-34" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-34" data-name="Degradado sin nombre 3" x1="970.27" y1="14.51" x2="20.82" y2="604.71" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-35" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-35" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-35" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-35" data-name="Degradado sin nombre 3" x1="1051.05" y1="144.46" x2="101.61" y2="734.66" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-36" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-36" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-36" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-36" data-name="Degradado sin nombre 3" x1="1010.76" y1="79.65" x2="61.32" y2="669.84" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-37" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-37" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-37" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-37" data-name="Degradado sin nombre 3" x1="1131.84" y1="274.42" x2="182.39" y2="864.61" xlink:href="#Degradado_sin_nombre_3"/>
+    <filter id="drop-shadow-38" filterUnits="userSpaceOnUse">
+      <feOffset dx="4" dy="7"/>
+      <feGaussianBlur result="blur-38" stdDeviation="4"/>
+      <feFlood flood-color="#000" flood-opacity=".04"/>
+      <feComposite in2="blur-38" operator="in"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <linearGradient id="Degradado_sin_nombre_3-38" data-name="Degradado sin nombre 3" x1="1091.55" y1="209.6" x2="142.1" y2="799.8" xlink:href="#Degradado_sin_nombre_3"/>
+  </defs>
+  <g id="OBJECTS">
+    <g style="mask: url(#mask);">
+      <g>
+        <g style="filter: url(#drop-shadow-1);">
+          <path d="M630.83,172.79l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM587.46,166.98l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-2);">
+          <path d="M616.09,84.14l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM572.72,78.34l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-2); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-3);">
+          <path d="M660.38,350.53l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM617,344.72l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-3); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-4);">
+          <polygon points="662.93 215.77 645.64 261.88 597.07 269.96 565.77 231.92 583.08 185.82 631.65 177.74 662.93 215.77" style="fill: url(#Degradado_sin_nombre_3-4); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-5);">
+          <path d="M689.92,528.27l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM646.55,522.46l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-5); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-6);">
+          <path d="M675.19,439.62l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM631.81,433.82l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-6); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-7);">
+          <path d="M545.67,141.4l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM502.29,135.59l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-7); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-8);">
+          <path d="M575.22,319.14l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM531.84,313.33l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-8); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-9);">
+          <path d="M604.76,496.88l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM561.39,491.07l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-9); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-10);">
+          <path d="M590.03,408.23l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM546.65,402.42l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-10); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-11);">
+          <polygon points="492.85 152.49 475.56 198.6 426.99 206.68 395.69 168.64 413 122.54 461.57 114.46 492.85 152.49" style="fill: url(#Degradado_sin_nombre_3-11); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-12);">
+          <path d="M505.11,376.34l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM461.74,370.54l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-12); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-13);">
+          <path d="M490.37,287.69l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM447,281.89l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-13); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-14);">
+          <path d="M534.66,554.08l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM491.28,548.28l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-14); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-15);">
+          <path d="M519.92,465.43l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM476.55,459.63l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-15); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-16);">
+          <path d="M405.21,256.3l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM361.84,250.5l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-16); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-17);">
+          <path d="M449.49,522.69l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM406.12,516.88l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-17); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-18);">
+          <polygon points="452.05 387.94 434.75 434.04 386.18 442.11 354.89 404.09 372.2 357.97 420.77 349.9 452.05 387.94" style="fill: url(#Degradado_sin_nombre_3-18); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-19);">
+          <path d="M320.29,224.41l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM276.92,218.61l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-19); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-20);">
+          <path d="M305.55,135.77l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM262.18,129.96l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.65-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-20); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-21);">
+          <path d="M349.84,402.15l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM306.47,396.35l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-21); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-22);">
+          <path d="M335.1,313.5l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM291.73,307.7l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-22); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-23);">
+          <path d="M235.13,193.02l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM191.76,187.22l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-23); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-24);">
+          <path d="M220.39,104.37l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM177.02,98.57l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-24); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-25);">
+          <polygon points="281.97 324.66 264.67 370.76 216.1 378.83 184.81 340.81 202.12 294.69 250.69 286.62 281.97 324.66" style="fill: url(#Degradado_sin_nombre_3-25); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-26);">
+          <path d="M249.94,282.11l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM206.57,276.31l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-26); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-27);">
+          <path d="M294.23,548.5l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM250.85,542.7l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-27); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-28);">
+          <path d="M279.49,459.85l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM236.12,454.05l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-28); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-29);">
+          <path d="M165.02,250.23l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM121.65,244.42l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-29); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-30);">
+          <path d="M150.29,161.58l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM106.91,155.77l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-30); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-31);">
+          <path d="M209.38,517.06l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM166.01,511.25l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-31); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-32);">
+          <path d="M79.86,218.83l-48.58,8.08L0,188.88l17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM36.49,213.03l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-32); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-33);">
+          <path d="M124.22,485.66l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM80.85,479.86l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-33); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-34);">
+          <path d="M701.18,115.42l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM657.81,109.61l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-34); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-35);">
+          <path d="M730.73,293.15l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM687.35,287.35l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-35); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-36);">
+          <path d="M715.99,204.51l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM672.62,198.7l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-36); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-37);">
+          <path d="M760.27,470.89l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM716.9,465.09l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-37); stroke-width: 0px;"/>
+        </g>
+        <g style="filter: url(#drop-shadow-38);">
+          <path d="M745.54,382.25l-48.58,8.08-31.28-38.03,17.3-46.11,48.58-8.08,31.28,38.03-17.3,46.11ZM702.16,376.44l33.96-5.64,12.09-32.23-21.87-26.58-33.96,5.64-12.09,32.23,21.87,26.58Z" style="fill: url(#Degradado_sin_nombre_3-38); stroke-width: 0px;"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

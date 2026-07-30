@@ -1,4 +1,38 @@
-export default function WelcomeScreen({ field, onNext }) {
+export default function WelcomeScreen({ field, onNext, theme }) {
+  // Hexboard (Finance): réplica del welcome de QuillForms en producción —
+  // título Roboto 400 24px, descripción 20px negra (máx 640px), botón negro
+  // radio 10 (padding 9/23/9/20) con el hint "presiona Enter" a su derecha.
+  const isHex = !!theme?.hexboard
+
+  if (isHex) {
+    return (
+      <div className="flex flex-col items-center text-center">
+        <h1 className="text-black text-[24px] leading-[32px] font-normal mb-3">
+          {field.label || 'Formulario'}
+        </h1>
+        {field.description && (
+          <p className="text-black text-[18px] md:text-[20px] leading-[1.4] max-w-[640px] mb-5">
+            {field.description}
+          </p>
+        )}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => onNext(null)}
+            className="inline-flex items-center gap-2 bg-black text-white rounded-[10px] pl-[23px] pr-[20px] py-[9px] text-[20px] cursor-pointer border-0 transition-opacity hover:opacity-90"
+          >
+            {field.buttonText || 'Comenzar'}
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
+          <span className="hidden md:inline text-gray-700 text-[15px]">
+            presiona <strong>Enter ↵</strong>
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
       <h1 className="text-gray-900 text-2xl md:text-3xl font-bold mb-4 leading-tight">

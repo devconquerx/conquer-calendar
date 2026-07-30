@@ -5,8 +5,8 @@ export const CB_PIXEL_CLIP =
 // Tamaños del CTA: `lg` para el botón principal bajo el vídeo, `sm` (más
 // compacto y responsive) para reutilizarlo dentro del overlay del reproductor.
 const CTA_SIZES = {
-  lg: { paper: 'text-base md:text-lg px-[30px] md:px-10 py-5', plain: 'py-4 px-8 text-lg' },
-  sm: { paper: 'text-sm md:text-base px-5 md:px-9 py-2 md:py-4', plain: 'py-2 px-5 md:px-7 text-base' },
+  lg: { paper: 'text-base md:text-lg px-[30px] md:px-10 py-5', plain: 'py-4 px-8 text-lg', hex: 'text-base md:text-lg px-8 md:px-10 py-4 md:py-5' },
+  sm: { paper: 'text-sm md:text-base px-5 md:px-9 py-2 md:py-4', plain: 'py-2 px-5 md:px-7 text-base', hex: 'text-sm md:text-base px-5 md:px-8 py-2 md:py-3' },
 }
 
 /* Botón CTA reutilizable con el estilo de producción: pixelado + degradado
@@ -33,6 +33,29 @@ export function CtaButton({ theme, onClick, text, size = 'lg' }) {
     )
   }
 
+  // Hexboard (Finance): pill con el gradiente azul de producción (cf-video.css
+  // #js-videolitics-calendly-container a): radio 85px, outline 4px
+  // rgba(118,157,255,.28), Montserrat 800 18px y padding 20/40 en desktop;
+  // 16px/600 con padding 10/30 y ancho 90% en móvil (≤640px).
+  if (theme?.hexboard) {
+    const hexSize = size === 'sm'
+      ? 'text-[14px] sm:text-[16px] px-5 py-2 sm:px-7 sm:py-3'
+      : 'w-[90%] sm:w-auto text-[16px] font-semibold px-[30px] py-[10px] sm:text-[18px] sm:font-extrabold sm:px-[40px] sm:py-[20px]'
+    return (
+      <button
+        onClick={onClick}
+        className={`text-white ${hexSize} uppercase text-center leading-[1.25] rounded-[85px] hover:brightness-110 active:scale-[0.98] transition-all`}
+        style={{
+          fontFamily: 'Montserrat, sans-serif',
+          backgroundImage: accent.buttonGradient || 'linear-gradient(95deg, #1c48b0 36%, #5e94ff)',
+          boxShadow: '0 0 0 4px rgba(118,157,255,0.28)',
+        }}
+      >
+        {text}
+      </button>
+    )
+  }
+
   return (
     <button
       onClick={onClick}
@@ -44,8 +67,11 @@ export function CtaButton({ theme, onClick, text, size = 'lg' }) {
 }
 
 export default function AgendarButton({ theme, onClick, text = 'Agendar Sesión de Consultoría Gratuita' }) {
+  // Finance (hexboard): márgenes del contenedor del CTA de producción
+  // (#js-videolitics-calendly-container: margin 2rem arriba / 3rem abajo).
+  const spacing = theme?.hexboard ? 'mt-8 mb-12' : 'mt-8 animate-fade-in'
   return (
-    <div className="flex justify-center mt-8 animate-fade-in">
+    <div className={`flex justify-center ${spacing}`}>
       <CtaButton theme={theme} onClick={onClick} text={text} size="lg" />
     </div>
   )

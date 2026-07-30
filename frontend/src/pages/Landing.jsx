@@ -24,6 +24,15 @@ export default function Landing({ school, program, region, formConfig, nextUrl, 
     />
   }
 
+  if (theme.hexboard) {
+    return <HexLanding
+      school={school} program={program} region={region}
+      formConfig={formConfig} theme={theme} assets={assets}
+      instructor={instructor} disclaimer={disclaimer}
+      nextUrl={nextUrl} funnelSlug={funnelSlug} videoEnabled={videoEnabled}
+    />
+  }
+
   return <DefaultLanding
     school={school} program={program} region={region}
     formConfig={formConfig} theme={theme} t={t}
@@ -191,6 +200,148 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
             <a href={footer.legal?.privacy} target="_blank" rel="noopener noreferrer" className="hover:text-cb-ink">Política de Privacidad</a>
             <a href={footer.legal?.terms} target="_blank" rel="noopener noreferrer" className="hover:text-cb-ink">Términos y Condiciones</a>
           </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
+
+/* ═══ Landing "hexboard" — réplica 1:1 de conquerfinance.com (Webflow) ═══
+   Medida en vivo contra producción (desktop 1440 / móvil ≤479):
+   navbar 70px con logo de 180px · columna de 1140px · form de 980px ·
+   tarjeta de instructor r10 con sombra rgba(6,34,99,.17) · logos de prensa
+   max 120px justify-between · disclaimer Arial 12 · footer full-width con
+   "ConquerX" en degradado Webflow. El cluster hexagonal va en el body
+   (posición 150% 23%, 800px, no-repeat). */
+const CONQUERX_GRADIENT =
+  'linear-gradient(90deg, rgb(177,108,234) 20%, rgb(255,94,105) 60%, rgb(255,138,86) 80%, rgb(255,168,75) 90%)'
+
+function HexLanding({ school, program, region, formConfig, theme, assets, instructor, disclaimer, nextUrl, funnelSlug, videoEnabled }) {
+  const t = theme.landing || {}
+  const footer = theme.footer || {}
+  const contentWidth = t.contentWidth || '1140px'
+  // La imagen va inline (URL del bundle); posición/tamaño por clases para poder
+  // variar por breakpoint: en móvil el cluster asoma arriba (40px), en desktop
+  // al 23% de la altura — como el body de producción.
+  const pageStyle = {
+    backgroundColor: '#ffffff',
+    ...(assets?.hexBackground ? { backgroundImage: `url(${assets.hexBackground})` } : {}),
+    fontFamily: 'Poppins, sans-serif',
+  }
+  const instructorPhoto = assets?.instructorPhoto || instructor?.imageUrl
+  const pressLogos = t.pressLogos || []
+
+  return (
+    <div className="min-h-screen overflow-x-hidden relative flex flex-col text-black bg-no-repeat bg-[length:800px] bg-[position:150%_40px] md:bg-[position:150%_23%]" style={pageStyle}>
+      {/* Navbar: logo 180px centrado; 75px de alto en móvil, 70px en desktop */}
+      <header className="w-full h-[75px] md:h-[70px] flex items-center justify-center">
+        <img src={assets.logo} alt={footer.copyrightBrand || 'Conquer Finance'} className="w-[180px] h-auto" />
+      </header>
+
+      <main className="relative z-10 flex-1 w-full mx-auto px-5 flex flex-col" style={{ maxWidth: `calc(${contentWidth} + 40px)` }}>
+        {/* Hero: eyebrow + título + subtítulo (a 5px del navbar, como producción) */}
+        <div className="mt-[5px]">
+          <HeroSection formConfig={formConfig} theme={theme} />
+        </div>
+
+        {/* Bullets con check azul (a 10px del subtítulo) */}
+        <div className="mt-[10px]">
+          <BulletPoints formConfig={formConfig} theme={theme} />
+        </div>
+
+        {/* Doble chevron azul: producción usa un Lottie dentro de un hueco de
+            ~56px entre bullets y form — aquí un SVG estático con la misma forma. */}
+        <div className="h-[45px] md:h-[56px] flex items-center justify-center" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="w-9 h-9 animate-bounce" fill="none" stroke={t.accentText || '#345bb8'} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 6l8 7 8-7" />
+            <path d="M4 13l8 7 8-7" />
+          </svg>
+        </div>
+
+        {/* Formulario inline (sin tarjeta; el .container-form de Webflow mide
+            980px en desktop y 95% del viewport en móvil, con 25px arriba y
+            20px abajo) */}
+        <div className="-mx-[10px] md:mx-auto md:w-full max-w-[980px] pt-[25px] pb-[20px]">
+          <LandingForm
+            program={program}
+            region={region}
+            formConfig={formConfig}
+            school={school}
+            nextUrl={nextUrl}
+            funnelSlug={funnelSlug}
+            videoEnabled={videoEnabled}
+          />
+        </div>
+
+        {/* Instructor: tarjeta blanca r10 con avatar circular de 150px.
+            Sombra desktop rgba(6,34,99,.17) / móvil 0 2px 11px #0003 (Webflow). */}
+        {instructor && (
+          <div className="mt-[40px] rounded-[10px] bg-white shadow-[0_2px_11px_rgba(0,0,0,0.2)] md:shadow-[0_2px_5px_2px_rgba(6,34,99,0.17)] px-[17px] py-[20px] md:py-[40px] md:pl-[98px] md:pr-[60px] flex flex-col md:flex-row items-center gap-[10px] md:gap-[41px]">
+            {instructorPhoto && (
+              <img
+                src={instructorPhoto}
+                alt={instructor.name}
+                className="w-[150px] h-[150px] rounded-full object-cover flex-shrink-0"
+              />
+            )}
+            <div className="min-w-0 max-w-[755px] text-center md:text-left">
+              <p className="text-[17px] md:text-[18px] font-extrabold leading-[32px]" style={{ color: t.accentText || '#1c48af' }}>{instructor.name}</p>
+              {instructor.role && <p className="text-sm text-gray-500 mb-1">{instructor.role}</p>}
+              <p
+                className="text-[14px] font-medium leading-[21px] text-black/80 [&_strong]:font-bold [&_em]:italic"
+                dangerouslySetInnerHTML={safeHtml(instructor.description)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Logos de prensa: título Poppins 800 16 + logos de hasta 120px.
+            Desktop: una fila justify-between; móvil: filas de 2 sin gap vertical. */}
+        {pressLogos.length > 0 && (
+          <div className="mt-[40px] md:mt-[70px] flex flex-col md:flex-row items-center justify-between md:gap-[40px]">
+            <p className="text-[16px] font-extrabold leading-[21px] text-[#333] flex-shrink-0 mb-[30px] md:mb-0">{t.pressTitle || 'Nos has visto en...'}</p>
+            <div className="max-md:flex max-md:flex-wrap max-md:justify-center max-md:gap-x-[40px] max-md:gap-y-0 md:contents">
+              {pressLogos.map((src, i) => (
+                <img key={i} src={src} alt="" className="max-w-[120px] h-auto object-contain" />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Disclaimer + contacto: Arial 12/lh20 #333 centrado */}
+        <div className="mt-[40px] md:mt-[55px] text-center text-[12px] leading-[20px] text-[#333]" style={{ fontFamily: 'Arial, sans-serif' }}>
+          {disclaimer && <p>{disclaimer}</p>}
+          {footer.contactEmail && (
+            <p className="mt-[20px]">Puedes contactarnos enviándonos un email a {footer.contactEmail}</p>
+          )}
+        </div>
+      </main>
+
+      {/* Footer dentro del contenedor de contenido (1140px): © Arial 14 +
+          ConquerX en degradado Webflow + enlaces legales Poppins 14 con "/" */}
+      <footer className="w-full mx-auto px-5 mt-[60px] py-[20px] flex flex-col md:flex-row justify-between items-center gap-3 text-[14px] text-[#333]" style={{ maxWidth: `calc(${contentWidth} + 40px)` }}>
+        <p className="text-center md:text-left" style={{ fontFamily: 'Arial, sans-serif' }}>
+          &copy; {new Date().getFullYear()} Todos los derechos reservados por{' '}
+          <span
+            className="font-extrabold align-middle"
+            style={{
+              fontFamily: 'Montserrat, sans-serif',
+              backgroundImage: CONQUERX_GRADIENT,
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+            }}
+          >
+            {footer.copyrightBrand || 'ConquerX'}
+          </span>
+        </p>
+        <div className="flex flex-wrap justify-center gap-2 flex-shrink-0" style={{ fontFamily: 'Poppins, sans-serif' }}>
+          <a href={footer.legal?.terms} target="_blank" rel="noopener noreferrer" className="hover:underline">Términos y condiciones</a>
+          <span>/</span>
+          <a href={footer.legal?.privacy} target="_blank" rel="noopener noreferrer" className="hover:underline">Política de privacidad</a>
+          <span>/</span>
+          <a href={footer.legal?.cookies} target="_blank" rel="noopener noreferrer" className="hover:underline">Política de cookies</a>
         </div>
       </footer>
     </div>

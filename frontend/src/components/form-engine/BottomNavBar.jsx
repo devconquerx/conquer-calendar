@@ -1,6 +1,9 @@
-export default function BottomNavBar({ progress, onUp, onDown, canGoUp, canGoDown }) {
+export default function BottomNavBar({ progress, onUp, onDown, canGoUp, canGoDown, bottomOffset = 0 }) {
+  // bottomOffset: en el shell hexboard (Finance) la barra se eleva por encima
+  // de la franja oscura inferior, para quedar sobre la zona blanca como en
+  // producción.
   return (
-    <div className="bottom-nav">
+    <div className="bottom-nav" style={bottomOffset ? { bottom: `${bottomOffset}px` } : undefined}>
       <div className="bottom-progress">
         <span className="progress-label">{progress}% completado</span>
         <div className="progress-track">

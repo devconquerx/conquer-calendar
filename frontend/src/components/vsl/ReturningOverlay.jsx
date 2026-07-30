@@ -44,14 +44,23 @@ const restartIcon = (
 
 export default function ReturningOverlay({ onContinue, onRestart, theme }) {
   // Color del aro de los botones: degradado del acento del tema (naranja en
-  // Conquer Blocks, azul en Legal). Fallback al azul de producción si el tema
-  // no define un degradado de botón.
-  const colorStops = theme?.accent?.buttonGradient?.match(/#[0-9a-fA-F]{3,8}/g) || ['#3974FF']
+  // Conquer Blocks, azul en Legal). Finance (hexboard) usa el azul sólido del
+  // modal de videolitics de producción; fallback al mismo azul si el tema no
+  // define un degradado de botón.
+  const colorStops = theme?.hexboard
+    ? ['#3974FF']
+    : (theme?.accent?.buttonGradient?.match(/#[0-9a-fA-F]{3,8}/g) || ['#3974FF'])
+  // Finance: título del modal en Inter bold 16/36 (c-videolitics-message-title);
+  // el resto de marcas conserva Funnel Display.
+  const titleCls = theme?.hexboard
+    ? 'text-[16px] sm:text-[36px] font-bold leading-tight mb-3 md:mb-8 [text-shadow:0_0_3px_rgba(0,0,0,1)]'
+    : 'font-funnel text-sm md:text-4xl font-semibold leading-tight mb-3 md:mb-8'
+  const titleStyle = theme?.hexboard ? { fontFamily: 'Inter, sans-serif' } : undefined
 
   return (
-    <div className="absolute inset-0 z-10 grid place-items-center bg-black/80 px-2 md:px-4">
+    <div className="absolute inset-0 z-10 grid place-items-center bg-black/80 px-2 md:px-4" style={titleStyle}>
       <div className="text-center text-white max-w-[760px] w-full">
-        <h2 className="font-funnel text-sm md:text-4xl font-semibold leading-tight mb-3 md:mb-8">
+        <h2 className={titleCls} style={titleStyle}>
           Ya habías comenzado a ver este video
         </h2>
         <div className="flex flex-col md:flex-row gap-3 md:gap-5 justify-center md:justify-between items-center md:items-stretch md:px-7">

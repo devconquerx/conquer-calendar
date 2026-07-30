@@ -13,6 +13,29 @@ export default function BulletPoints({ formConfig, theme }) {
   const t = theme.landing.bullets
   const isPaper = !!theme.paperboard
 
+  // Hexboard (Finance): réplica 1:1 de los bullets de producción
+  // (.cf-subtitle-point / .cf-pricing-plan-pointer-text-18px): check 24×28,
+  // filas cada 16px (10px móvil) con sangría de 30px en desktop; texto Poppins
+  // 400 · 17px/lh23 desktop · 13px/lh125% móvil · #000c.
+  if (theme.hexboard) {
+    const checkIcon = theme.assets?.checkIcon
+    return (
+      <div className="flex flex-col w-full md:pl-[30px]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+        {bullets.map((item, i) => (
+          <div key={i} className="flex items-center gap-2 md:gap-4 mb-[10px] md:mb-4">
+            {checkIcon && (
+              <img src={checkIcon} alt="" className="flex-shrink-0 w-6 h-[28px] object-contain" />
+            )}
+            <p
+              className="text-[13px] leading-[1.25] md:text-[17px] md:leading-[23px] font-normal text-black/80"
+              dangerouslySetInnerHTML={safeHtml(item)}
+            />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   // Paperboard (Blocks/Legal): filas a ancho completo con textura paperboard
   // (overlay blanco 0.6) y sombra suave en capas, icono 48px + texto 16px.
   if (isPaper) {

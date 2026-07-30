@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react'
 
 import paperboardTexture from '../../../assets/img/cb/paperboard-texture.avif'
+import { useTheme } from '../../../themes'
 
 const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
 
@@ -8,6 +9,7 @@ const cbShadow = '0px 2px 5px rgba(0,0,0,0.1), 0px 9px 9px rgba(0,0,0,0.09), 0px
 
 export default function MultipleChoice({ field, value, onChange, onNext }) {
   const choices = field.choices || []
+  const theme = useTheme()
 
   const handleSelect = useCallback((choiceValue) => {
     onChange(choiceValue)
@@ -29,6 +31,39 @@ export default function MultipleChoice({ field, value, onChange, onNext }) {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [choices, handleSelect])
+
+  // Hexboard (Finance): opciones grises de QuillForms en producción
+  // (answersColor #000000bf): fondo negro al 10% (20% hover, 75% seleccionada
+  // con texto blanco), borde 1px negro 75%, radio 5px y badge de letra con
+  // borde negro al 40%. Mismo layout apilado.
+  if (theme?.hexboard) {
+    return (
+      <div className="flex flex-col gap-2 w-full">
+        {choices.map((choice, i) => {
+          const isSelected = value === choice.value
+          return (
+            <button
+              key={choice.value}
+              type="button"
+              onClick={() => handleSelect(choice.value)}
+              className={`flex items-center justify-between gap-3 text-left px-[10px] py-[10px] rounded-[5px] border w-full transition-colors duration-150 border-black/75 ${
+                isSelected ? 'bg-black/75 text-white' : 'bg-black/10 hover:bg-black/20 text-black/75'
+              }`}
+            >
+              <span className="text-base md:text-xl leading-[1.4]">{choice.label}</span>
+              <span
+                className={`flex items-center justify-center w-8 h-8 rounded-full border text-sm font-bold uppercase flex-shrink-0 ${
+                  isSelected ? 'border-white text-white' : 'border-black/40 bg-black/10 text-black/75'
+                }`}
+              >
+                {KEYS[i] || ''}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-2 w-full">

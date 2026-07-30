@@ -337,10 +337,15 @@ _ESCUELAS_RUTA_PATH = ('conquer-blocks', 'conquer-legal')
 
 
 # URLs de la página de video por marca. Conquer Legal replica las rutas de
-# producción bajo /hub/ (conquerlegal.com/hub/video-<region>).
+# producción bajo /hub/ (conquerlegal.com/hub/video-<region>). Conquer Finance
+# replica EXACTAMENTE las URLs vivas de www.conquerfinance.com (Webflow): sin
+# barra final, y la confirmación compartida entre regiones sin sufijo — cuando
+# el dominio pase a servirse desde aquí no puede cambiar ni un carácter.
 def _video_url(escuela, region, base=''):
     if escuela == 'conquer-legal':
         return f'{base}/hub/video-{region}'
+    if escuela == 'conquer-finance':
+        return f'{base}/video-clase-{region}'
     if escuela in _ESCUELAS_RUTA_PATH:
         return f'{base}/{escuela}/video-clase-{region}/'
     return f'{base}/video-clase-{region}/'
@@ -350,6 +355,8 @@ def _video_url(escuela, region, base=''):
 def _landing_url(escuela, region, base=''):
     if escuela == 'conquer-legal':
         return f'{base}/hub/registro-{region}'
+    if escuela == 'conquer-finance':
+        return f'{base}/clase-online-gratuita-{region}'
     if escuela in _ESCUELAS_RUTA_PATH:
         return f'{base}/{escuela}/clase-online-gratuita-{region}/'
     return f'{base}/clase-online-gratuita-{region}/'
@@ -359,6 +366,10 @@ def _landing_url(escuela, region, base=''):
 def confirmacion_url(escuela, region, base=''):
     if escuela == 'conquer-legal':
         return f'{base}/hub/confirmacion'
+    if escuela == 'conquer-finance':
+        # Página única para todas las regiones, como en producción
+        # (www.conquerfinance.com/confirmacion-llamada).
+        return f'{base}/confirmacion-llamada'
     if escuela in _ESCUELAS_RUTA_PATH:
         return f'{base}/{escuela}/confirmacion-llamada-{region}/'
     return f'{base}/confirmacion-llamada-{region}/'
@@ -647,6 +658,17 @@ class FunnelStatusView(View):
         for f in FunnelForm.objects.all().order_by('escuela', 'region'):
             cfg = f.config or {}
             tiene_video = bool(cfg.get('video')) or f.escuela in _VIDEO_DEFAULTS
+
+            # Las escuelas SIN la escuela en el path (finance, languages…)
+            # resuelven por Host, así que sus rutas raíz no funcionan desde el
+            # dominio del panel (calendar.localhost / el dominio del calendario).
+            # Se les añade ?escuela=<slug>: en dev DEBUG lo usa el fallback de
+            # _escuela_por_host; en los dominios de marca el parámetro se ignora.
+            def _link(url):
+                if not url or f.escuela in _ESCUELAS_RUTA_PATH:
+                    return url
+                return f'{url}?escuela={f.escuela}'
+
             filas.append({
                 'escuela': f.escuela,
                 'region': f.region,
@@ -655,10 +677,10 @@ class FunnelStatusView(View):
                 'has_landing': 'landing' in cfg,
                 'has_welcome': 'welcome' in cfg,
                 'has_video': tiene_video,
-                'landing_url': _landing_url(f.escuela, f.region, base=base),
-                'video_url': _video_url(f.escuela, f.region, base=base),
+                'landing_url': _link(_landing_url(f.escuela, f.region, base=base)),
+                'video_url': _link(_video_url(f.escuela, f.region, base=base)),
                 'stepform_url': stepform_url(f.escuela, f.region, base=base) or '',
-                'confirmation_url': confirmacion_url(f.escuela, f.region, base=base),
+                'confirmation_url': _link(confirmacion_url(f.escuela, f.region, base=base)),
             })
         return render(request, 'pages/public/funnel/status.html', {
             'filas': filas,
