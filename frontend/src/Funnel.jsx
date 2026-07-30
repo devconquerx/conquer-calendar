@@ -187,9 +187,12 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     // recarga, el contenedor publicado funciona tal cual (verificado contra el
     // sGTM). Si algún día el contenedor pasa a escuchar `calendly_scheduled`,
     // este branch puede volver al router.navigate — no ambos, o duplicaría.
-    if (theme?.hexboard && confirmationUrl) {
-      const sep = confirmationUrl.includes('?') ? '&' : '?'
-      window.location.href = `${confirmationUrl}${sep}${params.toString()}`
+    // OJO: en el SPA la prop confirmationUrl no viaja (FunnelApp no la pasa);
+    // la URL canónica de la etapa vive en router.urls.confirmation.
+    const hardConfirmationUrl = confirmationUrl || router?.urls?.confirmation || ''
+    if (theme?.hexboard && hardConfirmationUrl) {
+      const sep = hardConfirmationUrl.includes('?') ? '&' : '?'
+      window.location.href = `${hardConfirmationUrl}${sep}${params.toString()}`
       return
     }
     if (router) {
