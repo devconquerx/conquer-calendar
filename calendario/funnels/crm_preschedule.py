@@ -68,6 +68,10 @@ def push_pre_schedule(prellamada):
         # obligatorio). Usamos el token estable de la Prellamada como uuid: es
         # único por recorrido y no cambia entre el upsert intermedio y el final.
         'uuid': str(prellamada.token),
+        # Discriminador de origen: con 'calendario' el CRM NO re-etiqueta ni
+        # re-empuja conversiones (lo hace esta app); sin él (Make/funnel viejo)
+        # el CRM sigue haciendo todo como siempre.
+        'source': 'calendario',
         'journey_id': journey_id,
         'event_id': _trk('event_id'),
         'lead_email': prellamada.email,

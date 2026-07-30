@@ -22,6 +22,10 @@ def push_schedule(reserva):
     s = build_schedule_ctx(reserva)
 
     payload = {
+        # Discriminador de origen: con 'calendario' el CRM NO re-etiqueta ni
+        # re-empuja conversiones (lo hace esta app); sin él (Make/funnel viejo)
+        # el CRM sigue haciendo todo como siempre.
+        'source': 'calendario',
         'lead_email': s.lead_email,
         'lead_name': s.lead_name,
         'lead_phone_number': s.lead_phone_number,

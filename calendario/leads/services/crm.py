@@ -31,6 +31,10 @@ def push_lead(lead):
         return
 
     payload = {
+        # Discriminador de origen: con 'calendario' el CRM NO re-etiqueta ni
+        # re-empuja conversiones (lo hace esta app); sin él (Make/funnel viejo)
+        # el CRM sigue haciendo todo como siempre.
+        'source': 'calendario',
         'email': lead.email,
         'full_name': lead.full_name,
         'last_name': lead.last_name,
