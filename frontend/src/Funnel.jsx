@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { fetchConfig, postResolver, registerLead, sendPreSchedule } from './api'
+import { fetchConfig, postResolver, sendPreSchedule } from './api'
 import useTracking from './hooks/useTracking'
 import { fireAllLead } from './lib/pixelEvents'
 import FormStep from './components/FormStep'
@@ -34,7 +34,6 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   // en el StepForm, pero autorrellenados con el valor del query param (ese valor
   // se siembra en `respuestas`). No se ocultan: el lead ve y puede corregir sus
   // datos.
-  const leadRegisteredRef = useRef(false)
   // schedule_event_id del recorrido: se genera una vez al montar y se reutiliza
   // en el utm_term de Calendly y en fireAllSchedule (igual que el funnel de
   // Django, que lo genera en `trackingParams` al montar el form).
@@ -92,30 +91,12 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     setRespuestas(prev => ({ ...prev, [current.id]: value }))
   }
 
-  // Registra el lead (nombre+email+tracking) apenas se captura el email, para
-  // capturarlo aunque abandone antes de agendar (igual que funnels).
-  const maybeRegisterLead = (answers) => {
-    if (leadRegisteredRef.current) return
-    const email = answers.email
-    if (!email) return
-    leadRegisteredRef.current = true
-    registerLead({
-      name: answers.name || '',
-      email,
-      lead_phone: answers.phone || '',
-      escuela: escuelaProp || escuela,
-      funnel: slug,
-      event_id: tracking.eventId,
-      journey_id: tracking.journeyId,
-      user_agent: navigator.userAgent,
-      url: window.location.href,
-      ...tracking.utmParams,
-      ...tracking.clickIds,
-      _fbp: tracking.pixelCookies._fbp || '',
-      _fbc: tracking.pixelCookies._fbc || '',
-      _ttp: tracking.pixelCookies._ttp || '',
-    })
-  }
+  // NOTA: el StepForm NO registra leads. El lead lo crea la landing (única
+  // fuente, como en conquerx-funnels-new, donde el form solo alimentaba la
+  // PreSchedule vía Make); aquí el visitante queda capturado igualmente por la
+  // Prellamada progresiva (sendPreSchedule) desde que escribe su teléfono.
+  // Antes había un re-registro aquí y cada recorrido creaba DOS LeadRegisters
+  // en el CRM (el segundo con page_url=/agenda/...).
 
   const handleNext = (value) => {
     if (!current) return
@@ -124,7 +105,6 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
         ? { ...respuestas, [current.id]: value }
         : { ...respuestas }
     setRespuestas(updated)
-    maybeRegisterLead(updated)
 
     setDirection('forward')
     if (currentIndex < blocks.length - 1) {
