@@ -6,6 +6,19 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+# Lead.school (slug interno del calendario) → código de escuela del CRM, el
+# vocabulario que guardaba el funnel viejo en LeadRegister.school. OJO finance:
+# el CRM usa 'fi' (SCHOOL_TAGS/SCHOOL_PIXEL_MAP indexan por 'fi'); con el slug
+# largo su Meta CAPI/TikTok/Ads de paridad daban SKIP (pixel_id=None). La
+# traducción vive SOLO aquí: internamente el calendario sigue con el slug (los
+# tags de Respond.io derivan 'CF' de él y no deben cambiar).
+_SCHOOL_CRM_CODE = {
+    'conquer-blocks': 'cb', 'conquerblocks': 'cb', 'conquer-blocks-esp': 'cb',
+    'conquer-finance': 'fi', 'conquerfinance': 'fi', 'cf': 'fi',
+    'conquer-languages': 'cl', 'conquerlanguages': 'cl',
+    'conquer-legal': 'cg', 'conquerlegal': 'cg',
+}
+
 
 def push_lead(lead):
     """Send lead data to the CRM ingest API after NeverBounce validation."""
@@ -28,8 +41,9 @@ def push_lead(lead):
         'ip_address': lead.ip_address,
         'page_url': lead.page_url,
         'funnel': lead.funnel,
-        'school': lead.school,
+        'school': _SCHOOL_CRM_CODE.get((lead.school or '').lower().strip(), lead.school),
         'product': lead.product,
+        'conditions': lead.conditions,
         # UTMs
         'utm_source': lead.utm_source,
         'utm_campaign': lead.utm_campaign,
@@ -51,6 +65,13 @@ def push_lead(lead):
         'dclid': lead.dclid,
         'ttclid': lead.ttclid,
         'gclsrc': lead.gclsrc,
+        # Cookies de píxel (advanced matching del CAPI de paridad del CRM; el
+        # funnel viejo las mandaba y el ingest ya las acepta)
+        '_fbp': lead._fbp,
+        '_fbc': lead._fbc,
+        '_ttp': lead._ttp,
+        '_ga': lead._ga,
+        '_gid': lead._gid,
         # Tracking
         'event_id': lead.event_id,
         'journey_id': lead.journey_id,

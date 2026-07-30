@@ -116,9 +116,15 @@ def process_crm_send(self, lead_id):
         return
 
     from calendario.leads.models import Lead
-    from calendario.leads.services import crm
+    from calendario.leads.services import crm, geo
 
     lead = Lead.objects.get(pk=lead_id)
+    # Geo por IP antes del envío (el funnel viejo mandaba city/country con el
+    # lead). Best-effort: si geojs falla, el lead viaja sin geo igualmente.
+    try:
+        geo.enrich_lead(lead)
+    except Exception:
+        logger.exception('Lead %s: geo enrichment falló; se continúa sin geo', lead_id)
     crm.push_lead(lead)
     lead.tags.add('crm_done')
     logger.info('Lead %s: crm_done', lead_id)

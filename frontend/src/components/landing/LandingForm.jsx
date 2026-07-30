@@ -215,6 +215,9 @@ export default function LandingForm({ program, region, formConfig, school, nextU
       escuela: school?.slug || '',
       funnel: funnelSlug,
       last_name: honeypotRef.current?.value || '',
+      // Evidencia de aceptación de políticas al enviar (mismo formato que el
+      // funnel viejo guardaba en LeadRegister.conditions).
+      conditions: `Acepta las políticas: ${new Date().toISOString()}`,
     }
 
     if (phoneData) {
