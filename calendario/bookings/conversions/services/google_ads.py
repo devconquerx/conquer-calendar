@@ -83,7 +83,7 @@ def push_schedule(reserva):
         conversion['userIdentifiers'] = user_identifiers
 
     login_customer_id = getattr(settings, 'GOOGLE_ADS_LOGIN_CUSTOMER_ID', '')
-    url = f'https://googleads.googleapis.com/v19/customers/{customer_id}:uploadClickConversions'
+    url = f'https://googleads.googleapis.com/v24/customers/{customer_id}:uploadClickConversions'
     headers = {
         'Authorization': f'Bearer {access_token}',
         'developer-token': developer_token,
