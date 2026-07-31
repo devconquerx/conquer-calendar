@@ -177,10 +177,16 @@ def dispatch_schedule_tasks(reserva_id):
         s = build_schedule_ctx(reserva)
         lead = s.lead
 
+        # Conquer Legal NO usa la API directa de conversiones (van por el
+        # server container de sGTM); ver dispatch_lead_tasks.
+        es_legal = (s.school_code or '') == 'cg'
+
         # Plataformas de ads condicionadas por la fuente de tráfico. Sin Lead
         # emparejado, se usa el utm_source del tracking como fallback (igual que
         # funnels), para no perder conversiones de reservas sin Lead.
-        if lead:
+        if es_legal:
+            pass
+        elif lead:
             if is_from_meta(lead):
                 process_schedule_meta_capi.delay(reserva_id)
             if is_from_tiktok(lead):
@@ -260,6 +266,11 @@ def sweep_incomplete_reservas():
                 meta_on = src == 'metaads'
                 tiktok_on = 'tiktok' in src
                 google_on = src == 'googleads'
+
+            # Mismo gate que dispatch_schedule_tasks: Legal no usa la API
+            # directa de conversiones (van por el server container de sGTM).
+            if (s.school_code or '') == 'cg':
+                meta_on = tiktok_on = google_on = False
 
             if meta_on and 'sch_meta_capi_done' not in tag_names and 'sch_meta_capi_failed' not in tag_names:
                 process_schedule_meta_capi.delay(reserva.pk)

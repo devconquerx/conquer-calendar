@@ -157,11 +157,18 @@ def dispatch_lead_tasks(lead_id):
     # Respaldo en Supabase: siempre, independiente del origen y del CRM.
     process_supabase.delay(lead_id)
 
-    if is_from_meta(lead):
+    # Conquer Legal NO usa la API directa de conversiones: las suyas las
+    # dispara el server container de sGTM (tags Google Ads/Meta del contenedor
+    # de Legal) — empujarlas también por API las duplicaría. El resto de
+    # marcas replica el push por API que hacía el CRM con el funnel viejo.
+    from calendario.leads.services.utils import get_school_code
+    es_legal = get_school_code(lead) == 'cg'
+
+    if not es_legal and is_from_meta(lead):
         process_meta_capi.delay(lead_id)
-    if is_from_tiktok(lead):
+    if not es_legal and is_from_tiktok(lead):
         process_tiktok_events.delay(lead_id)
-    if is_from_google(lead):
+    if not es_legal and is_from_google(lead):
         process_google_ads.delay(lead_id)
     # Respond.io: las etiquetas de lead (lead-<ABBR>, <ABBR>, región) se asignan
     # al crear el lead, tenga teléfono o no. Si llega sin teléfono, el contacto se
@@ -194,23 +201,28 @@ def sweep_incomplete_leads():
         .prefetch_related('tags')
     )
 
+    from calendario.leads.services.utils import get_school_code
+
     requeued = 0
     for lead in leads.iterator(chunk_size=200):
         tag_names = set(lead.tags.names())
+        # Mismo gate que dispatch_lead_tasks: Legal no usa la API directa de
+        # conversiones (van por el server container de sGTM).
+        es_legal = get_school_code(lead) == 'cg'
 
         if 'supabase_done' not in tag_names and 'supabase_failed' not in tag_names:
             process_supabase.delay(lead.pk)
             requeued += 1
 
-        if is_from_meta(lead) and 'meta_capi_done' not in tag_names and 'meta_capi_failed' not in tag_names:
+        if not es_legal and is_from_meta(lead) and 'meta_capi_done' not in tag_names and 'meta_capi_failed' not in tag_names:
             process_meta_capi.delay(lead.pk)
             requeued += 1
 
-        if is_from_tiktok(lead) and 'tiktok_events_done' not in tag_names and 'tiktok_events_failed' not in tag_names:
+        if not es_legal and is_from_tiktok(lead) and 'tiktok_events_done' not in tag_names and 'tiktok_events_failed' not in tag_names:
             process_tiktok_events.delay(lead.pk)
             requeued += 1
 
-        if is_from_google(lead) and 'google_ads_done' not in tag_names and 'google_ads_failed' not in tag_names:
+        if not es_legal and is_from_google(lead) and 'google_ads_done' not in tag_names and 'google_ads_failed' not in tag_names:
             process_google_ads.delay(lead.pk)
             requeued += 1
 
