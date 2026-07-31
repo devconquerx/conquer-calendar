@@ -147,10 +147,13 @@ function HexConfirmation({ theme, assets }) {
           <p className="mt-6 mx-auto max-w-[610px] text-[16px] leading-6 font-medium">
             {hexBold(c.paso1Text, c.paso1TextBold)}
           </p>
-          <div className="mt-10 md:mt-[35px] aspect-video bg-black">
+          {/* Patrón responsive de Bunny/Webflow (padding-top + iframe absoluto):
+              en iOS/WebKit un iframe con h-full dentro de aspect-video no se
+              dimensiona y el player quedaba en negro. */}
+          <div className="mt-10 md:mt-[35px] relative w-full bg-black" style={{ paddingTop: '56.25%' }}>
             <iframe
               src={c.paso1Video}
-              className="w-full h-full"
+              className="absolute inset-0 w-full h-full"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
               title="Paso 1"
