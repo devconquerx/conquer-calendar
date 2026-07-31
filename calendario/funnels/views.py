@@ -229,6 +229,16 @@ class ReservarView(View):
         if inicio_utc.tzinfo is None:
             inicio_utc = inicio_utc.replace(tzinfo=dt_timezone.utc)
 
+        # El event_id de la RESERVA es el del evento Schedule (el que el píxel
+        # usa como eventID vía cqx_schedule_event_id), no el del journey: así
+        # el CAPI backend y el CRM deduplican contra el píxel, igual que el
+        # flujo viejo (Make lo extraía del utm_term de Calendly). La Prellamada
+        # conserva el event_id del journey (paridad con el PreSchedule viejo).
+        schedule_event_id = (body.get('schedule_event_id') or '').strip()
+        tracking_reserva = dict(prellamada.tracking or {})
+        if schedule_event_id:
+            tracking_reserva['event_id'] = schedule_event_id
+
         try:
             with transaction.atomic():
                 reserva = crear_reserva(
@@ -239,7 +249,7 @@ class ReservarView(View):
                     telefono_invitado=telefono,
                     notas=notas,
                     timezone_invitado=tz,
-                    tracking=prellamada.tracking,
+                    tracking=tracking_reserva,
                 )
                 prellamada.reserva = reserva
                 prellamada.save(update_fields=['reserva'])

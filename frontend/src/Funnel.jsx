@@ -209,6 +209,11 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
       prellamada_token: outcome.prellamada_token,
       inicio_utc: slot.utc,
       tz: slot.tz,
+      // Id del evento Schedule (el mismo que usa el píxel vía
+      // cqx_schedule_event_id): el backend lo snapshotea en la reserva para
+      // que el CAPI/CRM dedupliquen contra el píxel, como el flujo viejo
+      // (donde viajaba en el utm_term de Calendly).
+      schedule_event_id: scheduleEventId,
       nombre: (prefill.nombre || '').trim(),
       email: (prefill.email || '').trim(),
       telefono: (prefill.telefono || '').trim(),

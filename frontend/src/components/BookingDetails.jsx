@@ -55,6 +55,8 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
         prellamada_token: prellamadaToken,
         inicio_utc: slot.utc,
         tz: slot.tz,
+        // Mismo id de Schedule que usa el píxel (dedup CAPI/CRM, como el viejo).
+        schedule_event_id: (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_schedule_event_id')) || '',
         nombre: nombre.trim(),
         email: email.trim(),
         telefono: telefono.trim(),
