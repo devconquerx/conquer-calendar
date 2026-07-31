@@ -146,7 +146,15 @@ def _get_access_token():
 
 
 def _format_datetime(dt):
-    """Format datetime for Google Ads API (YYYY-MM-DD HH:MM:SS+HH:MM)."""
+    """Format datetime for Google Ads API (yyyy-mm-dd hh:mm:ss+hh:mm).
+
+    OJO: %z de strftime emite el offset SIN dos puntos (+0000) y la API lo
+    rechaza (INVALID_STRING_DATE_TIME_SECONDS_WITH_OFFSET): hay que insertar
+    el ':' a mano. Datetimes naive → se asume UTC.
+    """
     if not dt:
-        return datetime.now().strftime('%Y-%m-%d %H:%M:%S+01:00')
-    return dt.strftime('%Y-%m-%d %H:%M:%S%z')
+        dt = datetime.now()
+    s = dt.strftime('%Y-%m-%d %H:%M:%S%z')
+    if len(s) >= 5 and s[-5] in '+-':
+        return s[:-2] + ':' + s[-2:]
+    return s + '+00:00'
