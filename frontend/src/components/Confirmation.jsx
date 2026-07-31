@@ -156,6 +156,10 @@ function HexConfirmation({ theme, assets }) {
               className="absolute inset-0 w-full h-full"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
+              // Bunny valida el dominio que embebe por Referer; Django manda
+              // Referrer-Policy: same-origin (el iframe cross-origin iría SIN
+              // referer y la CDN responde 403 → player en negro en iOS/WebKit).
+              referrerPolicy="strict-origin-when-cross-origin"
               title="Paso 1"
               style={{ border: 'none' }}
             />
@@ -470,6 +474,7 @@ function PaperboardConfirmation({ theme, assets }) {
                 className="w-full h-full relative z-0"
                 allow="autoplay; fullscreen; picture-in-picture"
                 allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
                 title="Paso 1"
                 style={{ border: 'none' }}
               />
@@ -709,6 +714,10 @@ function DefaultConfirmation({ escuela, theme }) {
               className="w-full h-full"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
+              // Bunny valida el dominio que embebe por Referer; Django manda
+              // Referrer-Policy: same-origin (el iframe cross-origin iría SIN
+              // referer y la CDN responde 403 → player en negro en iOS/WebKit).
+              referrerPolicy="strict-origin-when-cross-origin"
               title="Paso 1"
               style={{ border: 'none' }}
             />
