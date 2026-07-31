@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { fetchConfig, postResolver, sendPreSchedule } from './api'
+import { fetchConfig, postResolver, postReservar, sendPreSchedule } from './api'
 import useTracking from './hooks/useTracking'
 import { fireAllLead } from './lib/pixelEvents'
 import FormStep from './components/FormStep'
@@ -57,6 +57,12 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   const [phase, setPhase] = useState(embedded ? 'form' : 'loading')
   const [outcome, setOutcome] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
+  // Reserva directa desde el funnel: al elegir hora se reserva con los datos
+  // de la prellamada, sin re-pedirlos. 'booking' pinta el estado de espera;
+  // si el intento directo falla, 'directBookingFailed' cae al formulario de
+  // BookingDetails (prefillado) como fallback para reintentar/corregir.
+  const [booking, setBooking] = useState(false)
+  const [directBookingFailed, setDirectBookingFailed] = useState(false)
   const [calendlyUrl, setCalendlyUrl] = useState('')
   const [loadError, setLoadError] = useState('')
 
@@ -188,6 +194,41 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [router, confirmationUrl, tracking.eventId, tracking.journeyId, outcome, theme])
 
+  // Al elegir hora viniendo del funnel: los datos personales ya se pidieron en
+  // el StepForm (viven en la Prellamada / outcome.prefill), así que se reserva
+  // directo — fecha y hora son los únicos pasos del calendario. El formulario
+  // de BookingDetails queda solo para el uso suelto del calendario (sin
+  // prefill) y como fallback si la reserva directa falla.
+  const handleSlotSelected = (slot) => {
+    setSelectedSlot(slot)
+    const prefill = outcome?.prefill || {}
+    const canBookDirect = !directBookingFailed && prefill.email && prefill.nombre
+    if (!canBookDirect) return
+    setBooking(true)
+    postReservar(slug, {
+      prellamada_token: outcome.prellamada_token,
+      inicio_utc: slot.utc,
+      tz: slot.tz,
+      nombre: (prefill.nombre || '').trim(),
+      email: (prefill.email || '').trim(),
+      telefono: (prefill.telefono || '').trim(),
+      notas: '',
+    })
+      .then((result) => {
+        if (result.ok) {
+          goToConfirmation(result)
+        } else {
+          // Slot ocupado u otro rechazo: volver al formulario prefillado.
+          setDirectBookingFailed(true)
+          setBooking(false)
+        }
+      })
+      .catch(() => {
+        setDirectBookingFailed(true)
+        setBooking(false)
+      })
+  }
+
   const submitResolver = async (finalRespuestas) => {
     setPhase('resolving')
     try {
@@ -311,7 +352,12 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
       if (calendlyUrl) {
         return <CalendlyEmbed url={calendlyUrl} onScheduled={goToConfirmation} />
       }
-      if (selectedSlot) {
+      if (selectedSlot && booking) {
+        return (
+          <div className="loading-wrap" style={pageStyle}>Confirmando tu reserva...</div>
+        )
+      }
+      if (selectedSlot && (directBookingFailed || !(outcome.prefill?.email && outcome.prefill?.nombre))) {
         return (
           <BookingDetails
             slot={selectedSlot}
@@ -334,7 +380,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
           eventoInfo={outcome.evento_info}
           theme={theme}
           funnelFont={funnelFont}
-          onSlotSelected={setSelectedSlot}
+          onSlotSelected={handleSlotSelected}
         />
       )
     }
