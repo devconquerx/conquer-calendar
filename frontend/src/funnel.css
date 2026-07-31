@@ -434,7 +434,10 @@ body { background: #fff; }
 .bk-submit:disabled { opacity: .6; cursor: not-allowed; }
 
 @media (max-width: 800px) {
-  .bk-card, .bk-card.has-slots { flex-direction: column !important; max-width: 100% !important; min-height: 0 !important; }
+  /* height:auto es clave: .bk-card.has-slots fija height:560px (pensado para
+     las columnas lado a lado del desktop) y con overflow:hidden en el layout
+     apilado del móvil recortaba la columna de horas y la zona horaria. */
+  .bk-card, .bk-card.has-slots { flex-direction: column !important; max-width: 100% !important; min-height: 0 !important; height: auto !important; }
   .bk-left, .bk-card.has-slots .bk-left { flex: none !important; border-right: none !important; border-bottom: 1px solid var(--bk-divider) !important; padding: 24px 20px !important; }
   .bk-right, .bk-card.has-slots .bk-right { padding: 24px 20px !important; }
   .bk-date-inner { flex-direction: column; gap: 20px; }

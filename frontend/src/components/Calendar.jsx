@@ -126,6 +126,17 @@ export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSe
 
   useEffect(() => { fetchMes(mes) }, [mes, fetchMes])
 
+  // En pantallas angostas el panel de horas se apila DEBAJO del calendario:
+  // al elegir día, se hace scroll hasta él para que el usuario lo vea.
+  useEffect(() => {
+    if (!selectedDate) return
+    if (typeof window === 'undefined' || window.innerWidth > 800) return
+    const t = setTimeout(() => {
+      document.querySelector('.bk-slots-col')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+    return () => clearTimeout(t)
+  }, [selectedDate])
+
   const HOY = todayISO()
   const mesData = slotsData
 
