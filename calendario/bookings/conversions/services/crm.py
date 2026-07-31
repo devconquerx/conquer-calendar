@@ -29,7 +29,9 @@ def push_schedule(reserva):
         'lead_email': s.lead_email,
         'lead_name': s.lead_name,
         'lead_phone_number': s.lead_phone_number,
-        'lead_country': s.lead_country,
+        # lead_country NO se manda a propósito: Schedule.save() del CRM lo
+        # deriva del prefijo telefónico con nombre EN ESPAÑOL (patrón del
+        # flujo viejo); nuestro valor venía en inglés (widget de la landing).
         'call_register': s.call_register.isoformat() if s.call_register else None,
         'call_datetime': s.call_datetime.isoformat() if s.call_datetime else None,
         'event': s.event,

@@ -91,6 +91,25 @@ def push_pre_schedule(prellamada):
         'q4_answer': _answer(3),
         'q5_answer': _answer(4),
         'q6_answer': _answer(5),
+        # Todas las respuestas unidas por salto de línea, en el orden del form:
+        # es lo que el setter lee de un vistazo (formato exacto del flujo viejo
+        # vía Make). El CRM la copia también al Schedule al vincular la reserva.
+        'lead_scoring_text': '\n'.join(a for a in (_answer(i) for i in range(6)) if a) or None,
+        # Click IDs y cookies de píxel (el flujo viejo los mandaba con la
+        # prellamada; el ingest del CRM ya los acepta)
+        'gclid': _trk('gclid'),
+        'gbraid': _trk('gbraid'),
+        'wbraid': _trk('wbraid'),
+        'fbclid': _trk('fbclid'),
+        'msclkid': _trk('msclkid'),
+        'dclid': _trk('dclid'),
+        'ttclid': _trk('ttclid'),
+        'gclsrc': _trk('gclsrc'),
+        '_fbp': _trk('_fbp'),
+        '_fbc': _trk('_fbc'),
+        '_ttp': _trk('_ttp'),
+        '_ga': _trk('_ga'),
+        '_gid': _trk('_gid'),
         # UTMs (columna con fallback al tracking)
         'utm_source': _trk('utm_source'),
         'utm_campaign': _trk('utm_campaign'),

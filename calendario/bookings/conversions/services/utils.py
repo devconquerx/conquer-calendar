@@ -94,7 +94,9 @@ def build_schedule_ctx(reserva):
     s.form = (funnel.key if funnel else '') or ''
     s.specialisation = ''
     s.lead_scoring_score = prellamada.score if prellamada else None
-    s.lead_scoring_text = ''
+    # None (no ''): así el payload lo omite y el CRM lo copia del PreSchedule
+    # al vincular (sync_schedule_with_preschedule), igual que las q1..q6.
+    s.lead_scoring_text = None
     s.event = reserva.event_type.nombre if reserva.event_type_id else ''
 
     # Respuestas q1..q6: no hay mapeo fijo en conquer-calendar (CRM está disabled).
