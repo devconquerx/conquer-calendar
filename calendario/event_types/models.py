@@ -36,6 +36,8 @@ class EventType(models.Model):
         (15, '15 minutos'),
         (20, '20 minutos'),
         (30, '30 minutos'),
+        (40, '40 minutos'),
+        (45, '45 minutos'),
         (60, '60 minutos'),
     ]
     incremento_inicio_minutos = models.PositiveSmallIntegerField(
