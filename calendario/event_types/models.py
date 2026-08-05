@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -55,6 +56,34 @@ class EventType(models.Model):
         default=60,
         validators=[MinValueValidator(1), MaxValueValidator(365)],
         help_text="Rango máximo (rolling) en días contados al minuto desde el momento actual.",
+    )
+    # Hasta dónde se puede reservar. Dos modos excluyentes, como en Calendly:
+    #   'rolling' -> los próximos N días desde ahora mismo (aviso_maximo_dias);
+    #   'fechas'  -> un rango fijo con fecha de inicio y de fin, para eventos que
+    #                solo existen en una temporada concreta (una convocatoria, un
+    #                curso) y que dejan de aceptar reservas al pasarse.
+    # El modo por defecto es el rolling: los eventos que ya existen no cambian.
+    RANGO_ROLLING = 'rolling'
+    RANGO_FECHAS = 'fechas'
+    RANGO_CHOICES = [
+        (RANGO_ROLLING, 'Días rodantes (a partir de hoy)'),
+        (RANGO_FECHAS, 'Rango de fechas concreto'),
+    ]
+    rango_tipo = models.CharField(
+        max_length=10,
+        choices=RANGO_CHOICES,
+        default=RANGO_ROLLING,
+        verbose_name='Tipo de rango de reserva',
+    )
+    rango_fecha_inicio = models.DateField(
+        null=True, blank=True,
+        verbose_name='Reservable desde',
+        help_text="Solo se usa con el rango de fechas concreto.",
+    )
+    rango_fecha_fin = models.DateField(
+        null=True, blank=True,
+        verbose_name='Reservable hasta',
+        help_text="Solo se usa con el rango de fechas concreto. Es un día inclusive.",
     )
     FORMATO_TITULO_CHOICES = [
         ('evento_invitado', 'Evento · Invitado  (ej: "Consultoría con Juan")'),
@@ -159,6 +188,45 @@ class EventType(models.Model):
     def clean(self):
         if self.precio is not None and self.precio < 0:
             raise ValidationError({'precio': 'El precio no puede ser negativo.'})
+        if self.rango_tipo == self.RANGO_FECHAS:
+            errores = {}
+            if not self.rango_fecha_inicio:
+                errores['rango_fecha_inicio'] = 'Indica desde qué día se puede reservar.'
+            if not self.rango_fecha_fin:
+                errores['rango_fecha_fin'] = 'Indica hasta qué día se puede reservar.'
+            if (self.rango_fecha_inicio and self.rango_fecha_fin
+                    and self.rango_fecha_fin < self.rango_fecha_inicio):
+                errores['rango_fecha_fin'] = 'La fecha final no puede ser anterior a la inicial.'
+            if errores:
+                raise ValidationError(errores)
+
+    @property
+    def usa_rango_de_fechas(self):
+        """El evento está limitado a un rango fijo y lo tiene bien configurado.
+
+        Las dos fechas son obligatorias en ese modo (lo valida `clean`), pero se
+        comprueban igual: un objeto construido a mano o una fila vieja no deben
+        acabar en una ventana a medias.
+        """
+        return (self.rango_tipo == self.RANGO_FECHAS
+                and self.rango_fecha_inicio is not None
+                and self.rango_fecha_fin is not None)
+
+    def ventana_reservas(self, hoy_local):
+        """Primer y último día reservables (ambos inclusive), en fechas locales.
+
+        Único sitio donde se decide la ventana: lo usan tanto el cálculo de slots
+        como las vistas públicas, para que el calendario no ofrezca días que
+        después se rechazarían al reservar.
+
+        Con el rango fijo el pasado se recorta igual (no se reserva ayer aunque el
+        rango empiece antes), y si el rango ya terminó devuelve una ventana vacía
+        —el último día cae antes que el primero—, que los consumidores traducen a
+        "no hay horas".
+        """
+        if self.usa_rango_de_fechas:
+            return max(hoy_local, self.rango_fecha_inicio), self.rango_fecha_fin
+        return hoy_local, hoy_local + timedelta(days=self.aviso_maximo_dias)
 
     @property
     def gcal_palabras_ignorar_lista(self):
@@ -179,11 +247,15 @@ class EventType(models.Model):
 
 
 class EventTypeXHost(models.Model):
-    # Prioridad en el reparto round-robin. Rango cerrado 1..3, sin valor centinela:
-    # todos los organizadores nacen en PRIORIDAD_DEFECTO, así que mientras nadie la
-    # toque el criterio es constante y no desempata nada (el reparto se comporta
-    # exactamente igual que antes de existir este campo).
-    PRIORIDAD_MIN = 1
+    # Prioridad en el reparto round-robin. Rango cerrado 0..3, donde 0 es el valor
+    # centinela «excluido»: el organizador sigue en el pool y en el formulario, pero
+    # no recibe reservas ni aporta sus horas a los slots que se ofrecen, hasta que
+    # se le vuelva a poner un número >= 1.
+    # De 1 a 3 es prioridad real: todos los organizadores nacen en PRIORIDAD_DEFECTO,
+    # así que mientras nadie la toque el criterio es constante y no desempata nada
+    # (el reparto se comporta exactamente igual que antes de existir este campo).
+    PRIORIDAD_EXCLUIDO = 0
+    PRIORIDAD_MIN = 0
     PRIORIDAD_MAX = 3
     PRIORIDAD_DEFECTO = 1
 
@@ -207,10 +279,17 @@ class EventTypeXHost(models.Model):
         help_text=(
             "De 1 a 3, donde 3 es la más alta. Cuando varios organizadores están "
             "libres a la misma hora, la reserva se asigna al de mayor prioridad; a "
-            "igualdad de prioridad decide el reparto de carga de siempre."
+            "igualdad de prioridad decide el reparto de carga de siempre. "
+            "0 lo deja fuera de este evento: no recibe reservas ni ofrece sus horas "
+            "hasta que se le ponga un número mayor que 0."
         ),
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def excluido(self):
+        """El organizador está en el pool pero apartado del reparto (prioridad 0)."""
+        return self.prioridad == self.PRIORIDAD_EXCLUIDO
 
     class Meta:
         db_table = 'event_types_x_hosts'

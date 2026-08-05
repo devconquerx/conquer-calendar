@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -17,6 +19,7 @@ from .forms import EventTypeForm, _hosts_queryset, _generar_slug_equipo
 from .models import EventType, EventTypeXHost, EnlaceUnico, DisponibilidadEtxh, DisponibilidadFechaEtxh
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class EventTypeListView(RequierePermisoMixin, ListView):
@@ -125,6 +128,23 @@ def _hosts_disponibles_context():
     ]
 
 
+def _invalidar_slots_sin_romper(event_type_id):
+    """Invalida los slots cacheados sin dejar que un fallo de caché tumbe el guardado.
+
+    Se llama en `on_commit`, con el evento ya escrito: una excepción aquí sería un
+    500 sobre algo que en realidad salió bien. Los slots cacheados caducan por TTL
+    en segundos, así que perder una invalidación no deja nada inconsistente.
+    """
+    from calendario.bookings.services import invalidar_slots
+    try:
+        invalidar_slots(event_type_id)
+    except Exception:
+        logger.warning(
+            'No se pudo invalidar la caché de slots del event_type %s',
+            event_type_id, exc_info=True,
+        )
+
+
 def _puede_configurar_prioridad(user, event_type):
     """
     Quién puede repartir la prioridad del round-robin de un evento:
@@ -149,9 +169,10 @@ def _prioridades_del_post(post, host_ids):
     """
     Lee las prioridades que envía el modal de organizadores ('prioridad_<host_id>').
 
-    Todo lo que falte, no sea un entero o se salga del rango 1..3 cae a la prioridad
+    Todo lo que falte, no sea un entero o se salga del rango 0..3 cae a la prioridad
     por defecto: el modal es la única vía normal de tocar esto, pero un POST a mano
-    no debe poder meter valores raros en la BD.
+    no debe poder meter valores raros en la BD. El 0 sí es un valor legítimo (deja
+    al organizador fuera del reparto), así que pasa el filtro como cualquier otro.
     """
     minimo = EventTypeXHost.PRIORIDAD_MIN
     maximo = EventTypeXHost.PRIORIDAD_MAX
@@ -324,6 +345,12 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
                         cambiadas.append(pivot)
                 if cambiadas:
                     EventTypeXHost.objects.bulk_update(cambiadas, ['prioridad'])
+            # El pool y el rango de fechas deciden qué horas se ofrecen, así que
+            # tocarlos invalida los slots cacheados en vez de esperar a que caduquen
+            # solos. Corre después del commit y es solo una optimización: si la
+            # caché falla, el evento ya está guardado y no se le puede devolver un
+            # error al usuario, así que se traga y se deja caducar por TTL.
+            transaction.on_commit(lambda: _invalidar_slots_sin_romper(obj.pk))
         self.object = obj
         messages.success(self.request, f"Tipo de evento '{obj.nombre}' actualizado.")
         return redirect(self.get_success_url())

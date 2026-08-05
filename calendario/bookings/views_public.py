@@ -70,10 +70,10 @@ def _siguiente_mes(mes):
     return (mes.replace(day=28) + timedelta(days=4)).replace(day=1)
 
 
-def _mes_tiene_slots(event_type, tz_visitante, hoy_local, max_fecha, mes_base):
+def _mes_tiene_slots(event_type, tz_visitante, min_fecha, max_fecha, mes_base):
     """True si el mes `mes_base` tiene al menos un slot dentro de la ventana reservable."""
     ultimo_dia = _siguiente_mes(mes_base) - timedelta(days=1)
-    desde = max(mes_base, hoy_local)
+    desde = max(mes_base, min_fecha)
     hasta = min(ultimo_dia, max_fecha)
     if desde > hasta:
         return False
@@ -84,37 +84,43 @@ def _mes_tiene_slots(event_type, tz_visitante, hoy_local, max_fecha, mes_base):
     return False
 
 
-def _primer_mes_con_slots(event_type, tz_visitante, hoy_local, max_fecha, mes_base):
+def _primer_mes_con_slots(event_type, tz_visitante, min_fecha, max_fecha, mes_base):
     """Avanza desde `mes_base` al primer mes con disponibilidad, acotado por `max_fecha`.
     Si ningún mes de la ventana tiene slots, devuelve `mes_base` sin cambios (se queda
     en el mes actual mostrándolo vacío, como antes)."""
     mes_max = max_fecha.replace(day=1)
     mes = mes_base
     while mes <= mes_max:
-        if _mes_tiene_slots(event_type, tz_visitante, hoy_local, max_fecha, mes):
+        if _mes_tiene_slots(event_type, tz_visitante, min_fecha, max_fecha, mes):
             return mes
         mes = _siguiente_mes(mes)
     return mes_base
 
 
-def _build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha_sel,
-                        auto_avanzar=False):
+def _build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha_sel,
+                        auto_avanzar=False, hoy_local=None):
     """Construye el contexto de calendario (grid + días con slots) para el template.
     Todas las fechas se agrupan en la TZ del visitante.
 
+    `min_fecha` es el primer día reservable y `hoy_local` el día de hoy: coinciden
+    en el rango rodante, pero con un rango de fechas que empieza en el futuro no,
+    y ahí uno acota el calendario mientras el otro solo pinta el "hoy".
+
     Si `auto_avanzar` es True (solo en la primera carga, sin mes/fecha explícitos), y el
     mes base no tiene disponibilidad, se salta al primer mes que sí la tenga."""
-    mes_min = hoy_local.replace(day=1)
+    if hoy_local is None:
+        hoy_local = min_fecha
+    mes_min = min_fecha.replace(day=1)
     mes_max = max_fecha.replace(day=1)
     mes_base = max(mes_min, min(mes_max, mes_base))
 
     if auto_avanzar:
-        mes_base = _primer_mes_con_slots(event_type, tz_visitante, hoy_local, max_fecha, mes_base)
+        mes_base = _primer_mes_con_slots(event_type, tz_visitante, min_fecha, max_fecha, mes_base)
 
     # Días con slots en el mes visible. Pedimos ±1 día al servicio para no
     # perder slots que cruzan la frontera de día entre TZ del host y del visitante.
     ultimo_dia = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
-    desde = max(mes_base, hoy_local)
+    desde = max(mes_base, min_fecha)
     hasta = min(ultimo_dia, max_fecha)
     dias_con_slots = set()
     if desde <= hasta:
@@ -136,7 +142,7 @@ def _build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha
                 'es_seleccionada': d == fecha_sel,
                 'clickable': (
                     d.month == mes_base.month
-                    and hoy_local <= d <= max_fecha
+                    and min_fecha <= d <= max_fecha
                     and d in dias_con_slots
                 ),
             })
@@ -153,20 +159,20 @@ def _build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha
     }
 
 
-def _calcular_slots_mes_json(event_type, tz_visitante, hoy_local, max_fecha, mes_str):
+def _calcular_slots_mes_json(event_type, tz_visitante, min_fecha, max_fecha, mes_str):
     try:
         mes_base = date.fromisoformat(mes_str + '-01') if mes_str else None
     except ValueError:
         mes_base = None
     if not mes_base:
-        mes_base = hoy_local.replace(day=1)
+        mes_base = min_fecha.replace(day=1)
 
-    mes_min = hoy_local.replace(day=1)
+    mes_min = min_fecha.replace(day=1)
     mes_max = max_fecha.replace(day=1)
     mes_base = max(mes_min, min(mes_max, mes_base))
 
     ultimo_dia = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
-    desde = max(mes_base, hoy_local)
+    desde = max(mes_base, min_fecha)
     hasta = min(ultimo_dia, max_fecha)
 
     mes_anterior = (mes_base - timedelta(days=1)).replace(day=1)
@@ -205,9 +211,9 @@ class SlotsMesJSONView(View):
         tz_host = ZoneInfo(host.timezone)
         tz_visitante = _tz_visitante(request, tz_host)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
         data = _calcular_slots_mes_json(
-            event_type, tz_visitante, hoy_local, max_fecha,
+            event_type, tz_visitante, min_fecha, max_fecha,
             request.GET.get('mes', ''),
         )
         return JsonResponse(data)
@@ -220,9 +226,9 @@ class SlotsMesJSONTeamView(View):
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
         data = _calcular_slots_mes_json(
-            event_type, tz_visitante, hoy_local, max_fecha,
+            event_type, tz_visitante, min_fecha, max_fecha,
             request.GET.get('mes', ''),
         )
         return JsonResponse(data)
@@ -237,14 +243,14 @@ class BookingPageView(View):
         tz_host = ZoneInfo(host.timezone)
         tz_visitante = _tz_visitante(request, tz_host)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
 
         fecha_str = request.GET.get('fecha', '')
         try:
             fecha = date.fromisoformat(fecha_str) if fecha_str else None
         except ValueError:
             fecha = None
-        if fecha and (fecha < hoy_local or fecha > max_fecha):
+        if fecha and (fecha < min_fecha or fecha > max_fecha):
             fecha = None
 
         mes_str = request.GET.get('mes', '')
@@ -253,7 +259,7 @@ class BookingPageView(View):
         except ValueError:
             mes_base = None
         if not mes_base:
-            mes_base = fecha.replace(day=1) if fecha else hoy_local.replace(day=1)
+            mes_base = fecha.replace(day=1) if fecha else min_fecha.replace(day=1)
 
         slots_local = []
         if fecha:
@@ -267,7 +273,7 @@ class BookingPageView(View):
             'event_type': event_type,
             'fecha': fecha,
             'fecha_iso': fecha.isoformat() if fecha else '',
-            'min_fecha_iso': hoy_local.isoformat(),
+            'min_fecha_iso': min_fecha.isoformat(),
             'max_fecha_iso': max_fecha.isoformat(),
             'slots_local': slots_local,
             'tz_host': host.timezone,
@@ -277,8 +283,8 @@ class BookingPageView(View):
             'slots_url': reverse('public_booking:slots_mes_json', kwargs={'user_slug': host.slug, 'event_type_slug': event_type.slug}),
         }
         auto_avanzar = not request.GET.get('mes') and not fecha
-        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha,
-                                       auto_avanzar=auto_avanzar))
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
+                                       auto_avanzar=auto_avanzar, hoy_local=hoy_local))
         return render(request, 'pages/public/booking/page.html', ctx)
 
 
@@ -315,8 +321,8 @@ class BookingFormView(View):
         tz_host = ZoneInfo(host.timezone)
         tz_visitante = _tz_visitante(request, tz_host)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
-        fecha = inicio.astimezone(tz_visitante).date() if inicio else hoy_local
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
+        fecha = inicio.astimezone(tz_visitante).date() if inicio else min_fecha
         mes_base = fecha.replace(day=1)
         slots = _slots_dia_visitante(event_type, fecha, tz_visitante)
 
@@ -325,7 +331,7 @@ class BookingFormView(View):
             'event_type': event_type,
             'fecha': fecha,
             'fecha_iso': fecha.isoformat(),
-            'min_fecha_iso': hoy_local.isoformat(),
+            'min_fecha_iso': min_fecha.isoformat(),
             'max_fecha_iso': max_fecha.isoformat(),
             'slots_local': _slots_template(slots, tz_visitante),
             'tz_host': host.timezone,
@@ -341,7 +347,8 @@ class BookingFormView(View):
             'form_action_url': reverse('public_booking:booking_submit', kwargs={'user_slug': host.slug, 'event_type_slug': event_type.slug}),
             'slots_url': reverse('public_booking:slots_mes_json', kwargs={'user_slug': host.slug, 'event_type_slug': event_type.slug}),
         }
-        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
+                                       hoy_local=hoy_local))
         if duplicado is not None:
             ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
         return render(request, 'pages/public/booking/page.html', ctx, status=400 if not duplicado else 200)
@@ -371,14 +378,14 @@ class TeamBookingPageView(View):
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
 
         fecha_str = request.GET.get('fecha', '')
         try:
             fecha = date.fromisoformat(fecha_str) if fecha_str else None
         except ValueError:
             fecha = None
-        if fecha and (fecha < hoy_local or fecha > max_fecha):
+        if fecha and (fecha < min_fecha or fecha > max_fecha):
             fecha = None
 
         mes_str = request.GET.get('mes', '')
@@ -387,7 +394,7 @@ class TeamBookingPageView(View):
         except ValueError:
             mes_base = None
         if not mes_base:
-            mes_base = fecha.replace(day=1) if fecha else hoy_local.replace(day=1)
+            mes_base = fecha.replace(day=1) if fecha else min_fecha.replace(day=1)
 
         slots_local = []
         if fecha:
@@ -400,7 +407,7 @@ class TeamBookingPageView(View):
             'event_type': event_type,
             'fecha': fecha,
             'fecha_iso': fecha.isoformat() if fecha else '',
-            'min_fecha_iso': hoy_local.isoformat(),
+            'min_fecha_iso': min_fecha.isoformat(),
             'max_fecha_iso': max_fecha.isoformat(),
             'slots_local': slots_local,
             'tz_ref': event_type.host.timezone,
@@ -411,8 +418,8 @@ class TeamBookingPageView(View):
             'slots_url': reverse('public_team:slots_mes_json', kwargs={'slug_equipo': event_type.slug_equipo}),
         }
         auto_avanzar = not request.GET.get('mes') and not fecha
-        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha,
-                                       auto_avanzar=auto_avanzar))
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
+                                       auto_avanzar=auto_avanzar, hoy_local=hoy_local))
         return render(request, 'pages/public/booking/page.html', ctx)
 
 
@@ -448,8 +455,8 @@ class TeamBookingFormView(View):
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
-        fecha = inicio.astimezone(tz_visitante).date() if inicio else hoy_local
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
+        fecha = inicio.astimezone(tz_visitante).date() if inicio else min_fecha
         mes_base = fecha.replace(day=1)
         slots = _slots_dia_visitante(event_type, fecha, tz_visitante)
 
@@ -457,7 +464,7 @@ class TeamBookingFormView(View):
             'event_type': event_type,
             'fecha': fecha,
             'fecha_iso': fecha.isoformat(),
-            'min_fecha_iso': hoy_local.isoformat(),
+            'min_fecha_iso': min_fecha.isoformat(),
             'max_fecha_iso': max_fecha.isoformat(),
             'slots_local': _slots_template(slots, tz_visitante),
             'tz_ref': event_type.host.timezone,
@@ -474,7 +481,8 @@ class TeamBookingFormView(View):
             'form_action_url': reverse('public_team:booking_submit', kwargs={'slug_equipo': event_type.slug_equipo}),
             'slots_url': reverse('public_team:slots_mes_json', kwargs={'slug_equipo': event_type.slug_equipo}),
         }
-        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
+                                       hoy_local=hoy_local))
         if duplicado is not None:
             ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
         return render(request, 'pages/public/booking/page.html', ctx, status=400 if not duplicado else 200)
@@ -587,14 +595,14 @@ class EnlaceUnicoPageView(View):
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
 
         fecha_str = request.GET.get('fecha', '')
         try:
             fecha = date.fromisoformat(fecha_str) if fecha_str else None
         except ValueError:
             fecha = None
-        if fecha and (fecha < hoy_local or fecha > max_fecha):
+        if fecha and (fecha < min_fecha or fecha > max_fecha):
             fecha = None
 
         mes_str = request.GET.get('mes', '')
@@ -603,7 +611,7 @@ class EnlaceUnicoPageView(View):
         except ValueError:
             mes_base = None
         if not mes_base:
-            mes_base = fecha.replace(day=1) if fecha else hoy_local.replace(day=1)
+            mes_base = fecha.replace(day=1) if fecha else min_fecha.replace(day=1)
 
         slots_local = []
         if fecha:
@@ -617,7 +625,7 @@ class EnlaceUnicoPageView(View):
             'host': event_type.host,
             'fecha': fecha,
             'fecha_iso': fecha.isoformat() if fecha else '',
-            'min_fecha_iso': hoy_local.isoformat(),
+            'min_fecha_iso': min_fecha.isoformat(),
             'max_fecha_iso': max_fecha.isoformat(),
             'slots_local': slots_local,
             'tz_host': event_type.host.timezone,
@@ -627,8 +635,8 @@ class EnlaceUnicoPageView(View):
             'slots_url': reverse('public_enlace_unico:slots_mes_json', kwargs={'token': token}),
         }
         auto_avanzar = not request.GET.get('mes') and not fecha
-        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha,
-                                       auto_avanzar=auto_avanzar))
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
+                                       auto_avanzar=auto_avanzar, hoy_local=hoy_local))
         return render(request, 'pages/public/booking/page.html', ctx)
 
 
@@ -677,8 +685,8 @@ class EnlaceUnicoFormView(View):
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
-        fecha = inicio.astimezone(tz_visitante).date() if inicio else hoy_local
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
+        fecha = inicio.astimezone(tz_visitante).date() if inicio else min_fecha
         mes_base = fecha.replace(day=1)
         slots = _slots_dia_visitante(event_type, fecha, tz_visitante)
         token = str(enlace.token)
@@ -688,7 +696,7 @@ class EnlaceUnicoFormView(View):
             'host': event_type.host,
             'fecha': fecha,
             'fecha_iso': fecha.isoformat(),
-            'min_fecha_iso': hoy_local.isoformat(),
+            'min_fecha_iso': min_fecha.isoformat(),
             'max_fecha_iso': max_fecha.isoformat(),
             'slots_local': _slots_template(slots, tz_visitante),
             'tz_host': event_type.host.timezone,
@@ -704,7 +712,8 @@ class EnlaceUnicoFormView(View):
             'form_action_url': reverse('public_enlace_unico:booking_submit', kwargs={'token': token}),
             'slots_url': reverse('public_enlace_unico:slots_mes_json', kwargs={'token': token}),
         }
-        ctx.update(_build_calendar_ctx(event_type, tz_visitante, hoy_local, mes_base, max_fecha, fecha))
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
+                                       hoy_local=hoy_local))
         if duplicado is not None:
             ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
         return render(request, 'pages/public/booking/page.html', ctx, status=400 if not duplicado else 200)
@@ -721,9 +730,9 @@ class EnlaceUnicoSlotsView(View):
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
-        max_fecha = hoy_local + timedelta(days=event_type.aviso_maximo_dias)
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
         data = _calcular_slots_mes_json(
-            event_type, tz_visitante, hoy_local, max_fecha,
+            event_type, tz_visitante, min_fecha, max_fecha,
             request.GET.get('mes', ''),
         )
         return JsonResponse(data)

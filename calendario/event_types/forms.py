@@ -54,6 +54,22 @@ class EventTypeForm(forms.ModelForm):
         required=False, min_value=1, max_value=365, initial=60,
         label='Rango máximo (días)',
     )
+    # El checkbox del formulario; el modelo guarda el modo como texto para que se
+    # pueda ampliar más adelante sin migrar datos.
+    rango_por_fechas = forms.BooleanField(
+        required=False,
+        label='Usar un rango de fechas concreto',
+    )
+    rango_fecha_inicio = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        label='Reservable desde',
+    )
+    rango_fecha_fin = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        label='Reservable hasta',
+    )
     es_equipo = forms.BooleanField(
         required=False,
         label='Evento de equipo',
@@ -71,7 +87,8 @@ class EventTypeForm(forms.ModelForm):
             'nombre', 'descripcion', 'duracion_minutos',
             'incremento_inicio_minutos',
             'buffer_antes_minutos', 'buffer_despues_minutos',
-            'aviso_minimo_minutos', 'aviso_maximo_dias', 'activo',
+            'aviso_minimo_minutos', 'aviso_maximo_dias',
+            'rango_fecha_inicio', 'rango_fecha_fin', 'activo',
             'crm_destino', 'unico_por_invitado',
             'confirmacion_tipo', 'confirmacion_url',
             'gcal_palabras_ignorar',
@@ -88,6 +105,10 @@ class EventTypeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['hosts'].queryset = _hosts_queryset()
+        if self.instance.pk and not self.is_bound:
+            self.fields['rango_por_fechas'].initial = (
+                self.instance.rango_tipo == EventType.RANGO_FECHAS
+            )
         if self.instance.pk and self.instance.slug_equipo:
             self.fields['es_equipo'].initial = True
             if not self.is_bound:
@@ -112,3 +133,28 @@ class EventTypeForm(forms.ModelForm):
     def clean_aviso_maximo_dias(self):
         v = self.cleaned_data.get('aviso_maximo_dias')
         return v if v is not None else 60
+
+    def clean(self):
+        """Traduce el checkbox del formulario al modo que guarda el modelo.
+
+        Las fechas se conservan aunque se desmarque el checkbox: el modo lo decide
+        `rango_tipo`, así que quedan guardadas sin efecto y volver a marcarlo no
+        obliga a escribirlas otra vez.
+        """
+        cleaned = super().clean()
+        usa_fechas = bool(cleaned.get('rango_por_fechas'))
+        self.instance.rango_tipo = (
+            EventType.RANGO_FECHAS if usa_fechas else EventType.RANGO_ROLLING
+        )
+        if not usa_fechas:
+            return cleaned
+
+        inicio = cleaned.get('rango_fecha_inicio')
+        fin = cleaned.get('rango_fecha_fin')
+        if not inicio:
+            self.add_error('rango_fecha_inicio', 'Indica desde qué día se puede reservar.')
+        if not fin:
+            self.add_error('rango_fecha_fin', 'Indica hasta qué día se puede reservar.')
+        if inicio and fin and fin < inicio:
+            self.add_error('rango_fecha_fin', 'La fecha final no puede ser anterior a la inicial.')
+        return cleaned

@@ -38,17 +38,29 @@ def _intervals_overlap(a_inicio, a_fin, b_inicio, b_fin):
 
 def _obtener_hosts_pool(event_type):
     """
-    Hosts activos del pool del event_type, ordenados por pivot.id ASC.
-    Si pool vacío (evento no-equipo), usa el host dueño del evento como fallback.
+    Hosts activos del pool del event_type que participan en el reparto, ordenados
+    por pivot.id ASC.
+
+    Los organizadores con prioridad 0 quedan fuera aquí, que es el único punto por
+    el que pasan tanto los slots ofrecidos como la asignación de la reserva: así un
+    excluido ni recibe reservas ni aporta sus horas al calendario público (ofrecer
+    una hora que solo él cubre daría un slot que después no se puede reservar).
+
+    Si el pool no tiene ninguna fila (evento no-equipo), usa el host dueño del
+    evento como fallback. Un pool con filas pero todas en prioridad 0 NO cae al
+    fallback: es una exclusión deliberada, y quedarse sin hosts es el resultado
+    querido, no un evento personal.
     """
-    pivots = (EventTypeXHost.objects
-              .filter(event_type=event_type, host__is_active=True)
-              .select_related('host')
-              .order_by('id'))
-    hosts = [p.host for p in pivots]
-    if not hosts and event_type.host.is_active:
-        hosts = [event_type.host]
-    return hosts
+    pivots = list(EventTypeXHost.objects
+                  .filter(event_type=event_type, host__is_active=True)
+                  .select_related('host')
+                  .order_by('id'))
+    if pivots:
+        return [p.host for p in pivots
+                if p.prioridad > EventTypeXHost.PRIORIDAD_EXCLUIDO]
+    if event_type.host.is_active:
+        return [event_type.host]
+    return []
 
 
 def _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc, palabras_ignorar=None):
@@ -96,6 +108,15 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     fecha_hasta = min(fecha_hasta, maximo.astimezone(tz_host).date())
     if fecha_hasta < fecha_desde:
         return []
+
+    # Rango de fechas fijo: recorta por los dos lados. Es el corte de verdad —
+    # la vista pública ya no ofrece esos días, pero aquí es donde se decide qué
+    # se puede reservar, así que una petición a mano tampoco lo salta.
+    if event_type.usa_rango_de_fechas:
+        fecha_desde = max(fecha_desde, event_type.rango_fecha_inicio)
+        fecha_hasta = min(fecha_hasta, event_type.rango_fecha_fin)
+        if fecha_hasta < fecha_desde:
+            return []
 
     bloques_por_dia = defaultdict(list)
     for b in BloqueHorarioSemanal.objects.filter(host=host):
@@ -341,6 +362,9 @@ def _seleccionar_host_round_robin(event_type, candidatos):
 
     Con todos los organizadores en la prioridad por defecto el primer criterio es
     constante y la elección queda idéntica al reparto histórico por carga.
+
+    Los excluidos (prioridad 0) no llegan aquí: `_obtener_hosts_pool` ya los quitó
+    aguas arriba, así que ningún candidato puede tener prioridad 0.
     Pre-condición: len(candidatos) >= 1.
     """
     if len(candidatos) == 1:

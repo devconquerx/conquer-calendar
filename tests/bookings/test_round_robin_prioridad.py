@@ -6,6 +6,10 @@ selección es: mayor prioridad -> menos reservas confirmadas -> orden de entrada
 al pool. Como todos los organizadores nacen en la prioridad por defecto, mientras
 nadie la toque el criterio es constante y el reparto se comporta exactamente como
 antes de existir el campo.
+
+El 0 es aparte: no es "la prioridad más baja" sino un centinela de exclusión. El
+organizador sigue en el pool pero no recibe reservas ni aporta sus horas a los
+slots que se ofrecen.
 """
 from datetime import timedelta
 from unittest.mock import patch
@@ -13,7 +17,12 @@ from unittest.mock import patch
 from django.test import TestCase
 
 from calendario.bookings.models import Reserva
-from calendario.bookings.services import crear_reserva as svc_crear
+from calendario.availability.models import BloqueHorarioSemanal
+from calendario.bookings.exceptions import SlotNoDisponibleError
+from calendario.bookings.services import (
+    _calcular_slots_para_host, _obtener_hosts_pool, calcular_slots,
+    crear_reserva as svc_crear,
+)
 from calendario.event_types.models import EventType, EventTypeXHost
 from tests.factories import crear_disponibilidad, crear_host, slot_futuro
 
@@ -114,3 +123,92 @@ class PrioridadRoundRobinTest(TestCase):
         _set_prioridad(self.et, self.c, 2)
         r = _reservar(self.et, slot_futuro(dias=1), 'x1@x.com')
         self.assertEqual(r.host, self.b)
+
+    # --- Prioridad 0: excluido del evento ---
+
+    def test_el_excluido_no_recibe_reservas(self, _ev, _conf):
+        # Ana es la primera del pool y sin tocar nada se llevaría la primera.
+        _set_prioridad(self.et, self.a, 0)
+        hosts = [
+            _reservar(self.et, slot_futuro(dias=d), f'x{d}@x.com').host
+            for d in (1, 2, 3, 4)
+        ]
+        self.assertNotIn(self.a, hosts)
+        self.assertEqual(hosts, [self.b, self.c, self.b, self.c])
+
+    def test_el_excluido_no_gana_ni_siendo_el_unico_con_carga_cero(self, _ev, _conf):
+        # Con carga 0 el reparto se lo daría a Ana; el 0 se evalúa antes.
+        _set_prioridad(self.et, self.a, 0)
+        for i in range(3):
+            inicio = slot_futuro(dias=20 + i)
+            Reserva.objects.create(
+                event_type=self.et, host=self.b,
+                inicio_utc=inicio, fin_utc=inicio + timedelta(minutes=30),
+                nombre_invitado='Previa', email_invitado=f'prev{i}@x.com',
+            )
+        r = _reservar(self.et, slot_futuro(dias=1), 'x1@x.com')
+        self.assertEqual(r.host, self.c)
+
+    def test_volver_a_subir_la_prioridad_lo_reincorpora(self, _ev, _conf):
+        _set_prioridad(self.et, self.a, 0)
+        r1 = _reservar(self.et, slot_futuro(dias=1), 'x1@x.com')
+        self.assertNotEqual(r1.host, self.a)
+        _set_prioridad(self.et, self.a, 3)
+        r2 = _reservar(self.et, slot_futuro(dias=2), 'x2@x.com')
+        self.assertEqual(r2.host, self.a)
+
+    def test_con_todos_excluidos_no_se_puede_reservar(self, _ev, _conf):
+        # Ni se ofrecen horas ni cae al dueño del evento como si fuese personal:
+        # que no quede nadie es justo lo que pidió quien puso los ceros.
+        for h in (self.a, self.b, self.c):
+            _set_prioridad(self.et, h, 0)
+        with self.assertRaises(SlotNoDisponibleError):
+            _reservar(self.et, slot_futuro(dias=1), 'x1@x.com')
+
+    @patch('calendario.bookings.services.obtener_busy_intervalos', return_value=[])
+    def test_el_excluido_no_aporta_sus_horas_a_los_slots(self, _busy, _ev, _conf):
+        # Solo Ana trabaja los miércoles: al excluirla, esas horas desaparecen del
+        # calendario público en vez de quedar ofrecidas y fallar al reservarlas.
+        # Evento aparte con dos hosts: al excluir a Ana queda uno solo y
+        # `calcular_slots` no se va a los hilos, que bajo TestCase abren su propia
+        # conexión y no verían los datos de la transacción de este test.
+        et = EventType.objects.create(
+            host=self.a, nombre='Solo Ana los miércoles', duracion_minutos=30,
+            buffer_antes_minutos=0, buffer_despues_minutos=0,
+            aviso_minimo_minutos=0, activo=True, unico_por_invitado=False,
+        )
+        EventTypeXHost.objects.create(event_type=et, host=self.a)
+        EventTypeXHost.objects.create(event_type=et, host=self.b)
+        BloqueHorarioSemanal.objects.filter(host=self.b, dia_semana=2).delete()
+
+        miercoles = slot_futuro(dias=1).date()
+        while miercoles.weekday() != 2:
+            miercoles += timedelta(days=1)
+
+        # Precondición: ese día las horas del evento son exactamente las de Ana.
+        self.assertTrue(_calcular_slots_para_host(et, self.a, miercoles, miercoles))
+        self.assertEqual(_calcular_slots_para_host(et, self.b, miercoles, miercoles), [])
+
+        _set_prioridad(et, self.a, 0)
+        self.assertEqual(calcular_slots(et, miercoles, miercoles), [])
+
+    def test_obtener_hosts_pool_deja_fuera_a_los_excluidos(self, _ev, _conf):
+        _set_prioridad(self.et, self.b, 0)
+        self.assertEqual(_obtener_hosts_pool(self.et), [self.a, self.c])
+
+    def test_obtener_hosts_pool_con_todos_excluidos_no_cae_al_dueno(self, _ev, _conf):
+        for h in (self.a, self.b, self.c):
+            _set_prioridad(self.et, h, 0)
+        self.assertEqual(_obtener_hosts_pool(self.et), [])
+
+    @patch('calendario.bookings.services.obtener_busy_intervalos', return_value=[])
+    def test_evento_personal_sin_pool_sigue_funcionando(self, _busy, _ev, _conf):
+        # El fallback al dueño es para eventos sin ninguna fila en el pool; la
+        # exclusión no debe habérselo llevado por delante.
+        personal = EventType.objects.create(
+            host=self.a, nombre='Evento personal', duracion_minutos=30,
+            buffer_antes_minutos=0, buffer_despues_minutos=0,
+            aviso_minimo_minutos=0, activo=True, unico_por_invitado=False,
+        )
+        r = _reservar(personal, slot_futuro(dias=1), 'x1@x.com')
+        self.assertEqual(r.host, self.a)

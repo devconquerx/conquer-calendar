@@ -71,6 +71,9 @@
     color: #7e8299; cursor: pointer; line-height: 1;
   }
   .hosts-chip-remove:hover { color: #f1416c; }
+  /* Excluido (prioridad 0): sigue en la lista, pero se ve que no está jugando. */
+  .hosts-chip.is-excluido { opacity: .55; }
+  .prioridad-fila.is-excluido .prioridad-nombre { text-decoration: line-through; }
 </style>
 <div class="card shadow-sm" style="max-width: 760px;">
     <div class="card-header border-0 pt-6">
@@ -189,12 +192,43 @@
                     {% endif %}
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold required">Rango máximo (días)</label>
-                    <input type="number" name="aviso_maximo_dias" min="1" max="365"
-                           class="form-control form-control-lg{% if form.aviso_maximo_dias.errors %} is-invalid{% endif %}"
-                           value="{{ form.aviso_maximo_dias.value|default_if_none:60 }}" />
+                    <label class="form-label fw-semibold d-flex align-items-center justify-content-between mb-2">
+                        <span class="required">Rango máximo</span>
+                        <span class="form-check form-check-custom form-check-sm m-0">
+                            <input class="form-check-input" type="checkbox"
+                                   name="rango_por_fechas" id="rango_por_fechas"
+                                   {% if form.rango_por_fechas.value %}checked{% endif %} />
+                            <label class="form-check-label fw-semibold ms-2 fs-8" for="rango_por_fechas">
+                                Rango de fechas
+                            </label>
+                        </span>
+                    </label>
+
+                    <!-- Los dos controles ocupan el mismo hueco: se ve el que toque. -->
+                    <div id="rango-dias-campo" class="input-group input-group-lg">
+                        <input type="number" name="aviso_maximo_dias" min="1" max="365"
+                               id="aviso_maximo_dias"
+                               class="form-control form-control-lg{% if form.aviso_maximo_dias.errors %} is-invalid{% endif %}"
+                               value="{{ form.aviso_maximo_dias.value|default_if_none:60 }}" />
+                        <span class="input-group-text">días</span>
+                    </div>
+
+                    <input type="text" id="rango_fechas_display" autocomplete="off"
+                           class="form-control form-control-lg d-none{% if form.rango_fecha_inicio.errors or form.rango_fecha_fin.errors %} is-invalid{% endif %}"
+                           placeholder="Elige el rango" />
+                    <input type="hidden" name="rango_fecha_inicio" id="rango_fecha_inicio"
+                           value="{{ form.rango_fecha_inicio.value|default_if_none:''|stringformat:'s'|slice:':10' }}" />
+                    <input type="hidden" name="rango_fecha_fin" id="rango_fecha_fin"
+                           value="{{ form.rango_fecha_fin.value|default_if_none:''|stringformat:'s'|slice:':10' }}" />
+
                     {% if form.aviso_maximo_dias.errors %}
-                    <div class="invalid-feedback">{{ form.aviso_maximo_dias.errors|join:", " }}</div>
+                    <div class="text-danger fs-8 mt-1">{{ form.aviso_maximo_dias.errors|join:", " }}</div>
+                    {% endif %}
+                    {% if form.rango_fecha_inicio.errors or form.rango_fecha_fin.errors %}
+                    <div class="text-danger fs-8 mt-1">
+                        {{ form.rango_fecha_inicio.errors|join:", " }}
+                        {{ form.rango_fecha_fin.errors|join:", " }}
+                    </div>
                     {% endif %}
                 </div>
                 <div class="col-md-4 d-flex align-items-end pb-2">
@@ -405,6 +439,14 @@
                             organizadores están libres a la misma hora, la reserva se asigna al de
                             mayor prioridad. A igualdad de prioridad decide el reparto de carga de
                             siempre, así que si los dejas todos en <b>1</b> no cambia nada.
+                            <br>
+                            Pon <b>0</b> para dejar a alguien fuera de este evento: sigue en la
+                            lista, pero no recibe reservas ni se ofrecen sus horas hasta que le
+                            vuelvas a poner un número mayor que 0.
+                        </div>
+                        <div id="prioridad-todos-cero"
+                             class="alert alert-warning py-2 px-3 fs-8 d-none">
+                            Todos están en 0: este evento se quedará sin horas disponibles.
                         </div>
                         <div id="prioridad-list"></div>
                         <div id="prioridad-vacio" class="text-muted text-center py-4 d-none">
@@ -443,6 +485,75 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+// Rango de reserva: días rodantes o rango de fechas, nunca los dos. Los dos
+// controles comparten hueco y el checkbox decide cuál se ve.
+(function () {
+  var check     = document.getElementById('rango_por_fechas');
+  var campoDias = document.getElementById('rango-dias-campo');
+  var display   = document.getElementById('rango_fechas_display');
+  var desde     = document.getElementById('rango_fecha_inicio');
+  var hasta     = document.getElementById('rango_fecha_fin');
+  if (!check || !campoDias || !display || !desde || !hasta) return;
+
+  // El bundle de Metronic ya trae flatpickr, pero se carga más abajo que este
+  // bloque: hay que esperar a DOMContentLoaded o `window.flatpickr` todavía no
+  // existe. Si algún día no cargara, el campo se queda mostrando el rango
+  // guardado y el servidor conserva lo que hubiera: se pierde la edición, no el
+  // dato.
+  var picker = null;
+
+  function iniciarPicker() {
+    if (!window.flatpickr) {
+      if (desde.value && hasta.value) display.value = desde.value + ' a ' + hasta.value;
+      return;
+    }
+    picker = window.flatpickr(display, {
+      mode: 'range',
+      dateFormat: 'Y-m-d',
+      altInput: false,
+      locale: {
+        firstDayOfWeek: 1,
+        weekdays: {
+          shorthand: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'],
+          longhand: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+        },
+        months: {
+          shorthand: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+                      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+          longhand: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+        },
+        rangeSeparator: ' a ',
+      },
+      // Un rango a medias deja el campo de fin vacío a propósito: así el servidor
+      // lo rechaza con su mensaje en vez de inventarse una fecha.
+      onChange: function (fechas) {
+        desde.value = fechas[0] ? picker.formatDate(fechas[0], 'Y-m-d') : '';
+        hasta.value = fechas[1] ? picker.formatDate(fechas[1], 'Y-m-d') : '';
+      },
+    });
+    if (desde.value && hasta.value) {
+      picker.setDate([desde.value, hasta.value], false);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', iniciarPicker);
+  } else {
+    iniciarPicker();
+  }
+
+  function sync() {
+    var porFechas = check.checked;
+    campoDias.classList.toggle('d-none', porFechas);
+    display.classList.toggle('d-none', !porFechas);
+  }
+
+  check.addEventListener('change', sync);
+  sync();
+})();
+</script>
 <script>
 (function () {
   var duracionInput   = document.querySelector('[name="duracion_minutos"]');
@@ -531,9 +642,10 @@
     JSON.parse(initNode.textContent || '[]').map(String)
   );
 
-  // Prioridad round-robin por host (1..3, 3 = más alta). Se guarda aparte de
+  // Prioridad round-robin por host (0..3, 3 = más alta). El 0 es el centinela
+  // «excluido»: sigue en el pool pero fuera del reparto. Se guarda aparte de
   // `committed` para que quitar y volver a añadir un organizador no la pierda.
-  var PRIO_MIN = 1, PRIO_MAX = 3, PRIO_DEF = 1;
+  var PRIO_MIN = 0, PRIO_MAX = 3, PRIO_DEF = 1, PRIO_EXCLUIDO = 0;
   var prioNode = document.getElementById('prioridades-initial');
   var prioridades = {};
   if (prioNode) {
@@ -580,17 +692,23 @@
       hiddenPrio.value = String(prioridadDe(id));
       hiddenEl.appendChild(hiddenPrio);
 
+      var prio = prioridadDe(id);
       var chip = document.createElement('span');
-      chip.className = 'hosts-chip';
+      chip.className = 'hosts-chip' + (prio === PRIO_EXCLUIDO ? ' is-excluido' : '');
       var avatarHTML = h.avatar
         ? '<img src="' + h.avatar + '" class="rounded-circle" width="28" height="28" alt="">'
         : '<span class="hosts-avatar sm">' + h.iniciales + '</span>';
-      // Solo se marca la prioridad cuando alguien la ha subido: con todos en el
-      // valor por defecto no hay nada que señalar y los chips quedan como siempre.
-      var prio = prioridadDe(id);
-      var badgeHTML = prio > PRIO_DEF
-        ? '<span class="badge badge-light-primary fs-9 fw-bold" title="Prioridad ' + prio + '">P' + prio + '</span>'
-        : '';
+      // Solo se marca la prioridad cuando alguien la ha movido del valor por
+      // defecto: con todos en 1 no hay nada que señalar y los chips quedan como
+      // siempre. El 0 sí se marca siempre, porque cambia quién puede reservar.
+      var badgeHTML = '';
+      if (prio === PRIO_EXCLUIDO) {
+        badgeHTML = '<span class="badge badge-light-danger fs-9 fw-bold"' +
+          ' title="Fuera del reparto: no recibe reservas en este evento">Fuera</span>';
+      } else if (prio > PRIO_DEF) {
+        badgeHTML = '<span class="badge badge-light-primary fs-9 fw-bold" title="Prioridad ' +
+          prio + '">P' + prio + '</span>';
+      }
       chip.innerHTML =
         avatarHTML +
         '<span class="fw-semibold fs-7 text-gray-800">' + h.nombre + '</span>' +
@@ -707,9 +825,36 @@
   var prioListEl = document.getElementById('prioridad-list');
   var prioVacioEl = document.getElementById('prioridad-vacio');
 
+  var prioAvisoEl = document.getElementById('prioridad-todos-cero');
+
+  function inputsPrioridad() {
+    return Array.from(prioListEl.querySelectorAll('[data-prio-for]'));
+  }
+
+  // Lo que hay escrito ahora mismo en un input, ya normalizado al rango.
+  function valorTecleado(input) {
+    var v = parseInt(input.value, 10);
+    return (v >= PRIO_MIN && v <= PRIO_MAX) ? v : PRIO_DEF;
+  }
+
+  // Avisa si el evento se está quedando sin nadie que pueda recibir reservas.
+  function actualizarAvisoCero() {
+    var inputs = inputsPrioridad();
+    var todosFuera = inputs.length > 0 && inputs.every(function (input) {
+      return valorTecleado(input) === PRIO_EXCLUIDO;
+    });
+    prioAvisoEl.classList.toggle('d-none', !todosFuera);
+  }
+
+  function pintarFila(row, valor) {
+    var fuera = valor === PRIO_EXCLUIDO;
+    row.classList.toggle('is-excluido', fuera);
+    row.querySelector('.prioridad-estado').classList.toggle('d-none', !fuera);
+  }
+
   function filaPrioridad(id, h) {
     var row = document.createElement('div');
-    row.className = 'd-flex align-items-center gap-3 py-3 border-bottom';
+    row.className = 'prioridad-fila d-flex align-items-center gap-3 py-3 border-bottom';
 
     if (h.avatar) {
       var img = document.createElement('img');
@@ -728,13 +873,17 @@
     var info = document.createElement('span');
     info.className = 'flex-grow-1 min-w-0';
     var nombre = document.createElement('span');
-    nombre.className = 'd-block fw-semibold text-gray-800 text-truncate';
+    nombre.className = 'prioridad-nombre d-block fw-semibold text-gray-800 text-truncate';
     nombre.textContent = h.nombre;
     var email = document.createElement('span');
     email.className = 'd-block text-muted fs-7 text-truncate';
     email.textContent = h.email;
+    var estado = document.createElement('span');
+    estado.className = 'prioridad-estado d-block text-danger fs-8 fw-semibold d-none';
+    estado.textContent = 'Fuera del reparto: no recibe reservas ni ofrece sus horas.';
     info.appendChild(nombre);
     info.appendChild(email);
+    info.appendChild(estado);
     row.appendChild(info);
 
     var input = document.createElement('input');
@@ -747,8 +896,15 @@
     input.value = String(prioridadDe(id));
     input.setAttribute('data-prio-for', id);
     input.setAttribute('aria-label', 'Prioridad de ' + h.nombre);
+    // En vivo, para que se vea a quién estás dejando fuera antes de cerrar. El
+    // valor no se normaliza aquí: eso sigue pasando solo al cerrar el modal.
+    input.addEventListener('input', function () {
+      pintarFila(row, valorTecleado(input));
+      actualizarAvisoCero();
+    });
     row.appendChild(input);
 
+    pintarFila(row, prioridadDe(id));
     return row;
   }
 
@@ -760,15 +916,14 @@
       var h = hostsById[id];
       if (h) prioListEl.appendChild(filaPrioridad(id, h));
     });
+    actualizarAvisoCero();
   }
 
   // Se normaliza al cerrar y no mientras se teclea: si no, borrar el campo para
   // escribir otro número lo resetearía a 1 en mitad de la edición.
   function cerrarPrioridad() {
-    prioListEl.querySelectorAll('[data-prio-for]').forEach(function (input) {
-      var v = parseInt(input.value, 10);
-      prioridades[input.getAttribute('data-prio-for')] =
-        (v >= PRIO_MIN && v <= PRIO_MAX) ? v : PRIO_DEF;
+    inputsPrioridad().forEach(function (input) {
+      prioridades[input.getAttribute('data-prio-for')] = valorTecleado(input);
     });
     renderChips();
     prioModal.classList.add('d-none');

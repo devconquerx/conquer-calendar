@@ -2,9 +2,11 @@
 Tests del guardado de la prioridad round-robin desde el panel.
 
 El modal de "Configurar prioridad" envía un campo `prioridad_<host_id>` por cada
-organizador seleccionado. La vista los normaliza (1..3, cualquier otra cosa cae al
+organizador seleccionado. La vista los normaliza (0..3, cualquier otra cosa cae al
 valor por defecto) y los persiste en EventTypeXHost sin recrear las filas que ya
 existían, para no perder el orden de entrada al pool.
+
+El 0 es un valor legítimo: deja al organizador fuera del reparto de ese evento.
 """
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -87,6 +89,36 @@ class PrioridadPoolViewTest(TestCase):
         })
         defecto = EventTypeXHost.PRIORIDAD_DEFECTO
         self.assertEqual(self._prioridades(), {self.a.pk: defecto, self.b.pk: defecto})
+
+    def test_el_cero_se_guarda_como_exclusion(self):
+        self._post(**{
+            f'prioridad_{self.a.pk}': '0',
+            f'prioridad_{self.b.pk}': '2',
+        })
+        self.assertEqual(self._prioridades(), {self.a.pk: 0, self.b.pk: 2})
+        pivot = EventTypeXHost.objects.get(event_type=self.et, host=self.a)
+        self.assertTrue(pivot.excluido)
+
+    def test_los_negativos_no_son_una_exclusion(self):
+        # -1 no es "más excluido": es basura y cae al valor por defecto.
+        self._post(**{f'prioridad_{self.a.pk}': '-1'})
+        self.assertEqual(
+            self._prioridades()[self.a.pk], EventTypeXHost.PRIORIDAD_DEFECTO,
+        )
+
+    def test_el_excluido_sigue_en_el_pool(self):
+        # Poner 0 no es quitarlo: la fila (y con ella el orden de entrada) se queda.
+        self._post(**{f'prioridad_{self.a.pk}': '0', f'prioridad_{self.b.pk}': '1'})
+        pivot = EventTypeXHost.objects.get(event_type=self.et, host=self.a)
+        self.assertEqual(pivot.pk, self.pivot_a.pk)
+
+    def test_un_host_del_pool_no_puede_autoexcluirse(self):
+        c = Client()
+        c.force_login(self.b)
+        c.post(self.url, self._payload(**{f'prioridad_{self.b.pk}': '0'}))
+        self.assertEqual(
+            self._prioridades()[self.b.pk], EventTypeXHost.PRIORIDAD_DEFECTO,
+        )
 
     def test_no_recrea_las_filas_existentes(self):
         # El orden de entrada al pool (pivot.id) es el último desempate del
