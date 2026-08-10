@@ -15,7 +15,13 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   const router = useRouter()
   const [showButton, setShowButton] = useState(false)
 
-  const theme = getTheme(school?.slug)
+  const baseTheme = getTheme(school?.slug)
+  // Rediseño por página: un tema puede pedir que SOLO su página de vídeo use el
+  // sistema paperboard (hoy: Finance, que toma prestados los tokens de Legal
+  // vía `videoPaper`) sin cambiar de sistema en el resto de etapas del funnel.
+  const theme = !baseTheme.paperboard && baseTheme.videoVariant === 'paperboard'
+    ? { ...baseTheme, ...baseTheme.videoPaper, paperboard: true, hexboard: false }
+    : baseTheme
   const isPaper = !!theme.paperboard
   const assets = theme.assets
 

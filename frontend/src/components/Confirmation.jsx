@@ -14,7 +14,13 @@ import { safeHtml } from '../lib/sanitize'
  * y el schedule_event_id guardados en localStorage (igual que funnels).
  */
 export default function Confirmation({ escuela = '', slug = '' }) {
-  const theme = getTheme(escuela, slug)
+  const baseTheme = getTheme(escuela, slug)
+  // Rediseño por página: un tema puede pedir que SOLO su confirmación use el
+  // sistema paperboard (hoy: Finance, que toma el diseño de Legal y conserva su
+  // contenido vía `confirmationPaper`) sin cambiar el resto de etapas.
+  const theme = !baseTheme.paperboard && baseTheme.confirmationVariant === 'paperboard'
+    ? { ...baseTheme, ...baseTheme.confirmationPaper, paperboard: true, hexboard: false }
+    : baseTheme
   const isPaper = !!theme.paperboard && !!theme.confirmation
   const assets = theme.assets
   const { eventId, journeyId } = useTracking()
@@ -366,14 +372,16 @@ function PaperboardConfirmation({ theme, assets }) {
     WebkitMaskRepeat: 'no-repeat',
     maskRepeat: 'no-repeat',
     transform: isInstr ? 'scaleX(-1)' : undefined,
-    // Con máscara móvil (Blocks): por defecto la máscara con el borde ABAJO; la
-    // clase `lg:[--p2mask:...]` del elemento la cambia a la de la derecha en
-    // desktop. Sin ella (Legal): siempre la máscara derecha.
+    // Con máscara móvil (Blocks/Legal/Finance): borde ABAJO en móvil y borde
+    // DERECHO en desktop. Las dos URLs viajan como CSS vars inline (dependen del
+    // tema), pero `--p2mask` se decide por CLASE en el elemento
+    // (`[--p2mask:var(--p2-bottom)] lg:[--p2mask:var(--p2-right)]`): si se
+    // definiera inline, ninguna clase podría sobreescribirla y desktop quedaría
+    // clavado en la máscara de abajo. Sin máscara móvil: siempre la derecha.
     ...(maskMobile
       ? {
           '--p2-right': maskRight,
           '--p2-bottom': maskMobile,
-          '--p2mask': 'var(--p2-bottom)',
           WebkitMaskImage: 'var(--p2mask)',
           maskImage: 'var(--p2mask)',
         }
@@ -508,7 +516,7 @@ function PaperboardConfirmation({ theme, assets }) {
             style={{ ...cardBg, minHeight: c.paso2MinHeight || undefined }}
           >
             <div
-              className={`${c.paso2ImgWidth || 'lg:w-[540px]'} flex-shrink-0 self-stretch ${c.paso2MobileBox || 'h-64'} lg:h-auto ${c.paso2MaskMobile ? 'lg:[--p2mask:var(--p2-right)]' : ''}`}
+              className={`${c.paso2ImgWidth || 'lg:w-[540px]'} flex-shrink-0 self-stretch ${c.paso2MobileBox || 'h-64'} lg:h-auto ${c.paso2MaskMobile ? '[--p2mask:var(--p2-bottom)] lg:[--p2mask:var(--p2-right)]' : ''}`}
               style={paso2ImgStyle}
             />
 

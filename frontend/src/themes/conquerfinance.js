@@ -33,11 +33,246 @@ import confHexFondo from '../assets/img/finance/hex-fondo.avif'
 // lottie-web. Producción los anima; aquí frame fijo + CSS bounce en el chevron.
 import confConfetti from '../assets/img/finance/confirmation/confetti.svg'
 import confDoubleChevron from '../assets/img/finance/confirmation/double-chevron.svg'
+// Rediseño 2026: los funnels de Finance migran página a página al sistema
+// "paperboard" de Conquer Legal. Mientras dure la transición se toman prestados
+// los tokens/assets de Legal tal cual (colores incluidos); la paleta propia de
+// Finance llegará después.
+import legal from './conquerlegal'
+// Mockup de llamada entrante de la confirmación de Blocks: en el rediseño
+// paperboard, Finance lo usa tal cual en su Paso 2 (como los tokens de Legal,
+// hasta que exista una versión con la marca Finance).
+import confMockupBlocks from '../assets/img/cb/confirmation/conquer-mockup.png'
+// Conquie de fiesta (el "emoji de celebración" del hero de Blocks): decisión
+// del usuario 2026-08-10 — sustituye al apretón de manos de Legal.
+import confFiestaBlocks from '../assets/img/cb/confirmation/conquie-fiesta.svg'
+// Píxeles decorativos en verde: los SVG de Legal (gradiente #00C0FF→#0040FF)
+// recoloreados con la marca Finance (#AED916→#3AC043).
+import pxGreen6 from '../assets/img/finance/pixel-6x6-green.svg'
+import pxGreen5 from '../assets/img/finance/pixel-5x5-green.svg'
+import pxGreenLg8 from '../assets/img/finance/px-lg-8-green.svg'
+import pxGreenSm7 from '../assets/img/finance/px-sm-7-green.svg'
+// Foto de Félix con el fondo virado a verde de marca (el felix.avif original
+// trae el degradado azul HORNEADO en la imagen; recoloreado por matiz con
+// PIL/numpy — solo los píxeles azules saturados, piel/camisa intactas).
+import instructorPhotoGreen from '../assets/img/finance/felix-green.avif'
+// Logo con el wordmark "Finance" en verde de marca (recolor provisional del
+// gradiente azul #02bdf8→#2827d6 a #AED916→#3AC043; si brand entrega un logo
+// oficial verde, basta con reemplazar el archivo). Solo lo usan las páginas
+// paperboard; el hex conserva el azul original.
+import logoGreen from '../assets/img/finance/logo-green.svg'
+
+// ── Paleta propia de Finance (2026-08-10, Figma "Gradiente Conquer") ──
+// Cartuso #AED916 · Lima #74CD2D · Esmeralda #3AC043. El gradiente de marca va
+// de cartuso a esmeralda; en botones se añade lima como parada intermedia.
+// OJO: en las clases Tailwind de abajo los hex van LITERALES (el JIT escanea el
+// texto del archivo; un template string no generaría la clase).
+const FI_GRADIENT = 'linear-gradient(90deg, #AED916 0%, #74CD2D 50%, #3AC043 100%)'
+const FI_TEXT_GRADIENT = 'linear-gradient(90deg, #AED916, #3AC043)'
+
+const paperAccent = {
+  strongGradient: FI_TEXT_GRADIENT,
+  auroraGradient: 'linear-gradient(60deg,#AED916,#3AC043,#AED916,#3AC043)',
+  buttonGradient: FI_GRADIENT,
+  buttonWeight: '800',
+  linkGradient: 'linear-gradient(to right,#AED916,#3AC043)',
+  ring: '#74CD2D',
+  solid: '#3AC043',
+}
+
+// Mismo mapeo que los píxeles de Legal (deco/sm7 = cluster 6x6, deco2/lg8 = 5x5).
+const paperPixels = {
+  deco: pxGreen6,
+  deco2: pxGreen5,
+  sm7: pxGreen6,
+  lg8: pxGreen5,
+  pxLg8: pxGreenLg8,
+  pxSm7: pxGreenSm7,
+}
+
+// CSS vars del StepForm y del calendario de agendamiento: el paperboard neutro
+// (fondo, tarjeta, textura, sombra) se hereda de Legal; el acento pasa a verde.
+// funnel.css mapea --bk-accent* ← --theme-accent* → el calendario se tiñe solo.
+const paperCssVars = {
+  ...legal.cssVars,
+  '--theme-accent': '#3AC043',
+  '--theme-accent-hover': '#2FA83A',
+  '--theme-accent-bg': '#EFF8DC',
+  '--theme-accent-ring': 'rgba(116,205,45,0.3)',
+  '--theme-btn-gradient': FI_GRADIENT,
+}
+
+// Copy por defecto de la página de vídeo (compartido entre el renderer hexboard
+// y el override paperboard). En la práctica lo pisa config['video'] de la BD.
+const VIDEO_SUBTITLE = '· VÍDEO DE 15 MINUTOS ·'
+const VIDEO_TITLE =
+  '<strong>Genera un sueldo mensual</strong> gracias al Trading <strong>en menos de 7 semanas</strong>, sin invertir tu propio capital'
 
 export default {
   id: 'conquerfinance',
   // Sistema de diseño de Finance: blanco + patrón hexagonal + acento azul.
   hexboard: true,
+
+  // El contenedor GTM de Finance (heredado de Webflow) dispara el Schedule con
+  // el trigger "page load en *confirmacion-llamada*", así que el StepForm debe
+  // navegar a la confirmación con recarga real, no pushState. Es un flag de
+  // MARCA (no de sistema de diseño): sobrevive a la migración paperboard.
+  gtmHardConfirmation: true,
+
+  // Rediseño por página: TODAS las etapas (landing, vídeo, stepform y
+  // confirmación) usan ya el sistema paperboard (Legal). El flag `hexboard`
+  // sigue arriba solo como fallback si se retira una variante. Landing.jsx
+  // fusiona `landingPaper`, VideoPage.jsx `videoPaper`, Funnel.jsx
+  // `stepformPaper` y Confirmation.jsx `confirmationPaper` al renderizar.
+  landingVariant: 'paperboard',
+  landingPaper: {
+    accent: paperAccent,
+    // Estructura/medidas de Legal + acentos en verde Finance (solo cambian los
+    // tokens que llevaban azul).
+    landing: {
+      ...legal.landing,
+      hero: {
+        ...legal.landing.hero,
+        subtitle: 'bg-gradient-to-r from-[#AED916] to-[#3AC043] bg-clip-text text-transparent',
+      },
+      bullets: {
+        ...legal.landing.bullets,
+        checkBg: 'bg-[#EFF8DC]',
+        checkIcon: 'text-[#3AC043]',
+      },
+      form: {
+        ...legal.landing.form,
+        badge: 'bg-[#EFF8DC] text-[#2FA83A]',
+        badgeDot: 'bg-[#74CD2D]',
+        input: 'border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 focus:border-[#74CD2D] focus:ring-1 focus:ring-[#74CD2D]/20',
+        button: 'bg-gradient-to-r from-[#AED916] to-[#3AC043] hover:from-[#B9E52A] hover:to-[#45CC4F] shadow-lg shadow-[#3AC043]/20',
+        consentLink: 'text-[#3AC043]',
+      },
+      instructor: {
+        ...legal.landing.instructor,
+        ring: 'ring-[#74CD2D]',
+        name: 'text-[#3AC043]',
+      },
+      footer: {
+        ...legal.landing.footer,
+        accent: 'text-[#3AC043] font-bold',
+      },
+    },
+    assets: {
+      ...legal.assets,
+      logo: logoGreen,
+      instructorPhoto: instructorPhotoGreen,
+      pixels: paperPixels,
+      // La foto de Félix es un retrato normal (no el encuadre "alejado" de
+      // Ignacio): cover centrado arriba, sin zoom.
+      instructorBgSize: 'cover',
+      instructorBgPosition: 'center top',
+    },
+  },
+
+  stepformVariant: 'paperboard',
+  stepformPaper: {
+    accent: paperAccent,
+    // Fondo de página crema + tarjeta con textura/borde arena/sombra de Legal.
+    // Al tomar los cssVars completos desaparecen los overrides hex de botón
+    // (`--theme-btn-clip: none` / radio 10 negro) → los botones del form
+    // recuperan el clip pixelado, ahora con el gradiente verde de Finance.
+    // `paperCssVars` también tiñe el calendario de agendamiento (--bk-accent*).
+    page: legal.page,
+    cssVars: paperCssVars,
+    assets: {
+      ...legal.assets,
+      logo: logoGreen,
+      pixels: paperPixels,
+    },
+  },
+
+  videoVariant: 'paperboard',
+  videoPaper: {
+    accent: paperAccent,
+    video: {
+      ...legal.video,
+      // El copy sigue siendo el de Finance (config['video'] de la BD lo pisa;
+      // esto es solo el fallback). Los tokens visuales quedan los de Legal,
+      // con el glow del player en verde de marca.
+      subtitle: VIDEO_SUBTITLE,
+      title: VIDEO_TITLE,
+      glow: '0 2px 20px 6px rgba(116,205,45,0.35)',
+      // Finance conserva su arranque de producción: autoplay muted + overlay de
+      // "activar sonido" (Legal sí arranca con sonido tras el submit).
+      autoplayUnmuted: false,
+      // El logo de Finance es horizontal (el de Legal es un lockup vertical):
+      // mismos anchos que usaba la navbar hex.
+      headerLogoWidth: '180px',
+      headerLogoWidthMobile: '140px',
+      footerLogoWidth: '240px',
+    },
+    assets: {
+      ...legal.assets,
+      logo: logoGreen,
+      pixels: paperPixels,
+    },
+  },
+
+  confirmationVariant: 'paperboard',
+  confirmationPaper: {
+    accent: paperAccent,
+    // Diseño de Legal completo (texturas, rasgados, cajas, ritmo medido 1:1,
+    // conquies incluidos por ahora) + CONTENIDO de Finance: los 3 pasos con su
+    // vídeo Bunny, su mensaje de teléfono y su entrevista de YouTube. Los
+    // acentos de color pasan al verde de marca.
+    confirmation: {
+      ...legal.confirmation,
+      heroIcon: confFiestaBlocks,
+      heroTitle: 'Tu llamada ha sido reservada',
+      felicidadesGradient: FI_TEXT_GRADIENT,
+      accentGradient: FI_TEXT_GRADIENT,
+      // Caja "Importante"/recordatorio: el PNG azul de Legal se sustituye por
+      // el gradiente de marca (el renderer usa boxGradient si boxImage es null).
+      boxImage: null,
+      boxGradient: 'linear-gradient(120deg, #AED916 0%, #3AC043 100%)',
+      // Marco de los vídeos: sin esto el VideoFrame caería al glow azul por
+      // defecto (el borde ya sale de accent.ring = lima).
+      videoGlow: '0 0 30px rgba(116,205,45,0.30)',
+      heroDecoImg: pxGreen6,
+      importanteText: 'Completa estos 3 pasos ahora para poder aprovechar tu llamada al máximo.',
+      // El logo de Finance es horizontal (~9.5:1): las alturas de Legal (39/88px,
+      // pensadas para su lockup vertical) lo desbordarían. Anchos equivalentes a
+      // los de las páginas ya migradas (180px navbar / 240px footer).
+      navLogoHeight: 'h-[19px] md:h-[24px] w-auto',
+      footerLogoHeight: 'h-[19px] md:h-[25px] w-auto',
+      // PASO 1 — el vídeo corto de Finance (Bunny, 56s).
+      paso1Text: 'Mira este vídeo de 56 segundos para entender tus siguientes pasos lógicos',
+      paso1TextBold: 'Mira este vídeo',
+      paso1Video:
+        'https://iframe.mediadelivery.net/embed/185796/541cbc1b-c3e8-4081-bb8d-a2a40ce950fe?autoplay=false&loop=false&muted=false&preload=true&responsive=true',
+      // PASO 2 — copy de Finance (el renderer paperboard pinta los párrafos como
+      // texto plano, así que van sin <strong>; el titular de la tarjeta ya es
+      // "Mantente al tanto de tu teléfono", heredado de Legal palabra a palabra).
+      // Mockup de llamada entrante de Blocks (decisión del usuario 2026-08-10):
+      // a sangre completa con la máscara pixelada, como en la confirmación de
+      // conquerblocks.com — sustituye al phone-52 del hex, que recortaba mal.
+      paso2Image: confMockupBlocks,
+      paso2Paragraphs: [
+        'Te contactaremos por llamada para confirmar la cita el día y la hora acordadas. Una vez confirmada la sesión con tu asesor te enviaremos el enlace de la videollamada.',
+        'Es importante que contestes confirmando 👍 tu llamada, ya que estamos recibiendo muchísimas solicitudes y queremos hablar con personas que estén comprometidas en ser un caso de éxito.',
+      ],
+      reminderText: 'Recuerda conectarte puntual y estando en un lugar tranquilo y cómodo.',
+      // PASO 3 — la entrevista de cuentas fondeadas (el acento en gradiente lo
+      // pone el renderer sobre `paso3TitleAccent`).
+      paso3TitlePre: 'Descubre más acerca de la oportunidad de convertirte en ',
+      paso3TitleAccent: 'trader de cuentas fondeadas',
+      paso3Subtitle:
+        'Disfruta de una entrevista donde revelamos más datos, errores comunes y falsas creencias acerca del trading con cuentas fondeadas',
+      paso3SubtitleAccent: 'Ver al menos 30 minutos te ayudará a llegar mucho más preparado a la llamada :)',
+      paso3Thumbnail: confPaso3Thumb,
+      paso3Video: 'https://www.youtube.com/watch?v=8cGtPi7qnkQ',
+    },
+    assets: {
+      ...legal.assets,
+      logo: logoGreen,
+      pixels: paperPixels,
+    },
+  },
 
   favicon,
 
@@ -89,9 +324,8 @@ export default {
   // y CTA en gradiente pill (85px). El copy puede sobreescribirse por
   // config['video'] (subtitle/title).
   video: {
-    subtitle: '· VÍDEO DE 15 MINUTOS ·',
-    title:
-      '<strong>Genera un sueldo mensual</strong> gracias al Trading <strong>en menos de 7 semanas</strong>, sin invertir tu propio capital',
+    subtitle: VIDEO_SUBTITLE,
+    title: VIDEO_TITLE,
     pageBg: '#333333',
     navBorder: '#4f4f4f',
     kickerColor: '#345bb8',

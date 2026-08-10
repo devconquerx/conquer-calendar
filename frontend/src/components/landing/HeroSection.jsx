@@ -53,7 +53,7 @@ export default function HeroSection({ formConfig, theme }) {
         {subtitle && (
           <div className="inline-flex items-center gap-2 rounded-full border border-cb-line px-4 py-1 text-sm font-light text-cb-ink shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
             <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-            {subtitle}
+            <span dangerouslySetInnerHTML={safeHtml(subtitle)} />
           </div>
         )}
         <h1

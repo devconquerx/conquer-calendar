@@ -48,7 +48,7 @@ function parseAutofillPhone(rawValue, fallbackCountry) {
   return null
 }
 
-export default function LandingForm({ program, region, formConfig, school, nextUrl = '', funnelSlug = '', videoEnabled = false }) {
+export default function LandingForm({ program, region, formConfig, school, themeOverride = null, nextUrl = '', funnelSlug = '', videoEnabled = false }) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -66,7 +66,9 @@ export default function LandingForm({ program, region, formConfig, school, nextU
   const { eventId, journeyId, pixelCookies, buildFullPayload } = useTracking()
   const { countryCode: geoCountryCode, loading: geoLoading } = useGeoLocation()
 
-  const theme = getTheme(school?.slug)
+  // `themeOverride` llega cuando la página fuerza una variante de diseño (hoy:
+  // la landing de Finance renderizando con el sistema paperboard de Legal).
+  const theme = themeOverride || getTheme(school?.slug)
   const t = theme.landing.form
   const isPaper = !!theme.paperboard
   const accent = theme.accent || {}
@@ -476,6 +478,10 @@ export default function LandingForm({ program, region, formConfig, school, nextU
           <div>
             <input
               type="email"
+              // id="email": el contenedor GTM heredado de Webflow (Finance) lee el
+              // email del lead con document.querySelector('#email') para las
+              // enhanced conversions de Google Ads. Inocuo para Blocks/Legal.
+              id="email"
               placeholder="Tu mejor email *"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

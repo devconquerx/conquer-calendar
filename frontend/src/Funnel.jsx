@@ -143,7 +143,17 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   // Brand theme (conquerblocks paperboard look, etc.) resolved from escuela,
   // falling back to the funnel slug ('blocks-eu' → conquerblocks). Declarado
   // antes de goToConfirmation, que lo usa (y lo lista en sus deps).
-  const theme = getTheme(escuela, slug)
+  // Rediseño por página: un tema puede pedir que SOLO su StepForm (y las etapas
+  // que viven en esta página: calendario, reserva y rechazo) use el sistema
+  // paperboard (hoy: Finance con los tokens de Legal vía `stepformPaper`).
+  // Memoizado porque el efecto que publica cssVars en :root y varios callbacks
+  // dependen de la identidad de `theme` (getTheme devuelve referencias estables).
+  const theme = useMemo(() => {
+    const base = getTheme(escuela, slug)
+    return !base.paperboard && base.stepformVariant === 'paperboard'
+      ? { ...base, ...base.stepformPaper, paperboard: true, hexboard: false }
+      : base
+  }, [escuela, slug])
 
   const goToConfirmation = useCallback(() => {
     const params = new URLSearchParams(window.location.search)
@@ -166,17 +176,19 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
       window.location.href = `${etUrl}${sep}${params.toString()}`
       return
     }
-    // Hexboard (Finance): navegación REAL a la confirmación, no pushState. El
-    // contenedor GTM de Finance (era Webflow) dispara el Schedule (GA4/Meta/
-    // Twitter) con el trigger "page load en *confirmacion-llamada*": dentro del
-    // SPA ese page-load nunca ocurre y la conversión se pierde. Con la
-    // recarga, el contenedor publicado funciona tal cual (verificado contra el
-    // sGTM). Si algún día el contenedor pasa a escuchar `calendly_scheduled`,
-    // este branch puede volver al router.navigate — no ambos, o duplicaría.
-    // OJO: en el SPA la prop confirmationUrl no viaja (FunnelApp no la pasa);
-    // la URL canónica de la etapa vive en router.urls.confirmation.
+    // Finance (`gtmHardConfirmation`): navegación REAL a la confirmación, no
+    // pushState. El contenedor GTM de Finance (era Webflow) dispara el Schedule
+    // (GA4/Meta/Twitter) con el trigger "page load en *confirmacion-llamada*":
+    // dentro del SPA ese page-load nunca ocurre y la conversión se pierde. Con
+    // la recarga, el contenedor publicado funciona tal cual (verificado contra
+    // el sGTM). Es un flag propio del tema (no `hexboard`) porque es un
+    // comportamiento de la MARCA, no del sistema de diseño: debe sobrevivir a
+    // la migración paperboard. Si algún día el contenedor pasa a escuchar
+    // `calendly_scheduled`, este branch puede volver al router.navigate — no
+    // ambos, o duplicaría. OJO: en el SPA la prop confirmationUrl no viaja
+    // (FunnelApp no la pasa); la URL canónica vive en router.urls.confirmation.
     const hardConfirmationUrl = confirmationUrl || router?.urls?.confirmation || ''
-    if (theme?.hexboard && hardConfirmationUrl) {
+    if ((theme?.gtmHardConfirmation || theme?.hexboard) && hardConfirmationUrl) {
       const sep = hardConfirmationUrl.includes('?') ? '&' : '?'
       window.location.href = `${hardConfirmationUrl}${sep}${params.toString()}`
       return

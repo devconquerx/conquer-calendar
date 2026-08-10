@@ -6,7 +6,13 @@ import { CB_CARD_SHADOW } from '../themes/conquerblocks'
 import { safeHtml } from '../lib/sanitize'
 
 export default function Landing({ school, program, region, formConfig, nextUrl, funnelSlug, videoEnabled = false }) {
-  const theme = getTheme(school?.slug)
+  const baseTheme = getTheme(school?.slug)
+  // Rediseño por página: un tema puede pedir que SOLO su landing use el sistema
+  // paperboard (hoy: Finance, que toma prestados los tokens de Legal vía
+  // `landingPaper`) sin cambiar de sistema en el resto de etapas del funnel.
+  const theme = !baseTheme.paperboard && baseTheme.landingVariant === 'paperboard'
+    ? { ...baseTheme, ...baseTheme.landingPaper, paperboard: true, hexboard: false }
+    : baseTheme
   const t = theme.landing
   const isPaper = !!theme.paperboard
   const assets = theme.assets
@@ -144,6 +150,7 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
               region={region}
               formConfig={formConfig}
               school={school}
+              themeOverride={theme}
               nextUrl={nextUrl}
               funnelSlug={funnelSlug}
               videoEnabled={videoEnabled}
