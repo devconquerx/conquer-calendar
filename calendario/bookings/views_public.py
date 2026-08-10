@@ -19,6 +19,12 @@ from .forms import BookingForm
 from .models import Reserva
 from .services import calcular_slots, calcular_slots_cacheado, cancelar_reserva, crear_reserva, reemplazar_reserva
 
+# Listas fijas en español para formatear fechas: strftime('%A'/'%B') depende del
+# locale del SO (inglés en producción).
+_DIAS_ES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+_MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+             'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
 
 def _redirect_confirmacion(event_type, reserva):
     if event_type.confirmacion_tipo == 'url' and event_type.confirmacion_url:
@@ -507,11 +513,6 @@ class ConfirmacionView(View):
         fin_local = (reserva.inicio_utc + timedelta(minutes=reserva.event_type.duracion_minutos)).astimezone(tz_display)
         # Pasamos strings pre-formateados para evitar que Django reconvierta
         # los datetimes a TIME_ZONE del servidor en el template (TIME_ZONE="Europe/Madrid").
-        # Usamos listas fijas en español porque strftime('%A'/'%B') depende del
-        # locale del SO (inglés en producción).
-        _DIAS_ES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
-        _MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-                     'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
         ctx = {
             'reserva': reserva,
             'inicio_local': inicio_local,
@@ -529,6 +530,38 @@ class ConfirmacionView(View):
 
 
 class CancelarPublicaView(View):
+    """Cancelación desde el enlace de los correos (confirmación y recordatorio).
+
+    El GET NO cancela: enseña una página de confirmación con un botón que hace
+    el POST. Es a propósito. El enlace viaja en un correo, y los clientes de
+    correo y los antivirus abren solos los enlaces para previsualizarlos o
+    escanearlos: si el GET cancelara, se cancelarían reservas sin que nadie
+    tocara nada.
+    """
+
+    def get(self, request, token):
+        reserva = get_object_or_404(
+            Reserva.objects.select_related('event_type', 'host'),
+            confirmacion_token=token,
+        )
+        tz_display_str = reserva.timezone_invitado or reserva.host.timezone
+        try:
+            tz_display = ZoneInfo(tz_display_str)
+        except Exception:
+            tz_display = ZoneInfo(reserva.host.timezone)
+        inicio_local = reserva.inicio_utc.astimezone(tz_display)
+        ctx = {
+            'reserva': reserva,
+            'ya_cancelada': reserva.estado != Reserva.Estado.CONFIRMADA,
+            'inicio_hora_str': f"{inicio_local.hour}:{inicio_local.minute:02d}",
+            'inicio_fecha_str': (
+                f"{_DIAS_ES[inicio_local.weekday()]}, "
+                f"{inicio_local.day} de {_MESES_ES[inicio_local.month - 1]} "
+                f"de {inicio_local.year}"
+            ),
+            'tz_display': tz_display_str,
+        }
+        return render(request, 'pages/public/booking/cancelar_confirmar.html', ctx)
 
     def post(self, request, token):
         reserva = get_object_or_404(Reserva, confirmacion_token=token)
