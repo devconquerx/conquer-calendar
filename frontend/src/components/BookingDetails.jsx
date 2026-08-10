@@ -4,6 +4,27 @@ import useTracking from '../hooks/useTracking'
 import { fireAllSchedule } from '../lib/pixelEvents'
 import { apiUrl } from '../lib/apiBase'
 
+/** ISO en UTC → {fecha: 'lunes, 12 de mayo de 2026', hora: '17:30'} en la tz dada. */
+function formatearEnTz(iso, tz) {
+  if (!iso) return { fecha: '', hora: '' }
+  const d = new Date(iso)
+  if (isNaN(d)) return { fecha: '', hora: '' }
+  const opts = tz ? { timeZone: tz } : {}
+  try {
+    return {
+      fecha: new Intl.DateTimeFormat('es-ES', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', ...opts,
+      }).format(d),
+      hora: new Intl.DateTimeFormat('es-ES', {
+        hour: '2-digit', minute: '2-digit', hour12: false, ...opts,
+      }).format(d),
+    }
+  } catch {
+    // tz inválida (no debería): se cae a la del navegador antes que romper.
+    return formatearEnTz(iso, '')
+  }
+}
+
 function LeftPanel({ eventoInfo }) {
   return (
     <div className="bk-left">
@@ -41,9 +62,15 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
   const [notas, setNotas] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // Duplicado (el evento tiene "solo una reserva por invitado" y este email ya
+  // tiene una futura): guardamos la reserva vieja para ofrecer reemplazarla,
+  // igual que el modal de la página pública.
+  const [duplicado, setDuplicado] = useState(null)
+  // Caja de comentarios configurable por tipo de evento. Si el backend no manda
+  // el flag (respuesta vieja en caché), se muestra: el default es mostrarla.
+  const mostrarNotas = eventoInfo?.mostrar_caja_comentarios !== false
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const reservar = async (reemplazarToken = '') => {
     if (!nombre.trim() || !email.trim()) {
       setError('Nombre y email son obligatorios.')
       return
@@ -61,6 +88,7 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
         email: email.trim(),
         telefono: telefono.trim(),
         notas: notas.trim(),
+        ...(reemplazarToken ? { reemplazar_token: reemplazarToken } : {}),
       })
       if (result.ok) {
         // Dentro de un funnel: llevar a SU página de confirmación (el evento
@@ -82,7 +110,12 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
             window.location.href = apiUrl(`/r/${result.confirmacion_token}/`)
           }
         }
+      } else if (result.error === 'duplicado' && result.reserva_existente) {
+        // No es un error: se le ofrece cancelar la vieja y quedarse con esta,
+        // que es justo lo que necesita quien se equivocó de hora.
+        setDuplicado(result.reserva_existente)
       } else {
+        setDuplicado(null)
         setError(result.mensaje || 'Error al crear la reserva. Inténtalo de nuevo.')
       }
     } catch {
@@ -91,6 +124,15 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
       setLoading(false)
     }
   }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    reservar()
+  }
+
+  // La reserva vieja se muestra en la MISMA zona horaria que el visitante eligió
+  // para ver los slots, para que pueda comparar las dos horas sin traducir nada.
+  const fechaVieja = formatearEnTz(duplicado?.inicio_utc, slot.tz)
 
   return (
     <div className={`bk-wrapper ${theme?.hexboard ? 'bk-wrapper--plain' : ''}`}>
@@ -132,12 +174,14 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
                   autoComplete="tel"
                   value={telefono} onChange={e => setTelefono(e.target.value)} />
               </div>
-              <div>
-                <label className="bk-label" htmlFor="bd-notas">Notas (opcional)</label>
-                <textarea id="bd-notas" className="bk-input" rows={3}
-                  style={{ resize: 'vertical' }}
-                  value={notas} onChange={e => setNotas(e.target.value)} />
-              </div>
+              {mostrarNotas && (
+                <div>
+                  <label className="bk-label" htmlFor="bd-notas">Notas (opcional)</label>
+                  <textarea id="bd-notas" className="bk-input" rows={3}
+                    style={{ resize: 'vertical' }}
+                    value={notas} onChange={e => setNotas(e.target.value)} />
+                </div>
+              )}
               <button type="submit" className="bk-submit" disabled={loading}>
                 {loading ? 'Reservando…' : 'Confirmar reserva'}
               </button>
@@ -145,6 +189,38 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
           </form>
         </div>
       </div>
+
+      {duplicado && (
+        <div className="bk-modal-backdrop" onClick={() => setDuplicado(null)}>
+          <div className="bk-modal" role="dialog" aria-modal="true"
+            aria-labelledby="bd-modal-title" onClick={e => e.stopPropagation()}>
+            <h3 id="bd-modal-title">Ya tienes una reserva</h3>
+            <p>
+              Detectamos que ya tienes una reserva confirmada
+              {duplicado.event_type_nombre ? <> para <strong>{duplicado.event_type_nombre}</strong></> : null}:
+            </p>
+            <div className="bk-modal-existing">
+              <strong>{fechaVieja.fecha}</strong><br />
+              <strong>{fechaVieja.hora} h</strong>
+              {duplicado.host ? <> &middot; con {duplicado.host}</> : null}
+            </div>
+            <p>
+              ¿Quieres <strong>cancelar esa reserva</strong> y agendar esta nueva para
+              el <strong>{slot.fechaDisplay} a las {slot.label}</strong>?
+            </p>
+            <div className="bk-modal-actions">
+              <button type="button" className="bk-modal-btn cancel"
+                onClick={() => setDuplicado(null)} disabled={loading}>
+                No, volver
+              </button>
+              <button type="button" className="bk-modal-btn primary" disabled={loading}
+                onClick={() => reservar(duplicado.confirmacion_token)}>
+                {loading ? 'Reservando…' : 'Sí, cancelar y agendar nueva'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

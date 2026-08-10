@@ -140,6 +140,12 @@ class EventType(models.Model):
         help_text="Si está activo, un mismo email no puede reservar este evento dos veces mientras tenga una reserva futura confirmada.",
     )
 
+    mostrar_caja_comentarios = models.BooleanField(
+        default=True,
+        verbose_name='Caja de comentarios',
+        help_text="Muestra el campo 'Notas (opcional)' en el formulario de reserva, tanto en la página pública como en los funnels.",
+    )
+
     gcal_palabras_ignorar = models.TextField(
         blank=True,
         default='',

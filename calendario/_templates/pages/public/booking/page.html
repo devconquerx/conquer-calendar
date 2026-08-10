@@ -632,11 +632,13 @@ body {
               <input type="hidden" name="telefono_invitado" id="telefono_invitado"
                      value="{{ telefono_invitado|default:'' }}">
             </div>
+            {% if event_type.mostrar_caja_comentarios %}
             <div>
               <label class="bk-label" for="notas">Notas (opcional)</label>
               <textarea id="notas" name="notas" class="bk-input" rows="3"
                         style="resize:vertical;">{{ notas|default:'' }}</textarea>
             </div>
+            {% endif %}
             <button type="submit" class="bk-submit">Confirmar reserva</button>
           </div>
         </form>

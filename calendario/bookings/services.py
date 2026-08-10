@@ -499,12 +499,19 @@ def _dispatch_schedule_conversions(reserva_id):
 
 
 def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado,
-                       email_invitado, telefono_invitado='', notas='', timezone_invitado=''):
+                       email_invitado, telefono_invitado='', notas='', timezone_invitado='',
+                       tracking=None):
     """
     Cancela la reserva vieja y crea una nueva, en una sola transacción atómica.
     Saltea el check de duplicado de crear_reserva porque, al cancelar primero,
     la búsqueda de "reserva futura confirmada con el mismo email" ya no
     encuentra la vieja.
+
+    `tracking` (dict, opcional): tracking a guardar en la reserva nueva. Sin él
+    se hereda el de la vieja (página pública: el reagendamiento no genera un
+    recorrido nuevo). El funnel sí lo pasa, porque su reserva de reemplazo nace
+    del mismo recorrido que la original y lleva su schedule_event_id vivo, que
+    es contra el que deduplican el píxel y el CAPI.
     """
     with transaction.atomic():
         try:
@@ -523,7 +530,10 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
 
         # crear_reserva ahora no detecta duplicado porque la vieja está cancelada.
         # El reagendamiento conserva el tracking de la reserva original.
-        tracking_previo = {f: getattr(vieja, f, '') for f in RESERVA_TRACKING_FIELDS} if vieja else None
+        if tracking is not None:
+            tracking_previo = tracking
+        else:
+            tracking_previo = {f: getattr(vieja, f, '') for f in RESERVA_TRACKING_FIELDS} if vieja else None
         return crear_reserva(
             event_type=event_type,
             inicio_utc=inicio_utc,

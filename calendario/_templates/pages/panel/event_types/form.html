@@ -273,6 +273,21 @@
             </div>
             <!--end::Único por invitado-->
 
+            <!--begin::Caja de comentarios-->
+            <div class="d-flex align-items-start gap-4 mb-7">
+                <div class="form-check form-check-custom form-check-solid form-check-lg mt-1">
+                    <input class="form-check-input" type="checkbox" name="mostrar_caja_comentarios" id="mostrar_caja_comentarios"
+                           {% if form.mostrar_caja_comentarios.value %}checked{% endif %} />
+                    <label class="form-check-label fw-semibold ms-3" for="mostrar_caja_comentarios">Caja de comentarios</label>
+                </div>
+                <div class="text-muted fs-7" style="max-width: 480px;">
+                    Muestra el campo <b>Notas (opcional)</b> en el formulario de reserva.
+                    Si lo desmarcas, la caja desaparece para este evento, tanto en la
+                    página pública como en los funnels.
+                </div>
+            </div>
+            <!--end::Caja de comentarios-->
+
             <!--begin::Reglas free/busy (palabras que liberan el horario)-->
             <div class="separator separator-dashed my-8"></div>
             <div class="fv-row mb-7">

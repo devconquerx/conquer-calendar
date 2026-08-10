@@ -9,13 +9,15 @@ from django.conf import settings
 from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone as django_timezone
 from django.utils.dateparse import parse_datetime
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
 from calendario.bookings.exceptions import ReservaDuplicadaError, SlotNoDisponibleError
-from calendario.bookings.services import crear_reserva
+from calendario.bookings.models import Reserva
+from calendario.bookings.services import crear_reserva, reemplazar_reserva
 from calendario.bookings.views_public import _enviar_correos_confirmacion
 from .models import FunnelForm, Prellamada
 from .scoring import resolver_outcome
@@ -170,6 +172,7 @@ class ResolverView(View):
                 'precio': str(event_type.precio) if event_type.precio else None,
                 'confirmacion_tipo': event_type.confirmacion_tipo,
                 'confirmacion_url': event_type.confirmacion_url or '',
+                'mostrar_caja_comentarios': event_type.mostrar_caja_comentarios,
             }
 
         return JsonResponse({
@@ -239,18 +242,53 @@ class ReservarView(View):
         if schedule_event_id:
             tracking_reserva['event_id'] = schedule_event_id
 
+        # Reemplazo del duplicado: el front lo manda cuando el visitante acepta
+        # en el modal "ya tienes una reserva". Es el confirmacion_token de la
+        # reserva vieja, que solo conoce porque se lo devolvimos en el 409 de más
+        # abajo. Aun así se valida que sea del mismo evento y del mismo email,
+        # para que un token suelto no pueda cancelar la reserva de otro.
+        reemplazar_token = (body.get('reemplazar_token') or '').strip()
+        vieja = None
+        if reemplazar_token:
+            vieja = Reserva.objects.filter(
+                confirmacion_token=reemplazar_token,
+                event_type=event_type,
+                estado=Reserva.Estado.CONFIRMADA,
+                email_invitado__iexact=email,
+                fin_utc__gt=django_timezone.now(),
+            ).first()
+            if vieja is None:
+                return JsonResponse(
+                    {'ok': False, 'error': 'reemplazo_invalido',
+                     'mensaje': 'No encontramos esa reserva. Recarga la página e inténtalo de nuevo.'},
+                    status=404,
+                )
+
         try:
             with transaction.atomic():
-                reserva = crear_reserva(
-                    event_type=event_type,
-                    inicio_utc=inicio_utc,
-                    nombre_invitado=nombre,
-                    email_invitado=email,
-                    telefono_invitado=telefono,
-                    notas=notas,
-                    timezone_invitado=tz,
-                    tracking=tracking_reserva,
-                )
+                if vieja is not None:
+                    reserva = reemplazar_reserva(
+                        reserva_vieja_pk=vieja.pk,
+                        event_type=event_type,
+                        inicio_utc=inicio_utc,
+                        nombre_invitado=nombre,
+                        email_invitado=email,
+                        telefono_invitado=telefono,
+                        notas=notas,
+                        timezone_invitado=tz,
+                        tracking=tracking_reserva,
+                    )
+                else:
+                    reserva = crear_reserva(
+                        event_type=event_type,
+                        inicio_utc=inicio_utc,
+                        nombre_invitado=nombre,
+                        email_invitado=email,
+                        telefono_invitado=telefono,
+                        notas=notas,
+                        timezone_invitado=tz,
+                        tracking=tracking_reserva,
+                    )
                 prellamada.reserva = reserva
                 prellamada.save(update_fields=['reserva'])
                 r_pk = reserva.pk
@@ -264,6 +302,8 @@ class ReservarView(View):
                 'reserva_existente': {
                     'confirmacion_token': str(existing.confirmacion_token),
                     'inicio_utc': existing.inicio_utc.isoformat(),
+                    'host': existing.host.nombre_display(),
+                    'event_type_nombre': existing.event_type.nombre,
                 },
             }, status=409)
         except SlotNoDisponibleError as e:
