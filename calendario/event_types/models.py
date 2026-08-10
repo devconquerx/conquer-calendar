@@ -149,7 +149,9 @@ class EventType(models.Model):
             "estas palabras o emojis en su título, NO bloqueará los horarios (se "
             "podrá agendar encima). Una por línea. Si se le quita la palabra al "
             "evento en Google Calendar, vuelve a bloquear. Solo aplica a hosts con "
-            "sincronización de calendario activa."
+            "sincronización de calendario activa. Para que las reservas de ESTE "
+            "tipo de evento se puedan pisar entre sí, pon la palabra en el nombre "
+            "del tipo de evento (la app nunca la añade sola al título)."
         ),
     )
 

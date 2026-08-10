@@ -250,23 +250,25 @@ def obtener_busy_intervalos_local(host, time_min_utc, time_max_utc, palabras_ign
     ]
 
 
+def construir_titulo_evento(et, nombre_invitado):
+    """
+    Título que llevará el evento de Google Calendar de una reserva.
+
+    Igual que Calendly, la app NUNCA añade nada al título: sale tal cual del
+    formato configurado en el tipo de evento. Si quieres que las reservas de un
+    tipo de evento se puedan pisar entre sí, mete la palabra/emoji de las reglas
+    free/busy en el NOMBRE del tipo de evento.
+
+    Se expone aparte de `_titulo_evento` porque al crear la reserva hay que saber
+    el título antes de que exista el evento en Google (ver `crear_reserva`).
+    """
+    if et.formato_titulo_gcal == 'invitado_evento':
+        return f'{nombre_invitado} - {et.nombre}'
+    return f'{et.nombre} con {nombre_invitado}'
+
+
 def _titulo_evento(reserva):
-    et = reserva.event_type
-    fmt = et.formato_titulo_gcal
-    if fmt == 'invitado_evento':
-        titulo = f'{reserva.nombre_invitado} - {et.nombre}'
-    else:
-        titulo = f'{et.nombre} con {reserva.nombre_invitado}'
-    # Reglas free/busy (estilo Calendly): si el tipo de evento tiene palabras
-    # configuradas, la reserva nace "abierta" con la primera palabra/emoji en el
-    # título, para que se pueda reservar encima. El host cierra el slot quitándole
-    # esa palabra al evento en Google Calendar.
-    palabras = et.gcal_palabras_ignorar_lista
-    if palabras:
-        marcador = palabras[0]
-        if marcador.casefold() not in titulo.casefold():
-            titulo = f'{marcador} {titulo}'
-    return titulo
+    return construir_titulo_evento(reserva.event_type, reserva.nombre_invitado)
 
 
 def _extraer_meet_uri(conference_data):

@@ -1,16 +1,17 @@
 """
-Tests de la feature free/busy estilo Calendly (Opción A):
+Tests de la feature free/busy, calcada de Calendly:
 
-- Un tipo de evento con palabras configuradas (`gcal_palabras_ignorar`) crea
-  reservas "abiertas" (`permite_overbooking=True`): el título del evento nace con
-  la palabra/emoji y se puede reservar encima (varias reservas en el mismo slot).
+- La regla es un match contra el TÍTULO. La app nunca escribe la palabra: una
+  reserva nace "abierta" (`permite_overbooking=True`) solo si el título que le
+  toca —el del formato del tipo de evento— ya contiene la palabra/emoji. En la
+  práctica: la palabra va en el nombre del tipo de evento.
+- Palabras configuradas pero título que no matchea → comportamiento normal, un
+  slot = una reserva.
 - Cuando el host le QUITA la palabra al evento en Google Calendar, el sync pone
-  `permite_overbooking=False` y el slot se cierra (deja de admitir reservas).
+  `permite_overbooking=False` y el slot se cierra.
 - El horario también se cierra SOLO al llegar a MAX_RESERVAS_POR_SLOT (2, fijo),
   sin tocar Google Calendar. Solo cuentan las confirmadas: cancelar una vuelve a
-  dejar hueco.
-- Sin palabras configuradas, el comportamiento es el de siempre (un slot = una
-  reserva).
+  dejar hueco. Este tope es nuestro; Calendly no lo tiene.
 """
 from datetime import timedelta
 from unittest.mock import patch
@@ -41,7 +42,9 @@ class OverbookingFreeBusyTest(TestCase):
 
     def setUp(self):
         self.host = crear_host()
-        self.et = crear_event_type(self.host)
+        # La palabra va en el NOMBRE del tipo de evento, como en Calendly: así el
+        # título de cada evento creado la lleva y matchea la regla.
+        self.et = crear_event_type(self.host, nombre=f'{PALABRA} Reunión test')
         self.et.gcal_palabras_ignorar = PALABRA
         self.et.save(update_fields=['gcal_palabras_ignorar'])
         for dia in range(5):
@@ -55,9 +58,10 @@ class OverbookingFreeBusyTest(TestCase):
 
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
-    def test_titulo_incluye_la_palabra(self, _ev, _conf):
+    def test_titulo_es_el_del_formato_sin_anadidos(self, _ev, _conf):
         r = _reservar(self.et, slot_futuro(), 'a@x.com')
-        self.assertIn(PALABRA, _titulo_evento(r))
+        # La palabra sale del nombre del tipo de evento, no la mete la app.
+        self.assertEqual(_titulo_evento(r), f'{PALABRA} Reunión test con Lead')
 
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
@@ -137,6 +141,38 @@ class OverbookingFreeBusyTest(TestCase):
         _reconciliar_overbooking(self.host, {'gcal-evt-1': f'{PALABRA} Reunión con Lead'})
         r.refresh_from_db()
         self.assertTrue(r.permite_overbooking)
+
+
+class PalabrasPeroTituloQueNoMatcheaTest(TestCase):
+    """El tipo de evento tiene reglas, pero su nombre no lleva la palabra."""
+
+    def setUp(self):
+        self.host = crear_host()
+        self.et = crear_event_type(self.host, nombre='Reunión test')
+        self.et.gcal_palabras_ignorar = PALABRA
+        self.et.save(update_fields=['gcal_palabras_ignorar'])
+        for dia in range(5):
+            crear_disponibilidad(self.host, dia=dia)
+
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+    @patch('calendario.bookings.services.crear_evento_google')
+    def test_la_app_no_mete_la_palabra_en_el_titulo(self, _ev, _conf):
+        r = _reservar(self.et, slot_futuro(), 'a@x.com')
+        self.assertNotIn(PALABRA, _titulo_evento(r))
+
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+    @patch('calendario.bookings.services.crear_evento_google')
+    def test_reserva_nace_cerrada(self, _ev, _conf):
+        r = _reservar(self.et, slot_futuro(), 'a@x.com')
+        self.assertFalse(r.permite_overbooking)
+
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+    @patch('calendario.bookings.services.crear_evento_google')
+    def test_no_admite_doble_booking(self, _ev, _conf):
+        inicio = slot_futuro()
+        _reservar(self.et, inicio, 'a@x.com')
+        with self.assertRaises(SlotNoDisponibleError):
+            _reservar(self.et, inicio, 'b@x.com')
 
 
 class SinPalabrasComportamientoNormalTest(TestCase):
