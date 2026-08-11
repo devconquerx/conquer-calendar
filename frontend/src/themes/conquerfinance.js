@@ -4,7 +4,16 @@
 // Oswald (eyebrows condensados) y Montserrat (CTAs). A diferencia de
 // Blocks/Legal (paperboard), Finance usa el sistema de diseño "hexboard":
 // los renderers hex de Landing/VideoPage/Confirmation leen estos tokens.
-import logo from '../assets/img/finance/logo.svg'
+// Logo oficial nuevo de marca (2026-08-11, entregado por el usuario): wordmark
+// "CONQUER" negro + "Finance" en estilo pegatina/recortado con borde blanco —
+// sustituye al lockup azul anterior en TODAS las etapas/regiones del funnel
+// (landing, vídeo, stepform, confirmación comparten este tema).
+import logo from '../assets/img/finance/logo-horizontal.png'
+// `logoInverted` (blanco, para fondos oscuros) sigue siendo el lockup azul
+// viejo: el usuario solo entregó la versión negra. Sin impacto visible hoy —
+// las 4 etapas renderizan paperboard (fondos claros); esta variante solo la
+// usaría el renderer hexboard (navbar oscura), que es fallback muerto en la
+// práctica. Si se reactiva el hexboard, pedir también un logo blanco.
 import logoInverted from '../assets/img/finance/logo-inverted.svg'
 // Favicon de marca: mismo PNG que sirve conquerfinance.com. FunnelApp lo
 // inyecta en <head> en runtime para todas las etapas del funnel de Finance.
@@ -14,7 +23,11 @@ import checkIcon from '../assets/img/finance/check.svg'
 // Triángulo gris (Polygon 2.png de producción): muescas entre secciones de la
 // confirmación (blanco vía brightness(2) arriba de la sección gris, gris abajo).
 import notchTriangle from '../assets/img/finance/notch-triangle.png'
-import instructorPhoto from '../assets/img/finance/felix.avif'
+// Foto oficial nueva de Félix (2026-08-11, entregada por el usuario): ya
+// compuesta con el fondo verde de marca + icono decorativo — se muestra tal
+// cual (cover/center), no necesita el tratamiento de headshot en bruto que
+// llevaba la anterior.
+import instructorPhoto from '../assets/img/finance/felix-nuevo.avif'
 import pressRadio from '../assets/img/finance/press-radiointereconomia.avif'
 import pressReferente from '../assets/img/finance/press-elreferente.avif'
 import pressBolsamania from '../assets/img/finance/press-bolsamania.avif'
@@ -51,15 +64,6 @@ import pxGreen6 from '../assets/img/finance/pixel-6x6-green.svg'
 import pxGreen5 from '../assets/img/finance/pixel-5x5-green.svg'
 import pxGreenLg8 from '../assets/img/finance/px-lg-8-green.svg'
 import pxGreenSm7 from '../assets/img/finance/px-sm-7-green.svg'
-// Foto de Félix con el fondo virado a verde de marca (el felix.avif original
-// trae el degradado azul HORNEADO en la imagen; recoloreado por matiz con
-// PIL/numpy — solo los píxeles azules saturados, piel/camisa intactas).
-import instructorPhotoGreen from '../assets/img/finance/felix-green.avif'
-// Logo con el wordmark "Finance" en verde de marca (recolor provisional del
-// gradiente azul #02bdf8→#2827d6 a #AED916→#3AC043; si brand entrega un logo
-// oficial verde, basta con reemplazar el archivo). Solo lo usan las páginas
-// paperboard; el hex conserva el azul original.
-import logoGreen from '../assets/img/finance/logo-green.svg'
 
 // ── Paleta propia de Finance (2026-08-10, Figma "Gradiente Conquer") ──
 // Cartuso #AED916 · Lima #74CD2D · Esmeralda #3AC043. El gradiente de marca va
@@ -159,13 +163,14 @@ export default {
     },
     assets: {
       ...legal.assets,
-      logo: logoGreen,
-      instructorPhoto: instructorPhotoGreen,
+      logo,
+      instructorPhoto,
       pixels: paperPixels,
-      // La foto de Félix es un retrato normal (no el encuadre "alejado" de
-      // Ignacio): cover centrado arriba, sin zoom.
+      // La foto ya viene compuesta (fondo + icono decorativo propios): se
+      // muestra completa, sin recorte de encuadre tipo headshot.
       instructorBgSize: 'cover',
-      instructorBgPosition: 'center top',
+      instructorBgPosition: 'center',
+      instructorBgPositionX: '-22px',
     },
   },
 
@@ -181,7 +186,7 @@ export default {
     cssVars: paperCssVars,
     assets: {
       ...legal.assets,
-      logo: logoGreen,
+      logo,
       pixels: paperPixels,
     },
   },
@@ -208,7 +213,7 @@ export default {
     },
     assets: {
       ...legal.assets,
-      logo: logoGreen,
+      logo,
       pixels: paperPixels,
     },
   },
@@ -269,7 +274,7 @@ export default {
     },
     assets: {
       ...legal.assets,
-      logo: logoGreen,
+      logo,
       pixels: paperPixels,
     },
   },

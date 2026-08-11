@@ -10,6 +10,7 @@ import { useRouter } from '../../lib/router'
 import { autocorrectEmail } from '../../lib/emailCorrection'
 import { getTheme } from '../../themes'
 import countries from '../../data/countries'
+import { resolveFormVariant } from '../../lib/formVariant'
 
 const getFlagUrl = (iso2) => `https://flagcdn.com/w40/${iso2?.toLowerCase()}.png`
 
@@ -81,13 +82,31 @@ export default function LandingForm({ program, region, formConfig, school, theme
   // Conquer Legal y en Conquer Blocks EU (igual que el funnel de referencia, donde
   // el check solo existe en EU). Forzable por config con landing.whatsappOptin.
   const isEuRegion = String(region || '').toLowerCase() === 'eu'
+
+  // A/B de Finance EU (réplica exacta de conquerx-funnels-new: `form_variant_cf`,
+  // variantes 55/56, 50/50 persistente por visitante) entre el checkbox de
+  // WhatsApp (55, igual que Legal/Blocks EU) y el campo de WhatsApp siempre
+  // visible pero opcional (56). Se resuelve en un efecto — no en SSR/primer
+  // render, que muestra el estado por defecto (honeypot, sin A/B) hasta montar
+  // — igual que el resto del estado de este componente que depende de
+  // localStorage/geo (país, etc). `?force_form_variant=55|56` fuerza y persiste
+  // la variante (para QA), igual que en el funnel viejo.
+  const isFinanceEuAbTest = theme.id === 'conquerfinance' && isEuRegion
+  const [formVariant, setFormVariant] = useState(null)
+  useEffect(() => {
+    if (!isFinanceEuAbTest) return
+    setFormVariant(resolveFormVariant({ storageKey: 'form_variant_cf', variants: ['55', '56'] }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const showWhatsappOptin = landing.whatsappOptin != null
     ? !!landing.whatsappOptin
-    : (theme.id === 'conquerlegal' || (theme.id === 'conquerblocks' && isEuRegion))
+    : (theme.id === 'conquerlegal' || (theme.id === 'conquerblocks' && isEuRegion) || (isFinanceEuAbTest && formVariant === '55'))
 
-  // Mostrar campo de teléfono visible: por config (showPhone) o al marcar el check
-  // de WhatsApp. Si no es visible, el teléfono se captura por honeypot/autofill.
-  const showPhone = !!landing.showPhone
+  // Mostrar campo de teléfono visible: por config (showPhone), al marcar el
+  // check de WhatsApp, o por la variante A/B 56 de Finance EU (siempre visible,
+  // opcional). Si no es visible, el teléfono se captura por honeypot/autofill.
+  const showPhone = !!landing.showPhone || (isFinanceEuAbTest && formVariant === '56')
   const phoneVisible = showPhone || (showWhatsappOptin && wantsWhatsapp)
   const enablePhoneHoneypot = !phoneVisible
 
@@ -113,14 +132,17 @@ export default function LandingForm({ program, region, formConfig, school, theme
   }, [dropdownOpen])
 
   const phonePlaceholder = useMemo(() => {
-    if (showWhatsappOptin) return 'Número de WhatsApp'
+    // Variante 55 (checkbox) Y 56 (siempre visible) de Finance EU son ambas un
+    // campo de WhatsApp, no de teléfono genérico — solo la 55 pasaba por
+    // showWhatsappOptin; la 56 caía al placeholder de ejemplo numérico.
+    if (showWhatsappOptin || (isFinanceEuAbTest && showPhone)) return 'Número de WhatsApp'
     if (!selectedCountry?.iso2) return 'Teléfono *'
     try {
       const ex = getExampleNumber(selectedCountry.iso2, examples)
       if (ex) return ex.format('NATIONAL')
     } catch {}
     return 'Teléfono *'
-  }, [selectedCountry, showWhatsappOptin])
+  }, [selectedCountry, showWhatsappOptin, isFinanceEuAbTest, showPhone])
 
   const filteredCountries = useMemo(() => {
     if (!search) return countries
@@ -221,6 +243,10 @@ export default function LandingForm({ program, region, formConfig, school, theme
       // funnel viejo guardaba en LeadRegister.conditions).
       conditions: `Acepta las políticas: ${new Date().toISOString()}`,
     }
+
+    // Variante A/B resuelta (hoy: Finance EU, 55/56) — el Lead.utm_form_variant
+    // y su forwarding al CRM ya existían, solo faltaba poblarlo.
+    if (formVariant) body.utm_form_variant = formVariant
 
     if (phoneData) {
       body.lead_phone = phoneDigits
@@ -498,7 +524,13 @@ export default function LandingForm({ program, region, formConfig, school, theme
 
         <div className="mt-3 text-xs text-black leading-relaxed">
           <p className="mb-0">
-            Al proporcionarnos tu correo electrónico, aceptas recibir comunicaciones comerciales por parte de nuestra empresa.
+            {/* El A/B de Finance EU cambia este texto en el viejo (updateComplianceText,
+                se dispara junto con el checkbox/campo de WhatsApp de ambas variantes
+                55/56 — no es específico de una sola) para mencionar WhatsApp; el resto
+                de marcas conserva el texto genérico. */}
+            {isFinanceEuAbTest
+              ? 'Al continuar aceptas que te enviemos tips, la repetición de la clase y recursos exclusivos por email/whatsapp. (Tranqui, solo contenido útil, nada de spam).'
+              : 'Al proporcionarnos tu correo electrónico, aceptas recibir comunicaciones comerciales por parte de nuestra empresa.'}
           </p>
           <p>
             Al continuar, confirmas que has leído y aceptas nuestra{' '}

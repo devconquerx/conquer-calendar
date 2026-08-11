@@ -135,7 +135,8 @@ class ResolverView(View):
             )
             return JsonResponse({'ok': True, 'prellamada_token': str(prellamada.token)})
 
-        outcome = resolver_outcome(funnel, respuestas)
+        utm_campaign = (tracking.get('utm_campaign') or '').strip()
+        outcome = resolver_outcome(funnel, respuestas, utm_campaign=utm_campaign)
 
         # En modo Calendly el rango no resuelve EventType local (queda None); la
         # Prellamada se guarda igual (el evento se agenda en Calendly).

@@ -13,6 +13,7 @@ import BottomNavBar from './components/form-engine/BottomNavBar'
 import StepTransition from './components/form-engine/StepTransition'
 import WelcomeScreen from './components/form-engine/fields/WelcomeScreen'
 import { getPrefillRespuestas } from './lib/prefillParams'
+import { countryFromPhone } from './lib/phoneCountry'
 import { validateBlock } from './lib/validateBlock'
 import { getTheme, ThemeContext } from './themes'
 import { useRouter } from './lib/router'
@@ -106,10 +107,19 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
 
   const handleNext = (value) => {
     if (!current) return
-    const updated =
+    let updated =
       current.id !== 'welcome' && value !== null
         ? { ...respuestas, [current.id]: value }
         : { ...respuestas }
+    // País derivado del teléfono para el componente 'country' del scoring
+    // nativo (resolver_outcome promedia country_score + q1..q6, réplica de
+    // mainFormSubmission.js). Se recalcula en cada paso mientras haya
+    // teléfono, así que un cambio de país al volver atrás también se refleja.
+    // 'country' nunca es un id de bloque real, así que viajar en `respuestas`
+    // no interfiere con el render/validación de ningún paso del StepForm.
+    if (updated.phone) {
+      updated = { ...updated, country: countryFromPhone(updated.phone) }
+    }
     setRespuestas(updated)
 
     setDirection('forward')

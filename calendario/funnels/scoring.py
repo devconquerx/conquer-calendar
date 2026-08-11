@@ -122,19 +122,32 @@ def aplica_never_cancel(respuestas, never_cancel):
     return any(_coincide_regla(respuestas, regla) for regla in (never_cancel or []))
 
 
-def resolver_outcome(funnel, respuestas):
+def es_campana_lanzamiento(utm_campaign):
+    """True si utm_campaign contiene 'lanzamiento' (case-insensitive).
+
+    Réplica de la excepción global de `resolveSchedulingOutcome` en
+    conquerx-funnels-new/mainForm.helpers.js: aplica a TODOS los funnels (no
+    es específica de ninguna marca/región) y se comprueba ANTES que
+    `neverCancel`/`validate`/score mínimo — durante una campaña de
+    lanzamiento nadie se rechaza, sin importar sus respuestas ni su score.
+    """
+    return 'lanzamiento' in (utm_campaign or '').lower()
+
+
+def resolver_outcome(funnel, respuestas, utm_campaign=''):
     """Decide el resultado del funnel para un conjunto de respuestas.
 
     Réplica de `resolveSchedulingOutcome` + selección de calendly de
     `MainForm.jsx`. Orden de precedencia (idéntico al original):
 
-    1. ``neverCancel`` → inmune: nunca se rechaza (salta validate y min_score).
-    2. ``validate`` → rechazo.
-    3. ``promedio < score_ranges[0].min_score`` → rechazo.
-    4. Selección del rango donde ``min_score <= promedio <= max_score``, con
+    1. ``utm_campaign`` contiene "lanzamiento" → inmune (igual que 2).
+    2. ``neverCancel`` → inmune: nunca se rechaza (salta validate y min_score).
+    3. ``validate`` → rechazo.
+    4. ``promedio < score_ranges[0].min_score`` → rechazo.
+    5. Selección del rango donde ``min_score <= promedio <= max_score``, con
        **fallback al primer rango** si ninguno encaja (réplica de
        ``calendlys.find(...) || calendlys[0]``).
-    5. Resolución del ``EventType`` por slug. Si no existe o está inactivo, se
+    6. Resolución del ``EventType`` por slug. Si no existe o está inactivo, se
        trata como rechazo y se loguea un warning (ver tabla de riesgos del plan).
 
     Devuelve un dict con ``resultado`` (``'calendario'`` | ``'rechazado'``),
@@ -159,7 +172,12 @@ def resolver_outcome(funnel, respuestas):
         'cancel_screen': config.get('cancel_screen', {}),
     }
 
-    inmune = aplica_never_cancel(respuestas, config.get('neverCancel', []))
+    # Global (cualquier marca/región): en campaña de lanzamiento nadie se
+    # rechaza. Misma inmunidad que neverCancel — se combinan con OR.
+    inmune = (
+        es_campana_lanzamiento(utm_campaign)
+        or aplica_never_cancel(respuestas, config.get('neverCancel', []))
+    )
 
     if not inmune:
         if aplica_validate(respuestas, config.get('validate', [])):

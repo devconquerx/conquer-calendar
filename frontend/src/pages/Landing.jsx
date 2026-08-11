@@ -172,6 +172,11 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
                     backgroundImage: `url(${instructorPhoto})`,
                     backgroundSize: assets?.instructorBgSize || 'cover',
                     backgroundPosition: assets?.instructorBgPosition || 'center top',
+                    // Eje X aparte del position shorthand de arriba — el longhand
+                    // gana solo en ese eje, así se puede desplazar el encuadre
+                    // horizontal sin tocar el vertical. Opcional, sin efecto
+                    // hasta que el tema lo defina.
+                    ...(assets?.instructorBgPositionX ? { backgroundPositionX: assets.instructorBgPositionX } : {}),
                   }}
                 />
               )}
@@ -192,10 +197,22 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
       {/* Footer */}
       <footer className="w-full mx-auto px-5 mt-12 pb-10" style={{ maxWidth: columnMaxWidth }}>
         {disclaimer && (
-          <p className="max-w-[90%] mx-auto text-xs font-light text-neutral-500 leading-[1.25] text-center">
-            {disclaimer}
-            {footer.contactEmail && ` Puedes contactarnos enviándonos un email a ${footer.contactEmail}`}
-          </p>
+          // `disclaimer` admite un array de párrafos (ej. Finance EU en prod trae
+          // 3 notas al pie separadas, no una sola línea larga); el email de
+          // contacto se auto-añade siempre al último párrafo.
+          Array.isArray(disclaimer)
+            ? disclaimer.map((line, i) => (
+                <p key={i} className="max-w-[90%] mx-auto text-xs font-light text-neutral-500 leading-[1.25] text-center mb-1.5 last:mb-0">
+                  {line}
+                  {i === disclaimer.length - 1 && footer.contactEmail && ` Puedes contactarnos enviándonos un email a ${footer.contactEmail}`}
+                </p>
+              ))
+            : (
+              <p className="max-w-[90%] mx-auto text-xs font-light text-neutral-500 leading-[1.25] text-center">
+                {disclaimer}
+                {footer.contactEmail && ` Puedes contactarnos enviándonos un email a ${footer.contactEmail}`}
+              </p>
+            )
         )}
         <div className="border-t border-[#404040] my-6" />
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-light text-cb-ink2 leading-tight">
