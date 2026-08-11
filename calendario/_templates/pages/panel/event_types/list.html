@@ -1,8 +1,14 @@
 {% extends 'layout/panel.html' %}
+{% load static %}
 
 {% block title %}Tipos de evento · {% endblock %}
 
 {% block content %}
+
+{# Recuerda los filtros entre recargas (ver js/filtros-persistentes.js) #}
+<script src="{% static 'js/filtros-persistentes.js' %}"
+        data-clave="event_types"
+        data-limpiar=".js-limpiar-filtros"></script>
 
 <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
     <div class="d-flex align-items-center flex-wrap" style="gap: 32px;">
@@ -76,7 +82,7 @@
                     </div>
 
                     <div class="d-flex justify-content-between p-3">
-                        <a href="{% url 'panel_event_types:event_type_list' %}{% if filtro_q %}?q={{ filtro_q }}{% endif %}" class="btn btn-sm btn-light">Limpiar</a>
+                        <a href="{% url 'panel_event_types:event_type_list' %}{% if filtro_q %}?q={{ filtro_q|urlencode }}{% endif %}" class="btn btn-sm btn-light js-limpiar-filtros">Limpiar</a>
                         <button type="submit" class="btn btn-sm btn-primary">Aplicar</button>
                     </div>
                 </div>
@@ -86,7 +92,7 @@
             <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
 
             {% if filtro_q or filtros_count %}
-            <a href="{% url 'panel_event_types:event_type_list' %}" class="btn btn-sm btn-light border" title="Limpiar"><i class="bi bi-x-lg"></i></a>
+            <a href="{% url 'panel_event_types:event_type_list' %}" class="btn btn-sm btn-light border js-limpiar-filtros" title="Limpiar"><i class="bi bi-x-lg"></i></a>
             {% endif %}
         </form>
     </div>
