@@ -1,136 +1,276 @@
 {% extends 'layout/panel.html' %}
-
 {% block title %}Mi perfil · {% endblock %}
 
+{% load static %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/panel-form.css' %}">
+{% endblock css %}
+
 {% block content %}
-<div class="card shadow-sm" style="max-width: 620px;">
-    <div class="card-header border-0 pt-6">
-        <div class="card-title">
-            <h3 class="fw-bold mb-0">Mi perfil</h3>
-        </div>
-    </div>
-    <div class="card-body pt-4">
 
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger d-flex align-items-center p-4 mb-6">
-            <i class="bi bi-exclamation-triangle-fill fs-4 text-danger me-3"></i>
-            <div>{% for e in form.non_field_errors %}<span>{{ e }}</span>{% endfor %}</div>
-        </div>
-        {% endif %}
-
-        <form method="post">
-            {% csrf_token %}
-
-            <!--begin::Nombre-->
-            <div class="row mb-7">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Nombre</label>
-                    <input type="text" name="first_name"
-                           class="form-control form-control-lg{% if form.first_name.errors %} is-invalid{% endif %}"
-                           value="{{ form.first_name.value|default:'' }}" />
-                    {% if form.first_name.errors %}
-                    <div class="invalid-feedback">{{ form.first_name.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Apellido</label>
-                    <input type="text" name="last_name"
-                           class="form-control form-control-lg{% if form.last_name.errors %} is-invalid{% endif %}"
-                           value="{{ form.last_name.value|default:'' }}" />
-                    {% if form.last_name.errors %}
-                    <div class="invalid-feedback">{{ form.last_name.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-            </div>
-            <!--end::Nombre-->
-
-            <!--begin::Email-->
-            <div class="fv-row mb-7">
-                <label class="form-label fw-semibold required">Correo electrónico</label>
-                <input type="email" name="email"
-                       class="form-control form-control-lg{% if form.email.errors %} is-invalid{% endif %}"
-                       value="{{ form.email.value|default:'' }}" />
-                {% if form.email.errors %}
-                <div class="invalid-feedback">{{ form.email.errors|join:", " }}</div>
-                {% endif %}
-            </div>
-            <!--end::Email-->
-
-            <!--begin::País-->
-            <div class="fv-row mb-7">
-                <label class="form-label fw-semibold">País</label>
-                <select name="country"
-                        class="form-select form-select-lg{% if form.country.errors %} is-invalid{% endif %}">
-                    {% for value, label in form.fields.country.widget.choices %}
-                    <option value="{{ value }}"{% if value == form.country.value %} selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-                {% if form.country.errors %}
-                <div class="invalid-feedback">{{ form.country.errors|join:", " }}</div>
-                {% endif %}
-            </div>
-            <!--end::País-->
-
-            <!--begin::Zona horaria-->
-            <div class="fv-row mb-9">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <label class="form-label fw-semibold mb-0">Zona horaria</label>
-                    <span class="text-muted fs-7">
-                        <i class="bi bi-clock me-1"></i>
-                        <span id="hora-actual">—</span>
-                    </span>
-                </div>
-                <select name="timezone" id="tz-select"
-                        class="form-select form-select-lg{% if form.timezone.errors %} is-invalid{% endif %}">
-                    {% for value, label in form.fields.timezone.widget.choices %}
-                    <option value="{{ value }}"{% if value == form.timezone.value %} selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-                {% if form.timezone.errors %}
-                <div class="invalid-feedback">{{ form.timezone.errors|join:", " }}</div>
-                {% endif %}
-            </div>
-            <!--end::Zona horaria-->
-
-            <!--begin::Acciones-->
-            <div class="d-flex gap-3 pt-4 border-top">
-                <button type="submit" class="btn btn-primary btn-lg">Guardar cambios</button>
-                <a href="{% url 'panel_usuarios:dashboard' %}" class="btn btn-light btn-lg">Cancelar</a>
-            </div>
-            <!--end::Acciones-->
-
-        </form>
+<!--begin::Cabecera-->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-6">
+    <div>
+        <a href="{% url 'panel_usuarios:dashboard' %}"
+           class="text-muted fs-8 text-hover-primary d-inline-flex align-items-center gap-1 mb-1">
+            <i class="bi bi-arrow-left"></i> Panel
+        </a>
+        <h2 class="fw-semibold mb-0">Mi perfil</h2>
+        <span class="text-muted fs-7">
+            Así te ven tus compañeros y así se calculan tus horarios.
+        </span>
     </div>
 </div>
-{% endblock content %}
+<!--end::Cabecera-->
 
-{% block js_footer %}
+{% if form.non_field_errors %}
+<div class="alert alert-danger d-flex align-items-center p-4 mb-6">
+    <i class="bi bi-exclamation-triangle-fill fs-4 text-danger me-3"></i>
+    <div class="d-flex flex-column">
+        {% for e in form.non_field_errors %}<span>{{ e }}</span>{% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<form method="post" id="form-perfil">
+    {% csrf_token %}
+    <div class="row g-6">
+
+        <!--begin::Columna del formulario-->
+        <div class="col-lg-7 col-xl-8">
+
+            <!--begin::Identidad-->
+            <div class="u-seccion">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num">1</span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Quién eres</div>
+                        <div class="text-muted fs-8">Tu nombre aparece en las invitaciones que reciben tus invitados.</div>
+                    </div>
+                </div>
+                <div class="u-seccion-body">
+                    <div class="row g-4 mb-5">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7" for="u-first-name">Nombre</label>
+                            <input type="text" name="first_name" id="u-first-name"
+                                   class="form-control{% if form.first_name.errors %} is-invalid{% endif %}"
+                                   value="{{ form.first_name.value|default:'' }}" />
+                            {% if form.first_name.errors %}
+                            <div class="invalid-feedback">{{ form.first_name.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7" for="u-last-name">Apellido</label>
+                            <input type="text" name="last_name" id="u-last-name"
+                                   class="form-control{% if form.last_name.errors %} is-invalid{% endif %}"
+                                   value="{{ form.last_name.value|default:'' }}" />
+                            {% if form.last_name.errors %}
+                            <div class="invalid-feedback">{{ form.last_name.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label fw-semibold fs-7 required" for="u-email">Correo electrónico</label>
+                        <div class="position-relative">
+                            <i class="bi bi-envelope position-absolute text-muted"
+                               style="left:14px; top:50%; transform:translateY(-50%); font-size:14px;"></i>
+                            <input type="email" name="email" id="u-email"
+                                   class="form-control{% if form.email.errors %} is-invalid{% endif %}"
+                                   style="padding-left:38px;"
+                                   value="{{ form.email.value|default:'' }}" />
+                            {% if form.email.errors %}
+                            <div class="invalid-feedback">{{ form.email.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="text-muted fs-8 mt-1">Es el correo con el que entras con Google.</div>
+                    </div>
+                </div>
+            </div>
+            <!--end::Identidad-->
+
+            <!--begin::Ubicación y horario-->
+            <div class="u-seccion">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num">2</span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Dónde estás</div>
+                        <div class="text-muted fs-8">Tu zona horaria decide a qué hora ves y ofreces tus huecos.</div>
+                    </div>
+                </div>
+                <div class="u-seccion-body">
+                    <div class="row g-4">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7" for="u-country">País</label>
+                            <select name="country" id="u-country"
+                                    class="form-select{% if form.country.errors %} is-invalid{% endif %}">
+                                {% for value, label in form.fields.country.widget.choices %}
+                                <option value="{{ value }}"{% if value == form.country.value %} selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.country.errors %}
+                            <div class="invalid-feedback">{{ form.country.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7" for="u-timezone">Zona horaria</label>
+                            <select name="timezone" id="u-timezone"
+                                    class="form-select{% if form.timezone.errors %} is-invalid{% endif %}">
+                                {% for value, label in form.fields.timezone.widget.choices %}
+                                <option value="{{ value }}"{% if value == form.timezone.value %} selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.timezone.errors %}
+                            <div class="invalid-feedback">{{ form.timezone.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--end::Ubicación y horario-->
+
+            <!--begin::Acciones-->
+            <div class="d-flex align-items-center gap-3 mt-6">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check2 me-1"></i>Guardar cambios
+                </button>
+                <a href="{% url 'panel_usuarios:dashboard' %}" class="btn btn-light">Cancelar</a>
+            </div>
+            <!--end::Acciones-->
+        </div>
+        <!--end::Columna del formulario-->
+
+        <!--begin::Vista previa-->
+        <div class="col-lg-5 col-xl-4">
+            <div class="u-sticky">
+                <div class="u-preview shadow-sm">
+                    <div class="u-preview-top"></div>
+                    <div class="px-5 pb-5 text-center">
+                        <div class="u-avatar" id="u-avatar">
+                            {% if request.user.avatar_url %}
+                            <img src="{{ request.user.avatar_url }}" alt="">
+                            {% else %}
+                            <span id="u-iniciales">?</span>
+                            {% endif %}
+                        </div>
+                        <div class="fw-semibold text-gray-900 fs-5 mt-3" id="u-nombre-preview">Sin nombre</div>
+                        <div class="text-muted fs-7" id="u-email-preview">sin@correo</div>
+
+                        <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+                            {% for rxu in request.user.roles_asignados.all %}
+                            <span class="badge u-badge-rol fs-8 text-capitalize">{{ rxu.rol.nombre }}</span>
+                            {% empty %}
+                            <span class="badge badge-light fs-8">Sin roles</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="separator my-4"></div>
+
+                        <!--begin::Reloj-->
+                        <div class="text-muted fs-8">Ahora mismo son las</div>
+                        <div class="u-reloj my-1" id="u-hora">--:--:--</div>
+                        <div class="text-muted fs-8" id="u-tz-preview">—</div>
+                        <!--end::Reloj-->
+
+                        <div class="separator my-4"></div>
+
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="text-muted fs-8">País</span>
+                            <span class="fw-semibold fs-8 text-gray-800" id="u-pais-preview">—</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between mt-2">
+                            <span class="text-muted fs-8">Miembro desde</span>
+                            <span class="fw-semibold fs-8 text-gray-800">{{ request.user.date_joined|date:"d/m/Y" }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3 p-4 mt-4 rounded" style="background:#f5f9ff; border:1px solid #dbe8ff;">
+                    <i class="bi bi-google fs-4" style="color:#006BFF;"></i>
+                    <div>
+                        <div class="fw-semibold fs-7 text-gray-900">Entras con Google</div>
+                        <div class="text-muted fs-8">
+                            Tu acceso va con tu cuenta de Google, así que no hay contraseña que
+                            recordar ni que cambiar aquí.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--end::Vista previa-->
+    </div>
+</form>
+
 <script>
 (function () {
-    var tzSelect = document.getElementById('tz-select');
-    var horaEl   = document.getElementById('hora-actual');
+    var nombre   = document.getElementById('u-first-name');
+    var apellido = document.getElementById('u-last-name');
+    var email    = document.getElementById('u-email');
+    var pais     = document.getElementById('u-country');
+    var tz       = document.getElementById('u-timezone');
 
-    function updateClock() {
-        var tz = tzSelect ? tzSelect.value : '{{ request.user.timezone|default:"UTC" }}';
+    var preNombre = document.getElementById('u-nombre-preview');
+    var preEmail  = document.getElementById('u-email-preview');
+    var prePais   = document.getElementById('u-pais-preview');
+    var preTz     = document.getElementById('u-tz-preview');
+    var hora      = document.getElementById('u-hora');
+    var avatar    = document.getElementById('u-avatar');
+    var iniciales = document.getElementById('u-iniciales');
+
+    // Color estable a partir del correo, para que siempre sea el mismo.
+    var PALETA = ['#006BFF', '#7239ea', '#F1416C', '#17c653', '#f6a609', '#00bcd4'];
+    function colorDe(texto) {
+        var suma = 0;
+        for (var i = 0; i < texto.length; i++) { suma += texto.charCodeAt(i); }
+        return PALETA[suma % PALETA.length];
+    }
+
+    function refrescar() {
+        var n = (nombre.value || '').trim();
+        var a = (apellido.value || '').trim();
+        var e = (email.value || '').trim();
+
+        preNombre.textContent = (n + ' ' + a).trim() || 'Sin nombre';
+        preEmail.textContent = e || 'sin@correo';
+        preTz.textContent = tz.value || '—';
+        prePais.textContent = pais.value ? pais.options[pais.selectedIndex].text : '—';
+
+        // Solo hay iniciales si no se está mostrando una foto.
+        if (iniciales) {
+            var base = (n + ' ' + a).trim() || e.split('@')[0].replace(/[._-]/g, ' ');
+            var trozos = base.split(/\s+/).filter(Boolean);
+            iniciales.textContent = trozos.slice(0, 2).map(function (t) {
+                return t.charAt(0).toUpperCase();
+            }).join('') || '?';
+            avatar.style.background = colorDe(e || base || 'x');
+        }
+    }
+
+    function actualizarReloj() {
         try {
-            horaEl.textContent = new Intl.DateTimeFormat('es', {
-                timeZone: tz,
+            hora.textContent = new Intl.DateTimeFormat('es', {
+                timeZone: tz.value,
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
                 hour12: false,
             }).format(new Date());
-        } catch (e) {
-            horaEl.textContent = '—';
+        } catch (err) {
+            hora.textContent = '--:--:--';
         }
     }
 
-    updateClock();
-    setInterval(updateClock, 1000);
+    [nombre, apellido, email].forEach(function (input) {
+        input.addEventListener('input', refrescar);
+    });
+    pais.addEventListener('change', refrescar);
+    tz.addEventListener('change', function () { refrescar(); actualizarReloj(); });
 
-    if (tzSelect) {
-        tzSelect.addEventListener('change', updateClock);
-    }
-}());
+    refrescar();
+    actualizarReloj();
+    setInterval(actualizarReloj, 1000);
+})();
 </script>
-{% endblock js_footer %}
+{% endblock content %}

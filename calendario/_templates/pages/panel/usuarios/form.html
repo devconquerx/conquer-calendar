@@ -1,173 +1,373 @@
 {% extends 'layout/panel.html' %}
-
 {% block title %}{% if object %}Editar usuario{% else %}Nuevo usuario{% endif %} · {% endblock %}
 
+{% load static %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/panel-form.css' %}">
+{% endblock css %}
+
 {% block content %}
-<div class="card shadow-sm" style="max-width: 760px;">
-    <div class="card-header border-0 pt-6">
-        <div class="card-title">
-            <h3 class="fw-bold mb-0">
-                {% if object %}Editar: {{ object.username }}{% else %}Nuevo usuario{% endif %}
-            </h3>
-        </div>
-    </div>
-    <div class="card-body pt-4">
 
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger d-flex align-items-center p-5 mb-8">
-            <i class="bi bi-shield-exclamation fs-3 text-danger me-3"></i>
-            <div class="d-flex flex-column">
-                {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <form method="post">
-            {% csrf_token %}
-
-
-            <!--begin::Nombre y Apellido-->
-            <div class="row mb-7">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Nombre</label>
-                    <input type="text" name="first_name"
-                           class="form-control form-control-lg{% if form.first_name.errors %} is-invalid{% endif %}"
-                           value="{{ form.first_name.value|default:'' }}" />
-                    {% if form.first_name.errors %}
-                    <div class="invalid-feedback">{{ form.first_name.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Apellido</label>
-                    <input type="text" name="last_name"
-                           class="form-control form-control-lg{% if form.last_name.errors %} is-invalid{% endif %}"
-                           value="{{ form.last_name.value|default:'' }}" />
-                    {% if form.last_name.errors %}
-                    <div class="invalid-feedback">{{ form.last_name.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-            </div>
-            <!--end::Nombre y Apellido-->
-
-            <!--begin::Email-->
-            <div class="fv-row mb-7">
-                <label class="form-label fw-semibold required">Email</label>
-                <input type="email" name="email"
-                       class="form-control form-control-lg{% if form.email.errors %} is-invalid{% endif %}"
-                       value="{{ form.email.value|default:'' }}"
-                       autocomplete="email" />
-                {% if form.email.errors %}
-                <div class="invalid-feedback">{{ form.email.errors|join:", " }}</div>
-                {% endif %}
-            </div>
-            <!--end::Email-->
-
-            <!--begin::Timezone y Avatar-->
-            <div class="row mb-7">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Zona horaria</label>
-                    {{ form.timezone }}
-                    {% if form.timezone.errors %}
-                    <div class="text-danger small mt-1">{{ form.timezone.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">URL de avatar</label>
-                    <input type="url" name="avatar_url"
-                           class="form-control form-control-lg{% if form.avatar_url.errors %} is-invalid{% endif %}"
-                           value="{{ form.avatar_url.value|default:'' }}" />
-                    {% if form.avatar_url.errors %}
-                    <div class="invalid-feedback">{{ form.avatar_url.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-            </div>
-            <!--end::Timezone y Avatar-->
-
-            <!--begin::Contraseñas (solo creación)-->
-            {% if not object %}
-            <div class="row mb-7">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold required">Contraseña</label>
-                    <input type="password" name="password1"
-                           class="form-control form-control-lg{% if form.password1.errors %} is-invalid{% endif %}"
-                           autocomplete="new-password" />
-                    {% if form.password1.errors %}
-                    <div class="invalid-feedback">{{ form.password1.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold required">Confirmar contraseña</label>
-                    <input type="password" name="password2"
-                           class="form-control form-control-lg{% if form.password2.errors %} is-invalid{% endif %}"
-                           autocomplete="new-password" />
-                    {% if form.password2.errors %}
-                    <div class="invalid-feedback">{{ form.password2.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-            </div>
+<!--begin::Cabecera-->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-6">
+    <div>
+        <a href="{% url 'panel_usuarios:usuario_list' %}"
+           class="text-muted fs-8 text-hover-primary d-inline-flex align-items-center gap-1 mb-1">
+            <i class="bi bi-arrow-left"></i> Usuarios
+        </a>
+        <h2 class="fw-semibold mb-0">
+            {% if object %}Editar usuario{% else %}Nuevo usuario{% endif %}
+        </h2>
+        <span class="text-muted fs-7">
+            {% if object %}
+            Cambia sus datos, su zona horaria o lo que puede hacer dentro del panel.
+            {% else %}
+            Da de alta a alguien del equipo. Entrará con su cuenta de Google.
             {% endif %}
-            <!--end::Contraseñas-->
+        </span>
+    </div>
+</div>
+<!--end::Cabecera-->
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger d-flex align-items-center p-4 mb-6">
+    <i class="bi bi-shield-exclamation fs-3 text-danger me-3"></i>
+    <div class="d-flex flex-column">
+        {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<form method="post" id="form-usuario">
+    {% csrf_token %}
+    <div class="row g-6">
+
+        <!--begin::Columna del formulario-->
+        <div class="col-lg-7 col-xl-8">
+
+            <!--begin::Identidad-->
+            <div class="u-seccion">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num">1</span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Quién es</div>
+                        <div class="text-muted fs-8">El correo es el que usará para entrar con Google.</div>
+                    </div>
+                </div>
+                <div class="u-seccion-body">
+                    <div class="mb-5">
+                        <label class="form-label fw-semibold fs-7 required" for="u-email">Email</label>
+                        <div class="position-relative">
+                            <i class="bi bi-envelope position-absolute text-muted"
+                               style="left:14px; top:50%; transform:translateY(-50%); font-size:14px;"></i>
+                            <input type="email" name="email" id="u-email"
+                                   class="form-control{% if form.email.errors %} is-invalid{% endif %}"
+                                   style="padding-left:38px;"
+                                   value="{{ form.email.value|default:'' }}"
+                                   placeholder="nombre.apellido@conquerx.com"
+                                   autocomplete="email" />
+                            {% if form.email.errors %}
+                            <div class="invalid-feedback">{{ form.email.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7" for="u-first-name">Nombre</label>
+                            <input type="text" name="first_name" id="u-first-name"
+                                   class="form-control{% if form.first_name.errors %} is-invalid{% endif %}"
+                                   value="{{ form.first_name.value|default:'' }}" placeholder="Ana" />
+                            {% if form.first_name.errors %}
+                            <div class="invalid-feedback">{{ form.first_name.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7" for="u-last-name">Apellido</label>
+                            <input type="text" name="last_name" id="u-last-name"
+                                   class="form-control{% if form.last_name.errors %} is-invalid{% endif %}"
+                                   value="{{ form.last_name.value|default:'' }}" placeholder="García" />
+                            {% if form.last_name.errors %}
+                            <div class="invalid-feedback">{{ form.last_name.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--end::Identidad-->
 
             <!--begin::Roles-->
-            <div class="fv-row mb-9">
-                <label class="form-label fw-semibold">Roles</label>
-                {% if form.roles.errors %}
-                <div class="text-danger small mb-3">{{ form.roles.errors|join:", " }}</div>
-                {% endif %}
-                <div class="d-flex flex-wrap gap-4">
-                    {% for choice in form.roles %}
-                    <div class="form-check form-check-custom form-check-solid">
-                        {{ choice.tag }}
-                        <label class="form-check-label fw-semibold ms-2" for="{{ choice.id_for_label }}">
-                            {{ choice.choice_label }}
-                        </label>
+            <div class="u-seccion">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num">2</span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Qué puede hacer</div>
+                        <div class="text-muted fs-8">Puedes marcar varios roles o ninguno.</div>
                     </div>
-                    {% endfor %}
+                </div>
+                <div class="u-seccion-body">
+                    {% if form.roles.errors %}
+                    <div class="text-danger fs-8 mb-3">{{ form.roles.errors|join:", " }}</div>
+                    {% endif %}
+                    <div class="row g-3">
+                        {% for tarjeta in tarjetas_roles %}
+                        <div class="col-md-6">
+                            <label class="u-rol js-rol" for="{{ tarjeta.widget.id_for_label }}">
+                                {{ tarjeta.widget.tag }}
+                                <span class="u-rol-icono"><i class="bi {{ tarjeta.icono }}"></i></span>
+                                <span>
+                                    <span class="d-block fw-semibold text-gray-900 fs-7 text-capitalize">{{ tarjeta.rol.nombre }}</span>
+                                    <span class="d-block text-muted fs-8">{{ tarjeta.rol.descripcion|default:"Sin descripción" }}</span>
+                                </span>
+                                <i class="bi bi-check-circle-fill u-rol-check"></i>
+                            </label>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-muted fs-7">No hay roles definidos.</div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
             <!--end::Roles-->
 
-            <!--begin::Magic login-->
-            {% if magic_login_token %}
-            <div class="fv-row mb-7">
-                <label class="form-label fw-semibold">Acceso como este usuario</label>
-                <div class="d-flex align-items-center gap-3">
-                    <button type="button"
-                            class="btn btn-sm"
+            <!--begin::Preferencias-->
+            <div class="u-seccion">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num">3</span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Preferencias</div>
+                        <div class="text-muted fs-8">Con qué horario ve el calendario y con qué foto aparece.</div>
+                    </div>
+                </div>
+                <div class="u-seccion-body">
+                    <div class="row g-4">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7" for="{{ form.timezone.id_for_label }}">Zona horaria</label>
+                            {{ form.timezone }}
+                            {% if form.timezone.errors %}
+                            <div class="text-danger fs-8 mt-1">{{ form.timezone.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7" for="u-avatar-url">URL de avatar</label>
+                            <input type="url" name="avatar_url" id="u-avatar-url"
+                                   class="form-control{% if form.avatar_url.errors %} is-invalid{% endif %}"
+                                   value="{{ form.avatar_url.value|default:'' }}"
+                                   placeholder="Opcional — si no, se usan sus iniciales" />
+                            {% if form.avatar_url.errors %}
+                            <div class="invalid-feedback">{{ form.avatar_url.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--end::Preferencias-->
+
+            <!--begin::Acciones-->
+            <div class="d-flex align-items-center gap-3 mt-6">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check2 me-1"></i>{% if object %}Guardar cambios{% else %}Crear usuario{% endif %}
+                </button>
+                <a href="{% url 'panel_usuarios:usuario_list' %}" class="btn btn-light">Cancelar</a>
+            </div>
+            <!--end::Acciones-->
+        </div>
+        <!--end::Columna del formulario-->
+
+        <!--begin::Vista previa-->
+        <div class="col-lg-5 col-xl-4">
+            <div class="u-sticky">
+                <div class="u-preview shadow-sm">
+                    <div class="u-preview-top"></div>
+                    <div class="px-5 pb-5 text-center">
+                        <div class="u-avatar" id="u-avatar">
+                            <span id="u-iniciales">?</span>
+                        </div>
+                        <div class="fw-semibold text-gray-900 fs-5 mt-3" id="u-nombre-preview">Sin nombre</div>
+                        <div class="text-muted fs-7" id="u-email-preview">sin@correo</div>
+
+                        <div class="d-flex flex-wrap justify-content-center gap-2 mt-3" id="u-roles-preview">
+                            <span class="badge badge-light fs-8">Sin roles</span>
+                        </div>
+
+                        <div class="separator my-4"></div>
+
+                        <div class="d-flex align-items-center justify-content-between text-start">
+                            <span class="text-muted fs-8">Zona horaria</span>
+                            <span class="fw-semibold fs-8 text-gray-800" id="u-tz-preview">—</span>
+                        </div>
+                        {% if object %}
+                        <div class="d-flex align-items-center justify-content-between text-start mt-2">
+                            <span class="text-muted fs-8">Estado</span>
+                            {% if object.is_active %}
+                            <span class="badge badge-light-success fs-8">Activo</span>
+                            {% else %}
+                            <span class="badge badge-light-danger fs-8">Inactivo</span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between text-start mt-2">
+                            <span class="text-muted fs-8">Último acceso</span>
+                            <span class="fw-semibold fs-8 text-gray-800">
+                                {% if object.last_login %}{{ object.last_login|date:"d/m/Y" }}{% else %}Nunca{% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if not object %}
+                <div class="d-flex gap-3 p-4 mt-4 rounded" style="background:#f5f9ff; border:1px solid #dbe8ff;">
+                    <i class="bi bi-google fs-4" style="color:#006BFF;"></i>
+                    <div>
+                        <div class="fw-semibold fs-7 text-gray-900">Sin contraseña</div>
+                        <div class="text-muted fs-8">
+                            Todo el equipo entra con su cuenta de Google, así que no hay que inventarse
+                            ninguna: se genera una aleatoria que nadie llega a ver.
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if magic_login_token %}
+                <div class="p-4 mt-4 rounded" style="background:#f7f4ff; border:1px solid #e4dcff;">
+                    <div class="fw-semibold fs-7 text-gray-900 mb-1">Entrar como este usuario</div>
+                    <div class="text-muted fs-8 mb-3">El enlace vale 1 hora y funciona en cualquier navegador.</div>
+                    <button type="button" class="btn btn-sm w-100"
                             style="background-color:#7239ea;border-color:#7239ea;color:#fff;"
                             data-magic-url="{% url 'magic_login' magic_login_token %}"
                             onclick="copyMagicLink(this)">
-                        <i class="ki-outline ki-entrance-right fs-4 me-1"></i>
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
                         <span class="btn-label">Copiar enlace de acceso</span>
                     </button>
-                    <span class="text-muted fs-7">El enlace es válido 1 hora y funciona en cualquier navegador.</span>
                 </div>
+                {% endif %}
             </div>
-            <script>
-            function copyMagicLink(btn) {
-                const url = window.location.origin + btn.dataset.magicUrl;
-                const label = btn.querySelector('.btn-label');
-                navigator.clipboard.writeText(url).then(function () {
-                    label.textContent = '¡Enlace copiado!';
-                    btn.style.backgroundColor = '#5e35b1';
-                    setTimeout(function () {
-                        label.textContent = 'Copiar enlace de acceso';
-                        btn.style.backgroundColor = '#7239ea';
-                    }, 2000);
-                });
-            }
-            </script>
-            {% endif %}
-            <!--end::Magic login-->
-
-            <!--begin::Acciones-->
-            <div class="d-flex gap-3 pt-4 border-top">
-                <button type="submit" class="btn btn-primary btn-lg">Guardar</button>
-                <a href="{% url 'panel_usuarios:usuario_list' %}" class="btn btn-light btn-lg">Cancelar</a>
-            </div>
-            <!--end::Acciones-->
-
-        </form>
+        </div>
+        <!--end::Vista previa-->
     </div>
-</div>
+</form>
+
+<script>
+(function () {
+    var email     = document.getElementById('u-email');
+    var nombre    = document.getElementById('u-first-name');
+    var apellido  = document.getElementById('u-last-name');
+    var avatarUrl = document.getElementById('u-avatar-url');
+    var tz        = document.getElementById('id_timezone');
+
+    var preNombre   = document.getElementById('u-nombre-preview');
+    var preEmail    = document.getElementById('u-email-preview');
+    var preRoles    = document.getElementById('u-roles-preview');
+    var preTz       = document.getElementById('u-tz-preview');
+    var avatar      = document.getElementById('u-avatar');
+    var iniciales   = document.getElementById('u-iniciales');
+
+    // Color estable a partir del correo, para que cada usuario tenga el suyo.
+    var PALETA = ['#006BFF', '#7239ea', '#F1416C', '#17c653', '#f6a609', '#00bcd4'];
+    function colorDe(texto) {
+        var suma = 0;
+        for (var i = 0; i < texto.length; i++) { suma += texto.charCodeAt(i); }
+        return PALETA[suma % PALETA.length];
+    }
+
+    function capitalizar(palabra) {
+        return palabra ? palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase() : '';
+    }
+
+    function refrescar() {
+        var n = (nombre.value || '').trim();
+        var a = (apellido.value || '').trim();
+        var e = (email.value || '').trim();
+
+        preNombre.textContent = (n + ' ' + a).trim() || 'Sin nombre';
+        preEmail.textContent = e || 'sin@correo';
+        if (tz) { preTz.textContent = tz.value || '—'; }
+
+        // Iniciales: del nombre si lo hay, si no del correo.
+        var base = (n + ' ' + a).trim() || e.split('@')[0].replace(/[._-]/g, ' ');
+        var trozos = base.split(/\s+/).filter(Boolean);
+        var letras = trozos.slice(0, 2).map(function (t) { return t.charAt(0).toUpperCase(); }).join('');
+        iniciales.textContent = letras || '?';
+        avatar.style.background = colorDe(e || base || 'x');
+
+        // Foto si hay URL; si falla la carga, se vuelve a las iniciales.
+        var url = avatarUrl ? (avatarUrl.value || '').trim() : '';
+        var img = avatar.querySelector('img');
+        if (url) {
+            if (!img) {
+                img = document.createElement('img');
+                img.onerror = function () { img.remove(); iniciales.style.display = ''; };
+                avatar.appendChild(img);
+            }
+            if (img.src !== url) { img.src = url; }
+            iniciales.style.display = 'none';
+        } else if (img) {
+            img.remove();
+            iniciales.style.display = '';
+        }
+
+        // Badges de roles marcados.
+        var marcados = Array.prototype.slice
+            .call(document.querySelectorAll('.js-rol input:checked'))
+            .map(function (input) {
+                return input.closest('.js-rol').querySelector('.fw-semibold').textContent.trim();
+            });
+        preRoles.innerHTML = '';
+        if (!marcados.length) {
+            preRoles.innerHTML = '<span class="badge badge-light fs-8">Sin roles</span>';
+        } else {
+            marcados.forEach(function (texto) {
+                var span = document.createElement('span');
+                span.className = 'badge u-badge-rol fs-8 text-capitalize';
+                span.textContent = texto;
+                preRoles.appendChild(span);
+            });
+        }
+    }
+
+    // Estado visual de las tarjetas de rol.
+    function pintarRoles() {
+        document.querySelectorAll('.js-rol').forEach(function (card) {
+            card.classList.toggle('is-selected', card.querySelector('input').checked);
+        });
+    }
+
+    [email, nombre, apellido, avatarUrl].forEach(function (input) {
+        if (input) { input.addEventListener('input', refrescar); }
+    });
+    if (tz) { tz.addEventListener('change', refrescar); }
+    document.querySelectorAll('.js-rol input').forEach(function (input) {
+        input.addEventListener('change', function () { pintarRoles(); refrescar(); });
+    });
+
+    // Al escribir el correo, propone nombre y apellido si están vacíos.
+    // Nunca pisa lo que ya haya escrito.
+    email.addEventListener('blur', function () {
+        var prefijo = (email.value || '').split('@')[0];
+        if (!prefijo) { return; }
+        var trozos = prefijo.replace(/[._-]+/g, ' ').split(/\s+/).filter(Boolean);
+        if (!nombre.value && trozos[0]) { nombre.value = capitalizar(trozos[0]); }
+        if (!apellido.value && trozos[1]) { apellido.value = capitalizar(trozos[1]); }
+        refrescar();
+    });
+
+    pintarRoles();
+    refrescar();
+})();
+
+function copyMagicLink(btn) {
+    var url = window.location.origin + btn.dataset.magicUrl;
+    var label = btn.querySelector('.btn-label');
+    navigator.clipboard.writeText(url).then(function () {
+        label.textContent = '¡Enlace copiado!';
+        btn.style.backgroundColor = '#5e35b1';
+        setTimeout(function () {
+            label.textContent = 'Copiar enlace de acceso';
+            btn.style.backgroundColor = '#7239ea';
+        }, 2000);
+    });
+}
+</script>
 {% endblock content %}

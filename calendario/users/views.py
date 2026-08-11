@@ -197,12 +197,40 @@ class UsuarioBulkToggleView(RequierePermisoMixin, View):
         return redirect(request.POST.get('next', 'panel_usuarios:usuario_list'))
 
 
+ICONOS_ROL = {
+    'admin': 'bi-shield-lock',
+    'supervisor': 'bi-people',
+    'host': 'bi-calendar-check',
+}
+
+
+def _tarjetas_roles(form):
+    """Empareja cada checkbox de rol con su Rol para poder pintarlos como tarjetas.
+
+    El widget se renderiza a partir de `fields['roles'].queryset`, así que el
+    orden de ambas listas es siempre el mismo.
+    """
+    return [
+        {
+            'widget': widget,
+            'rol': rol,
+            'icono': ICONOS_ROL.get(rol.nombre, 'bi-person-badge'),
+        }
+        for widget, rol in zip(form['roles'], form.fields['roles'].queryset)
+    ]
+
+
 class UsuarioCreateView(RequierePermisoMixin, CreateView):
     permiso_requerido = 'usuarios.crear'
     model = User
     form_class = UsuarioCreacionForm
     template_name = 'pages/panel/usuarios/form.html'
     success_url = reverse_lazy('panel_usuarios:usuario_list')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['tarjetas_roles'] = _tarjetas_roles(ctx['form'])
+        return ctx
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -242,6 +270,7 @@ class UsuarioUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx['tarjetas_roles'] = _tarjetas_roles(ctx['form'])
         obj = self.object
         if obj and obj != self.request.user:
             puede_impersonar = self.request.user.es_admin

@@ -3,6 +3,7 @@ import zoneinfo
 from django import forms
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
+from django.utils.crypto import get_random_string
 
 from calendario.users.models import User
 from calendario.permisos.models import Rol, RolXUsuario
@@ -63,16 +64,13 @@ class MiPerfilForm(forms.ModelForm):
 
 
 class UsuarioCreacionForm(forms.ModelForm):
-    password1 = forms.CharField(
-        label='Contraseña',
-        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
-        strip=False,
-    )
-    password2 = forms.CharField(
-        label='Confirmar contraseña',
-        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
-        strip=False,
-    )
+    """Alta de usuario sin contraseña: todo el mundo entra con su cuenta de Google.
+
+    Se guarda igualmente una contraseña aleatoria que nadie conoce, para que la
+    cuenta no quede con una vacía o adivinable. Si alguna vez hace falta una
+    contraseña real, se pone desde el admin de Django.
+    """
+
     roles = forms.ModelMultipleChoiceField(
         queryset=Rol.objects.none(),
         required=False,
@@ -90,21 +88,13 @@ class UsuarioCreacionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['roles'].queryset = Rol.objects.all()
-        self.fields['timezone'].widget.attrs.update({'class': 'form-select form-select-lg'})
-
-    def clean_password2(self):
-        p1 = self.cleaned_data.get('password1', '')
-        p2 = self.cleaned_data.get('password2', '')
-        if p1 != p2:
-            raise forms.ValidationError('Las contraseñas no coinciden.')
-        validate_password(p2)
-        return p2
+        self.fields['timezone'].widget.attrs.update({'class': 'form-select'})
 
     def save(self, commit=True):
         user = super().save(commit=False)
         if not user.username:
             user.username = self._generar_username(user.email)
-        user.set_password(self.cleaned_data['password1'])
+        user.set_password(get_random_string(50))
         if commit:
             user.save()
             roles = self.cleaned_data.get('roles', [])
@@ -142,7 +132,7 @@ class UsuarioEdicionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['roles'].queryset = Rol.objects.all()
-        self.fields['timezone'].widget.attrs.update({'class': 'form-select form-select-lg'})
+        self.fields['timezone'].widget.attrs.update({'class': 'form-select'})
         if self.instance and self.instance.pk:
             self.fields['roles'].initial = Rol.objects.filter(
                 asignaciones__usuario=self.instance

@@ -1,0 +1,56 @@
+/* Estilos compartidos de los formularios del panel con vista previa
+   (alta/edición de usuario y mi perfil). */
+
+/* Bloques numerados del formulario */
+.u-seccion { border: 1px solid #eef1f5; border-radius: 14px; background: #fff; }
+.u-seccion + .u-seccion { margin-top: 20px; }
+.u-seccion-head { display: flex; align-items: center; gap: 12px; padding: 18px 22px 0; }
+.u-seccion-num {
+    width: 28px; height: 28px; border-radius: 9px; flex: 0 0 28px;
+    display: flex; align-items: center; justify-content: center;
+    background: #eaf2ff; color: #006BFF; font-size: 12px; font-weight: 600;
+}
+.u-seccion-body { padding: 18px 22px 22px; }
+
+/* Tarjetas seleccionables (roles) */
+.u-rol {
+    position: relative; display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 16px; border: 1px solid #e6eaf0; border-radius: 12px;
+    cursor: pointer; transition: border-color .15s, background-color .15s, box-shadow .15s;
+    background: #fff; height: 100%;
+}
+.u-rol:hover { border-color: #b9d4ff; }
+.u-rol.is-selected { border-color: #006BFF; background: #f5f9ff; box-shadow: 0 0 0 1px #006BFF inset; }
+.u-rol input { position: absolute; opacity: 0; pointer-events: none; }
+.u-rol-icono {
+    width: 36px; height: 36px; border-radius: 10px; flex: 0 0 36px;
+    display: flex; align-items: center; justify-content: center;
+    background: #f2f5f9; color: #6c7a91; font-size: 16px; transition: background-color .15s, color .15s;
+}
+.u-rol.is-selected .u-rol-icono { background: #006BFF; color: #fff; }
+.u-rol-check { position: absolute; top: 12px; right: 14px; color: #006BFF; opacity: 0; transition: opacity .15s; }
+.u-rol.is-selected .u-rol-check { opacity: 1; }
+
+/* Badge de rol en la vista previa: azul de Google, no el índigo del tema */
+.u-badge-rol { background: #e8f0fe; color: #1a73e8; }
+
+/* Tarjeta de vista previa */
+.u-preview { border: 1px solid #eef1f5; border-radius: 14px; overflow: hidden; background: #fff; }
+.u-preview-top { height: 74px; background: linear-gradient(120deg, #006BFF 0%, #7239ea 100%); }
+.u-avatar {
+    width: 84px; height: 84px; border-radius: 50%; margin: -46px auto 0;
+    border: 4px solid #fff; background: #006BFF; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 600; letter-spacing: .5px; overflow: hidden;
+}
+.u-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Reloj de la zona horaria */
+.u-reloj {
+    font-size: 30px; font-weight: 600; color: #1a1a2e;
+    font-variant-numeric: tabular-nums; letter-spacing: 1px; line-height: 1.1;
+}
+
+@media (min-width: 992px) {
+    .u-sticky { position: sticky; top: 100px; }
+}
