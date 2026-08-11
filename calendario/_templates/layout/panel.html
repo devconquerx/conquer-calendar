@@ -1,8 +1,10 @@
 {% extends 'layout/master.html' %}
 {% load i18n %}
+{% load static %}
 
 {% block css %}
 {{ block.super }}
+<link rel="stylesheet" href="{% static 'css/panel-tema.css' %}">
 {% addHtmlAttribute 'body' 'id' 'kt_app_body' %}
 {% addHtmlAttribute 'body' 'data-kt-name' 'metronic' %}
 {% addHtmlAttribute 'body' 'data-kt-app-layout' 'dark-sidebar' %}
@@ -33,13 +35,49 @@
                 <!--begin::Mobile logo-->
                 <div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0">
                     <a href="{% url 'panel_usuarios:dashboard' %}" class="d-lg-none">
-                        <img src="{% static 'media/logos/conquer-calendario.png' %}" alt="Conquer Calendario" style="height: 36px; width: auto;" />
+                        <img src="{% static 'media/logos/conquer-calendario.png' %}" alt="Conquer Calendario"
+                             class="theme-light-show" style="height: 36px; width: auto;" />
+                        <img src="{% static 'media/logos/conquer-calendario-blanco.png' %}" alt="Conquer Calendario"
+                             class="theme-dark-show" style="height: 27px; width: auto;" />
                     </a>
                 </div>
                 <!--end::Mobile logo-->
                 <!--begin::Header wrapper-->
                 <div class="d-flex align-items-stretch justify-content-end flex-lg-grow-1" id="kt_app_header_wrapper">
                     <div class="app-navbar flex-shrink-0 align-items-center d-flex">
+                        <!--begin::Tema claro / oscuro-->
+                        {# Lo maneja KTThemeMode: guarda la elección y escribe data-theme en el html #}
+                        <div class="app-navbar-item">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-icon btn-active-light w-35px h-35px"
+                                        data-bs-toggle="dropdown" aria-expanded="false" title="Tema">
+                                    <i class="bi bi-sun theme-light-show fs-5"></i>
+                                    <i class="bi bi-moon-stars theme-dark-show fs-5"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm"
+                                    style="min-width:160px;" data-kt-element="theme-mode-menu">
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                                           data-kt-element="mode" data-kt-value="light">
+                                            <i class="bi bi-sun text-muted"></i>Claro
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                                           data-kt-element="mode" data-kt-value="dark">
+                                            <i class="bi bi-moon-stars text-muted"></i>Oscuro
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center gap-2" href="#"
+                                           data-kt-element="mode" data-kt-value="system">
+                                            <i class="bi bi-circle-half text-muted"></i>Sistema
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <!--end::Tema claro / oscuro-->
                         <div class="app-navbar-item ms-3">
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-light fw-semibold d-flex align-items-center gap-2 px-3 py-2"
@@ -90,9 +128,15 @@
                  data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
 
                 <!--begin::Logo-->
-                <div class="app-sidebar-logo px-4 h-75px bg-body d-flex align-items-center justify-content-center" id="kt_app_sidebar_logo">
+                {# En claro, el logo de siempre con su caja; en oscuro, el blanco sin recuadro #}
+                <div class="app-sidebar-logo px-4 h-75px d-flex align-items-center justify-content-center bg-body theme-light-show" id="kt_app_sidebar_logo">
                     <a href="{% url 'panel_usuarios:dashboard' %}">
                         <img src="{% static 'media/logos/conquer-calendario.png' %}" alt="Conquer Calendario" style="height: 75px; width: auto;" />
+                    </a>
+                </div>
+                <div class="app-sidebar-logo px-4 h-75px d-flex align-items-center justify-content-center theme-dark-show">
+                    <a href="{% url 'panel_usuarios:dashboard' %}">
+                        <img src="{% static 'media/logos/conquer-calendario-blanco.png' %}" alt="Conquer Calendario" style="height: 56px; width: auto;" />
                     </a>
                 </div>
                 <!--end::Logo-->

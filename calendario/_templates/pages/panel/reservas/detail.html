@@ -1,160 +1,303 @@
 {% extends 'layout/panel.html' %}
 {% load tz %}
+{% load static %}
 
 {% block title %}Detalle reserva · {% endblock %}
 
+{% block css %}
+{{ block.super }}
+<style>
+  /* Cabecera con el resumen de la reserva */
+  .rd-hero {
+      border: 1px solid var(--cx-borde); border-radius: 14px;
+      background: var(--cx-superficie); overflow: hidden;
+  }
+  .rd-hero-top { height: 6px; background: linear-gradient(90deg, #006BFF 0%, #7239ea 100%); }
+  .rd-avatar {
+      width: 56px; height: 56px; border-radius: 50%; flex: 0 0 56px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--cx-acento); color: #fff; font-size: 19px; font-weight: 600;
+  }
+
+  /* Rejilla de campos: el hilo entre celdas es el propio fondo */
+  .rd-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+      background: var(--cx-borde); border: 1px solid var(--cx-borde);
+      border-radius: 14px; overflow: hidden;
+  }
+  .rd-campo { display: flex; gap: 12px; padding: 18px 20px; background: var(--cx-superficie); }
+  /* Las notas llenan el hueco de la tercera columna en lugar de ir sueltas abajo */
+  .rd-campo.rd-notas { grid-column: 3; grid-row: span 2; }
+  /* Una nota larga no debe estirar las filas de al lado: scrollea dentro */
+  .rd-campo.rd-notas .rd-valor { max-height: 190px; overflow-y: auto; padding-right: 4px; }
+  .rd-icono {
+      width: 34px; height: 34px; border-radius: 10px; flex: 0 0 34px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--cx-icono-bg); color: var(--cx-icono); font-size: 15px;
+  }
+  .rd-label { font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--bs-gray-600); margin-bottom: 3px; }
+  .rd-valor { font-size: 14px; color: var(--bs-gray-800); word-break: break-word; }
+  .rd-valor strong { color: var(--bs-gray-900); font-weight: 600; }
+  /* Los enlaces heredaban el primary del tema, que en oscuro casi no se lee */
+  .rd-valor a { color: var(--cx-acento); text-decoration: none; }
+  .rd-valor a:hover { text-decoration: underline; }
+
+  /* Bloque de acciones que no tienen vuelta atrás */
+  .rd-peligro { border: 1px solid var(--cx-borde); border-radius: 14px; background: var(--cx-superficie); }
+
+  @media (max-width: 991px) {
+      .rd-grid { grid-template-columns: 1fr; }
+      .rd-campo.rd-notas { grid-column: auto; grid-row: auto; }
+  }
+</style>
+{% endblock css %}
+
 {% block content %}
-<div class="card shadow-sm" style="max-width: 960px;">
-    <div class="card-header border-0 pt-6">
-        <div class="card-title">
-            <h3 class="fw-bold mb-0">Detalle de reserva</h3>
-        </div>
-        <div class="card-toolbar">
-            <a href="{% url 'panel_reservas:reserva_list' %}" class="btn btn-sm btn-light">
-                <i class="bi bi-arrow-left me-1"></i>Volver
-            </a>
-        </div>
+
+<!--begin::Cabecera-->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-6">
+    <div>
+        <a href="{% url 'panel_reservas:reserva_list' %}"
+           class="text-muted fs-8 text-hover-primary d-inline-flex align-items-center gap-1 mb-1">
+            <i class="bi bi-arrow-left"></i> Reservas
+        </a>
+        <h2 class="fw-semibold mb-0">Detalle de reserva</h2>
     </div>
-    <div class="card-body pt-4">
+    <a href="{% url 'panel_reservas:reserva_list' %}" class="btn btn-sm btn-light">
+        <i class="bi bi-arrow-left me-1"></i>Volver
+    </a>
+</div>
+<!--end::Cabecera-->
 
-        <div class="row gy-4 mb-6">
+<div style="max-width: 1080px;">
 
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Tipo de evento</div>
-                <div class="text-gray-800 fw-bold">{{ reserva.event_type.nombre }}</div>
+    <!--begin::Resumen-->
+    <div class="rd-hero shadow-sm mb-5">
+        <div class="rd-hero-top"></div>
+        <div class="d-flex flex-wrap align-items-center gap-4 p-5">
+            <span class="rd-avatar">{{ reserva.nombre_invitado|slice:":1"|upper }}</span>
+            <div class="flex-grow-1">
+                <div class="fw-semibold text-gray-900 fs-4">{{ reserva.nombre_invitado }}</div>
+                <div class="text-muted fs-7 d-flex flex-wrap align-items-center gap-3 mt-1">
+                    <span><i class="bi bi-calendar3-event me-1"></i>{{ reserva.event_type.nombre }}</span>
+                    <span><i class="bi bi-clock me-1"></i>{{ rango_host.fecha }}, {{ rango_host.hora_inicio }} – {{ rango_host.hora_fin }}</span>
+                </div>
             </div>
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Estado</div>
-                {% if reserva.estado == 'confirmada' %}
-                <span class="badge badge-light-success fw-semibold">Confirmada</span>
-                {% else %}
-                <span class="badge badge-light-secondary fw-semibold">Cancelada</span>
-                {% endif %}
-            </div>
-            {# Fila 1: Tipo evento | Estado | Google Meet #}
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Google Meet</div>
+            <div class="d-flex align-items-center gap-2">
                 {% if reserva.google_meet_url %}
-                <a href="{{ reserva.google_meet_url }}" target="_blank" rel="noopener" class="text-primary fw-semibold">
+                <a href="{{ reserva.google_meet_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary">
                     <i class="bi bi-camera-video me-1"></i>Abrir Meet
                 </a>
-                {% else %}
-                <span class="text-muted">—</span>
                 {% endif %}
-            </div>
-
-            {# Fila 2: Invitado | Email | Google Calendar #}
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Invitado</div>
-                <div class="text-gray-800 fw-bold">{{ reserva.nombre_invitado }}</div>
-            </div>
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Email</div>
-                <div class="text-gray-600">{{ reserva.email_invitado }}</div>
-            </div>
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Google Calendar</div>
                 {% if reserva.google_event_url %}
-                <a href="{{ reserva.google_event_url }}" target="_blank" rel="noopener" class="text-primary fw-semibold">
+                <a href="{{ reserva.google_event_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-light">
                     <i class="bi bi-calendar-event me-1"></i>Abrir en GCal
                 </a>
-                {% else %}
-                <span class="text-muted">—</span>
                 {% endif %}
             </div>
+        </div>
+    </div>
+    <!--end::Resumen-->
 
-            {# Fila 3: Hora invitado | Hora host | Sync Google Calendar #}
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Hora invitado</div>
-                <div class="text-gray-800 fw-bold">
-                    {{ rango_invitado.hora_inicio }} – {{ rango_invitado.hora_fin }}
-                    <span class="text-muted fw-normal">({{ rango_invitado.tz }})</span>
-                </div>
-                <div class="text-gray-600 fs-7 mt-1">{{ rango_invitado.fecha }}</div>
+    <!--begin::Campos-->
+    <div class="rd-grid shadow-sm">
+
+        {# Fila 1: Tipo evento | Estado | Google Meet #}
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-calendar3-event"></i></span>
+            <div>
+                <div class="rd-label">Tipo de evento</div>
+                <div class="rd-valor"><strong>{{ reserva.event_type.nombre }}</strong></div>
             </div>
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Hora host</div>
-                <div class="text-gray-800 fw-bold">
-                    {{ rango_host.hora_inicio }} – {{ rango_host.hora_fin }}
-                    <span class="text-muted fw-normal">({{ rango_host.tz }})</span>
-                </div>
-                <div class="text-gray-600 fs-7 mt-1">{{ rango_host.fecha }}</div>
-            </div>
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Sync Google Calendar</div>
-                {% if reserva.google_sync_estado == 'sincronizado' %}
-                <span class="badge badge-light-success fw-semibold">
-                    <i class="bi bi-check-circle me-1"></i>Sincronizado
-                </span>
-                {% elif reserva.google_sync_estado == 'error' %}
-                <span class="badge badge-light-danger fw-semibold">
-                    <i class="bi bi-exclamation-circle me-1"></i>Error sync
-                </span>
-                {% else %}
-                <span class="badge badge-light-warning fw-semibold">
-                    <i class="bi bi-clock me-1"></i>Pendiente
-                </span>
-                {% endif %}
-                {% if gcal_utc %}
-                <div class="mt-2 fs-7 text-gray-600">
-                    <span class="fw-semibold">UTC en GCal:</span>
-                    {{ gcal_utc.inicio }} – {{ gcal_utc.fin }}
-                    <span class="text-muted">({{ gcal_utc.fecha }})</span>
-                    {% if gcal_coincide %}
-                    <i class="bi bi-check2 text-success ms-1" title="Coincide con la BD"></i>
+        </div>
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-flag"></i></span>
+            <div>
+                <div class="rd-label">Estado</div>
+                <div class="rd-valor">
+                    {% if reserva.estado == 'confirmada' %}
+                    <span class="badge badge-light-success fw-semibold">Confirmada</span>
                     {% else %}
-                    <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="¡Difiere de la BD!"></i>
+                    <span class="badge badge-light-secondary fw-semibold">Cancelada</span>
                     {% endif %}
                 </div>
-                {% endif %}
             </div>
-
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Hora UTC</div>
-                {% timezone "UTC" %}
-                <div class="text-gray-600">
-                    {{ reserva.inicio_utc|date:"H:i" }} – {{ reserva.fin_utc|date:"H:i" }}
+        </div>
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-camera-video"></i></span>
+            <div>
+                <div class="rd-label">Google Meet</div>
+                <div class="rd-valor">
+                    {% if reserva.google_meet_url %}
+                    <a href="{{ reserva.google_meet_url }}" target="_blank" rel="noopener" class="fw-semibold">
+                        Abrir Meet <i class="bi bi-box-arrow-up-right fs-8"></i>
+                    </a>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
                 </div>
-                <div class="text-gray-600 fs-7 mt-1">{{ reserva.inicio_utc|date:"d/m/Y" }}</div>
+            </div>
+        </div>
+
+        {# Fila 2: Invitado | Email | Google Calendar #}
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-person"></i></span>
+            <div>
+                <div class="rd-label">Invitado</div>
+                <div class="rd-valor"><strong>{{ reserva.nombre_invitado }}</strong></div>
+            </div>
+        </div>
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-envelope"></i></span>
+            <div>
+                <div class="rd-label">Email</div>
+                <div class="rd-valor">
+                    <a href="mailto:{{ reserva.email_invitado }}">{{ reserva.email_invitado }}</a>
+                </div>
+            </div>
+        </div>
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-calendar-event"></i></span>
+            <div>
+                <div class="rd-label">Google Calendar</div>
+                <div class="rd-valor">
+                    {% if reserva.google_event_url %}
+                    <a href="{{ reserva.google_event_url }}" target="_blank" rel="noopener" class="fw-semibold">
+                        Abrir en GCal <i class="bi bi-box-arrow-up-right fs-8"></i>
+                    </a>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Fila 3: Hora invitado | Hora host | Sync Google Calendar #}
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-clock"></i></span>
+            <div>
+                <div class="rd-label">Hora invitado</div>
+                <div class="rd-valor">
+                    <strong>{{ rango_invitado.hora_inicio }} – {{ rango_invitado.hora_fin }}</strong>
+                    <span class="text-muted">({{ rango_invitado.tz }})</span>
+                </div>
+                <div class="text-muted fs-8 mt-1">{{ rango_invitado.fecha }}</div>
+            </div>
+        </div>
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-clock-history"></i></span>
+            <div>
+                <div class="rd-label">Hora host</div>
+                <div class="rd-valor">
+                    <strong>{{ rango_host.hora_inicio }} – {{ rango_host.hora_fin }}</strong>
+                    <span class="text-muted">({{ rango_host.tz }})</span>
+                </div>
+                <div class="text-muted fs-8 mt-1">{{ rango_host.fecha }}</div>
+            </div>
+        </div>
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-arrow-repeat"></i></span>
+            <div>
+                <div class="rd-label">Sync Google Calendar</div>
+                <div class="rd-valor">
+                    {% if reserva.google_sync_estado == 'sincronizado' %}
+                    <span class="badge badge-light-success fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i>Sincronizado
+                    </span>
+                    {% elif reserva.google_sync_estado == 'error' %}
+                    <span class="badge badge-light-danger fw-semibold">
+                        <i class="bi bi-exclamation-circle me-1"></i>Error sync
+                    </span>
+                    {% else %}
+                    <span class="badge badge-light-warning fw-semibold">
+                        <i class="bi bi-clock me-1"></i>Pendiente
+                    </span>
+                    {% endif %}
+                    {% if gcal_utc %}
+                    <div class="mt-2 fs-8 text-muted">
+                        <span class="fw-semibold">UTC en GCal:</span>
+                        {{ gcal_utc.inicio }} – {{ gcal_utc.fin }} ({{ gcal_utc.fecha }})
+                        {% if gcal_coincide %}
+                        <i class="bi bi-check2 text-success ms-1" title="Coincide con la BD"></i>
+                        {% else %}
+                        <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="¡Difiere de la BD!"></i>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Fila 4: Hora UTC | Creada #}
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-globe"></i></span>
+            <div>
+                <div class="rd-label">Hora UTC</div>
+                {% timezone "UTC" %}
+                <div class="rd-valor">{{ reserva.inicio_utc|date:"H:i" }} – {{ reserva.fin_utc|date:"H:i" }}</div>
+                <div class="text-muted fs-8 mt-1">{{ reserva.inicio_utc|date:"d/m/Y" }}</div>
                 {% endtimezone %}
             </div>
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Creada</div>
-                <div class="text-gray-600">{{ reserva.fecha_creacion|date:"d/m/Y H:i" }}</div>
+        </div>
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-calendar-plus"></i></span>
+            <div>
+                <div class="rd-label">Creada</div>
+                <div class="rd-valor">{{ reserva.fecha_creacion|date:"d/m/Y H:i" }}</div>
             </div>
-            <div class="col-sm-4"></div>{# spacer #}
-
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Teléfono</div>
-                <div class="text-gray-600">
-                    {% if reserva.telefono_invitado %}{{ reserva.telefono_invitado }}{% else %}<span class="text-muted">—</span>{% endif %}
-                </div>
-            </div>
-            <div class="col-sm-4">
-                <div class="text-muted fs-7 fw-semibold mb-1">Enlace del lead</div>
-                <a href="{% url 'public_token:confirmacion' token=reserva.confirmacion_token %}"
-                   target="_blank" rel="noopener" class="text-primary fw-semibold">
-                    <i class="bi bi-box-arrow-up-right me-1"></i>Ver enlace
-                </a>
-            </div>
-            <div class="col-sm-4"></div>{# spacer #}
-
-            <div class="col-sm-12">
-                <div class="text-muted fs-7 fw-semibold mb-1">Notas</div>
-                <div class="text-gray-600">
+        </div>
+        {# Notas: ocupa la tercera columna de estas dos filas #}
+        <div class="rd-campo rd-notas">
+            <span class="rd-icono"><i class="bi bi-sticky"></i></span>
+            <div>
+                <div class="rd-label">Notas</div>
+                <div class="rd-valor">
                     {% if reserva.notas %}{{ reserva.notas }}{% else %}<span class="text-muted">—</span>{% endif %}
                 </div>
             </div>
-
         </div>
 
-        {% if 'reservas.cancelar' in PERMISOS_USUARIO %}
-        <div class="border-top pt-5 d-flex gap-3">
+        {# Fila 5: Teléfono | Enlace del lead #}
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-telephone"></i></span>
+            <div>
+                <div class="rd-label">Teléfono</div>
+                <div class="rd-valor">
+                    {% if reserva.telefono_invitado %}
+                    <a href="tel:{{ reserva.telefono_invitado }}">{{ reserva.telefono_invitado }}</a>
+                    {% else %}<span class="text-muted">—</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="rd-campo">
+            <span class="rd-icono"><i class="bi bi-link-45deg"></i></span>
+            <div>
+                <div class="rd-label">Enlace del lead</div>
+                <div class="rd-valor">
+                    <a href="{% url 'public_token:confirmacion' token=reserva.confirmacion_token %}"
+                       target="_blank" rel="noopener" class="fw-semibold">
+                        Ver enlace <i class="bi bi-box-arrow-up-right fs-8"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!--end::Campos-->
+
+    {% if 'reservas.cancelar' in PERMISOS_USUARIO %}
+    <!--begin::Acciones-->
+    <div class="rd-peligro shadow-sm mt-5 p-5 d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+            <div class="fw-semibold text-gray-900">Acciones sobre la reserva</div>
+            <div class="text-muted fs-8">Cancelar avisa a Google Calendar y deja el registro. Eliminar la borra del todo.</div>
+        </div>
+        <div class="d-flex gap-3">
             {% if reserva.estado == 'confirmada' %}
             <form method="post" action="{% url 'panel_reservas:reserva_cancelar' reserva.pk %}"
                   onsubmit="return confirm('¿Cancelar esta reserva? Se cancelará también en Google Calendar pero quedará el registro.')">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-warning">
+                <button type="submit" class="btn btn-sm btn-warning">
                     <i class="bi bi-x-circle me-1"></i>Cancelar reserva
                 </button>
             </form>
@@ -162,13 +305,13 @@
             <form method="post" action="{% url 'panel_reservas:reserva_eliminar' reserva.pk %}"
                   onsubmit="return confirm('¿Eliminar esta reserva? Se borrará por completo de la BD y de Google Calendar.')">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-danger">
+                <button type="submit" class="btn btn-sm btn-danger">
                     <i class="bi bi-trash me-1"></i>Eliminar reserva
                 </button>
             </form>
         </div>
-        {% endif %}
-
     </div>
+    <!--end::Acciones-->
+    {% endif %}
 </div>
 {% endblock content %}

@@ -8,19 +8,15 @@
 <link rel="stylesheet" href="{% static 'css/panel-form.css' %}">
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 <style>
-  /* Icono de ayuda: el detalle largo vive en el tooltip, no en la página */
-  .et-info { color: #b5bcc9; cursor: help; font-size: 13px; }
-  .et-info:hover { color: #006BFF; }
-
   /* Fila de opción con interruptor */
   .et-switch { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
-  .et-switch + .et-switch { border-top: 1px dashed #eef1f5; }
+  .et-switch + .et-switch { border-top: 1px dashed var(--cx-borde); }
 
   /* Cabecera de la vista previa: barra de color como en el listado */
-  .et-preview-top { height: 6px; background: #006BFF; }
+  .et-preview-top { height: 6px; background: var(--cx-acento); }
   .et-enlace {
-    display: block; font-size: 11px; color: #6b7280; background: #f7f9fc;
-    border: 1px solid #eef1f5; border-radius: 8px; padding: 8px 10px;
+    display: block; font-size: 11px; color: var(--bs-gray-700); background: var(--bs-gray-100);
+    border: 1px solid var(--cx-borde); border-radius: 8px; padding: 8px 10px;
     word-break: break-all; text-align: left;
   }
 
@@ -50,8 +46,8 @@
     align-items: center;
     gap: .4rem;
     background: transparent;
-    border: 1px solid #d1d5db;
-    color: #6b7280;
+    border: 1px solid var(--bs-gray-300);
+    color: var(--bs-gray-700);
     font-weight: 500;
     font-size: 13px;
     padding: 7px 14px;
@@ -60,34 +56,39 @@
     transition: border-color .15s, color .15s, background-color .15s;
     cursor: pointer;
   }
-  .btn-ghost:hover { border-color: #9ca3af; color: #374151; background-color: #fafafa; }
+  .btn-ghost:hover { border-color: var(--bs-gray-500); color: var(--bs-gray-800); background-color: var(--bs-gray-100); }
   .btn-ghost:focus { outline: none; box-shadow: 0 0 0 3px rgba(156,163,175,.18); }
   .btn-ghost .ki-outline { font-size: 14px; color: inherit; }
 
   .ql-editor { min-height: 140px; font-size: 14px; line-height: 1.6; }
-  .ql-toolbar.ql-snow { border-radius: 0.475rem 0.475rem 0 0; border-color: #e1e3ea; }
-  .ql-container.ql-snow { border-radius: 0 0 0.475rem 0.475rem; border-color: #e1e3ea; }
+  .ql-toolbar.ql-snow { border-radius: 0.475rem 0.475rem 0 0; border-color: var(--bs-gray-300); }
+  .ql-container.ql-snow { border-radius: 0 0 0.475rem 0.475rem; border-color: var(--bs-gray-300); }
+  /* Quill trae su tema claro: en oscuro hay que aclararle los iconos y el texto */
+  [data-theme="dark"] .ql-snow .ql-stroke { stroke: var(--bs-gray-700); }
+  [data-theme="dark"] .ql-snow .ql-fill { fill: var(--bs-gray-700); }
+  [data-theme="dark"] .ql-snow .ql-picker { color: var(--bs-gray-700); }
+  [data-theme="dark"] .ql-snow .ql-picker-options { background: var(--cx-superficie); border-color: var(--bs-gray-300); }
   #descripcion-editor.is-invalid + .ql-toolbar.ql-snow,
   #descripcion-editor.is-invalid .ql-container.ql-snow { border-color: var(--bs-danger); }
 
   .hosts-row { border-radius: .425rem; transition: background-color .15s; }
-  .hosts-row:hover { background-color: #f9f9f9; }
+  .hosts-row:hover { background-color: var(--bs-gray-100); }
   .hosts-row.is-hidden { display: none !important; }
   .hosts-avatar {
     width: 36px; height: 36px; display: inline-flex;
     align-items: center; justify-content: center;
     border-radius: 50%; font-weight: 600; font-size: 13px;
-    background: #f1faff; color: #009ef7; flex-shrink: 0;
+    background: var(--cx-acento-suave); color: var(--cx-acento); flex-shrink: 0;
   }
   .hosts-avatar.sm { width: 28px; height: 28px; font-size: 11px; }
   .hosts-chip {
     display: inline-flex; align-items: center; gap: .5rem;
-    background: #f5f8fa; border-radius: 999px;
+    background: var(--bs-gray-100); border-radius: 999px;
     padding: .25rem .25rem .25rem .25rem;
   }
   .hosts-chip-remove {
     border: none; background: transparent; padding: 0 .5rem 0 .25rem;
-    color: #7e8299; cursor: pointer; line-height: 1;
+    color: var(--bs-gray-600); cursor: pointer; line-height: 1;
   }
   .hosts-chip-remove:hover { color: #f1416c; }
   /* Excluido (prioridad 0): sigue en la lista, pero se ve que no está jugando. */
@@ -108,7 +109,7 @@
         <h2 class="fw-semibold mb-0 d-flex align-items-center gap-3 flex-wrap">
             {% if object %}Editar: {{ object.nombre }}{% else %}Nuevo tipo de evento{% endif %}
             {% if object and request.user.es_admin %}
-            <span class="badge fs-8 fw-bold" style="background:#eaf2ff;color:#006BFF;">ID {{ object.id }}</span>
+            <span class="badge fs-8 fw-bold" style="background:var(--cx-acento-suave);color:var(--cx-acento);">ID {{ object.id }}</span>
             {% endif %}
         </h2>
         <span class="text-muted fs-7">
@@ -198,7 +199,7 @@
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2">
                                 Incremento de inicio
-                                <i class="bi bi-info-circle et-info"
+                                <i class="bi bi-info-circle u-info"
                                    title="Si son 30 min, los huecos salen a las 9:00, 9:30, 10:00… aunque el evento dure otra cosa."></i>
                             </label>
                             <select name="incremento_inicio_minutos"
@@ -214,7 +215,7 @@
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="et-buffer-antes">
                                 Buffer antes (min)
-                                <i class="bi bi-info-circle et-info"
+                                <i class="bi bi-info-circle u-info"
                                    title="Minutos que se bloquean justo antes de la reserva para no encadenar reuniones."></i>
                             </label>
                             <input type="number" name="buffer_antes_minutos" id="et-buffer-antes" min="0"
@@ -224,7 +225,7 @@
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="et-buffer-despues">
                                 Buffer después (min)
-                                <i class="bi bi-info-circle et-info"
+                                <i class="bi bi-info-circle u-info"
                                    title="Minutos que se bloquean justo después de la reserva."></i>
                             </label>
                             <input type="number" name="buffer_despues_minutos" id="et-buffer-despues" min="0"
@@ -237,7 +238,7 @@
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2">
                                 Aviso mínimo
-                                <i class="bi bi-info-circle et-info"
+                                <i class="bi bi-info-circle u-info"
                                    title="Cuánto tiempo antes tiene que reservarse como mínimo."></i>
                             </label>
                             <select name="aviso_minimo_minutos"
@@ -251,7 +252,7 @@
                             <label class="form-label fw-semibold fs-7 d-flex align-items-center justify-content-between mb-2">
                                 <span class="required d-flex align-items-center gap-2">
                                     Rango máximo
-                                    <i class="bi bi-info-circle et-info"
+                                    <i class="bi bi-info-circle u-info"
                                        title="Días rodantes: siempre los próximos N días. Rango de fechas: solo entre dos fechas concretas."></i>
                                 </span>
                                 <span class="form-check form-check-custom form-check-solid form-switch m-0">
@@ -308,7 +309,7 @@
                 <div class="u-seccion-body">
                     <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="gcal_palabras_ignorar">
                         Reglas de disponibilidad (libre / ocupado)
-                        <i class="bi bi-info-circle et-info"
+                        <i class="bi bi-info-circle u-info"
                            title="Una por línea. Si un evento de Google Calendar lleva alguna de estas palabras en el título, no bloquea: se puede agendar encima (máximo 2 por hora). Al quitársela, vuelve a bloquear. La app nunca añade la palabra por su cuenta: si quieres que las reservas de este tipo se pisen entre sí, ponla en el nombre del tipo de evento (ej. 🔓 Clase de prueba)."></i>
                     </label>
                     <textarea name="gcal_palabras_ignorar" id="gcal_palabras_ignorar" rows="3"
@@ -366,7 +367,7 @@
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="confirmacion_tipo">
                                 Redirección post-reserva
-                                <i class="bi bi-info-circle et-info"
+                                <i class="bi bi-info-circle u-info"
                                    title="Página de confirmación: la pantalla con los datos de la reserva. URL personalizada: un path interno de la app."></i>
                             </label>
                             <select class="form-select" name="confirmacion_tipo" id="confirmacion_tipo">
@@ -390,7 +391,7 @@
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="crm_destino">
                                 Destino en el CRM
-                                <i class="bi bi-info-circle et-info"
+                                <i class="bi bi-info-circle u-info"
                                    title="A qué tabla del CRM se manda la reserva. Schedule además dispara las conversiones (redes, ActiveCampaign, Respond.io)."></i>
                             </label>
                             <select class="form-select" name="crm_destino" id="crm_destino">

@@ -1,0 +1,58 @@
+/* Paleta del panel: un único sitio donde viven los colores de los dos temas.
+   Metronic marca el tema activo con data-theme en el <html>; aquí solo se
+   redefinen los valores. Se carga en layout/panel.html, así que estas
+   variables están disponibles en todas las páginas del panel. */
+
+:root {
+    /* Hace que los controles nativos (hora, fecha, selects, barras de scroll)
+       se pinten con el tema correcto en vez de en blanco siempre. */
+    color-scheme: light;
+
+    --cx-superficie: #ffffff;      /* fondo de tarjetas y bloques */
+    --cx-borde: #eef1f5;
+    --cx-borde-suave: #e6eaf0;
+    --cx-borde-hover: #b9d4ff;
+    --cx-acento: #006BFF;
+    --cx-acento-suave: #eaf2ff;    /* fondo del número de sección */
+    --cx-acento-seleccion: #f5f9ff;
+    --cx-icono-bg: #f2f5f9;
+    --cx-icono: #6c7a91;
+    --cx-texto-fuerte: #1a1a2e;
+    --cx-google-bg: #e8f0fe;
+    --cx-google-texto: #1a73e8;
+    --cx-info-bg: #f5f9ff;
+    --cx-info-borde: #dbe8ff;
+    --cx-morado-bg: #f7f4ff;
+    --cx-morado-borde: #e4dcff;
+    --cx-ayuda: #b5bcc9;
+}
+
+[data-theme="dark"] {
+    color-scheme: dark;
+
+    --cx-superficie: #1e1e2d;
+    --cx-borde: #2b2b40;
+    --cx-borde-suave: #2b2b40;
+    --cx-borde-hover: #3699ff;
+    --cx-acento: #3699ff;
+    --cx-acento-suave: #1c2b41;
+    --cx-acento-seleccion: #1b2337;
+    --cx-icono-bg: #2b2b40;
+    --cx-icono: #92929f;
+    --cx-texto-fuerte: #ffffff;
+    --cx-google-bg: #1c2b41;
+    --cx-google-texto: #8ab4f8;
+    --cx-info-bg: #1b2337;
+    --cx-info-borde: #2b3a55;
+    --cx-morado-bg: #241f38;
+    --cx-morado-borde: #3a2f5b;
+    --cx-ayuda: #6d6d80;
+}
+
+/* Botón que abre las horas de la reserva (listas de reservas y dashboard).
+   En oscuro, btn-light-primary deja el icono en azul sobre fondo azul oscuro y
+   no se ve; se fuerza blanco. El hover lo sigue pintando Metronic. */
+[data-theme="dark"] .tz-info-btn,
+[data-theme="dark"] .tz-info-btn i {
+    color: #ffffff;
+}

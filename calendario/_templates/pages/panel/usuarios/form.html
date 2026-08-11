@@ -218,8 +218,8 @@
                 </div>
 
                 {% if not object %}
-                <div class="d-flex gap-3 p-4 mt-4 rounded" style="background:#f5f9ff; border:1px solid #dbe8ff;">
-                    <i class="bi bi-google fs-4" style="color:#006BFF;"></i>
+                <div class="d-flex gap-3 p-4 mt-4 rounded u-aviso">
+                    <i class="bi bi-google fs-4" style="color:var(--cx-acento);"></i>
                     <div>
                         <div class="fw-semibold fs-7 text-gray-900">Sin contraseña</div>
                         <div class="text-muted fs-8">
@@ -231,7 +231,7 @@
                 {% endif %}
 
                 {% if magic_login_token %}
-                <div class="p-4 mt-4 rounded" style="background:#f7f4ff; border:1px solid #e4dcff;">
+                <div class="p-4 mt-4 rounded u-aviso-morado">
                     <div class="fw-semibold fs-7 text-gray-900 mb-1">Entrar como este usuario</div>
                     <div class="text-muted fs-8 mb-3">El enlace vale 1 hora y funciona en cualquier navegador.</div>
                     <button type="button" class="btn btn-sm w-100"
