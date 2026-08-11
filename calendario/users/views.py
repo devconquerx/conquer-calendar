@@ -4,6 +4,7 @@ from django.contrib.auth import login as auth_login, logout as auth_logout, upda
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import signing
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
@@ -135,10 +136,17 @@ class UsuarioListView(RequierePermisoMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().prefetch_related('roles_asignados__rol')
+        q = self.request.GET.get('q', '').strip()
         dominio = self.request.GET.get('dominio', '').strip()
         estado = self.request.GET.get('estado', '').strip()
         tipo = self.request.GET.get('tipo', '').strip()
         creacion = self.request.GET.get('creacion', '').strip()
+        for termino in q.split():
+            qs = qs.filter(
+                Q(email__icontains=termino)
+                | Q(first_name__icontains=termino)
+                | Q(last_name__icontains=termino)
+            )
         if dominio:
             qs = qs.filter(email__iendswith=f'@{dominio}')
         if estado == 'activo':
@@ -163,6 +171,7 @@ class UsuarioListView(RequierePermisoMixin, ListView):
         )
         dominio_set = sorted({e.split('@')[1] for e in dominios if '@' in e})
         ctx['dominios'] = dominio_set
+        ctx['filtro_q'] = self.request.GET.get('q', '')
         ctx['filtro_dominio'] = self.request.GET.get('dominio', '')
         ctx['filtro_estado'] = self.request.GET.get('estado', '')
         ctx['filtro_tipo'] = self.request.GET.get('tipo', '')

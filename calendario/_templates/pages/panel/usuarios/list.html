@@ -19,42 +19,59 @@
 
     {# Filtros #}
     <div class="card-body pb-0">
-        <form method="get" class="d-flex flex-wrap gap-3 align-items-end">
-            <div>
-                <label class="form-label fs-7 fw-semibold text-muted mb-1">Dominio</label>
-                <select name="dominio" class="form-select form-select-sm" style="min-width:200px;" onchange="this.form.submit()">
-                    <option value="">Todos los dominios</option>
-                    {% for d in dominios %}
-                    <option value="{{ d }}" {% if filtro_dominio == d %}selected{% endif %}>@{{ d }}</option>
-                    {% endfor %}
-                </select>
+        <form method="get" class="d-flex flex-wrap gap-4 align-items-center">
+            <div style="width:240px;">
+                <label class="form-label fs-7 fw-semibold text-muted mb-1">Buscar</label>
+                <div class="position-relative">
+                    <i class="bi bi-search position-absolute" style="left:10px; top:50%; transform:translateY(-50%); color:#9aa3af; font-size:12px;"></i>
+                    <input type="search" name="q" class="form-control form-control-sm w-100"
+                           placeholder="Correo o nombre..." value="{{ filtro_q }}"
+                           style="padding-left:30px;">
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary w-100 mt-4">
+                    <i class="bi bi-search me-1"></i>Buscar
+                </button>
             </div>
-            <div>
-                <label class="form-label fs-7 fw-semibold text-muted mb-1">Estado</label>
-                <select name="estado" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">Todos</option>
-                    <option value="activo" {% if filtro_estado == 'activo' %}selected{% endif %}>Activos</option>
-                    <option value="inactivo" {% if filtro_estado == 'inactivo' %}selected{% endif %}>Inactivos</option>
-                </select>
+
+            {# Filtros en 2 columnas: dominio/creación y estado/tipo #}
+            <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.25rem 1rem;">
+                <div>
+                    <label class="form-label fs-7 fw-semibold text-muted mb-1">Dominio</label>
+                    <select name="dominio" class="form-select form-select-sm" style="min-width:190px;" onchange="this.form.submit()">
+                        <option value="">Todos los dominios</option>
+                        {% for d in dominios %}
+                        <option value="{{ d }}" {% if filtro_dominio == d %}selected{% endif %}>@{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label fs-7 fw-semibold text-muted mb-1">Estado</label>
+                    <select name="estado" class="form-select form-select-sm" style="min-width:190px;" onchange="this.form.submit()">
+                        <option value="">Todos</option>
+                        <option value="activo" {% if filtro_estado == 'activo' %}selected{% endif %}>Activos</option>
+                        <option value="inactivo" {% if filtro_estado == 'inactivo' %}selected{% endif %}>Inactivos</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label fs-7 fw-semibold text-muted mb-1">Creación</label>
+                    <select name="creacion" class="form-select form-select-sm" style="min-width:190px;" onchange="this.form.submit()">
+                        <option value="" {% if not filtro_creacion %}selected{% endif %}>Por defecto</option>
+                        <option value="antiguos" {% if filtro_creacion == 'antiguos' %}selected{% endif %}>Más antiguos primero</option>
+                        <option value="recientes" {% if filtro_creacion == 'recientes' %}selected{% endif %}>Más recientes primero</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label fs-7 fw-semibold text-muted mb-1">Tipo</label>
+                    <select name="tipo" class="form-select form-select-sm" style="min-width:190px;" onchange="this.form.submit()">
+                        <option value="" {% if not filtro_tipo %}selected{% endif %}>Todos</option>
+                        <option value="host" {% if filtro_tipo == 'host' %}selected{% endif %}>Hosts</option>
+                        <option value="admin" {% if filtro_tipo == 'admin' %}selected{% endif %}>Administradores</option>
+                    </select>
+                </div>
             </div>
+
+            {% if filtro_q or filtro_dominio or filtro_estado or filtro_tipo or filtro_creacion %}
             <div>
-                <label class="form-label fs-7 fw-semibold text-muted mb-1">Tipo</label>
-                <select name="tipo" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="" {% if not filtro_tipo %}selected{% endif %}>Todos</option>
-                    <option value="host" {% if filtro_tipo == 'host' %}selected{% endif %}>Hosts</option>
-                    <option value="admin" {% if filtro_tipo == 'admin' %}selected{% endif %}>Administradores</option>
-                </select>
-            </div>
-            <div>
-                <label class="form-label fs-7 fw-semibold text-muted mb-1">Creación</label>
-                <select name="creacion" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="" {% if not filtro_creacion %}selected{% endif %}>Por defecto</option>
-                    <option value="antiguos" {% if filtro_creacion == 'antiguos' %}selected{% endif %}>Más antiguos primero</option>
-                    <option value="recientes" {% if filtro_creacion == 'recientes' %}selected{% endif %}>Más recientes primero</option>
-                </select>
-            </div>
-            {% if filtro_dominio or filtro_estado or filtro_tipo or filtro_creacion %}
-            <div class="align-self-end">
                 <a href="{% url 'panel_usuarios:usuario_list' %}" class="btn btn-sm btn-light">
                     <i class="bi bi-x-lg me-1"></i>Limpiar
                 </a>
@@ -172,16 +189,16 @@
         <div class="d-flex justify-content-between align-items-center pt-4">
             <span class="text-muted fs-7">
                 Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-                {% if filtro_dominio or filtro_estado or filtro_tipo or filtro_creacion %}
+                {% if filtro_q or filtro_dominio or filtro_estado or filtro_tipo or filtro_creacion %}
                 · filtrado
                 {% endif %}
             </span>
             <div class="d-flex gap-2">
                 {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if filtro_dominio %}&dominio={{ filtro_dominio }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}{% if filtro_creacion %}&creacion={{ filtro_creacion }}{% endif %}" class="btn btn-sm btn-light">Anterior</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if filtro_q %}&q={{ filtro_q|urlencode }}{% endif %}{% if filtro_dominio %}&dominio={{ filtro_dominio }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}{% if filtro_creacion %}&creacion={{ filtro_creacion }}{% endif %}" class="btn btn-sm btn-light">Anterior</a>
                 {% endif %}
                 {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if filtro_dominio %}&dominio={{ filtro_dominio }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}{% if filtro_creacion %}&creacion={{ filtro_creacion }}{% endif %}" class="btn btn-sm btn-light">Siguiente</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if filtro_q %}&q={{ filtro_q|urlencode }}{% endif %}{% if filtro_dominio %}&dominio={{ filtro_dominio }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}{% if filtro_creacion %}&creacion={{ filtro_creacion }}{% endif %}" class="btn btn-sm btn-light">Siguiente</a>
                 {% endif %}
             </div>
         </div>
