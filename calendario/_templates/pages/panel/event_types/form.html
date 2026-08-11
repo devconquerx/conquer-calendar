@@ -3,11 +3,28 @@
 
 {% block title %}{% if object %}Editar tipo de evento{% else %}Nuevo tipo de evento{% endif %} · {% endblock %}
 
-{% block content %}
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/panel-form.css' %}">
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 <style>
+  /* Icono de ayuda: el detalle largo vive en el tooltip, no en la página */
+  .et-info { color: #b5bcc9; cursor: help; font-size: 13px; }
+  .et-info:hover { color: #006BFF; }
 
-  /* Collapsible section animation */
+  /* Fila de opción con interruptor */
+  .et-switch { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
+  .et-switch + .et-switch { border-top: 1px dashed #eef1f5; }
+
+  /* Cabecera de la vista previa: barra de color como en el listado */
+  .et-preview-top { height: 6px; background: #006BFF; }
+  .et-enlace {
+    display: block; font-size: 11px; color: #6b7280; background: #f7f9fc;
+    border: 1px solid #eef1f5; border-radius: 8px; padding: 8px 10px;
+    word-break: break-all; text-align: left;
+  }
+
+  /* Sección de organizadores, plegable con el interruptor de equipo */
   .et-collapsible {
     overflow: hidden;
     max-height: 0;
@@ -20,14 +37,14 @@
     opacity: 1;
     transform: translateY(0);
   }
-  /* Once the open transition ends, lift the clip and drop the transform so
-     the popover can overflow AND escape the stacking context. */
+  /* Al terminar la apertura se quita el clip y el transform para que el
+     popover pueda desbordar Y salir del stacking context. */
   .et-collapsible.is-open.is-settled {
     overflow: visible;
     transform: none;
   }
 
-  /* Minimal "ghost" button — Calendly-style */
+  /* Botón "fantasma" minimalista — estilo Calendly */
   .btn-ghost {
     display: inline-flex;
     align-items: center;
@@ -46,11 +63,13 @@
   .btn-ghost:hover { border-color: #9ca3af; color: #374151; background-color: #fafafa; }
   .btn-ghost:focus { outline: none; box-shadow: 0 0 0 3px rgba(156,163,175,.18); }
   .btn-ghost .ki-outline { font-size: 14px; color: inherit; }
+
   .ql-editor { min-height: 140px; font-size: 14px; line-height: 1.6; }
   .ql-toolbar.ql-snow { border-radius: 0.475rem 0.475rem 0 0; border-color: #e1e3ea; }
   .ql-container.ql-snow { border-radius: 0 0 0.475rem 0.475rem; border-color: #e1e3ea; }
   #descripcion-editor.is-invalid + .ql-toolbar.ql-snow,
   #descripcion-editor.is-invalid .ql-container.ql-snow { border-color: var(--bs-danger); }
+
   .hosts-row { border-radius: .425rem; transition: background-color .15s; }
   .hosts-row:hover { background-color: #f9f9f9; }
   .hosts-row.is-hidden { display: none !important; }
@@ -75,434 +94,589 @@
   .hosts-chip.is-excluido { opacity: .55; }
   .prioridad-fila.is-excluido .prioridad-nombre { text-decoration: line-through; }
 </style>
-<div class="card shadow-sm" style="max-width: 760px;">
-    <div class="card-header border-0 pt-6">
-        <div class="card-title">
-            <h3 class="fw-bold mb-0 d-flex align-items-center gap-3 flex-wrap">
-                {% if object %}Editar: {{ object.nombre }}{% else %}Nuevo tipo de evento{% endif %}
-                {% if object and request.user.es_admin %}
-                <span style="background:#0041ff;color:#fff;font-size:16px;font-weight:700;padding:5px 14px;border-radius:6px;letter-spacing:.03em;">
-                    ID {{ object.id }}
-                </span>
-                {% endif %}
-            </h3>
-        </div>
+{% endblock css %}
+
+{% block content %}
+
+<!--begin::Cabecera-->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-6">
+    <div>
+        <a href="{% url 'panel_event_types:event_type_list' %}"
+           class="text-muted fs-8 text-hover-primary d-inline-flex align-items-center gap-1 mb-1">
+            <i class="bi bi-arrow-left"></i> Tipos de evento
+        </a>
+        <h2 class="fw-semibold mb-0 d-flex align-items-center gap-3 flex-wrap">
+            {% if object %}Editar: {{ object.nombre }}{% else %}Nuevo tipo de evento{% endif %}
+            {% if object and request.user.es_admin %}
+            <span class="badge fs-8 fw-bold" style="background:#eaf2ff;color:#006BFF;">ID {{ object.id }}</span>
+            {% endif %}
+        </h2>
+        <span class="text-muted fs-7">
+            {% if object %}Ajusta cómo y cuándo puede reservarse.{% else %}Define cómo y cuándo puede reservarse.{% endif %}
+        </span>
     </div>
-    <div class="card-body pt-4">
+</div>
+<!--end::Cabecera-->
 
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger d-flex align-items-center p-5 mb-8">
-            <i class="ki-outline ki-shield-cross fs-2hx text-danger me-4"></i>
-            <div class="d-flex flex-column">
-                {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
-            </div>
-        </div>
-        {% endif %}
+{% if readonly %}
+<div class="alert alert-info d-flex align-items-center gap-2 mb-6">
+    <i class="bi bi-eye fs-4 text-info"></i>
+    <span>Este evento lo creó <strong>{{ object.host.get_full_name }}</strong>. Solo puedes verlo.</span>
+</div>
+{% endif %}
 
-        {% if readonly %}
-        <div class="alert alert-info d-flex align-items-center gap-2 mb-6">
-            <i class="ki-duotone ki-information fs-2 text-info"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
-            <span>Este evento fue creado por <strong>{{ object.host.get_full_name }}</strong>. Solo puedes verlo.</span>
-        </div>
-        {% endif %}
+{% if form.non_field_errors %}
+<div class="alert alert-danger d-flex align-items-center p-4 mb-6">
+    <i class="bi bi-shield-exclamation fs-3 text-danger me-3"></i>
+    <div class="d-flex flex-column">
+        {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+    </div>
+</div>
+{% endif %}
 
-        <form method="post">
-            {% csrf_token %}
-        <fieldset {% if readonly %}disabled{% endif %} style="all:unset;display:contents">
+<form method="post" id="form-event-type">
+    {% csrf_token %}
+<fieldset {% if readonly %}disabled{% endif %} style="all:unset;display:contents">
+    <div class="row g-6">
 
-            <!--begin::Nombre-->
-            <div class="fv-row mb-7">
-                <label class="form-label fw-semibold required">Nombre</label>
-                <input type="text" name="nombre"
-                       class="form-control form-control-lg{% if form.nombre.errors %} is-invalid{% endif %}"
-                       value="{{ form.nombre.value|default:'' }}" />
-                {% if form.nombre.errors %}
-                <div class="invalid-feedback">{{ form.nombre.errors|join:", " }}</div>
-                {% endif %}
-            </div>
-            <!--end::Nombre-->
+        <!--begin::Columna del formulario-->
+        <div class="col-lg-7 col-xl-8">
 
-            <!--begin::Descripcion-->
-            <div class="fv-row mb-7">
-                <label class="form-label fw-semibold">Descripción</label>
-                <div id="descripcion-editor"></div>
-                <textarea name="descripcion" id="descripcion-input" hidden>{{ form.descripcion.value|default:'' }}</textarea>
-                {% if form.descripcion.errors %}
-                <div class="invalid-feedback d-block">{{ form.descripcion.errors|join:", " }}</div>
-                {% endif %}
-            </div>
-            <!--end::Descripcion-->
-
-            <!--begin::Row tiempos-->
-            <div class="row mb-7">
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold required">Duración (min)</label>
-                    <input type="number" name="duracion_minutos" min="1"
-                           class="form-control form-control-lg{% if form.duracion_minutos.errors %} is-invalid{% endif %}"
-                           value="{{ form.duracion_minutos.value|default_if_none:'' }}" />
-                    {% if form.duracion_minutos.errors %}
-                    <div class="invalid-feedback">{{ form.duracion_minutos.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold">Incremento de inicio</label>
-                    <select name="incremento_inicio_minutos"
-                            class="form-select form-select-lg{% if form.incremento_inicio_minutos.errors %} is-invalid{% endif %}">
-                      {% for val, label in form.incremento_inicio_minutos.field.choices %}
-                      <option value="{{ val }}"{% if form.incremento_inicio_minutos.value|stringformat:"s" == val|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
-                      {% endfor %}
-                    </select>
-                    {% if form.incremento_inicio_minutos.errors %}
-                    <div class="invalid-feedback">{{ form.incremento_inicio_minutos.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold">Buffer antes (min)</label>
-                    <input type="number" name="buffer_antes_minutos" min="0"
-                           class="form-control form-control-lg{% if form.buffer_antes_minutos.errors %} is-invalid{% endif %}"
-                           value="{{ form.buffer_antes_minutos.value|default_if_none:'' }}" />
-                    {% if form.buffer_antes_minutos.errors %}
-                    <div class="invalid-feedback">{{ form.buffer_antes_minutos.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold">Buffer después (min)</label>
-                    <input type="number" name="buffer_despues_minutos" min="0"
-                           class="form-control form-control-lg{% if form.buffer_despues_minutos.errors %} is-invalid{% endif %}"
-                           value="{{ form.buffer_despues_minutos.value|default_if_none:'' }}" />
-                    {% if form.buffer_despues_minutos.errors %}
-                    <div class="invalid-feedback">{{ form.buffer_despues_minutos.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-            </div>
-            <!--end::Row tiempos-->
-
-            <!--begin::Row aviso + rango + activo-->
-            <div class="row mb-7">
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold">Aviso mínimo</label>
-                    <select name="aviso_minimo_minutos"
-                            class="form-select form-select-lg{% if form.aviso_minimo_minutos.errors %} is-invalid{% endif %}">
-                      {% for val, label in form.aviso_minimo_minutos.field.choices %}
-                      <option value="{{ val }}"{% if form.aviso_minimo_minutos.value|stringformat:"s" == val|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
-                      {% endfor %}
-                    </select>
-                    {% if form.aviso_minimo_minutos.errors %}
-                    <div class="invalid-feedback">{{ form.aviso_minimo_minutos.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold d-flex align-items-center justify-content-between mb-2">
-                        <span class="required">Rango máximo</span>
-                        <span class="form-check form-check-custom form-check-sm m-0">
-                            <input class="form-check-input" type="checkbox"
-                                   name="rango_por_fechas" id="rango_por_fechas"
-                                   {% if form.rango_por_fechas.value %}checked{% endif %} />
-                            <label class="form-check-label fw-semibold ms-2 fs-8" for="rango_por_fechas">
-                                Rango de fechas
-                            </label>
-                        </span>
-                    </label>
-
-                    <!-- Los dos controles ocupan el mismo hueco: se ve el que toque. -->
-                    <div id="rango-dias-campo" class="input-group input-group-lg">
-                        <input type="number" name="aviso_maximo_dias" min="1" max="365"
-                               id="aviso_maximo_dias"
-                               class="form-control form-control-lg{% if form.aviso_maximo_dias.errors %} is-invalid{% endif %}"
-                               value="{{ form.aviso_maximo_dias.value|default_if_none:60 }}" />
-                        <span class="input-group-text">días</span>
-                    </div>
-
-                    <input type="text" id="rango_fechas_display" autocomplete="off"
-                           class="form-control form-control-lg d-none{% if form.rango_fecha_inicio.errors or form.rango_fecha_fin.errors %} is-invalid{% endif %}"
-                           placeholder="Elige el rango" />
-                    <input type="hidden" name="rango_fecha_inicio" id="rango_fecha_inicio"
-                           value="{{ form.rango_fecha_inicio.value|default_if_none:''|stringformat:'s'|slice:':10' }}" />
-                    <input type="hidden" name="rango_fecha_fin" id="rango_fecha_fin"
-                           value="{{ form.rango_fecha_fin.value|default_if_none:''|stringformat:'s'|slice:':10' }}" />
-
-                    {% if form.aviso_maximo_dias.errors %}
-                    <div class="text-danger fs-8 mt-1">{{ form.aviso_maximo_dias.errors|join:", " }}</div>
-                    {% endif %}
-                    {% if form.rango_fecha_inicio.errors or form.rango_fecha_fin.errors %}
-                    <div class="text-danger fs-8 mt-1">
-                        {{ form.rango_fecha_inicio.errors|join:", " }}
-                        {{ form.rango_fecha_fin.errors|join:", " }}
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4 d-flex align-items-end pb-2">
-                    <div class="form-check form-check-custom form-check-solid form-check-lg">
-                        <input class="form-check-input" type="checkbox" name="activo" id="activo"
-                               {% if form.activo.value %}checked{% endif %} />
-                        <label class="form-check-label fw-semibold ms-3" for="activo">Activo</label>
+            <!--begin::Lo básico-->
+            <div class="u-seccion">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num">1</span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Lo básico</div>
+                        <div class="text-muted fs-8">Lo que ve el invitado antes de reservar.</div>
                     </div>
                 </div>
-            </div>
-            <!--end::Row aviso + rango + activo-->
-
-            <!--begin::Destino CRM-->
-            <div class="d-flex align-items-start gap-4 mb-7">
-                <div style="min-width: 220px;">
-                    <label class="form-label fw-semibold" for="crm_destino">Destino en el CRM</label>
-                    <select class="form-select" name="crm_destino" id="crm_destino">
-                        <option value="none" {% if not form.crm_destino.value or form.crm_destino.value == 'none' %}selected{% endif %}>No enviar al CRM</option>
-                        <option value="onboarding" {% if form.crm_destino.value == 'onboarding' %}selected{% endif %}>Onboarding</option>
-                        <option value="schedule" {% if form.crm_destino.value == 'schedule' %}selected{% endif %}>Schedule (llamada)</option>
-                    </select>
-                </div>
-                <div class="text-muted fs-7 mt-8" style="max-width: 480px;">
-                    A qué tabla del CRM se envía la reserva al agendarse.
-                    <b>Schedule</b> además dispara las conversiones (redes, ActiveCampaign, Respond.io).
-                </div>
-            </div>
-            <!--end::Destino CRM-->
-
-            <!--begin::Único por invitado-->
-            <div class="d-flex align-items-start gap-4 mb-7">
-                <div class="form-check form-check-custom form-check-solid form-check-lg mt-1">
-                    <input class="form-check-input" type="checkbox" name="unico_por_invitado" id="unico_por_invitado"
-                           {% if form.unico_por_invitado.value %}checked{% endif %} />
-                    <label class="form-check-label fw-semibold ms-3" for="unico_por_invitado">Solo una reserva por invitado</label>
-                </div>
-                <div class="text-muted fs-7" style="max-width: 480px;">
-                    Si está activo, un mismo email no podrá reservar este evento dos veces.
-                    Si ya tiene una reserva futura, se le pedirá confirmación para cancelar
-                    la anterior y crear una nueva.
-                </div>
-            </div>
-            <!--end::Único por invitado-->
-
-            <!--begin::Caja de comentarios-->
-            <div class="d-flex align-items-start gap-4 mb-7">
-                <div class="form-check form-check-custom form-check-solid form-check-lg mt-1">
-                    <input class="form-check-input" type="checkbox" name="mostrar_caja_comentarios" id="mostrar_caja_comentarios"
-                           {% if form.mostrar_caja_comentarios.value %}checked{% endif %} />
-                    <label class="form-check-label fw-semibold ms-3" for="mostrar_caja_comentarios">Caja de comentarios</label>
-                </div>
-                <div class="text-muted fs-7" style="max-width: 480px;">
-                    Muestra el campo <b>Notas (opcional)</b> en el formulario de reserva.
-                    Si lo desmarcas, la caja desaparece para este evento, tanto en la
-                    página pública como en los funnels.
-                </div>
-            </div>
-            <!--end::Caja de comentarios-->
-
-            <!--begin::Reglas free/busy (palabras que liberan el horario)-->
-            <div class="separator separator-dashed my-8"></div>
-            <div class="fv-row mb-7">
-                <label class="form-label fw-semibold" for="gcal_palabras_ignorar">
-                    Reglas de disponibilidad (libre / ocupado)
-                </label>
-                <textarea name="gcal_palabras_ignorar" id="gcal_palabras_ignorar" rows="3"
-                          class="form-control form-control-lg{% if form.gcal_palabras_ignorar.errors %} is-invalid{% endif %}">{{ form.gcal_palabras_ignorar.value|default:'' }}</textarea>
-                {% if form.gcal_palabras_ignorar.errors %}
-                <div class="invalid-feedback">{{ form.gcal_palabras_ignorar.errors|join:", " }}</div>
-                {% endif %}
-                <div class="text-muted fs-7 mt-1">
-                    Una por línea. Si un evento de Google Calendar contiene alguna de estas
-                    palabras o emojis en su <b>título</b>, no bloqueará los horarios: se podrá
-                    agendar encima (doble booking). Al quitarle la palabra al evento en Google
-                    Calendar, vuelve a bloquear.
-                    <br>
-                    La app <b>nunca</b> añade la palabra al título. ¿Quieres que las reservas de
-                    este tipo de evento se puedan pisar entre sí? Pon la palabra en el
-                    <b>nombre del tipo de evento</b> (ej. <code>🔓 Clase de prueba</code>): así los
-                    eventos que se creen ya la llevan. Máximo 2 reservas por horario.
-                </div>
-            </div>
-            <!--end::Reglas free/busy-->
-
-            <!--begin::Confirmación post-reserva-->
-            <div class="separator separator-dashed my-8"></div>
-            <div class="d-flex align-items-start gap-4 mb-7">
-                <div style="min-width: 220px;">
-                    <label class="form-label fw-semibold" for="confirmacion_tipo">Redirección post-reserva</label>
-                    <select class="form-select" name="confirmacion_tipo" id="confirmacion_tipo">
-                        <option value="default" {% if not form.confirmacion_tipo.value or form.confirmacion_tipo.value == 'default' %}selected{% endif %}>Página de confirmación</option>
-                        <option value="url" {% if form.confirmacion_tipo.value == 'url' %}selected{% endif %}>URL personalizada</option>
-                    </select>
-                </div>
-                <div class="text-muted fs-7 mt-8" style="max-width: 480px;">
-                    A dónde se lleva al invitado después de reservar.
-                    <b>Página de confirmación</b> muestra los datos de la reserva.
-                    <b>URL personalizada</b> redirige a un path interno de la app.
-                </div>
-            </div>
-            <div class="fv-row mb-7" id="confirmacion-url-row">
-                <label class="form-label fw-semibold">Path de confirmación</label>
-                <input type="text" name="confirmacion_url" id="confirmacion_url"
-                       class="form-control form-control-lg{% if form.confirmacion_url.errors %} is-invalid{% endif %}"
-                       value="{{ form.confirmacion_url.value|default:'' }}"
-                       placeholder="/ruta/confirmacion/" />
-                {% if form.confirmacion_url.errors %}
-                <div class="invalid-feedback">{{ form.confirmacion_url.errors|join:", " }}</div>
-                {% endif %}
-                <div class="text-muted fs-7 mt-1">Path interno (ej: /conquer-blocks/confirmacion-llamada-latam/). Solo aplica si el tipo es "URL personalizada".</div>
-            </div>
-            <!--end::Confirmación post-reserva-->
-
-            <!--begin::Evento equipo-->
-            <div class="separator separator-dashed my-8"></div>
-            <div class="d-flex align-items-start gap-4 mb-8">
-                <div class="form-check form-check-custom form-check-solid form-check-lg mt-1">
-                    <input class="form-check-input" type="checkbox" name="es_equipo" id="es_equipo"
-                           {% if form.es_equipo.value %}checked{% endif %} />
-                    <label class="form-check-label fw-semibold ms-3" for="es_equipo">Evento de equipo</label>
-                </div>
-                <div class="text-muted fs-7" style="max-width: 480px;">
-                    Actívalo si varios hosts comparten este evento. Se generará un link único
-                    (<code>/e/…/</code>) y cada reserva se asignará automáticamente al host
-                    con menos carga (round-robin). Desactívalo para un evento personal con tu
-                    propio link.
-                </div>
-            </div>
-            <!--end::Evento equipo-->
-
-            <!--begin::Organizadores-->
-            <div id="organizadores-section" class="et-collapsible">
-            <div class="separator separator-dashed mt-8 mb-4"></div>
-            <div class="mb-8">
-                <div class="form-label fw-semibold mb-5 d-flex align-items-center justify-content-between">
-                    <span>Organizadores</span>
-                    <span class="d-flex align-items-center gap-3">
-                        <span class="text-muted fs-7" id="hosts-counter">0 seleccionados</span>
-                        {% if puede_prioridad %}
-                        <button type="button" class="btn btn-primary btn-sm py-1 px-3 fs-8 fw-semibold"
-                                id="prioridad-open">Configurar prioridad</button>
+                <div class="u-seccion-body">
+                    <div class="mb-5">
+                        <label class="form-label fw-semibold fs-7 required" for="et-nombre">Nombre</label>
+                        <input type="text" name="nombre" id="et-nombre"
+                               class="form-control{% if form.nombre.errors %} is-invalid{% endif %}"
+                               value="{{ form.nombre.value|default:'' }}"
+                               placeholder="Clase de prueba" />
+                        {% if form.nombre.errors %}
+                        <div class="invalid-feedback">{{ form.nombre.errors|join:", " }}</div>
                         {% endif %}
-                    </span>
+                    </div>
+
+                    <div>
+                        <label class="form-label fw-semibold fs-7">Descripción</label>
+                        <div id="descripcion-editor"></div>
+                        <textarea name="descripcion" id="descripcion-input" hidden>{{ form.descripcion.value|default:'' }}</textarea>
+                        {% if form.descripcion.errors %}
+                        <div class="invalid-feedback d-block">{{ form.descripcion.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!--end::Lo básico-->
+
+            <!--begin::Tiempos-->
+            <div class="u-seccion">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num">2</span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Duración y horarios</div>
+                        <div class="text-muted fs-8">Cuánto dura y con cuánta antelación se puede coger.</div>
+                    </div>
+                </div>
+                <div class="u-seccion-body">
+                    <div class="row g-4 mb-5">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7 required" for="et-duracion">Duración (min)</label>
+                            <input type="number" name="duracion_minutos" id="et-duracion" min="1"
+                                   class="form-control{% if form.duracion_minutos.errors %} is-invalid{% endif %}"
+                                   value="{{ form.duracion_minutos.value|default_if_none:'' }}" />
+                            {% if form.duracion_minutos.errors %}
+                            <div class="text-danger fs-8 mt-1">{{ form.duracion_minutos.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2">
+                                Incremento de inicio
+                                <i class="bi bi-info-circle et-info"
+                                   title="Si son 30 min, los huecos salen a las 9:00, 9:30, 10:00… aunque el evento dure otra cosa."></i>
+                            </label>
+                            <select name="incremento_inicio_minutos"
+                                    class="form-select{% if form.incremento_inicio_minutos.errors %} is-invalid{% endif %}">
+                              {% for val, label in form.incremento_inicio_minutos.field.choices %}
+                              <option value="{{ val }}"{% if form.incremento_inicio_minutos.value|stringformat:"s" == val|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
+                              {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-4 mb-5">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="et-buffer-antes">
+                                Buffer antes (min)
+                                <i class="bi bi-info-circle et-info"
+                                   title="Minutos que se bloquean justo antes de la reserva para no encadenar reuniones."></i>
+                            </label>
+                            <input type="number" name="buffer_antes_minutos" id="et-buffer-antes" min="0"
+                                   class="form-control{% if form.buffer_antes_minutos.errors %} is-invalid{% endif %}"
+                                   value="{{ form.buffer_antes_minutos.value|default_if_none:'' }}" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="et-buffer-despues">
+                                Buffer después (min)
+                                <i class="bi bi-info-circle et-info"
+                                   title="Minutos que se bloquean justo después de la reserva."></i>
+                            </label>
+                            <input type="number" name="buffer_despues_minutos" id="et-buffer-despues" min="0"
+                                   class="form-control{% if form.buffer_despues_minutos.errors %} is-invalid{% endif %}"
+                                   value="{{ form.buffer_despues_minutos.value|default_if_none:'' }}" />
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2">
+                                Aviso mínimo
+                                <i class="bi bi-info-circle et-info"
+                                   title="Cuánto tiempo antes tiene que reservarse como mínimo."></i>
+                            </label>
+                            <select name="aviso_minimo_minutos"
+                                    class="form-select{% if form.aviso_minimo_minutos.errors %} is-invalid{% endif %}">
+                              {% for val, label in form.aviso_minimo_minutos.field.choices %}
+                              <option value="{{ val }}"{% if form.aviso_minimo_minutos.value|stringformat:"s" == val|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
+                              {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7 d-flex align-items-center justify-content-between mb-2">
+                                <span class="required d-flex align-items-center gap-2">
+                                    Rango máximo
+                                    <i class="bi bi-info-circle et-info"
+                                       title="Días rodantes: siempre los próximos N días. Rango de fechas: solo entre dos fechas concretas."></i>
+                                </span>
+                                <span class="form-check form-check-custom form-check-solid form-switch m-0">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="rango_por_fechas" id="rango_por_fechas"
+                                           {% if form.rango_por_fechas.value %}checked{% endif %} />
+                                    <label class="form-check-label fw-semibold ms-2 fs-8" for="rango_por_fechas">
+                                        Rango de fechas
+                                    </label>
+                                </span>
+                            </label>
+
+                            <!-- Los dos controles ocupan el mismo hueco: se ve el que toque. -->
+                            <div id="rango-dias-campo" class="input-group">
+                                <input type="number" name="aviso_maximo_dias" min="1" max="365"
+                                       id="aviso_maximo_dias"
+                                       class="form-control{% if form.aviso_maximo_dias.errors %} is-invalid{% endif %}"
+                                       value="{{ form.aviso_maximo_dias.value|default_if_none:60 }}" />
+                                <span class="input-group-text">días</span>
+                            </div>
+
+                            <input type="text" id="rango_fechas_display" autocomplete="off"
+                                   class="form-control d-none{% if form.rango_fecha_inicio.errors or form.rango_fecha_fin.errors %} is-invalid{% endif %}"
+                                   placeholder="Elige el rango" />
+                            <input type="hidden" name="rango_fecha_inicio" id="rango_fecha_inicio"
+                                   value="{{ form.rango_fecha_inicio.value|default_if_none:''|stringformat:'s'|slice:':10' }}" />
+                            <input type="hidden" name="rango_fecha_fin" id="rango_fecha_fin"
+                                   value="{{ form.rango_fecha_fin.value|default_if_none:''|stringformat:'s'|slice:':10' }}" />
+
+                            {% if form.aviso_maximo_dias.errors %}
+                            <div class="text-danger fs-8 mt-1">{{ form.aviso_maximo_dias.errors|join:", " }}</div>
+                            {% endif %}
+                            {% if form.rango_fecha_inicio.errors or form.rango_fecha_fin.errors %}
+                            <div class="text-danger fs-8 mt-1">
+                                {{ form.rango_fecha_inicio.errors|join:", " }}
+                                {{ form.rango_fecha_fin.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--end::Tiempos-->
+
+            <!--begin::Avanzado-->
+            <div class="u-seccion">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num">3</span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Reglas de disponibilidad</div>
+                        <div class="text-muted fs-8">Palabras que hacen que un evento del calendario no bloquee.</div>
+                    </div>
+                </div>
+                <div class="u-seccion-body">
+                    <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="gcal_palabras_ignorar">
+                        Reglas de disponibilidad (libre / ocupado)
+                        <i class="bi bi-info-circle et-info"
+                           title="Una por línea. Si un evento de Google Calendar lleva alguna de estas palabras en el título, no bloquea: se puede agendar encima (máximo 2 por hora). Al quitársela, vuelve a bloquear. La app nunca añade la palabra por su cuenta: si quieres que las reservas de este tipo se pisen entre sí, ponla en el nombre del tipo de evento (ej. 🔓 Clase de prueba)."></i>
+                    </label>
+                    <textarea name="gcal_palabras_ignorar" id="gcal_palabras_ignorar" rows="3"
+                              class="form-control{% if form.gcal_palabras_ignorar.errors %} is-invalid{% endif %}"
+                              placeholder="🔓&#10;libre">{{ form.gcal_palabras_ignorar.value|default:'' }}</textarea>
+                    {% if form.gcal_palabras_ignorar.errors %}
+                    <div class="invalid-feedback">{{ form.gcal_palabras_ignorar.errors|join:", " }}</div>
+                    {% endif %}
+                    <div class="text-muted fs-8 mt-2">
+                        Una por línea. Para que las reservas de este evento se puedan pisar entre sí,
+                        pon la palabra en el <b>nombre del tipo de evento</b>.
+                    </div>
+                </div>
+            </div>
+            <!--end::Avanzado-->
+
+            <!--begin::Al reservar-->
+            <div class="u-seccion">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num">4</span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Al reservar</div>
+                        <div class="text-muted fs-8">Qué ve el invitado y a dónde va después.</div>
+                    </div>
+                </div>
+                <div class="u-seccion-body">
+
+                    <div class="et-switch">
+                        <div class="form-check form-check-custom form-check-solid form-switch mt-1">
+                            <input class="form-check-input" type="checkbox" name="unico_por_invitado" id="unico_por_invitado"
+                                   {% if form.unico_por_invitado.value %}checked{% endif %} />
+                        </div>
+                        <label class="cursor-pointer" for="unico_por_invitado">
+                            <span class="d-block fw-semibold fs-7 text-gray-900">Solo una reserva por invitado</span>
+                            <span class="d-block text-muted fs-8">
+                                Si ya tiene una reserva futura, se le pide cambiarla en vez de crear otra.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="et-switch">
+                        <div class="form-check form-check-custom form-check-solid form-switch mt-1">
+                            <input class="form-check-input" type="checkbox" name="mostrar_caja_comentarios" id="mostrar_caja_comentarios"
+                                   {% if form.mostrar_caja_comentarios.value %}checked{% endif %} />
+                        </div>
+                        <label class="cursor-pointer" for="mostrar_caja_comentarios">
+                            <span class="d-block fw-semibold fs-7 text-gray-900">Caja de comentarios</span>
+                            <span class="d-block text-muted fs-8">
+                                Muestra el campo <b>Notas</b> en el formulario de reserva.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="row g-4 mt-3">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="confirmacion_tipo">
+                                Redirección post-reserva
+                                <i class="bi bi-info-circle et-info"
+                                   title="Página de confirmación: la pantalla con los datos de la reserva. URL personalizada: un path interno de la app."></i>
+                            </label>
+                            <select class="form-select" name="confirmacion_tipo" id="confirmacion_tipo">
+                                <option value="default" {% if not form.confirmacion_tipo.value or form.confirmacion_tipo.value == 'default' %}selected{% endif %}>Página de confirmación</option>
+                                <option value="url" {% if form.confirmacion_tipo.value == 'url' %}selected{% endif %}>URL personalizada</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6" id="confirmacion-url-row">
+                            <label class="form-label fw-semibold fs-7" for="confirmacion_url">Path de confirmación</label>
+                            <input type="text" name="confirmacion_url" id="confirmacion_url"
+                                   class="form-control{% if form.confirmacion_url.errors %} is-invalid{% endif %}"
+                                   value="{{ form.confirmacion_url.value|default:'' }}"
+                                   placeholder="/ruta/confirmacion/" />
+                            {% if form.confirmacion_url.errors %}
+                            <div class="invalid-feedback">{{ form.confirmacion_url.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-4 mt-1">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="crm_destino">
+                                Destino en el CRM
+                                <i class="bi bi-info-circle et-info"
+                                   title="A qué tabla del CRM se manda la reserva. Schedule además dispara las conversiones (redes, ActiveCampaign, Respond.io)."></i>
+                            </label>
+                            <select class="form-select" name="crm_destino" id="crm_destino">
+                                <option value="none" {% if not form.crm_destino.value or form.crm_destino.value == 'none' %}selected{% endif %}>No enviar al CRM</option>
+                                <option value="onboarding" {% if form.crm_destino.value == 'onboarding' %}selected{% endif %}>Onboarding</option>
+                                <option value="schedule" {% if form.crm_destino.value == 'schedule' %}selected{% endif %}>Schedule (llamada)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--end::Al reservar-->
+
+
+        </div>
+        <!--end::Columna del formulario-->
+
+        <!--begin::Vista previa-->
+        <div class="col-lg-5 col-xl-4">
+            <div class="u-sticky">
+                <div class="u-preview shadow-sm">
+                    <div class="et-preview-top"></div>
+                    <div class="p-5">
+                        <div class="fw-semibold text-gray-900 fs-4" id="et-nombre-preview">Sin nombre</div>
+                        <div class="text-muted fs-7 mt-1">
+                            <i class="bi bi-clock me-1"></i><span id="et-duracion-preview">—</span>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <span class="badge u-badge-rol fs-8" id="et-tipo-badge">Individual</span>
+                            <span class="badge fs-8" id="et-estado-badge">Activo</span>
+                        </div>
+
+                        {% if object %}
+                        <div class="separator my-4"></div>
+                        <div class="text-muted fs-8 mb-1">Enlace público</div>
+                        <span class="et-enlace" id="et-enlace">{{ request.scheme }}://{{ request.get_host }}{% if object.slug_equipo %}/e/{{ object.slug_equipo }}/{% else %}/{{ object.host.slug }}/{{ object.slug }}/{% endif %}</span>
+                        <button type="button" class="btn btn-light btn-sm w-100 mt-2" id="et-copiar">
+                            <i class="bi bi-link-45deg me-1"></i><span>Copiar enlace</span>
+                        </button>
+                        {% endif %}
+
+                        <div class="separator my-4"></div>
+
+                        <div class="form-check form-check-custom form-check-solid form-switch">
+                            <input class="form-check-input" type="checkbox" name="activo" id="activo"
+                                   {% if form.activo.value %}checked{% endif %} />
+                            <label class="form-check-label fw-semibold fs-7 ms-3" for="activo">Activo</label>
+                        </div>
+                        <div class="text-muted fs-8 mt-1">Si lo apagas, nadie puede reservarlo.</div>
+                    </div>
                 </div>
 
-                <div id="hosts-selected-list" class="d-flex flex-wrap gap-2 mb-3"></div>
-                <div id="hosts-hidden-inputs"></div>
-
-                <div class="position-relative" id="hosts-picker-wrapper">
-                    <button type="button" class="btn-ghost" id="hosts-picker-trigger">
-                        <i class="ki-outline ki-plus"></i> Añadir coorganizador
+                <!--begin::Acciones-->
+                <div class="d-flex flex-column gap-2 mt-4">
+                    {% if not readonly %}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2 me-1"></i>Guardar
                     </button>
+                    {% endif %}
+                    <a href="{% url 'panel_event_types:event_type_list' %}" class="btn btn-light">
+                        {% if readonly %}Volver{% else %}Cancelar{% endif %}
+                    </a>
+                </div>
+                <!--end::Acciones-->
 
-                    <div id="hosts-picker-popover" class="card shadow-lg position-absolute d-none"
-                         style="top: 100%; left: 0; margin-top: .5rem; width: 360px; z-index: 1050;">
-                        <div class="card-body p-4">
-                            <div class="position-relative mb-3">
-                                <i class="ki-outline ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
-                                <input type="text" id="hosts-search"
-                                       class="form-control form-control-solid ps-10"
-                                       placeholder="Buscar organizadores" autocomplete="off"/>
-                            </div>
+            <!--begin::Equipo-->
+            <div class="u-seccion mt-4">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num"><i class="bi bi-people"></i></span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Organizadores</div>
+                        <div class="text-muted fs-8">Uno solo o varios repartiéndose las reservas.</div>
+                    </div>
+                </div>
+                <div class="u-seccion-body">
 
-                            <div class="d-flex justify-content-between align-items-center mb-3 fs-7">
-                                <label class="form-check form-check-custom form-check-sm m-0">
-                                    <input type="checkbox" id="hosts-select-all" class="form-check-input"/>
-                                    <span class="form-check-label ms-2 fw-semibold text-primary">Seleccionar todo</span>
-                                </label>
-                                <a href="#" id="hosts-clear-all" class="text-muted text-hover-danger">
-                                    <i class="ki-outline ki-cross-circle fs-5"></i> Borrar todo
-                                </a>
-                            </div>
+                    <div class="et-switch pt-0">
+                        <div class="form-check form-check-custom form-check-solid form-switch mt-1">
+                            <input class="form-check-input" type="checkbox" name="es_equipo" id="es_equipo"
+                                   {% if form.es_equipo.value %}checked{% endif %} />
+                        </div>
+                        <label class="cursor-pointer" for="es_equipo">
+                            <span class="d-block fw-semibold fs-7 text-gray-900">Evento de equipo</span>
+                            <span class="d-block text-muted fs-8">
+                                Link único <code>/e/…</code> y reparto automático entre los organizadores (round-robin).
+                            </span>
+                        </label>
+                    </div>
 
-                            <div id="hosts-list" class="overflow-auto" style="max-height: 280px;">
-                                {% for h in hosts_disponibles %}
-                                <label class="d-flex align-items-center gap-3 py-2 px-2 cursor-pointer hosts-row"
-                                       data-host-id="{{ h.id }}"
-                                       data-search="{{ h.nombre|lower }} {{ h.email|lower }}">
-                                    <input type="checkbox" class="form-check-input hosts-cb" value="{{ h.id }}"/>
-                                    {% if h.avatar %}
-                                    <img src="{{ h.avatar }}" class="rounded-circle" width="36" height="36" alt=""/>
-                                    {% else %}
-                                    <span class="hosts-avatar">{{ h.iniciales }}</span>
-                                    {% endif %}
-                                    <span class="flex-grow-1">
-                                        <span class="d-block fw-semibold text-gray-800">{{ h.nombre }}</span>
-                                        <span class="d-block text-muted fs-7">{{ h.email }}</span>
-                                    </span>
-                                </label>
-                                {% empty %}
-                                <div class="text-muted text-center py-4">No hay organizadores disponibles.</div>
-                                {% endfor %}
-                                <div id="hosts-empty" class="text-muted text-center py-4 d-none">
-                                    Sin resultados.
+                    <!--begin::Organizadores-->
+                    <div id="organizadores-section" class="et-collapsible">
+                        <div class="separator separator-dashed my-5"></div>
+
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+                            <span class="fw-semibold fs-7 text-gray-900">Organizadores</span>
+                            <span class="d-flex align-items-center gap-3">
+                                <span class="text-muted fs-8" id="hosts-counter">0 seleccionados</span>
+                                {% if puede_prioridad %}
+                                <button type="button" class="btn-ghost" id="prioridad-open">
+                                    <i class="bi bi-sliders"></i> Configurar prioridad
+                                </button>
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div id="hosts-selected-list" class="d-flex flex-wrap gap-2 mb-3"></div>
+                        <div id="hosts-hidden-inputs"></div>
+
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <div class="position-relative" id="hosts-picker-wrapper">
+                                <button type="button" class="btn-ghost" id="hosts-picker-trigger">
+                                    <i class="ki-outline ki-plus"></i> Añadir coorganizador
+                                </button>
+
+                                <div id="hosts-picker-popover" class="card shadow-lg position-absolute d-none"
+                                     style="top: 100%; right: 0; margin-top: .5rem; width: 340px; z-index: 1050;">
+                                    <div class="card-body p-4">
+                                        <div class="position-relative mb-3">
+                                            <i class="ki-outline ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+                                            <input type="text" id="hosts-search"
+                                                   class="form-control form-control-solid ps-10"
+                                                   placeholder="Buscar organizadores" autocomplete="off"/>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center mb-3 fs-7">
+                                            <label class="form-check form-check-custom form-check-sm m-0">
+                                                <input type="checkbox" id="hosts-select-all" class="form-check-input"/>
+                                                <span class="form-check-label ms-2 fw-semibold text-primary">Seleccionar todo</span>
+                                            </label>
+                                            <a href="#" id="hosts-clear-all" class="text-muted text-hover-danger">
+                                                <i class="ki-outline ki-cross-circle fs-5"></i> Borrar todo
+                                            </a>
+                                        </div>
+
+                                        <div id="hosts-list" class="overflow-auto" style="max-height: 280px;">
+                                            {% for h in hosts_disponibles %}
+                                            <label class="d-flex align-items-center gap-3 py-2 px-2 cursor-pointer hosts-row"
+                                                   data-host-id="{{ h.id }}"
+                                                   data-search="{{ h.nombre|lower }} {{ h.email|lower }}">
+                                                <input type="checkbox" class="form-check-input hosts-cb" value="{{ h.id }}"/>
+                                                {% if h.avatar %}
+                                                <img src="{{ h.avatar }}" class="rounded-circle" width="36" height="36" alt=""/>
+                                                {% else %}
+                                                <span class="hosts-avatar">{{ h.iniciales }}</span>
+                                                {% endif %}
+                                                <span class="flex-grow-1">
+                                                    <span class="d-block fw-semibold text-gray-800">{{ h.nombre }}</span>
+                                                    <span class="d-block text-muted fs-7">{{ h.email }}</span>
+                                                </span>
+                                            </label>
+                                            {% empty %}
+                                            <div class="text-muted text-center py-4">No hay organizadores disponibles.</div>
+                                            {% endfor %}
+                                            <div id="hosts-empty" class="text-muted text-center py-4 d-none">
+                                                Sin resultados.
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-end gap-2 pt-3 mt-3 border-top">
+                                            <button type="button" class="btn btn-light btn-sm" id="hosts-cancel">Cancelar</button>
+                                            <button type="button" class="btn btn-primary btn-sm" id="hosts-apply">Aplicar</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="d-flex justify-content-end gap-2 pt-3 mt-3 border-top">
-                                <button type="button" class="btn btn-light btn-sm" id="hosts-cancel">Cancelar</button>
-                                <button type="button" class="btn btn-primary btn-sm" id="hosts-apply">Aplicar</button>
-                            </div>
+                            {% comment %}
+                            Disponibilidad por organizador: proyecto en pausa. El modal y su JS
+                            siguen más abajo; para reactivarlo basta con descomentar este botón.
+                            {% endcomment %}
+                            {% comment %}
+                            {% if object and request.user.es_admin %}
+                            <button type="button" class="btn-ghost" id="btn-disponibilidad"
+                                    data-bs-toggle="modal" data-bs-target="#modalDisponibilidad"
+                                    data-et-id="{{ object.pk }}">
+                                <i class="ki-outline ki-time fs-5"></i> Configurar disponibilidad por organizador
+                            </button>
+                            {% endif %}
+                            {% endcomment %}
                         </div>
-                    </div>
-                </div>
 
-                {% if form.hosts.errors %}
-                <div class="text-danger fs-7 mt-2">{{ form.hosts.errors|join:", " }}</div>
-                {% endif %}
+                        {% if form.hosts.errors %}
+                        <div class="text-danger fs-8 mt-2">{{ form.hosts.errors|join:", " }}</div>
+                        {% endif %}
 
-            </div>
 
-            <!--begin::Modal prioridad round-robin-->
-            {% if puede_prioridad %}
-            <div id="prioridad-modal" class="d-none position-fixed top-0 start-0 w-100 h-100"
-                 style="background: rgba(0,0,0,.4); z-index: 1060;">
-                <div class="card shadow-lg position-absolute top-50 start-50 translate-middle d-flex flex-column"
-                     style="width: min(560px, calc(100vw - 2rem)); max-height: calc(100vh - 4rem);">
-                    <div class="card-header py-4 min-h-auto d-flex align-items-center justify-content-between">
-                        <h3 class="fs-5 fw-bold mb-0">Prioridad de los organizadores</h3>
-                        <button type="button" class="btn btn-icon btn-sm btn-active-light"
-                                id="prioridad-close" aria-label="Cerrar">
-                            <i class="ki-outline ki-cross fs-2"></i>
-                        </button>
+                        {{ hosts_disponibles|json_script:"hosts-data" }}
+                        {{ prioridades_iniciales|json_script:"prioridades-initial" }}
+                        <script id="hosts-initial" type="application/json">
+                          [{% for hid in form.hosts.value|default_if_none:'' %}{{ hid }}{% if not forloop.last %},{% endif %}{% endfor %}]
+                        </script>
                     </div>
-                    <div class="card-body py-4 overflow-auto">
-                        <div class="text-muted fs-7 mb-4">
-                            De <b>1</b> a <b>3</b>, donde <b>3</b> es la más alta. Cuando varios
-                            organizadores están libres a la misma hora, la reserva se asigna al de
-                            mayor prioridad. A igualdad de prioridad decide el reparto de carga de
-                            siempre, así que si los dejas todos en <b>1</b> no cambia nada.
-                            <br>
-                            Pon <b>0</b> para dejar a alguien fuera de este evento: sigue en la
-                            lista, pero no recibe reservas ni se ofrecen sus horas hasta que le
-                            vuelvas a poner un número mayor que 0.
-                        </div>
-                        <div id="prioridad-todos-cero"
-                             class="alert alert-warning py-2 px-3 fs-8 d-none">
-                            Todos están en 0: este evento se quedará sin horas disponibles.
-                        </div>
-                        <div id="prioridad-list"></div>
-                        <div id="prioridad-vacio" class="text-muted text-center py-4 d-none">
-                            Añade organizadores para poder darles prioridad.
-                        </div>
-                    </div>
-                    <div class="card-footer py-3 d-flex justify-content-end">
-                        <button type="button" class="btn btn-primary btn-sm" id="prioridad-done">Listo</button>
-                    </div>
+                    <!--end::Organizadores-->
                 </div>
             </div>
-            {% endif %}
-            <!--end::Modal prioridad round-robin-->
-
-            {{ hosts_disponibles|json_script:"hosts-data" }}
-            {{ prioridades_iniciales|json_script:"prioridades-initial" }}
-            <script id="hosts-initial" type="application/json">
-              [{% for hid in form.hosts.value|default_if_none:'' %}{{ hid }}{% if not forloop.last %},{% endif %}{% endfor %}]
-            </script>
+            <!--end::Equipo-->
             </div>
-            <!--end::Organizadores-->
+        </div>
+        <!--end::Vista previa-->
+    </div>
+</fieldset>
+</form>
 
-        </fieldset>
-
-            <!--begin::Acciones-->
-            <div class="d-flex gap-3 pt-4 border-top">
-                {% if not readonly %}
-                <button type="submit" class="btn btn-primary btn-lg">Guardar</button>
-                {% endif %}
-                <a href="{% url 'panel_event_types:event_type_list' %}" class="btn btn-light btn-lg">{% if readonly %}Volver{% else %}Cancelar{% endif %}</a>
+{% comment %}
+El modal vive fuera del formulario a propósito: dentro de la columna pegajosa
+quedaba encerrado en su contexto de apilamiento (position: sticky) y se pintaba
+por debajo de la cabecera. Sus inputs no llevan name, así que no se envían.
+{% endcomment %}
+<!--begin::Modal prioridad round-robin-->
+{% if puede_prioridad %}
+<div id="prioridad-modal" class="d-none position-fixed top-0 start-0 w-100 h-100"
+     style="background: rgba(0,0,0,.4); z-index: 1060;">
+    <div class="card shadow-lg position-absolute top-50 start-50 translate-middle d-flex flex-column"
+         style="width: min(560px, calc(100vw - 2rem)); max-height: calc(100vh - 4rem);">
+        <div class="card-header py-4 min-h-auto d-flex align-items-center justify-content-between">
+            <h3 class="fs-5 fw-bold mb-0">Prioridad de los organizadores</h3>
+            <button type="button" class="btn btn-icon btn-sm btn-active-light"
+                    id="prioridad-close" aria-label="Cerrar">
+                <i class="ki-outline ki-cross fs-2"></i>
+            </button>
+        </div>
+        <div class="card-body py-4 overflow-auto">
+            <div class="text-muted fs-8 mb-4">
+                De <b>1</b> a <b>3</b>, gana el más alto cuando varios están libres a la vez.
+                Con todos en <b>1</b> no cambia nada. Un <b>0</b> deja a esa persona fuera de
+                este evento sin quitarla de la lista.
             </div>
-            <!--end::Acciones-->
-
-        </form>
+            <div id="prioridad-todos-cero"
+                 class="alert alert-warning py-2 px-3 fs-8 d-none">
+                Todos están en 0: este evento se quedará sin horas disponibles.
+            </div>
+            <div id="prioridad-list"></div>
+            <div id="prioridad-vacio" class="text-muted text-center py-4 d-none">
+                Añade organizadores para poder darles prioridad.
+            </div>
+        </div>
+        <div class="card-footer py-3 d-flex justify-content-end">
+            <button type="button" class="btn btn-primary btn-sm" id="prioridad-done">Listo</button>
+        </div>
     </div>
 </div>
+{% endif %}
+<!--end::Modal prioridad round-robin-->
+
+<script>
+// Vista previa en vivo de la tarjeta lateral.
+(function () {
+  var nombre   = document.getElementById('et-nombre');
+  var duracion = document.getElementById('et-duracion');
+  var equipo   = document.getElementById('es_equipo');
+  var activo   = document.getElementById('activo');
+
+  var preNombre = document.getElementById('et-nombre-preview');
+  var preDur    = document.getElementById('et-duracion-preview');
+  var preTipo   = document.getElementById('et-tipo-badge');
+  var preEstado = document.getElementById('et-estado-badge');
+
+  function refrescar() {
+    preNombre.textContent = (nombre.value || '').trim() || 'Sin nombre';
+    preDur.textContent = duracion.value ? duracion.value + ' minutos' : '—';
+    preTipo.textContent = equipo && equipo.checked ? 'Equipo' : 'Individual';
+    var on = activo && activo.checked;
+    preEstado.textContent = on ? 'Activo' : 'Inactivo';
+    preEstado.className = 'badge fs-8 ' + (on ? 'badge-light-success' : 'badge-light-danger');
+  }
+
+  [nombre, duracion].forEach(function (el) { if (el) el.addEventListener('input', refrescar); });
+  [equipo, activo].forEach(function (el) { if (el) el.addEventListener('change', refrescar); });
+  refrescar();
+})();
+
+// Copiar el enlace público.
+(function () {
+  var btn = document.getElementById('et-copiar');
+  if (!btn) return;
+  var enlace = document.getElementById('et-enlace');
+  var label = btn.querySelector('span');
+  btn.addEventListener('click', function () {
+    navigator.clipboard.writeText(enlace.textContent.trim()).then(function () {
+      label.textContent = '¡Copiado!';
+      setTimeout(function () { label.textContent = 'Copiar enlace'; }, 2000);
+    });
+  });
+})();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <script>
@@ -775,7 +949,19 @@
     searchEl.value = '';
     applyFilter('');
     popover.classList.remove('d-none');
+    colocarPopover();
     setTimeout(function () { searchEl.focus(); }, 0);
+  }
+
+  // El selector vive en la columna derecha, cerca del final de la página: si
+  // abriéndose hacia abajo no cabe, se abre hacia arriba.
+  function colocarPopover() {
+    var hueco = window.innerHeight - trigger.getBoundingClientRect().bottom;
+    var haciaArriba = hueco < popover.offsetHeight + 16;
+    popover.style.top = haciaArriba ? 'auto' : '100%';
+    popover.style.bottom = haciaArriba ? '100%' : 'auto';
+    popover.style.marginTop = haciaArriba ? '0' : '.5rem';
+    popover.style.marginBottom = haciaArriba ? '.5rem' : '0';
   }
 
   function closePopover() {
