@@ -84,6 +84,11 @@ class Reserva(models.Model):
     utm_adsetid = models.CharField(max_length=255, blank=True, default='')
     utm_adid = models.CharField(max_length=255, blank=True, default='')
     utm_form_variant = models.CharField(max_length=500, blank=True, default='')
+    url = models.CharField(
+        max_length=1500, blank=True, default='',
+        verbose_name='URL de origen',
+        help_text='window.location.href del visitante al momento de reservar.',
+    )
 
     estado = models.CharField(
         max_length=20,

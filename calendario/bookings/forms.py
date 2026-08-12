@@ -10,6 +10,7 @@ class BookingForm(forms.Form):
     email_invitado = forms.EmailField()
     telefono_invitado = forms.CharField(max_length=50)
     notas = forms.CharField(max_length=1000, required=False, widget=forms.Textarea(attrs={'rows': 3}))
+    url = forms.CharField(max_length=1500, required=False, widget=forms.HiddenInput)
 
     def clean_nombre_invitado(self):
         v = self.cleaned_data['nombre_invitado'].strip()

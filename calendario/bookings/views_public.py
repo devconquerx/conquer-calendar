@@ -313,6 +313,7 @@ class BookingFormView(View):
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
+                tracking={'url': form.cleaned_data.get('url', '')},
             )
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, host, event_type, form, duplicado=e.reserva_existente)
@@ -447,6 +448,7 @@ class TeamBookingFormView(View):
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
+                tracking={'url': form.cleaned_data.get('url', '')},
             )
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, event_type, form, duplicado=e.reserva_existente)
@@ -699,6 +701,7 @@ class EnlaceUnicoFormView(View):
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
+                tracking={'url': form.cleaned_data.get('url', '')},
             )
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, enlace, event_type, form, duplicado=e.reserva_existente)

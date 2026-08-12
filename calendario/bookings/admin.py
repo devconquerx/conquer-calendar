@@ -398,7 +398,7 @@ class ReservaAdmin(admin.ModelAdmin):
             'fields': (
                 'journey_id', 'event_id', 'utm_source', 'utm_campaign', 'utm_medium',
                 'utm_term', 'utm_content', 'utm_idcampaign', 'utm_adsetid', 'utm_adid',
-                'utm_form_variant',
+                'utm_form_variant', 'url',
             ),
         }),
         ('Metadatos', {

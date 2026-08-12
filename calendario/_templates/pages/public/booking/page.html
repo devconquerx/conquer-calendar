@@ -581,10 +581,11 @@ body {
 
       {# STEP 3: Form #}
       <div id="step-form">
-        <form method="post" action="{{ form_action_url }}">
+        <form method="post" action="{{ form_action_url }}" id="bk-form">
           {% csrf_token %}
           <input type="hidden" id="inicio_utc" name="inicio_utc" value="{{ inicio_utc_str|default:'' }}">
           <input type="hidden" name="tz" value="{{ tz_visitante }}">
+          <input type="hidden" id="bk-url" name="url" value="">
 
           <button type="button" class="bk-back" onclick="goBack()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -649,6 +650,18 @@ body {
 </div>
 
 <script>
+(function () {
+  // Deja constancia de la URL exacta que tenía el visitante al confirmar
+  // (incluye ?mes=&fecha= etc., que se actualizan client-side vía history.pushState).
+  var bkForm = document.getElementById('bk-form');
+  var bkUrl  = document.getElementById('bk-url');
+  if (bkForm && bkUrl) {
+    bkForm.addEventListener('submit', function () {
+      bkUrl.value = window.location.href;
+    });
+  }
+})();
+
 (function () {
   var params    = new URLSearchParams(window.location.search);
   var urlTz     = params.get('tz') || '';
