@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('bookings', '0023_remove_reserva_uq_reserva_host_inicio_confirmada_and_more'),
+        ('bookings', '0024_reserva_url'),
     ]
 
     operations = [
