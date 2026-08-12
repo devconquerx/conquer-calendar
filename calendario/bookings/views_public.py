@@ -571,6 +571,40 @@ class CancelarPublicaView(View):
         return render(request, 'pages/public/booking/cancelada.html', {'reserva': reserva})
 
 
+class ConfirmarAsistenciaPublicaView(View):
+    """Botón "Confirmar asistencia" de los correos.
+
+    No toca Google Calendar: el invitado ya se inserta como attendee
+    'accepted' al crear el evento (ver google_calendar/services.py), así que
+    para Google la asistencia nunca estuvo en duda. Esto solo deja constancia
+    de que el invitado abrió el correo y dijo que va.
+
+    A diferencia de cancelar, aquí el GET sí marca: la acción no destruye nada
+    y es idempotente, y el invitado espera un solo clic. El coste es que un
+    antivirus que abra el enlace para escanearlo marca la asistencia sin que
+    el invitado toque nada, así que este dato vale como señal, no como prueba.
+    """
+
+    def get(self, request, token):
+        reserva = get_object_or_404(
+            Reserva.objects.select_related('event_type', 'host'),
+            confirmacion_token=token,
+        )
+        cancelada = reserva.estado != Reserva.Estado.CONFIRMADA
+        ya_estaba = reserva.asistencia_confirmada
+
+        if not cancelada and not ya_estaba:
+            reserva.asistencia_confirmada = True
+            reserva.asistencia_confirmada_en = dj_timezone.now()
+            reserva.save(update_fields=['asistencia_confirmada', 'asistencia_confirmada_en'])
+
+        return render(request, 'pages/public/booking/asistencia_confirmada.html', {
+            'reserva': reserva,
+            'cancelada': cancelada,
+            'ya_estaba': ya_estaba,
+        })
+
+
 class ReemplazarPublicaView(View):
     """Endpoint disparado por el modal de duplicado.
 

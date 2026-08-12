@@ -15,7 +15,8 @@ class PlantillaCorreo(models.Model):
     cuerpo = models.TextField(
         help_text=(
             'Variables: {{nombre_invitado}}, {{email_invitado}}, {{nombre_host}}, '
-            '{{nombre_evento}}, {{fecha_hora}}, {{duracion}}, {{google_meet_url}}, {{link_cancelar}}'
+            '{{nombre_evento}}, {{fecha_hora}}, {{duracion}}, {{google_meet_url}}, '
+            '{{link_cancelar}}, {{link_reagendar}}, {{link_confirmar}}'
         )
     )
     pie_pagina = models.CharField(max_length=300, blank=True, default='')
@@ -109,6 +110,12 @@ class Reserva(models.Model):
     )
     recordatorio_1_enviado = models.BooleanField(default=False)
     recordatorio_2_enviado = models.BooleanField(default=False)
+
+    # Botón "Confirmar asistencia" de los correos. No cambia nada en Google
+    # Calendar (el invitado ya entra como 'accepted'): es solo la señal de que
+    # el invitado leyó el correo y dijo que va.
+    asistencia_confirmada = models.BooleanField(default=False)
+    asistencia_confirmada_en = models.DateTimeField(null=True, blank=True)
 
     # Reglas free/busy: cuando el evento de esta reserva en Google Calendar lleva
     # alguna de las palabras/emojis configuradas en el tipo de evento, el sync

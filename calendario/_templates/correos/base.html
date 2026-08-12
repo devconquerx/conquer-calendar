@@ -184,17 +184,49 @@
           {% endif %}
           {% endwith %}
 
-          <!-- Cancelar -->
-          {% if link_cancelar and 'link_cancelar' in campos %}
+          <!-- Acciones: confirmar / reagendar / cancelar.
+               Cada botón se enseña solo si su variable está en los campos
+               visibles de la plantilla, así que se activan por separado desde
+               el admin. Van en una tabla para que se alineen en fila en todos
+               los clientes de correo (Outlook no respeta bien inline-block). -->
+          {% with ver_confirmar=link_confirmar ver_reagendar=link_reagendar ver_cancelar=link_cancelar %}
+          {% if ver_confirmar and 'link_confirmar' in campos or ver_reagendar and 'link_reagendar' in campos or ver_cancelar and 'link_cancelar' in campos %}
           <tr>
             <td style="padding:0 40px 36px;">
-              <a href="{{ link_cancelar }}"
-                 style="display:inline-block;background-color:#fee2e2;color:#dc2626;font-size:13px;font-weight:600;padding:10px 22px;border-radius:6px;text-decoration:none;border:1px solid #fca5a5;">
-                Cancelar reserva
-              </a>
+              <table cellpadding="0" cellspacing="0" border="0"><tr>
+
+                {% if ver_confirmar and 'link_confirmar' in campos %}
+                <td style="padding-right:10px;">
+                  <a href="{{ link_confirmar }}"
+                     style="display:inline-block;background-color:#dcfce7;color:#15803d;font-size:13px;font-weight:600;padding:10px 22px;border-radius:6px;text-decoration:none;border:1px solid #86efac;">
+                    Confirmar asistencia
+                  </a>
+                </td>
+                {% endif %}
+
+                {% if ver_reagendar and 'link_reagendar' in campos %}
+                <td style="padding-right:10px;">
+                  <a href="{{ link_reagendar }}"
+                     style="display:inline-block;background-color:#eff6ff;color:#1d4ed8;font-size:13px;font-weight:600;padding:10px 22px;border-radius:6px;text-decoration:none;border:1px solid #93c5fd;">
+                    Reagendar
+                  </a>
+                </td>
+                {% endif %}
+
+                {% if ver_cancelar and 'link_cancelar' in campos %}
+                <td>
+                  <a href="{{ link_cancelar }}"
+                     style="display:inline-block;background-color:#fee2e2;color:#dc2626;font-size:13px;font-weight:600;padding:10px 22px;border-radius:6px;text-decoration:none;border:1px solid #fca5a5;">
+                    Cancelar reserva
+                  </a>
+                </td>
+                {% endif %}
+
+              </tr></table>
             </td>
           </tr>
           {% endif %}
+          {% endwith %}
 
           <!-- Footer -->
           {% if pie_pagina %}

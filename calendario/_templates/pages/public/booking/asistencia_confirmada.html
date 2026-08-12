@@ -1,0 +1,27 @@
+{% extends 'layout/public.html' %}
+{% block title %}Asistencia confirmada — {% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card">
+      <div class="card-body text-center py-5">
+        {% if cancelada %}
+          <h4>Esta reserva está cancelada</h4>
+          <p class="text-muted">
+            La reserva de <strong>{{ reserva.event_type.nombre }}</strong>
+            con {{ reserva.host.first_name|default:reserva.host.username }}
+            ya no está activa, así que no hay asistencia que confirmar.
+          </p>
+        {% else %}
+          <h4>Tu asistencia ha sido confirmada</h4>
+          <p class="text-muted">
+            {% if ya_estaba %}Ya la habías confirmado antes.{% endif %}
+            Te esperamos en <strong>{{ reserva.event_type.nombre }}</strong>
+            con {{ reserva.host.first_name|default:reserva.host.username }}.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

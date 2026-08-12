@@ -26,6 +26,8 @@ _VARS_DEMO = {
     '{{google_event_url}}':    'https://calendar.google.com/calendar/event?eid=demo',
     '{{link_reserva}}':        'http://localhost:8002/panel/reservas/1/',
     '{{link_cancelar}}':       '#',
+    '{{link_reagendar}}':      '#',
+    '{{link_confirmar}}':      '#',
 }
 
 

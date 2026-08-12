@@ -125,6 +125,10 @@ def _build_vars(reserva, site_url):
         'google_event_url':   reserva.google_event_url or '',
         'link_cancelar':      f"{site_url}/r/{reserva.confirmacion_token}/cancelar/",
         'link_reserva':       f"{site_url}/panel/reservas/{reserva.pk}/",
+        # Vuelve a la página pública del mismo tipo de evento: el invitado
+        # elige hueco nuevo y reserva otra vez. No cancela la actual.
+        'link_reagendar':     f"{site_url}/{reserva.host.slug}/{reserva.event_type.slug}/",
+        'link_confirmar':     f"{site_url}/r/{reserva.confirmacion_token}/confirmar/",
     }
 
 

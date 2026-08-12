@@ -28,7 +28,9 @@ VARIABLES_CORREO = [
     ('{{google_event_url}}',    'Enlace Google Calendar'),
     ('{{google_meet_url}}',     'Enlace Google Meet'),
     ('{{link_reserva}}',        'Ver reserva en la app'),
-    ('{{link_cancelar}}',       'Enlace de cancelación'),
+    ('{{link_cancelar}}',       'Botón: cancelar reserva'),
+    ('{{link_reagendar}}',      'Botón: reagendar (vuelve a la página del evento)'),
+    ('{{link_confirmar}}',      'Botón: confirmar asistencia'),
 ]
 
 
@@ -295,12 +297,12 @@ def _sch_source(obj):
 class ReservaAdmin(admin.ModelAdmin):
     list_display = (
         'nombre_invitado', 'email_invitado', 'event_type', 'host',
-        'inicio_utc', 'estado', 'google_sync_estado',
+        'inicio_utc', 'estado', 'asistencia_confirmada', 'google_sync_estado',
         'col_meta', 'col_tiktok', 'col_google', 'col_ac',
         'col_respondio', 'col_crm', 'col_onboarding', 'col_supabase',
         'fecha_creacion',
     )
-    list_filter = ('estado', 'google_sync_estado', 'event_type', 'host', 'fecha_creacion', 'tags')
+    list_filter = ('estado', 'asistencia_confirmada', 'google_sync_estado', 'event_type', 'host', 'fecha_creacion', 'tags')
     search_fields = (
         'nombre_invitado', 'email_invitado', 'telefono_invitado',
         'google_event_id', 'confirmacion_token', 'journey_id', 'event_id',
@@ -313,7 +315,7 @@ class ReservaAdmin(admin.ModelAdmin):
     readonly_fields = (
         'confirmacion_token', 'google_event_id', 'google_event_link',
         'google_meet_url', 'fecha_creacion', 'fecha_actualizacion',
-        'tag_chips_detail',
+        'tag_chips_detail', 'asistencia_confirmada_en',
     )
 
     def get_queryset(self, request):
