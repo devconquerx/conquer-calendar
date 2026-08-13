@@ -1,15 +1,17 @@
 from django.db import migrations
 
 
-# 89 y 90 son los EventTypes reales de PropTradingLatam (conectados en
-# score_ranges), pero ninguno tenía slug_equipo — no existía página pública
-# de reserva directa para ninguno de los dos. slug_equipo es único en la
-# base, así que no se puede reusar el slug "limpio" que ya tiene el 99
-# (duplicado suelto, sin tocar). Se les da uno propio, sufijado con su id
-# para que no choque con nada.
+# 89 es el EventType real de PropTradingLatam (conectado en score_ranges),
+# pero no tenía slug_equipo — no existía página pública de reserva directa.
+# slug_equipo es único en la base, así que no se puede reusar el slug
+# "limpio" que ya tiene el 99 (duplicado suelto, sin tocar). Se le da uno
+# propio, sufijado con su id para que no choque con nada.
+#
+# (90 — el otro EventType que originalmente iba acá — se borró: era
+# "⭐ Sesión de Consultoría LATAM" de jose.andres, con solo reservas de
+# prueba. Su tramo de score se fusionó con el 89 en la migración 0031.)
 SLUG_EQUIPO_POR_ID = {
     89: 'sesion-de-consultoria-conquer-finance-latam-89',
-    90: 'sesion-de-consultoria-conquer-finance-latam-90',
 }
 
 
