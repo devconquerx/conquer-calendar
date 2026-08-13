@@ -66,6 +66,9 @@ def push_schedule(reserva):
         # Tracking
         'event_id': s.event_id,
         'journey_id': s.journey_id,
+        # pre_email del setter (campo propio, NO 'setter'/'setter_id' —
+        # esos los interpreta el ingest del CRM como FK numérica directa).
+        'setter_pre_email': s.setter or None,
     }
 
     payload = {k: v for k, v in payload.items() if v is not None}

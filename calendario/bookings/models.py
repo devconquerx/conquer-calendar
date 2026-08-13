@@ -76,6 +76,13 @@ class Reserva(models.Model):
     # enlazados. Vacío en reservas creadas fuera del funnel (calendario directo).
     journey_id = models.CharField(max_length=120, blank=True, default='', db_index=True)
     event_id = models.CharField(max_length=120, blank=True, default='')
+    # Setter que generó el link directo de preagendamiento (pre_email del User
+    # en el CRM, p.ej. "juan.perez"). Viaja como query param `setter` en la URL
+    # de /agenda/.../ (lo genera el CRM, equivalente al utm_term=pre_email que
+    # usaba Calendly) y se manda al CRM como campo separado — ya no hace falta
+    # empaquetarlo en utm_term, esa era una limitación de Calendly que con
+    # calendario propio no aplica.
+    setter = models.CharField(max_length=140, blank=True, default='')
     utm_source = models.CharField(max_length=255, blank=True, default='')
     utm_campaign = models.CharField(max_length=255, blank=True, default='')
     utm_medium = models.CharField(max_length=255, blank=True, default='')

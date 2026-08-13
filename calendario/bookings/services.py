@@ -400,7 +400,7 @@ def _seleccionar_host_round_robin(event_type, candidatos):
 # Campos de tracking que la Reserva guarda como snapshot (del tracking de la
 # Prellamada). Mismos nombres que el payload del CRM schedule / Supabase.
 RESERVA_TRACKING_FIELDS = (
-    'journey_id', 'event_id', 'utm_source', 'utm_campaign', 'utm_medium',
+    'journey_id', 'event_id', 'setter', 'utm_source', 'utm_campaign', 'utm_medium',
     'utm_term', 'utm_content', 'utm_idcampaign', 'utm_adsetid', 'utm_adid',
     'utm_form_variant', 'url',
 )

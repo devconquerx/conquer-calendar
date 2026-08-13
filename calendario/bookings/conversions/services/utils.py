@@ -84,7 +84,11 @@ def build_schedule_ctx(reserva):
     s.journey_id = reserva.journey_id or (lead.journey_id if lead else None) or tracking.get('journey_id') or ''
     s.page_url = (lead.page_url if lead else '') or ''
 
-    s.setter = ''
+    # pre_email del setter que generó el link directo de preagendamiento
+    # (snapshot en la propia reserva; ver RESERVA_TRACKING_FIELDS). Se manda al
+    # CRM como campo separado (setter_pre_email en push_schedule), no como
+    # parte de utm_term — esa era una limitación de Calendly que aquí no aplica.
+    s.setter = reserva.setter or ''
     s.closer = closer
     s.closer_from_make = closer
     s.meet_join_url = reserva.google_meet_url or ''

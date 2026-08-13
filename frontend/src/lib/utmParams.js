@@ -15,6 +15,12 @@ export const TRACKING_QUERY_KEYS = [
   'product',
   '_ga',
   '_gid',
+  // No es un UTM: es el pre_email del setter que generó el link directo de
+  // preagendamiento (lo manda el CRM en la URL de /agenda/.../). Viaja igual
+  // que los UTMs — mismo mecanismo de propagación — hasta la Reserva y de ahí
+  // al CRM como campo separado (ver bookings/services.py RESERVA_TRACKING_FIELDS
+  // y conversions/services/crm.py).
+  'setter',
 ]
 
 const CLICK_ID_KEYS = [
