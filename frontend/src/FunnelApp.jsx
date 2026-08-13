@@ -88,7 +88,18 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
 
   // Renderiza la etapa no-landing con el componente dado (lazy o no), con sus
   // props correctas. Solo una etapa se renderiza a la vez.
+  //
+  // `search` viene fijo desde el boot de la SPA (window.location.search de la
+  // landing, para que el SSR y la primera hidratación coincidan) — NUNCA se
+  // actualiza tras eso. Si lo siguiéramos pasando a etapas alcanzadas por
+  // navegación client-side, Funnel/VideoPage lo preferirían (vía `search ??
+  // window.location.search`) sobre la URL real ya actualizada por el router
+  // con name/email/phone del formulario anterior, y el prefill llegaría vacío.
+  // Por eso solo se lo damos a la etapa que de verdad fue la del SSR inicial;
+  // en cualquier otra, pasamos undefined para que el propio `??` de cada
+  // página caiga a leer el window.location.search en vivo.
   const video = formConfig?.video || {}
+  const liveSearch = stage === initialStage ? search : undefined
   const renderStage = (Comp) => {
     if (stage === 'video') {
       return (
@@ -98,14 +109,14 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
           formConfig={formConfig}
           videoUrls={video.videoUrls || []}
           buttonPercent={video.buttonPercent || 75}
-          search={search}
+          search={liveSearch}
         />
       )
     }
     if (stage === 'confirmation') {
       return <Comp escuela={escuela} slug={slug} />
     }
-    return <Comp slug={slug} escuela={escuela} formConfig={formConfig} search={search} />
+    return <Comp slug={slug} escuela={escuela} formConfig={formConfig} search={liveSearch} />
   }
 
   // Etapa SSR'd inicial → componente no-lazy, render síncrono sin Suspense.
