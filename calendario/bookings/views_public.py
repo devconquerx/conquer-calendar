@@ -423,6 +423,13 @@ class TeamBookingPageView(View):
             'is_team': True,
             'form_action_url': reverse('public_team:booking_submit', kwargs={'slug_equipo': event_type.slug_equipo}),
             'slots_url': reverse('public_team:slots_mes_json', kwargs={'slug_equipo': event_type.slug_equipo}),
+            # Prefill desde query params — mismos nombres que usa el funnel
+            # (name/email/phone/setter), para los links de reagendamiento que
+            # genera el CRM directo a esta página (no pasan por /agenda/).
+            'nombre_invitado': (request.GET.get('name') or '').strip(),
+            'email_invitado': (request.GET.get('email') or '').strip(),
+            'telefono_invitado': (request.GET.get('phone') or '').strip(),
+            'setter': (request.GET.get('setter') or '').strip(),
         }
         auto_avanzar = not request.GET.get('mes') and not fecha
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
@@ -448,7 +455,10 @@ class TeamBookingFormView(View):
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
-                tracking={'url': form.cleaned_data.get('url', '')},
+                tracking={
+                    'url': form.cleaned_data.get('url', ''),
+                    'setter': form.cleaned_data.get('setter', ''),
+                },
             )
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, event_type, form, duplicado=e.reserva_existente)
@@ -482,6 +492,7 @@ class TeamBookingFormView(View):
             'nombre_invitado': request.POST.get('nombre_invitado', ''),
             'email_invitado': request.POST.get('email_invitado', ''),
             'telefono_invitado': request.POST.get('telefono_invitado', ''),
+            'setter': request.POST.get('setter', ''),
             'notas': request.POST.get('notas', ''),
             'inicio_utc_str': request.POST.get('inicio_utc', ''),
             'slot_label': inicio.astimezone(tz_visitante).strftime('%H:%M') + ' h' if inicio else '',

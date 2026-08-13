@@ -11,6 +11,11 @@ class BookingForm(forms.Form):
     telefono_invitado = forms.CharField(max_length=50)
     notas = forms.CharField(max_length=1000, required=False, widget=forms.Textarea(attrs={'rows': 3}))
     url = forms.CharField(max_length=1500, required=False, widget=forms.HiddenInput)
+    # pre_email del setter que generó el link directo de reagendamiento (viaja
+    # como query param en la página, round-tripea por este hidden). Mismo
+    # mecanismo que event_id/journey_id en el flujo del funnel — snapshot en
+    # Reserva.setter vía RESERVA_TRACKING_FIELDS.
+    setter = forms.CharField(max_length=140, required=False, widget=forms.HiddenInput)
 
     def clean_nombre_invitado(self):
         v = self.cleaned_data['nombre_invitado'].strip()
