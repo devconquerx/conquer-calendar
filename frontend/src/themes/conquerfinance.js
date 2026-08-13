@@ -134,6 +134,11 @@ export default {
     // tokens que llevaban azul).
     landing: {
       ...legal.landing,
+      // El logoHeight de Legal (39px) está pensado para su lockup vertical; en
+      // el horizontal de Finance (~11.3:1) queda enorme. 16px de alto equivale
+      // al mismo ancho (180px) que ya usa el logo del navbar en vídeo/stepform/
+      // confirmación — así el logo mide igual en las 4 etapas del funnel.
+      logoHeight: '16px',
       hero: {
         ...legal.landing.hero,
         subtitle: 'bg-gradient-to-r from-[#AED916] to-[#3AC043] bg-clip-text text-transparent',
