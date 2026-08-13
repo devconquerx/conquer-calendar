@@ -369,15 +369,18 @@ class FunnelAgendaView(View):
 def _escuela_por_host(request):
     """Resuelve la escuela según el dominio (Host) usando settings.FUNNEL_HOST_ESCUELA.
 
-    En dev (DEBUG) permite forzarla con ?escuela=conquer-languages para poder
-    probar en localhost.
+    Si el dominio no está en el mapeo (p.ej. calendar.conquerx.com, el
+    dominio canónico sin marca propia — o localhost en dev), cae a
+    ?escuela=conquer-languages. En los dominios de marca esto nunca se
+    alcanza: el Host ya resuelve la escuela, así que no hace falta limitarlo
+    a DEBUG.
     """
     host = request.get_host().split(':')[0].lower().strip()
     mapping = getattr(settings, 'FUNNEL_HOST_ESCUELA', {}) or {}
     escuela = mapping.get(host)
     if not escuela and host.startswith('www.'):
         escuela = mapping.get(host[4:])
-    if not escuela and settings.DEBUG:
+    if not escuela:
         escuela = request.GET.get('escuela')
     return escuela
 
