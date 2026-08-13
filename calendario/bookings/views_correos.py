@@ -49,7 +49,7 @@ class PlantillaCorreoPreviewView(LoginRequiredMixin, View):
             except Exception:
                 logo_url = None
 
-        default_logo_url = request.build_absolute_uri(static('correos/conquerx-logo.png'))
+        default_logo_url = request.build_absolute_uri(static('correos/conquerx-logo-negro.png'))
 
         campos = set(v.strip('{}') for v in (plantilla.campos_visibles or []))
 

@@ -162,7 +162,7 @@ def _enviar(reserva, tipo_correo, destinatario, plantilla):
     campos       = set(v.strip('{}') for v in (plantilla.campos_visibles or []))
 
     # Logo público — en producción usar SITE_URL del servidor real
-    static_logo = f"{site_url}{static('correos/conquerx-logo.png')}"
+    static_logo = f"{site_url}{static('correos/conquerx-logo-negro.png')}"
     default_logo_url = (
         static_logo if not site_url.startswith('http://localhost')
         else 'https://krctool.s3.eu-west-3.amazonaws.com/logo_conquercrm_email.png'
