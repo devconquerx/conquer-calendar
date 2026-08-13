@@ -36,7 +36,7 @@
                 <div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0">
                     <a href="{% url 'panel_usuarios:dashboard' %}" class="d-lg-none">
                         <img src="{% static 'media/logos/conquer-calendario.png' %}" alt="Conquer Calendario"
-                             class="theme-light-show" style="height: 36px; width: auto;" />
+                             class="theme-light-show" style="height: 27px; width: auto;" />
                         <img src="{% static 'media/logos/conquer-calendario-blanco.png' %}" alt="Conquer Calendario"
                              class="theme-dark-show" style="height: 27px; width: auto;" />
                     </a>
@@ -128,10 +128,10 @@
                  data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
 
                 <!--begin::Logo-->
-                {# En claro, el logo de siempre con su caja; en oscuro, el blanco sin recuadro #}
+                {# Mismo logo recortado en los dos temas: negro en claro, blanco en oscuro #}
                 <div class="app-sidebar-logo px-4 h-75px d-flex align-items-center justify-content-center bg-body theme-light-show" id="kt_app_sidebar_logo">
                     <a href="{% url 'panel_usuarios:dashboard' %}">
-                        <img src="{% static 'media/logos/conquer-calendario.png' %}" alt="Conquer Calendario" style="height: 75px; width: auto;" />
+                        <img src="{% static 'media/logos/conquer-calendario.png' %}" alt="Conquer Calendario" style="height: 56px; width: auto;" />
                     </a>
                 </div>
                 <div class="app-sidebar-logo px-4 h-75px d-flex align-items-center justify-content-center theme-dark-show">
