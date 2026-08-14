@@ -30,3 +30,7 @@ google-api-python-client==2.141.0
 
 # Email
 django-anymail[mailgun]==10.3
+
+# Teléfonos (misma metadata de Google que libphonenumber-js en el frontend, para
+# que la validación del servidor y la del navegador den siempre el mismo veredicto)
+phonenumbers>=8.13,<10

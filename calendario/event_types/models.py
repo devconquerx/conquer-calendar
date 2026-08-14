@@ -137,7 +137,7 @@ class EventType(models.Model):
 
     unico_por_invitado = models.BooleanField(
         default=True,
-        help_text="Si está activo, un mismo email no puede reservar este evento dos veces mientras tenga una reserva futura confirmada.",
+        help_text="Si está activo, un mismo email (o un mismo teléfono) no puede reservar este evento dos veces mientras tenga una reserva futura confirmada.",
     )
 
     mostrar_caja_comentarios = models.BooleanField(

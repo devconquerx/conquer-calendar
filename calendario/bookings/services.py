@@ -7,7 +7,8 @@ from zoneinfo import ZoneInfo
 
 from django.core.cache import cache
 from django.db import connections, transaction
-from django.db.models import Count
+from django.db.models import Count, Q, Value
+from django.db.models.functions import Replace
 from django.utils import timezone
 
 from calendario.availability.models import BloqueHorarioSemanal, BloqueHorarioFecha
@@ -413,6 +414,74 @@ def _tracking_kwargs(tracking):
     return {f: (tr.get(f) or '') for f in RESERVA_TRACKING_FIELDS}
 
 
+# Separadores que la gente (y los forms de las landings) mete dentro del número:
+# "+34 679 123-456", "(+57) 300 123 4567"… Se quitan antes de comparar, tanto del
+# teléfono que llega como del que hay guardado (vía REPLACE en SQL).
+_TEL_SEPARADORES = (' ', '-', '(', ')', '.', '\u00a0')
+
+# Cuántos dígitos finales tienen que coincidir para dar dos teléfonos por iguales.
+# Comparar el sufijo y no la cadena entera hace que "+34679123456", "0034679123456"
+# y "679123456" sean el mismo número. Con 9 dígitos el sufijo ya es prácticamente
+# único dentro de un país y no colisiona entre países (un móvil español y uno
+# mexicano no comparten los últimos 9).
+TEL_DIGITOS_COMPARAR = 9
+
+
+def _sufijo_telefono(valor):
+    """Sufijo comparable de un teléfono: sus últimos dígitos, sin prefijo ni
+    separadores. Devuelve '' si no hay dígitos suficientes para comparar sin
+    riesgo (extensiones, basura en el campo)."""
+    digitos = ''.join(c for c in (valor or '') if c.isdigit())
+    digitos = digitos.lstrip('0')  # 0034…/0424… → el 0 de marcación no cuenta
+    if len(digitos) < 7:
+        return ''
+    return digitos[-TEL_DIGITOS_COMPARAR:]
+
+
+def _annotate_telefono_normalizado(qs):
+    """Anota el teléfono guardado sin separadores, para poder comparar sufijos
+    en SQL (y no traerse todas las reservas futuras a memoria)."""
+    expr = 'telefono_invitado'
+    for sep in _TEL_SEPARADORES:
+        expr = Replace(expr, Value(sep), Value(''))
+    return qs.annotate(telefono_norm=expr)
+
+
+def buscar_reserva_duplicada(event_type, email_invitado, telefono_invitado=''):
+    """Reserva futura confirmada de este event_type hecha por el mismo invitado,
+    entendiendo "el mismo" como mismo email O mismo teléfono. Devuelve None si no
+    hay ninguna. La más próxima en el tiempo es la que se devuelve.
+    """
+    email_norm = (email_invitado or '').strip().lower()
+    tel_sufijo = _sufijo_telefono(telefono_invitado)
+    if not email_norm and not tel_sufijo:
+        return None
+
+    coincide = Q()
+    if email_norm:
+        coincide |= Q(email_invitado__iexact=email_norm)
+    if tel_sufijo:
+        coincide |= Q(telefono_norm__endswith=tel_sufijo)
+
+    qs = Reserva.objects.select_related('host', 'event_type').filter(
+        event_type=event_type,
+        estado=Reserva.Estado.CONFIRMADA,
+        fin_utc__gt=timezone.now(),
+    )
+    return _annotate_telefono_normalizado(qs).filter(coincide).order_by('inicio_utc').first()
+
+
+def mismo_invitado(reserva, email_invitado, telefono_invitado=''):
+    """¿La reserva es de este invitado? Mismo criterio que buscar_reserva_duplicada
+    (email O teléfono), para validar el reemplazo de un duplicado detectado por
+    teléfono aunque el email que escribió ahora sea otro."""
+    email_norm = (email_invitado or '').strip().lower()
+    if email_norm and (reserva.email_invitado or '').strip().lower() == email_norm:
+        return True
+    tel_sufijo = _sufijo_telefono(telefono_invitado)
+    return bool(tel_sufijo) and _sufijo_telefono(reserva.telefono_invitado) == tel_sufijo
+
+
 def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
                   telefono_invitado='', notas='', timezone_invitado='', tracking=None):
     """
@@ -429,15 +498,7 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
             raise SlotNoDisponibleError("El evento no está disponible.")
 
         if et.unico_por_invitado:
-            email_norm = (email_invitado or '').strip().lower()
-            existente = (Reserva.objects
-                         .select_related('host', 'event_type')
-                         .filter(event_type=et,
-                                 estado=Reserva.Estado.CONFIRMADA,
-                                 email_invitado__iexact=email_norm,
-                                 fin_utc__gt=timezone.now())
-                         .order_by('inicio_utc')
-                         .first())
+            existente = buscar_reserva_duplicada(et, email_invitado, telefono_invitado)
             if existente:
                 raise ReservaDuplicadaError(existente)
 

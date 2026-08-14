@@ -32,6 +32,9 @@ export default defineConfig({
           rollupOptions: {
             input: {
               funnel: resolve(__dirname, 'src/funnel-spa.jsx'),
+              // Validación de teléfono para la página pública de reserva, que es
+              // un template Django sin React y necesita libphonenumber suelto.
+              phoneValidate: resolve(__dirname, 'src/phone-validate.js'),
             },
           },
         }),

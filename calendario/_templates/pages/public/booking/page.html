@@ -2,8 +2,14 @@
 {% block title %}{{ event_type.nombre }} — {% endblock %}
 
 {% block layout %}
-{% load static %}
+{% load static django_vite %}
 <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+{% comment %}
+Valida el teléfono con la misma librería y la misma metadata que el funnel
+(libphonenumber). Si no carga, el formulario sigue funcionando y la validación de
+servidor hace de red.
+{% endcomment %}
+{% vite_asset 'src/phone-validate.js' %}
 <style>
 :root {
   --bk-blue:       #0069ff;
@@ -325,6 +331,7 @@ body {
   min-width: 0;
 }
 .ph-number-input::placeholder { color: #b0b0b0; }
+.ph-msg { color: #e00; font-size: 12px; margin-top: 5px; }
 /* Dropdown */
 .ph-dropdown {
   position: absolute; top: calc(100% + 5px); left: 0;
@@ -633,6 +640,7 @@ body {
               </div>
               <input type="hidden" name="telefono_invitado" id="telefono_invitado"
                      value="{{ telefono_invitado|default:'' }}">
+              <div class="ph-msg" id="ph-msg" hidden></div>
             </div>
             {% if event_type.mostrar_caja_comentarios %}
             <div>
@@ -1183,7 +1191,37 @@ setTimeout(function () {
   var listEl    = document.getElementById('ph-list');
   var numberEl  = document.getElementById('ph-number');
   var hiddenEl  = document.getElementById('telefono_invitado');
+  var msgEl     = document.getElementById('ph-msg');
   if (!wrap) return;
+
+  /* ── Validación (misma librería y metadata que el funnel) ──────────────────
+     Si el bundle no cargó, CQXPhone() devuelve stubs permisivos: mejor dejar
+     pasar y que valide el servidor que bloquear a alguien con un número bueno. */
+  var SIN_VALIDADOR = {
+    esValido: function() { return true; },
+    ejemploNacional: function() { return ''; },
+    formatear: function(v) { return v; },
+  };
+  function CQXPhone() { return window.CQXPhone || SIN_VALIDADOR; }
+
+  function mostrarError(texto) {
+    msgEl.textContent = texto;
+    msgEl.hidden = false;
+    wrap.classList.add('ph-error');
+  }
+  function limpiarError() {
+    msgEl.hidden = true;
+    wrap.classList.remove('ph-error');
+  }
+
+  /* '' si el número está bien; si no, el motivo a enseñar debajo del campo. El
+     ejemplo del país no hace falta repetirlo aquí: ya está en el placeholder. */
+  function errorTelefono() {
+    var e164 = hiddenEl.value.trim();
+    if (!e164) return 'El teléfono es obligatorio';
+    if (CQXPhone().esValido(e164.replace(/\s+/g, ''))) return '';
+    return 'Ese número no es válido para ' + findCountry(selectedCode)[1];
+  }
 
   /* ── Restaurar valor si viene de un POST con errores ── */
   var existingVal = hiddenEl.value.trim();
@@ -1210,6 +1248,10 @@ setTimeout(function () {
     selectedDial = c[2];
     flagEl.textContent = flag(code);
     dialEl.textContent = c[2];
+    /* Placeholder con un número real del país: enseña de un vistazo cuántos
+       dígitos se esperan, que es lo que evita la mitad de los errores. */
+    var ejemplo = CQXPhone().ejemploNacional(code);
+    numberEl.placeholder = ejemplo || 'Número de teléfono';
     syncHidden();
   }
 
@@ -1228,7 +1270,15 @@ setTimeout(function () {
   }
 
   applySelection(initCode);
-  if (initNum) numberEl.value = initNum;
+  if (initNum) numberEl.value = CQXPhone().formatear(initNum, initCode);
+
+  /* El validador es un módulo ES: llega después de este script. Cuando avisa,
+     se repinta el placeholder con el número de ejemplo del país elegido. */
+  if (window.CQXPhone) {
+    applySelection(selectedCode);
+  } else {
+    document.addEventListener('cqxphone:listo', function() { applySelection(selectedCode); });
+  }
 
   /* ── Renderizar lista ── */
   function renderList(query) {
@@ -1284,25 +1334,51 @@ setTimeout(function () {
   searchEl.addEventListener('input', function() { renderList(this.value); });
   searchEl.addEventListener('blur', function() { setTimeout(closeDropdown, 180); });
 
-  numberEl.addEventListener('input', syncHidden);
+  /* Solo dígitos en el campo: se descarta cualquier otra tecla y también lo que
+     se pegue con formato ("(0424) 900-7348" entra como "04249007348", que
+     syncHidden ya sabe normalizar). Se recoloca el cursor para poder corregir un
+     dígito en medio sin que salte al final. */
+  function soloDigitos() {
+    var limpio = numberEl.value.replace(/\D/g, '');
+    if (limpio === numberEl.value) return;
+    var cursor = numberEl.selectionStart - (numberEl.value.length - limpio.length);
+    numberEl.value = limpio;
+    try { numberEl.setSelectionRange(cursor, cursor); } catch (e) {}
+  }
+
+  numberEl.addEventListener('input', function() {
+    soloDigitos();
+    syncHidden();
+    limpiarError();  /* mientras escribe no se le regaña */
+  });
   numberEl.addEventListener('change', syncHidden);
+  /* Al salir del campo sí: enterarse aquí es mejor que enterarse al enviar. */
+  numberEl.addEventListener('blur', function() {
+    syncHidden();
+    if (!hiddenEl.value.trim()) return;  /* vacío se avisa al enviar, no antes */
+    var error = errorTelefono();
+    if (error) mostrarError(error); else limpiarError();
+  });
 
   /* Cerrar al click fuera */
   document.addEventListener('mousedown', function(e) {
     if (!wrap.contains(e.target)) closeDropdown();
   });
 
-  /* Validación antes de submit: asegurar que haya número */
+  /* Validación antes de submit: el número tiene que existir de verdad en el
+     país elegido, igual de estricto que la pregunta de teléfono del funnel. */
   var form = wrap.closest('form');
   if (form) {
-    form.addEventListener('submit', function() {
+    form.addEventListener('submit', function(e) {
       syncHidden();
-      if (!hiddenEl.value.trim()) {
-        wrap.classList.add('ph-error');
+      var error = errorTelefono();
+      if (error) {
+        e.preventDefault();
+        mostrarError(error);
         numberEl.focus();
-        return false;
+        return;
       }
-      wrap.classList.remove('ph-error');
+      limpiarError();
     });
   }
 })();

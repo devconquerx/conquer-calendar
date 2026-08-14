@@ -1,4 +1,32 @@
+import logging
+
 from django import forms
+
+logger = logging.getLogger(__name__)
+
+# Validación estricta de teléfono, la misma que hace el funnel con
+# libphonenumber-js: no basta con la longitud, el prefijo nacional tiene que
+# existir de verdad en ese país. Si el paquete no está instalado (imagen sin
+# rebuildear) se sigue exigiendo el campo, pero sin el chequeo estricto: es
+# preferible a tumbar la página de reserva entera.
+try:
+    import phonenumbers
+except ImportError:  # pragma: no cover
+    phonenumbers = None
+    logger.warning(
+        "phonenumbers no está instalado: el teléfono de las reservas no se valida "
+        "en servidor. Rebuildea la imagen para que vuelva a validarse."
+    )
+
+
+def telefono_valido(valor):
+    """¿`valor` (E.164, ej. '+58 4121234567') es un número real de su país?"""
+    if phonenumbers is None:
+        return True
+    try:
+        return phonenumbers.is_valid_number(phonenumbers.parse(valor, None))
+    except phonenumbers.NumberParseException:
+        return False
 
 
 class BookingForm(forms.Form):
@@ -27,4 +55,8 @@ class BookingForm(forms.Form):
         v = self.cleaned_data.get('telefono_invitado', '').strip()
         if not v:
             raise forms.ValidationError("El número de teléfono es obligatorio.")
+        if not telefono_valido(v):
+            raise forms.ValidationError(
+                "Ese número no parece válido. Revisa el país y los dígitos."
+            )
         return v
