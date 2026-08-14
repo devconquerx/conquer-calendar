@@ -170,6 +170,18 @@ def is_from_meta(lead):
     return src == 'metaads' or bool(lead.fbclid)
 
 
+# Paridad con el pixel del navegador (misma regla que el CRM viejo): el pixel
+# de Meta dispara Lead en estas landings para CUALQUIER fuente de tráfico, así
+# que la API de conversiones debe enviar también todos esos leads — no solo los
+# de MetaAds — para mantener la cobertura y la deduplicación por event_id.
+PIXEL_LEAD_LANDING_PATTERNS = ('evento-online', 'clase-online-gratuita')
+
+
+def fires_pixel_lead(lead):
+    page_url = (lead.page_url or '').lower()
+    return any(pattern in page_url for pattern in PIXEL_LEAD_LANDING_PATTERNS)
+
+
 def is_from_tiktok(lead):
     src = (lead.utm_source or '').lower()
     return 'tiktok' in src or bool(lead.ttclid)

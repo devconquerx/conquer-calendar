@@ -150,7 +150,7 @@ def process_supabase(self, lead_id):
 def dispatch_lead_tasks(lead_id):
     """Evaluate conditions and enqueue applicable service tasks for a lead."""
     from calendario.leads.models import Lead
-    from calendario.leads.services.utils import is_from_meta, is_from_tiktok, is_from_google
+    from calendario.leads.services.utils import fires_pixel_lead, is_from_meta, is_from_tiktok, is_from_google
 
     lead = Lead.objects.get(pk=lead_id)
 
@@ -164,7 +164,9 @@ def dispatch_lead_tasks(lead_id):
     from calendario.leads.services.utils import get_school_code
     es_legal = get_school_code(lead) == 'cg'
 
-    if not es_legal and is_from_meta(lead):
+    # Meta CAPI va para TODOS los leads de landings con pixel (cualquier fuente),
+    # igual que el CRM viejo — no solo los de MetaAds (paridad y dedup del pixel).
+    if not es_legal and (fires_pixel_lead(lead) or is_from_meta(lead)):
         process_meta_capi.delay(lead_id)
     if not es_legal and is_from_tiktok(lead):
         process_tiktok_events.delay(lead_id)
@@ -189,7 +191,7 @@ def dispatch_lead_tasks(lead_id):
 def sweep_incomplete_leads():
     """Re-encola tareas cuyo tag *_done falta (leads de las últimas 24 h, creados hace > 5 min)."""
     from calendario.leads.models import Lead
-    from calendario.leads.services.utils import is_from_meta, is_from_tiktok, is_from_google
+    from calendario.leads.services.utils import fires_pixel_lead, is_from_meta, is_from_tiktok, is_from_google
 
     now = timezone.now()
     cutoff_old = now - timedelta(hours=24)
@@ -214,7 +216,7 @@ def sweep_incomplete_leads():
             process_supabase.delay(lead.pk)
             requeued += 1
 
-        if not es_legal and is_from_meta(lead) and 'meta_capi_done' not in tag_names and 'meta_capi_failed' not in tag_names:
+        if not es_legal and (fires_pixel_lead(lead) or is_from_meta(lead)) and 'meta_capi_done' not in tag_names and 'meta_capi_failed' not in tag_names:
             process_meta_capi.delay(lead.pk)
             requeued += 1
 
