@@ -290,21 +290,38 @@ def _html_a_texto(html):
     return texto.strip()
 
 
-def _descripcion_evento(reserva):
-    """Descripción del evento de Google Calendar: primero los datos de contacto
-    del invitado, y debajo el nombre y la descripción del tipo de evento, para
-    que el host tenga en la propia agenda de qué va la reunión."""
+PIE_DESCRIPCION = 'Desarrollado por ConquerX'
+
+
+def _descripcion_evento(reserva, meet_url=''):
+    """Descripción del evento de Google Calendar: los datos de contacto del
+    invitado, luego el nombre y la descripción del tipo de evento —para que el
+    host abra la agenda y sepa de qué va la reunión— y al final el enlace de Meet.
+
+    `meet_url` no se puede rellenar al crear el evento: la URL la devuelve Google
+    en la respuesta del insert. Por eso `crear_evento_google` monta la descripción
+    dos veces, la segunda ya con el enlace (ver el patch de allí).
+
+    Cada bloque va separado por una línea en blanco.
+    """
     et = reserva.event_type
     contacto = '\n'.join(filter(None, [
         f"Teléfono: {reserva.telefono_invitado}" if reserva.telefono_invitado else None,
         f"Email: {reserva.email_invitado}",
         f"Notas: {reserva.notas}" if reserva.notas else None,
     ]))
-    # La descripción va suelta al final, sin etiqueta que la anuncie.
+    meet = (
+        'Esto es una conferencia web de Google Meet puedes unirte mediante este '
+        f'enlace:\n{meet_url}'
+    ) if meet_url else None
     return '\n\n'.join(filter(None, [
         contacto,
-        f"Nombre del evento:\n{et.nombre}",
+        'Nombre del evento:',
+        et.nombre,
+        # La descripción va suelta, sin etiqueta que la anuncie.
         _html_a_texto(et.descripcion),
+        meet,
+        PIE_DESCRIPCION,
     ]))
 
 
@@ -401,6 +418,24 @@ def crear_evento_google(reserva_pk):
                 "crear_evento_google: OK reserva=%s host=%s event_id=%s",
                 reserva_pk, host_email, evento['id'],
             )
+
+            # El enlace de Meet solo se conoce ahora, así que la descripción se
+            # reescribe con él. Va en su propio try: el evento ya existe y está
+            # sincronizado, y quedarse sin esta línea no es motivo para marcar la
+            # reserva como fallida.
+            if reserva.google_meet_url:
+                try:
+                    servicio.events().patch(
+                        calendarId='primary',
+                        eventId=evento['id'],
+                        body={'description': _descripcion_evento(reserva, reserva.google_meet_url)},
+                        sendUpdates='none',
+                    ).execute()
+                except Exception:
+                    logger.exception(
+                        "crear_evento_google: no se pudo añadir el enlace de Meet a la "
+                        "descripción, reserva=%s event_id=%s", reserva_pk, evento['id'],
+                    )
         except (ServiceAccountNoConfiguradaError, EmailFueraDeDominioError) as e:
             logger.error(
                 "crear_evento_google: config/dominio error reserva=%s host=%s — %s",
