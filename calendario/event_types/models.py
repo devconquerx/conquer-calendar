@@ -55,7 +55,11 @@ class EventType(models.Model):
     aviso_maximo_dias = models.PositiveSmallIntegerField(
         default=60,
         validators=[MinValueValidator(1), MaxValueValidator(365)],
-        help_text="Rango máximo (rolling) en días contados al minuto desde el momento actual.",
+        help_text=(
+            "Rango máximo (rolling) en días naturales desde hoy. El último día "
+            "entra entero: con 3 días, el día de hoy+3 se abre completo a sus "
+            "00:00, no hora a hora conforme avanza el reloj."
+        ),
     )
     # Hasta dónde se puede reservar. Dos modos excluyentes, como en Calendly:
     #   'rolling' -> los próximos N días desde ahora mismo (aviso_maximo_dias);

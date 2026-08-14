@@ -104,20 +104,20 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
 
     ahora_utc = timezone.now()
     minimo = ahora_utc + timedelta(minutes=aviso)
-    maximo = ahora_utc + timedelta(days=event_type.aviso_maximo_dias)
-    # Clamp fecha_hasta al día donde aún caben slots dentro del rolling window.
-    fecha_hasta = min(fecha_hasta, maximo.astimezone(tz_host).date())
+
+    # La ventana reservable la decide `ventana_reservas`, el mismo sitio que usan
+    # las vistas públicas para pintar el calendario: así el día que se puede
+    # pinchar es exactamente el día que tiene horas. Los dos modos son
+    # excluyentes —con rango de fechas fijo el rolling `aviso_maximo_dias` no
+    # pinta nada— y el corte es siempre por DÍA COMPLETO, no al minuto: con 3
+    # días rodantes, el día hoy+3 aparece entero desde sus 00:00, en vez de irse
+    # destapando hora a hora conforme avanza el reloj.
+    hoy_local = ahora_utc.astimezone(tz_host).date()
+    ventana_desde, ventana_hasta = event_type.ventana_reservas(hoy_local)
+    fecha_desde = max(fecha_desde, ventana_desde)
+    fecha_hasta = min(fecha_hasta, ventana_hasta)
     if fecha_hasta < fecha_desde:
         return []
-
-    # Rango de fechas fijo: recorta por los dos lados. Es el corte de verdad —
-    # la vista pública ya no ofrece esos días, pero aquí es donde se decide qué
-    # se puede reservar, así que una petición a mano tampoco lo salta.
-    if event_type.usa_rango_de_fechas:
-        fecha_desde = max(fecha_desde, event_type.rango_fecha_inicio)
-        fecha_hasta = min(fecha_hasta, event_type.rango_fecha_fin)
-        if fecha_hasta < fecha_desde:
-            return []
 
     bloques_por_dia = defaultdict(list)
     for b in BloqueHorarioSemanal.objects.filter(host=host):
@@ -216,9 +216,6 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
                     cursor_local += step
                     continue
                 if slot_utc < minimo:
-                    cursor_local += step
-                    continue
-                if slot_utc > maximo:
                     cursor_local += step
                     continue
                 new_blocked_inicio = slot_utc - timedelta(minutes=buffer_antes)
