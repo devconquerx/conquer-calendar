@@ -1,6 +1,8 @@
 import logging
 import os
+import re
 from datetime import datetime
+from html import unescape
 
 from django.conf import settings
 from django.db import transaction
@@ -267,6 +269,45 @@ def construir_titulo_evento(et, nombre_invitado):
     return f'{et.nombre} con {nombre_invitado}'
 
 
+def _html_a_texto(html):
+    """Pasa el HTML del editor (Quill) a texto plano con saltos de línea.
+
+    La descripción del evento se escribe en un editor rich text, así que llega
+    como "<p>…</p><ul><li>…</li></ul>". En la descripción de Google Calendar el
+    resto de líneas van en texto plano separadas por \n; si se colara HTML,
+    Google renderizaría todo el campo como HTML y esos \n dejarían de verse.
+    """
+    if not html:
+        return ''
+    texto = re.sub(r'(?i)<br\s*/?>', '\n', html)
+    texto = re.sub(r'(?i)</(p|div|li|h[1-6]|tr)>', '\n', texto)
+    texto = re.sub(r'(?i)<li[^>]*>', '• ', texto)
+    texto = re.sub(r'<[^>]+>', '', texto)
+    texto = unescape(texto)
+    texto = texto.replace('\xa0', ' ')
+    texto = '\n'.join(linea.rstrip() for linea in texto.split('\n'))
+    texto = re.sub(r'\n{3,}', '\n\n', texto)  # Quill deja <p><br></p> de relleno
+    return texto.strip()
+
+
+def _descripcion_evento(reserva):
+    """Descripción del evento de Google Calendar: primero los datos de contacto
+    del invitado, y debajo el nombre y la descripción del tipo de evento, para
+    que el host tenga en la propia agenda de qué va la reunión."""
+    et = reserva.event_type
+    contacto = '\n'.join(filter(None, [
+        f"Teléfono: {reserva.telefono_invitado}" if reserva.telefono_invitado else None,
+        f"Email: {reserva.email_invitado}",
+        f"Notas: {reserva.notas}" if reserva.notas else None,
+    ]))
+    # La descripción va suelta al final, sin etiqueta que la anuncie.
+    return '\n\n'.join(filter(None, [
+        contacto,
+        f"Nombre del evento:\n{et.nombre}",
+        _html_a_texto(et.descripcion),
+    ]))
+
+
 def _titulo_evento(reserva):
     return construir_titulo_evento(reserva.event_type, reserva.nombre_invitado)
 
@@ -310,11 +351,7 @@ def crear_evento_google(reserva_pk):
             servicio = obtener_servicio_calendar(host_email)
             body = {
                 'summary': _titulo_evento(reserva),
-                'description': '\n'.join(filter(None, [
-                    f"Teléfono: {reserva.telefono_invitado}" if reserva.telefono_invitado else None,
-                    f"Email: {reserva.email_invitado}",
-                    f"Notas: {reserva.notas}" if reserva.notas else None,
-                ])),
+                'description': _descripcion_evento(reserva),
                 'start': {
                     'dateTime': reserva.inicio_utc.isoformat(),
                     'timeZone': 'UTC',
