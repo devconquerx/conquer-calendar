@@ -86,7 +86,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
   // A/B de Finance EU (réplica exacta de conquerx-funnels-new: `form_variant_cf`,
   // variantes 55/56, 50/50 persistente por visitante) entre el checkbox de
   // WhatsApp (55, igual que Legal/Blocks EU) y el campo de WhatsApp siempre
-  // visible pero opcional (56). Se resuelve en un efecto — no en SSR/primer
+  // visible y OBLIGATORIO (56). Se resuelve en un efecto — no en SSR/primer
   // render, que muestra el estado por defecto (honeypot, sin A/B) hasta montar
   // — igual que el resto del estado de este componente que depende de
   // localStorage/geo (país, etc). `?force_form_variant=55|56` fuerza y persiste
@@ -105,7 +105,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
 
   // Mostrar campo de teléfono visible: por config (showPhone), al marcar el
   // check de WhatsApp, o por la variante A/B 56 de Finance EU (siempre visible,
-  // opcional). Si no es visible, el teléfono se captura por honeypot/autofill.
+  // obligatorio). Si no es visible, el teléfono se captura por honeypot/autofill.
   const showPhone = !!landing.showPhone || (isFinanceEuAbTest && formVariant === '56')
   const phoneVisible = showPhone || (showWhatsappOptin && wantsWhatsapp)
   const enablePhoneHoneypot = !phoneVisible
@@ -135,7 +135,8 @@ export default function LandingForm({ program, region, formConfig, school, theme
     // Variante 55 (checkbox) Y 56 (siempre visible) de Finance EU son ambas un
     // campo de WhatsApp, no de teléfono genérico — solo la 55 pasaba por
     // showWhatsappOptin; la 56 caía al placeholder de ejemplo numérico.
-    if (showWhatsappOptin || (isFinanceEuAbTest && showPhone)) return 'Número de WhatsApp'
+    if (isFinanceEuAbTest && showPhone) return 'Número de WhatsApp *'
+    if (showWhatsappOptin) return 'Número de WhatsApp'
     if (!selectedCountry?.iso2) return 'Teléfono *'
     try {
       const ex = getExampleNumber(selectedCountry.iso2, examples)
@@ -186,7 +187,10 @@ export default function LandingForm({ program, region, formConfig, school, theme
     }
     if (phoneVisible) {
       const digits = phone.replace(/\D/g, '')
-      if (wantsWhatsapp && !digits) {
+      // En la variante 56 de Finance EU el teléfono es obligatorio (igual que en
+      // conquerx-funnels-new, donde el campo era visible y required desde el inicio).
+      const phoneRequired = wantsWhatsapp || (isFinanceEuAbTest && formVariant === '56')
+      if (phoneRequired && !digits) {
         newErrors.phone = 'Ingresa tu número de WhatsApp'
       } else if (digits) {
         const fullNumber = `+${selectedCountry?.phoneCode || ''}${digits}`
