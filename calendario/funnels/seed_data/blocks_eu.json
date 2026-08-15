@@ -148,8 +148,8 @@
           "required": true,
           "choices": [
             {
-              "label": "Tener un salario de más de 2000 dólares americanos al mes.",
-              "value": "Tener un salario de más de 2000 dólares americanos al mes."
+              "label": "Tener un salario de más de 3000 euros al mes.",
+              "value": "Tener un salario de más de 3000 euros al mes."
             },
             {
               "label": "Conseguir un puesto de empleo remoto y con flexibilidad.",
@@ -260,6 +260,10 @@
         "description": "Con el método que te presentará en el vídeo gratis, ha ayudado a más de 6.000 personas a aprender una <strong>nueva profesión con la que cambiar sus vidas por completo</strong>."
       },
       "description": "... aunque no tengas conocimientos previos de tecnología, ni te consideres una persona técnica"
+    },
+    "video": {
+      "videoUrls": ["https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-spain-2025-compress.mp4"],
+      "buttonPercent": 75
     },
     "welcome": {
       "title": "Sesión de Consultoría | Desarrollo Full Stack",

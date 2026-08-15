@@ -352,17 +352,27 @@ def stepform_url(escuela, region, base=''):
 
 
 class FunnelAgendaView(View):
-    """GET /agenda/<producto>/<region>/ → resuelve el funnel por escuela+región.
+    """GET /agenda/<producto>/<región>/ → resuelve el funnel por escuela+región.
 
     URL pública por marca (ej. /agenda/fullstack/eu/). La API sigue siendo por
     slug (/f/api/<slug>/...): la plantilla recibe el slug del funnel resuelto.
+
+    Puede haber más de un FunnelForm activo para la misma escuela+región (p.ej.
+    `blocks-eu` y `blocks-eu-2`, dos landings distintas que comparten el mismo
+    quiz/scoring) — se toma el de menor pk (el original) de forma determinista
+    en vez de `get_object_or_404`, que lanzaría `MultipleObjectsReturned` (500)
+    si hay más de uno. El StepForm de la landing "-2" en sí no pasa por aquí:
+    usa la config ya embebida en su propia página (slug explícito), así que
+    este fallback solo importa si el visitante llega directo a esta URL.
     """
 
     def get(self, request, producto, region):
         escuela = PRODUCTO_A_ESCUELA.get(producto)
-        funnel = get_object_or_404(
-            FunnelForm, escuela=escuela, region=region, activo=True
-        )
+        funnel = FunnelForm.objects.filter(
+            escuela=escuela, region=region, activo=True
+        ).order_by('pk').first()
+        if funnel is None:
+            raise Http404('No hay ningún funnel activo para esta escuela/región.')
         return _spa_render(request, funnel, 'stepform')
 
 
@@ -395,7 +405,12 @@ _ESCUELAS_RUTA_PATH = ('conquer-blocks', 'conquer-legal')
 # replica EXACTAMENTE las URLs vivas de www.conquerfinance.com (Webflow): sin
 # barra final, y la confirmación compartida entre regiones sin sufijo — cuando
 # el dominio pase a servirse desde aquí no puede cambiar ni un carácter.
-def _video_url(escuela, region, base=''):
+def _video_url(escuela, region, base='', slug=None):
+    # Segunda landing de Blocks EU (blocks-eu-2, réplica de cb-eu-2): tiene su
+    # propia URL de video (VSL corta), distinta de la de blocks-eu aunque
+    # comparten escuela+región — de ahí el caso especial por slug.
+    if slug == 'blocks-eu-2':
+        return f'{base}/conquer-blocks/video-2-clase-eu/'
     if escuela == 'conquer-legal':
         return f'{base}/hub/video-{region}'
     if escuela == 'conquer-finance':
@@ -406,7 +421,9 @@ def _video_url(escuela, region, base=''):
 
 
 # URL de la landing de registro de lead por marca (misma convención).
-def _landing_url(escuela, region, base=''):
+def _landing_url(escuela, region, base='', slug=None):
+    if slug == 'blocks-eu-2':
+        return f'{base}/conquer-blocks/clase-2-online-gratuita-eu/'
     if escuela == 'conquer-legal':
         return f'{base}/hub/registro-{region}'
     if escuela == 'conquer-finance':
@@ -530,8 +547,8 @@ def _spa_render(request, funnel, stage, escuela=None, region=None):
     slug = funnel.slug if funnel else ''
     program = PRODUCTO_POR_ESCUELA.get(escuela, '')
     video_enabled = bool(cfg.get('video'))
-    landing_url = _landing_url(escuela, region, base=base) if region else ''
-    video_url = _video_url(escuela, region, base=base) if region else ''
+    landing_url = _landing_url(escuela, region, base=base, slug=slug) if region else ''
+    video_url = _video_url(escuela, region, base=base, slug=slug) if region else ''
     stepform_u = stepform_url(escuela, region, base=base)
     confirmation_url = confirmacion_url(escuela, region, base=base) if region else ''
 
@@ -586,16 +603,29 @@ class FunnelClaseView(View):
       - /conquer-blocks/clase-online-gratuita-<region>/  → escuela fija en el path
       - /clase-online-gratuita-<region>/                 → escuela resuelta por Host
         (conquerlanguages.* → conquer-languages, conquerfinance.* → conquer-finance)
+
+    `slug` (opcional, vía kwarg de urls.py) resuelve un FunnelForm concreto en
+    vez de por escuela+región — necesario para landings "extra" que comparten
+    escuela+región con otra (p.ej. blocks-eu-2, réplica de la segunda landing
+    EU de Conquer Blocks del funnel viejo, cb-eu-2).
     """
 
-    def get(self, request, region, escuela=None):
+    def get(self, request, region, escuela=None, slug=None):
         if escuela is None:
             escuela = _escuela_por_host(request)
         if not escuela:
             raise Http404('No se pudo resolver la escuela para este dominio.')
-        funnel = get_object_or_404(
-            FunnelForm, escuela=escuela, region=region, activo=True
-        )
+        if slug:
+            funnel = get_object_or_404(FunnelForm, slug=slug, activo=True)
+        else:
+            # Puede haber más de un FunnelForm activo por escuela+región (ver
+            # blocks-eu-2 arriba): se toma el de menor pk de forma determinista
+            # en vez de get_object_or_404, que lanzaría MultipleObjectsReturned.
+            funnel = FunnelForm.objects.filter(
+                escuela=escuela, region=region, activo=True
+            ).order_by('pk').first()
+            if funnel is None:
+                raise Http404('No hay ningún funnel activo para esta escuela/región.')
         # Marcas con plantilla propia (HTML + Tailwind, p.ej. languages) siguen
         # el flujo multipágina; el resto entra al shell SPA en la etapa landing.
         template_name = _LANDING_TEMPLATE_POR_ESCUELA.get(funnel.escuela)
@@ -630,16 +660,24 @@ class FunnelVideoView(View):
 
       - /conquer-blocks/video-clase-<region>/  → escuela fija en el path
       - /video-clase-<region>/                 → escuela resuelta por Host
+
+    `slug` (opcional, vía kwarg de urls.py) resuelve un FunnelForm concreto en
+    vez de por escuela+región — ver FunnelClaseView (blocks-eu-2).
     """
 
-    def get(self, request, region, escuela=None):
+    def get(self, request, region, escuela=None, slug=None):
         if escuela is None:
             escuela = _escuela_por_host(request)
         if not escuela:
             raise Http404('No se pudo resolver la escuela para este dominio.')
-        funnel = get_object_or_404(
-            FunnelForm, escuela=escuela, region=region, activo=True
-        )
+        if slug:
+            funnel = get_object_or_404(FunnelForm, slug=slug, activo=True)
+        else:
+            funnel = FunnelForm.objects.filter(
+                escuela=escuela, region=region, activo=True
+            ).order_by('pk').first()
+            if funnel is None:
+                raise Http404('No hay ningún funnel activo para esta escuela/región.')
         # Marcas con plantilla propia (HTML + Tailwind + Plyr, p.ej. languages)
         # siguen el flujo multipágina; el resto entra al shell SPA en la etapa
         # de vídeo.
@@ -731,8 +769,8 @@ class FunnelStatusView(View):
                 'has_landing': 'landing' in cfg,
                 'has_welcome': 'welcome' in cfg,
                 'has_video': tiene_video,
-                'landing_url': _link(_landing_url(f.escuela, f.region, base=base)),
-                'video_url': _link(_video_url(f.escuela, f.region, base=base)),
+                'landing_url': _link(_landing_url(f.escuela, f.region, base=base, slug=f.slug)),
+                'video_url': _link(_video_url(f.escuela, f.region, base=base, slug=f.slug)),
                 'stepform_url': stepform_url(f.escuela, f.region, base=base) or '',
                 'confirmation_url': _link(confirmacion_url(f.escuela, f.region, base=base)),
             })

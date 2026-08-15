@@ -267,6 +267,10 @@
       "mensaje": "Por el momento esta sesión de consultoría no encaja con tu situación actual. Te dejamos nuestro contenido gratuito para que sigas avanzando.",
       "cta_url": "https://www.youtube.com/@ConquerBlocks"
     },
+    "calendlys_for_cancelled": {
+      "url": "https://calendly.com/d/cvny-mq6-gd7/sesion-de-consultoria-conquer-blocks-usa",
+      "price": "3,500 dólares"
+    },
     "settings": {
       "disableWheelSwiping": true,
       "disableNavigationArrows": false,
@@ -321,6 +325,10 @@
         "description": "Con el método que te presentará en el vídeo gratis, ha ayudado a más de 6.000 personas a aprender una <strong>nueva profesión con la que cambiar sus vidas por completo</strong>."
       },
       "description": "... aunque no tengas conocimientos previos de tecnología, ni te consideres una persona técnica"
+    },
+    "video": {
+      "videoUrls": ["https://vslconquerx.b-cdn.net/conquerblocks/conquerblocks-usa.mp4"],
+      "buttonPercent": 75
     },
     "welcome": {
       "title": "Sesión de Consultoría | Desarrollo Full Stack",

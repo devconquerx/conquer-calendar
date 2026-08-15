@@ -50,11 +50,25 @@ urlpatterns = [
         r'^clase-online-gratuita-(?P<region>latam|eu|us)/?$',
         FunnelClaseView.as_view(), name='clase_host',
     ),
+    # Segunda landing EU de Conquer Blocks (blocks-eu-2, réplica exacta de
+    # /conquer-blocks/clase-2-online-gratuita-eu del funnel viejo, cb-eu-2):
+    # comparte escuela+región con blocks-eu pero es un FunnelForm propio, así
+    # que va por slug explícito en vez de por el patrón genérico de arriba.
+    re_path(
+        r'^conquer-blocks/clase-2-online-gratuita-eu/?$',
+        FunnelClaseView.as_view(), {'escuela': 'conquer-blocks', 'region': 'eu', 'slug': 'blocks-eu-2'},
+        name='clase_cb_eu_2',
+    ),
     # Página de video (VSL), entre la landing y el StepForm. Por path para
     # cualquier escuela; por Host en la ruta raíz.
     re_path(
         r'^(?P<escuela>conquer-[a-z-]+)/video-clase-(?P<region>latam|eu|us)/?$',
         FunnelVideoView.as_view(), name='video_escuela',
+    ),
+    re_path(
+        r'^conquer-blocks/video-2-clase-eu/?$',
+        FunnelVideoView.as_view(), {'escuela': 'conquer-blocks', 'region': 'eu', 'slug': 'blocks-eu-2'},
+        name='video_cb_eu_2',
     ),
     re_path(
         r'^video-clase-(?P<region>latam|eu|us)/?$',

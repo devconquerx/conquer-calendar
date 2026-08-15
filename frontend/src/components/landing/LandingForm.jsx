@@ -78,30 +78,49 @@ export default function LandingForm({ program, region, formConfig, school, theme
   const buttonText = landing.buttonText || 'Ver video gratis'
 
   // Check opcional "Envíame la repetición por WhatsApp". Al marcarlo se revela el
-  // campo de teléfono para capturar el número de WhatsApp del lead. Activo en
-  // Conquer Legal y en Conquer Blocks EU (igual que el funnel de referencia, donde
-  // el check solo existe en EU). Forzable por config con landing.whatsappOptin.
+  // campo de teléfono para capturar el número de WhatsApp del lead. Activo
+  // siempre en Conquer Legal; en Conquer Finance EU y Conquer Blocks EU es
+  // parte de un A/B (ver abajo), no incondicional. Forzable por config con
+  // landing.whatsappOptin.
   const isEuRegion = String(region || '').toLowerCase() === 'eu'
 
-  // A/B de Finance EU (réplica exacta de conquerx-funnels-new: `form_variant_cf`,
-  // variantes 55/56, 50/50 persistente por visitante) entre el checkbox de
-  // WhatsApp (55, igual que Legal/Blocks EU) y el campo de WhatsApp siempre
-  // visible pero opcional (56). Se resuelve en un efecto — no en SSR/primer
-  // render, que muestra el estado por defecto (honeypot, sin A/B) hasta montar
-  // — igual que el resto del estado de este componente que depende de
-  // localStorage/geo (país, etc). `?force_form_variant=55|56` fuerza y persiste
-  // la variante (para QA), igual que en el funnel viejo.
+  // A/B de teléfono/WhatsApp en EU, uno por marca/landing (réplica exacta de
+  // conquerx-funnels-new, cada una con su propio storageKey/variantes):
+  // - Finance EU: `form_variant_cf`, 55 (checkbox, igual que Legal) / 56
+  //   (campo siempre visible, opcional, sin checkbox).
+  // - Blocks EU, landing principal (cb-eu, slug `blocks-eu`): `form_variant_cb_eu`,
+  //   51 (control: sin checkbox, solo honeypot, igual que LATAM/US) / 52 (test:
+  //   checkbox de WhatsApp, mismo mecanismo que Finance 55).
+  // - Blocks EU, segunda landing (cb-eu-2, slug `blocks-eu-2`): mismo mecanismo
+  //   pero con su propio experimento independiente, `form_variant_cb_eu_2`,
+  //   53 (control) / 54 (test) — persiste aparte para no mezclar el split de
+  //   ambas landings.
+  // Se resuelve en un efecto — no en SSR/primer render, que muestra el estado
+  // por defecto (honeypot, sin A/B) hasta montar — igual que el resto del
+  // estado de este componente que depende de localStorage/geo (país, etc).
+  // `?force_form_variant=<código>` fuerza y persiste la variante (para QA),
+  // igual que en el funnel viejo.
   const isFinanceEuAbTest = theme.id === 'conquerfinance' && isEuRegion
+  const isBlocksEuAbTest = theme.id === 'conquerblocks' && isEuRegion
+  const isBlocksEu2 = isBlocksEuAbTest && funnelSlug === 'blocks-eu-2'
+  const blocksEuTestVariant = isBlocksEu2 ? '54' : '52'
+  const abTestConfig = isFinanceEuAbTest
+    ? { storageKey: 'form_variant_cf', variants: ['55', '56'] }
+    : isBlocksEuAbTest
+      ? (isBlocksEu2
+          ? { storageKey: 'form_variant_cb_eu_2', variants: ['53', '54'] }
+          : { storageKey: 'form_variant_cb_eu', variants: ['51', '52'] })
+      : null
   const [formVariant, setFormVariant] = useState(null)
   useEffect(() => {
-    if (!isFinanceEuAbTest) return
-    setFormVariant(resolveFormVariant({ storageKey: 'form_variant_cf', variants: ['55', '56'] }))
+    if (!abTestConfig) return
+    setFormVariant(resolveFormVariant(abTestConfig))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const showWhatsappOptin = landing.whatsappOptin != null
     ? !!landing.whatsappOptin
-    : (theme.id === 'conquerlegal' || (theme.id === 'conquerblocks' && isEuRegion) || (isFinanceEuAbTest && formVariant === '55'))
+    : (theme.id === 'conquerlegal' || (isFinanceEuAbTest && formVariant === '55') || (isBlocksEuAbTest && formVariant === blocksEuTestVariant))
 
   // Mostrar campo de teléfono visible: por config (showPhone), al marcar el
   // check de WhatsApp, o por la variante A/B 56 de Finance EU (siempre visible,

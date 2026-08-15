@@ -8,6 +8,7 @@ import BookingDetails from './components/BookingDetails'
 import CalendlyEmbed from './components/CalendlyEmbed'
 import Confirmation from './components/Confirmation'
 import RejectScreen from './components/RejectScreen'
+import PricingScreen from './components/PricingScreen'
 import { buildCalendlyParams, buildCalendlyUrl, getYearMonthForCalendly } from './lib/calendly'
 import BottomNavBar from './components/form-engine/BottomNavBar'
 import StepTransition from './components/form-engine/StepTransition'
@@ -65,6 +66,9 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   const [booking, setBooking] = useState(false)
   const [directBookingFailed, setDirectBookingFailed] = useState(false)
   const [calendlyUrl, setCalendlyUrl] = useState('')
+  // Calendly de la pantalla de precio (config.calendlys_for_cancelled) para
+  // leads rechazados con alternativa — hoy solo Conquer Blocks US.
+  const [pricingCalendlyUrl, setPricingCalendlyUrl] = useState('')
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
@@ -271,22 +275,33 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
         fbp: tracking.pixelCookies._fbp || '',
         fbc: tracking.pixelCookies._fbc || '',
       })
+      const calendlyBody = {
+        lead_name: result.prefill?.nombre || finalRespuestas.name || '',
+        lead_email: result.prefill?.email || finalRespuestas.email || '',
+        lead_phone_number: result.prefill?.telefono || finalRespuestas.phone || '',
+        ...tracking.utmParams,
+      }
       // Modo Calendly (fiel a producción): si el rango trae una URL de Calendly,
       // construye el widget con prefill + UTMs + utm_term de tracking.
       if (result.resultado === 'calendario' && result.calendly_url) {
-        const body = {
-          lead_name: result.prefill?.nombre || finalRespuestas.name || '',
-          lead_email: result.prefill?.email || finalRespuestas.email || '',
-          lead_phone_number: result.prefill?.telefono || finalRespuestas.phone || '',
-          ...tracking.utmParams,
-        }
         const params = buildCalendlyParams({
-          body,
+          body: calendlyBody,
           monthValue: getYearMonthForCalendly(),
           journeyId: tracking.journeyId,
           scheduleEventId,
         })
         setCalendlyUrl(buildCalendlyUrl(result.calendly_url, params))
+      } else if (result.resultado === 'rechazado' && result.calendlys_for_cancelled?.url) {
+        // Pantalla de transparencia de precio (config.calendlys_for_cancelled,
+        // hoy solo Conquer Blocks US) — mismo widget de Calendly, sin mes
+        // preseleccionado, igual que handleCancelledUser del funnel viejo.
+        const params = buildCalendlyParams({
+          body: calendlyBody,
+          journeyId: tracking.journeyId,
+          scheduleEventId,
+          includeMonth: false,
+        })
+        setPricingCalendlyUrl(buildCalendlyUrl(result.calendlys_for_cancelled.url, params))
       }
       setOutcome(result)
       setPhase('outcome')
@@ -371,6 +386,18 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
 
   if (phase === 'outcome') {
     if (outcome.resultado === 'rechazado') {
+      if (outcome.calendlys_for_cancelled?.url && pricingCalendlyUrl) {
+        const pricing = (
+          <PricingScreen
+            price={outcome.calendlys_for_cancelled.price}
+            calendlyUrl={pricingCalendlyUrl}
+            theme={theme}
+            funnelFont={funnelFont}
+            onScheduled={goToConfirmation}
+          />
+        )
+        return theme.hexboard ? hexShell(pricing) : pricing
+      }
       const reject = <RejectScreen cancelScreen={outcome.cancel_screen} theme={theme} funnelFont={funnelFont} />
       return theme.hexboard ? hexShell(reject) : reject
     }

@@ -731,6 +731,20 @@ body { background: #fff; }
 }
 .reject-cta:hover { background: var(--rj-btn-bg-hover); filter: brightness(1.03); }
 
+/* Pricing screen (calendlys_for_cancelled) — reusa .reject-wrap/.reject-card */
+.pricing-cta-row { display: flex; flex-direction: row; gap: 12px; }
+.pricing-cta {
+  flex: 1; padding: 14px 16px; font-size: 15px; font-weight: 600;
+  border-radius: 8px; cursor: pointer; transition: all .14s; font-family: inherit;
+}
+.pricing-cta-no { background: rgba(231, 76, 60, .08); color: #e74c3c; border: 2px solid #e74c3c; }
+.pricing-cta-no:hover { background: rgba(231, 76, 60, .15); }
+.pricing-cta-yes { background: rgba(39, 174, 96, .08); color: #27ae60; border: 2px solid #27ae60; }
+.pricing-cta-yes:hover { background: rgba(39, 174, 96, .15); }
+@media (max-width: 480px) {
+  .pricing-cta-row { flex-direction: column; }
+}
+
 /* Calendar responsive */
 @media (max-width: 720px) {
   .cal-card, .cal-card.has-slots {

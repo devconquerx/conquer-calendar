@@ -23,7 +23,7 @@ CUSTOM_FIELD_MAP = {
 # igual que conquer-crm). Conquer Legal (cg) usa el nombre porque su tag se
 # gestiona por nombre en AC.
 FUNNEL_TAG_MAP = {
-    'cb-latam': '449', 'cb-eu': '451', 'cb-us': '452', 'cb-ge': '459',
+    'cb-latam': '449', 'cb-eu': '451', 'cb-us': '452', 'cb-ge': '459', 'cb-eu-2': '502',
     'fi-latam': '454', 'fi-eu': '456', 'fi-us': '457',
     'cf-latam': '454', 'cf-eu': '456', 'cf-us': '457',
     'cl-latam': '465', 'cl-eu': '466', 'cl-us': '468',
@@ -156,9 +156,20 @@ def push_lead(lead):
         return
 
     school_code = get_school_code(lead)
-    region = get_region_from_lead(lead).lower()  # 'latam', 'eu', 'usa'
-    region_key = 'us' if region == 'usa' else region
-    funnel_key = f'{school_code}-{region_key}' if school_code else None
+
+    # `lead.funnel` ya llega como el código corto del CRM (p.ej. 'cb-eu-2',
+    # 'fi-latam' — ver leads/views.py::_FUNNEL_SLUG_TO_CRM_CODE), así que si
+    # calza tal cual con una entrada del mapa se usa directo. Esto es necesario
+    # para landings "extra" como blocks-eu-2, cuyo sufijo `-2` rompe el parseo
+    # de región de get_region_from_lead (que solo entiende latam/eu/us) — sin
+    # este atajo, cb-eu-2 caía al tag de cb-latam por el fallback de región.
+    funnel_lower = (lead.funnel or '').lower().strip()
+    if funnel_lower in FUNNEL_TAG_MAP:
+        funnel_key = funnel_lower
+    else:
+        region = get_region_from_lead(lead).lower()  # 'latam', 'eu', 'usa'
+        region_key = 'us' if region == 'usa' else region
+        funnel_key = f'{school_code}-{region_key}' if school_code else None
 
     client = ActiveCampaignClient()
 

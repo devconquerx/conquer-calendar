@@ -45,7 +45,7 @@ for f in Lead._meta.get_fields():
 # en Lead.funnel y viaja al ingest del CRM, a AC y a Respond.io. Sin entrada
 # aquí (especialización, kids) se conserva el slug tal cual.
 _FUNNEL_SLUG_TO_CRM_CODE = {
-    'blocks-latam': 'cb-latam', 'blocks-eu': 'cb-eu', 'blocks-us': 'cb-us',
+    'blocks-latam': 'cb-latam', 'blocks-eu': 'cb-eu', 'blocks-us': 'cb-us', 'blocks-eu-2': 'cb-eu-2',
     'finance-latam': 'fi-latam', 'finance-eu': 'fi-eu', 'finance-us': 'fi-us',
     'languages-latam': 'cl-latam', 'languages-eu': 'cl-eu', 'languages-us': 'cl-us',
     'legal-eu': 'cg-eu',

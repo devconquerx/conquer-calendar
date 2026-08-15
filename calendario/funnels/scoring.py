@@ -152,7 +152,10 @@ def resolver_outcome(funnel, respuestas, utm_campaign=''):
 
     Devuelve un dict con ``resultado`` (``'calendario'`` | ``'rechazado'``),
     ``promedio``, ``score_total``, ``motivo`` y, si es calendario,
-    ``event_type_slug`` / ``host_slug`` / ``event_type_id``.
+    ``event_type_slug`` / ``host_slug`` / ``event_type_id``. Si es rechazo y el
+    funnel define ``config.calendlys_for_cancelled`` (``{'url', 'price'}``),
+    también incluye esa clave — alternativa de agendar igual con transparencia
+    de precio en vez del rechazo directo (hoy solo Conquer Blocks US).
     """
     config = funnel.config or {}
     scoring_config = FunnelScoring.load().config or []
@@ -180,13 +183,23 @@ def resolver_outcome(funnel, respuestas, utm_campaign=''):
     )
 
     if not inmune:
+        motivo_rechazo = None
         if aplica_validate(respuestas, config.get('validate', [])):
-            resultado.update(resultado='rechazado', motivo='validate')
-            return resultado
+            motivo_rechazo = 'validate'
+        else:
+            min_score = score_ranges[0]['min_score'] if score_ranges else 0
+            if promedio < min_score:
+                motivo_rechazo = 'score_below_min'
 
-        min_score = score_ranges[0]['min_score'] if score_ranges else 0
-        if promedio < min_score:
-            resultado.update(resultado='rechazado', motivo='score_below_min')
+        if motivo_rechazo:
+            resultado.update(resultado='rechazado', motivo=motivo_rechazo)
+            # Alternativa de agendar igual con transparencia de precio (réplica
+            # de `calendlys_for_cancelled` + `handleCancelledUser` del funnel
+            # viejo — hoy solo lo usa Conquer Blocks US). Puramente opcional:
+            # los funnels sin esta clave en su config quedan igual que antes.
+            calendlys_for_cancelled = config.get('calendlys_for_cancelled')
+            if calendlys_for_cancelled:
+                resultado['calendlys_for_cancelled'] = calendlys_for_cancelled
             return resultado
 
     rango = next(
