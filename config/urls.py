@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.urls import re_path
 from django.urls import path, include
 from django.conf.urls.static import static
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.http import JsonResponse
 from django.views.generic import RedirectView
 
@@ -115,6 +116,11 @@ urlpatterns = [
         include('calendario.bookings.urls_public_booking'),
     ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
+    # Se sirven por la pila normal de URLs (runserver arranca con --nostatic) para
+    # que pasen por los middleware y lleguen con las cabeceras de no-caché.
+    urlpatterns += staticfiles_urlpatterns()
 
 admin.site.site_header = "Conquer Calendario"
 admin.site.site_title = "Conquer Calendario"

@@ -1,6 +1,8 @@
 import logging
 import os
+import re
 from datetime import datetime
+from html import unescape
 
 from django.conf import settings
 from django.db import transaction
@@ -267,6 +269,62 @@ def construir_titulo_evento(et, nombre_invitado):
     return f'{et.nombre} con {nombre_invitado}'
 
 
+def _html_a_texto(html):
+    """Pasa el HTML del editor (Quill) a texto plano con saltos de línea.
+
+    La descripción del evento se escribe en un editor rich text, así que llega
+    como "<p>…</p><ul><li>…</li></ul>". En la descripción de Google Calendar el
+    resto de líneas van en texto plano separadas por \n; si se colara HTML,
+    Google renderizaría todo el campo como HTML y esos \n dejarían de verse.
+    """
+    if not html:
+        return ''
+    texto = re.sub(r'(?i)<br\s*/?>', '\n', html)
+    texto = re.sub(r'(?i)</(p|div|li|h[1-6]|tr)>', '\n', texto)
+    texto = re.sub(r'(?i)<li[^>]*>', '• ', texto)
+    texto = re.sub(r'<[^>]+>', '', texto)
+    texto = unescape(texto)
+    texto = texto.replace('\xa0', ' ')
+    texto = '\n'.join(linea.rstrip() for linea in texto.split('\n'))
+    texto = re.sub(r'\n{3,}', '\n\n', texto)  # Quill deja <p><br></p> de relleno
+    return texto.strip()
+
+
+PIE_DESCRIPCION = 'Desarrollado por ConquerX'
+
+
+def _descripcion_evento(reserva, meet_url=''):
+    """Descripción del evento de Google Calendar: los datos de contacto del
+    invitado, luego el nombre y la descripción del tipo de evento —para que el
+    host abra la agenda y sepa de qué va la reunión— y al final el enlace de Meet.
+
+    `meet_url` no se puede rellenar al crear el evento: la URL la devuelve Google
+    en la respuesta del insert. Por eso `crear_evento_google` monta la descripción
+    dos veces, la segunda ya con el enlace (ver el patch de allí).
+
+    Cada bloque va separado por una línea en blanco.
+    """
+    et = reserva.event_type
+    contacto = '\n'.join(filter(None, [
+        f"Teléfono: {reserva.telefono_invitado}" if reserva.telefono_invitado else None,
+        f"Email: {reserva.email_invitado}",
+        f"Notas: {reserva.notas}" if reserva.notas else None,
+    ]))
+    meet = (
+        'Esto es una conferencia web de Google Meet puedes unirte mediante este '
+        f'enlace:\n{meet_url}'
+    ) if meet_url else None
+    return '\n\n'.join(filter(None, [
+        contacto,
+        'Nombre del evento:',
+        et.nombre,
+        # La descripción va suelta, sin etiqueta que la anuncie.
+        _html_a_texto(et.descripcion),
+        meet,
+        PIE_DESCRIPCION,
+    ]))
+
+
 def _titulo_evento(reserva):
     return construir_titulo_evento(reserva.event_type, reserva.nombre_invitado)
 
@@ -310,11 +368,7 @@ def crear_evento_google(reserva_pk):
             servicio = obtener_servicio_calendar(host_email)
             body = {
                 'summary': _titulo_evento(reserva),
-                'description': '\n'.join(filter(None, [
-                    f"Teléfono: {reserva.telefono_invitado}" if reserva.telefono_invitado else None,
-                    f"Email: {reserva.email_invitado}",
-                    f"Notas: {reserva.notas}" if reserva.notas else None,
-                ])),
+                'description': _descripcion_evento(reserva),
                 'start': {
                     'dateTime': reserva.inicio_utc.isoformat(),
                     'timeZone': 'UTC',
@@ -364,6 +418,24 @@ def crear_evento_google(reserva_pk):
                 "crear_evento_google: OK reserva=%s host=%s event_id=%s",
                 reserva_pk, host_email, evento['id'],
             )
+
+            # El enlace de Meet solo se conoce ahora, así que la descripción se
+            # reescribe con él. Va en su propio try: el evento ya existe y está
+            # sincronizado, y quedarse sin esta línea no es motivo para marcar la
+            # reserva como fallida.
+            if reserva.google_meet_url:
+                try:
+                    servicio.events().patch(
+                        calendarId='primary',
+                        eventId=evento['id'],
+                        body={'description': _descripcion_evento(reserva, reserva.google_meet_url)},
+                        sendUpdates='none',
+                    ).execute()
+                except Exception:
+                    logger.exception(
+                        "crear_evento_google: no se pudo añadir el enlace de Meet a la "
+                        "descripción, reserva=%s event_id=%s", reserva_pk, evento['id'],
+                    )
         except (ServiceAccountNoConfiguradaError, EmailFueraDeDominioError) as e:
             logger.error(
                 "crear_evento_google: config/dominio error reserva=%s host=%s — %s",

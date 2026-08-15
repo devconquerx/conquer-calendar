@@ -19,6 +19,15 @@ TEMPLATES[0]['OPTIONS']['debug'] = DEBUG  # NOQA
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
+# En desarrollo los estáticos no llevan hash, así que se pide al navegador que no
+# los cachee: los cambios en CSS, JS o imágenes se ven recargando normal.
+#
+# runserver sirve /static/ por su cuenta, antes de la pila de middleware, así que
+# esa vía nunca vería las cabeceras. `runserver_nostatic` desactiva ese atajo y
+# deja que las sirvan las urlpatterns de staticfiles (ver config/urls.py).
+INSTALLED_APPS = ['whitenoise.runserver_nostatic', *INSTALLED_APPS]  # NOQA: F405
+MIDDLEWARE = ['config.storage.NoCacheStaticMiddleware', *MIDDLEWARE]  # NOQA: F405
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = None
 
 CACHES = {

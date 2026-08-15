@@ -17,7 +17,7 @@ from django.utils.decorators import method_decorator
 
 from calendario.bookings.exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from calendario.bookings.models import Reserva
-from calendario.bookings.services import crear_reserva, reemplazar_reserva
+from calendario.bookings.services import crear_reserva, mismo_invitado, reemplazar_reserva
 from calendario.bookings.views_public import _enviar_correos_confirmacion
 from .models import FunnelForm, Prellamada
 from .scoring import resolver_outcome
@@ -246,7 +246,7 @@ class ReservarView(View):
         # Reemplazo del duplicado: el front lo manda cuando el visitante acepta
         # en el modal "ya tienes una reserva". Es el confirmacion_token de la
         # reserva vieja, que solo conoce porque se lo devolvimos en el 409 de más
-        # abajo. Aun así se valida que sea del mismo evento y del mismo email,
+        # abajo. Aun así se valida que sea del mismo evento y del mismo invitado,
         # para que un token suelto no pueda cancelar la reserva de otro.
         reemplazar_token = (body.get('reemplazar_token') or '').strip()
         vieja = None
@@ -255,9 +255,13 @@ class ReservarView(View):
                 confirmacion_token=reemplazar_token,
                 event_type=event_type,
                 estado=Reserva.Estado.CONFIRMADA,
-                email_invitado__iexact=email,
                 fin_utc__gt=django_timezone.now(),
             ).first()
+            # El duplicado puede haberse detectado por teléfono con otro email,
+            # así que vale cualquiera de los dos datos — pero uno tiene que
+            # coincidir, para que un token suelto no cancele la reserva de otro.
+            if vieja is not None and not mismo_invitado(vieja, email, telefono):
+                vieja = None
             if vieja is None:
                 return JsonResponse(
                     {'ok': False, 'error': 'reemplazo_invalido',

@@ -205,8 +205,12 @@ def dispatch_schedule_tasks(reserva_id):
         if s.lead_email:
             process_schedule_activecampaign.delay(reserva_id)
 
-        if s.lead_phone_number:
-            process_schedule_respondio.delay(reserva_id)
+        # Respond.io NO se envía desde aquí: al crear el Schedule vía ingest, el
+        # CRM ya hace su propio push con los campos completos (nombre y número
+        # reales del closer, director, horas, país en español) y las etiquetas
+        # schedule-<abbr>. Enviarlo también desde aquí disparaba los workflows
+        # de Respond ANTES, con campos a medias (closer como 'usuario.email',
+        # sin numero_closer, setter vacío) — el WhatsApp de confirmación salía roto.
 
     # CRM: el destino lo decide EventType.crm_destino:
     #   'schedule'   → tabla Schedules del CRM (+ conversiones, despachadas arriba)
@@ -284,9 +288,7 @@ def sweep_incomplete_reservas():
             if s.lead_email and 'sch_activecampaign_done' not in tag_names and 'sch_activecampaign_failed' not in tag_names:
                 process_schedule_activecampaign.delay(reserva.pk)
                 requeued += 1
-            if s.lead_phone_number and 'sch_respondio_done' not in tag_names and 'sch_respondio_failed' not in tag_names:
-                process_schedule_respondio.delay(reserva.pk)
-                requeued += 1
+            # Respond.io: lo push-ea el CRM al recibir el Schedule (ver dispatch).
 
         # CRM: el destino lo decide EventType.crm_destino (schedule / onboarding / none).
         if is_schedule:

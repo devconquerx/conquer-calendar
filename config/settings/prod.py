@@ -48,7 +48,12 @@ MIDDLEWARE = [
     *MIDDLEWARE[1:],
 ]
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+# Nombres versionados por hash: al cambiar un estático cambia su URL, así que el
+# navegador (y cualquier CDN por delante) sirve la versión nueva sin recarga forzada.
+STATICFILES_STORAGE = 'config.storage.TolerantManifestStaticFilesStorage'
+
+# Ya identificados por su hash, los estáticos se pueden cachear indefinidamente.
+WHITENOISE_MAX_AGE = 31536000
 
 LOGGING = {
     'version': 1,
