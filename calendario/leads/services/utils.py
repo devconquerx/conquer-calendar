@@ -144,9 +144,14 @@ def get_region_from_lead(lead):
     if funnel:
         funnel_lower = funnel.lower()
         if '-' in funnel_lower:
-            region_part = funnel_lower.split('-')[-1]
-            if region_part in FUNNEL_REGION_MAP:
-                return FUNNEL_REGION_MAP[region_part]
+            # La región puede no ser el último segmento: slugs de variante
+            # como 'cb-eu-2' (segundo experimento EU de Blocks) llevan un
+            # sufijo extra después de la región ('2'), así que se prueban
+            # TODOS los segmentos, no solo el último — si no, 'cb-eu-2' caía
+            # al fallback de LATAM porque 'eu-2'.split('-')[-1] == '2'.
+            for part in funnel_lower.split('-'):
+                if part in FUNNEL_REGION_MAP:
+                    return FUNNEL_REGION_MAP[part]
         for suffix, region in FUNNEL_REGION_MAP.items():
             if funnel_lower.endswith(suffix):
                 return region
