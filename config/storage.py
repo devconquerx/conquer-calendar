@@ -18,6 +18,24 @@ class TolerantManifestStaticFilesStorage(CompressedManifestStaticFilesStorage):
     # Que falte una entrada en el manifiesto no debe reventar la página en runtime.
     manifest_strict = False
 
+    def hashed_name(self, name, content=None, filename=None):
+        # Los archivos de frontend/dist/assets/ ya vienen con un hash de
+        # contenido puesto por Vite (p.ej. funnel-Cl5WoCiK.js), y los chunks
+        # lazy (VideoPage/Funnel/Confirmation) se importan entre sí por ESE
+        # nombre exacto: Rollup graba el `import ... from "./funnel-Cl5WoCiK.js"`
+        # tal cual en build time, y Django/WhiteNoise no reescriben imports de
+        # JS (solo url() en CSS). Si además les ponemos NUESTRO hash encima,
+        # el <script> de entrada (que sí pasa por aquí vía {% vite_asset %})
+        # queda en una URL distinta a la que usan esos imports internos: el
+        # navegador carga el mismo módulo dos veces bajo dos URLs → dos copias
+        # de React → "Invalid hook call" (React #321) en cualquier hook de un
+        # chunk lazy (useRouter en VideoPage, useTheme, etc.), en cualquier
+        # escuela. Dejamos estos archivos tal cual: ya son inmutables por
+        # contenido gracias al hash de Vite, el de Django es puro riesgo.
+        if name.startswith('assets/'):
+            return name
+        return super().hashed_name(name, content=content, filename=filename)
+
     def post_process(self, paths, dry_run=False, **options):
         for name, hashed_name, processed in super().post_process(paths, dry_run, **options):
             if isinstance(processed, Exception):
