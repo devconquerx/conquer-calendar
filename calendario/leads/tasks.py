@@ -107,8 +107,19 @@ def process_neverbounce(self, lead_id):
         try:
             neverbounce.validate_email(lead)
             lead.refresh_from_db(fields=['neverbounce_result'])
-        except Exception:
-            logger.exception('Lead %s: NeverBounce falló; se continúa sin validación', lead_id)
+        except Exception as exc:
+            # Un timeout no es una respuesta, es que no dio tiempo a preguntar, así
+            # que se reintenta antes de darlo por perdido. Antes se capturaba aquí
+            # sin más: el lead quedaba con `neverbounce_skipped` al primer fallo y
+            # el sweep excluye ese tag, con lo que nadie volvía a preguntar nunca.
+            try:
+                raise self.retry(exc=exc)
+            except self.MaxRetriesExceededError:
+                logger.exception(
+                    'Lead %s: NeverBounce agotó los reintentos; se continúa sin '
+                    'validación (el CRM lo reintentará al recibir el lead sin '
+                    'neverbounce_result)', lead_id,
+                )
 
     if lead.neverbounce_result:
         lead.tags.add('neverbounce_done')
