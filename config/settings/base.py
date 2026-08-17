@@ -89,6 +89,14 @@ DATABASES = {
     "default": env.db("DATABASE_URL"),
 }
 
+# Conexiones persistentes. Sin esto Django abre un TCP+TLS nuevo contra el Postgres
+# gestionado en cada request: ~25 ms de handshake que Sentry venía marcando como
+# "N+1 Query" sobre el span `connect`, y un churn de conexiones que llegó a agotar
+# los slots del servidor. El pool queda acotado por el número de procesos
+# (3 gunicorn + 4 celery + beat), muy por debajo del max_connections=50.
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("CALENDARIO_DB_CONN_MAX_AGE", default=60)
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
