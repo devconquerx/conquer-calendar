@@ -395,11 +395,17 @@ def crear_evento_google(reserva_pk):
             _, cfg_inv = resolver_config(reserva, 'confirmacion_inv')
             send_updates = 'none' if cfg_inv else 'all'
 
+            # El evento se crea en silencio a propósito. El enlace de Meet solo lo
+            # devuelve Google en esta respuesta, así que si la invitación saliera
+            # aquí viajaría con la descripción todavía sin el enlace — y el .ics
+            # que reciben Outlook y Apple es una foto fija: la corrección posterior
+            # no les llega nunca. Se avisa en el patch de más abajo, ya con la
+            # descripción completa.
             evento = servicio.events().insert(
                 calendarId='primary',
                 body=body,
                 conferenceDataVersion=1,
-                sendUpdates=send_updates,
+                sendUpdates='none',
             ).execute()
 
             reserva.google_event_id = evento['id']
@@ -419,22 +425,36 @@ def crear_evento_google(reserva_pk):
                 reserva_pk, host_email, evento['id'],
             )
 
-            # El enlace de Meet solo se conoce ahora, así que la descripción se
-            # reescribe con él. Va en su propio try: el evento ya existe y está
-            # sincronizado, y quedarse sin esta línea no es motivo para marcar la
-            # reserva como fallida.
-            if reserva.google_meet_url:
-                try:
-                    servicio.events().patch(
-                        calendarId='primary',
-                        eventId=evento['id'],
-                        body={'description': _descripcion_evento(reserva, reserva.google_meet_url)},
-                        sendUpdates='none',
-                    ).execute()
-                except Exception:
+            # Segunda escritura: reescribe la descripción ya con el enlace de Meet
+            # y es la que dispara la invitación. Se ejecuta SIEMPRE, aunque no haya
+            # enlace: Google crea la sala de forma asíncrona y a veces responde con
+            # la conferencia aún pendiente, y si esto fuese condicional esas reservas
+            # se quedarían sin avisar a nadie. Sin enlace la descripción sale igual
+            # que antes, pero el invitado recibe su invitación.
+            # num_retries deja que el cliente de Google haga backoff ante el
+            # rateLimitExceeded que devuelve al escribir dos veces seguidas.
+            try:
+                servicio.events().patch(
+                    calendarId='primary',
+                    eventId=evento['id'],
+                    body={'description': _descripcion_evento(reserva, reserva.google_meet_url)},
+                    sendUpdates=send_updates,
+                ).execute(num_retries=3)
+            except Exception:
+                # El evento existe y la reserva está sincronizada, así que no se
+                # marca como fallida. Pero la gravedad depende de quién avisa: si
+                # el correo lo manda Django solo se pierde una línea de texto; si
+                # lo mandaba Google, el invitado se ha quedado sin invitación.
+                if send_updates == 'none':
                     logger.exception(
                         "crear_evento_google: no se pudo añadir el enlace de Meet a la "
                         "descripción, reserva=%s event_id=%s", reserva_pk, evento['id'],
+                    )
+                else:
+                    logger.exception(
+                        "crear_evento_google: la invitación de Google NO se envió, "
+                        "reserva=%s event_id=%s invitado=%s",
+                        reserva_pk, evento['id'], reserva.email_invitado,
                     )
         except (ServiceAccountNoConfiguradaError, EmailFueraDeDominioError) as e:
             logger.error(
