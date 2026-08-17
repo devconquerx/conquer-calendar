@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { fireAllPageView } from './pixelEvents'
 
 /* Router mínimo del funnel SPA.
@@ -32,6 +32,15 @@ export function stageFromPath(pathname, urls, fallback) {
 export default function FunnelRouter({ initialStage, urls, children }) {
   const [stage, setStage] = useState(initialStage)
 
+  // ¿Se ha navegado ya dentro de la SPA, o seguimos en la etapa con la que se
+  // cargó el documento? Importa para el autoplay del vídeo: una navegación con
+  // pushState conserva la activación de usuario del navegador (el submit de la
+  // landing), así que el vídeo puede arrancar con sonido; una carga directa o
+  // una recarga no la tiene y el navegador lo bloquearía.
+  // Va en un ref a propósito: se consulta al montar, no debe provocar renders.
+  const navegadoRef = useRef(false)
+  const hasNavigated = useCallback(() => navegadoRef.current, [])
+
   // `search` debe venir con '?' inicial; si no se pasa, se conserva el query
   // string actual (prefill + tracking viajan por la URL entre etapas).
   const navigate = useCallback(
@@ -43,6 +52,7 @@ export default function FunnelRouter({ initialStage, urls, children }) {
       }
       const qs = search !== undefined ? search : window.location.search || ''
       window.history.pushState({ stage: nextStage }, '', `${url}${qs}`)
+      navegadoRef.current = true
       setStage(nextStage)
       window.scrollTo({ top: 0, behavior: 'auto' })
       fireAllPageView()
@@ -54,6 +64,7 @@ export default function FunnelRouter({ initialStage, urls, children }) {
     (path, { search, stage: targetStage = 'confirmation' } = {}) => {
       const qs = search !== undefined ? search : window.location.search || ''
       window.history.pushState({ stage: targetStage }, '', `${path}${qs}`)
+      navegadoRef.current = true
       setStage(targetStage)
       window.scrollTo({ top: 0, behavior: 'auto' })
       fireAllPageView()
@@ -69,7 +80,10 @@ export default function FunnelRouter({ initialStage, urls, children }) {
     return () => window.removeEventListener('popstate', onPop)
   }, [urls, initialStage])
 
-  const value = useMemo(() => ({ stage, navigate, navigateRaw, urls }), [stage, navigate, navigateRaw, urls])
+  const value = useMemo(
+    () => ({ stage, navigate, navigateRaw, urls, hasNavigated }),
+    [stage, navigate, navigateRaw, urls, hasNavigated]
+  )
 
   return <RouterContext.Provider value={value}>{children}</RouterContext.Provider>
 }

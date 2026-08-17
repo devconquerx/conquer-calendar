@@ -207,9 +207,6 @@ export default {
       subtitle: VIDEO_SUBTITLE,
       title: VIDEO_TITLE,
       glow: '0 2px 20px 6px rgba(116,205,45,0.35)',
-      // Finance conserva su arranque de producción: autoplay muted + overlay de
-      // "activar sonido" (Legal sí arranca con sonido tras el submit).
-      autoplayUnmuted: false,
       // El logo de Finance es horizontal (el de Legal es un lockup vertical):
       // mismos anchos que usaba la navbar hex.
       headerLogoWidth: '180px',
@@ -342,8 +339,8 @@ export default {
     glow: '0 2px 20px 6px rgba(127,193,255,0.28)',
     headerLogoWidth: '180px',
     headerLogoWidthMobile: '140px',
-    // Igual que producción: el vídeo arranca con autoplay muted + overlay de
-    // "activar sonido" (Finance NO usa autoplayUnmuted como Legal).
+    // El arranque del vídeo (con sonido o con overlay) ya no depende de la marca:
+    // lo decide VideoPlayer según si se llegó navegando dentro de la SPA.
   },
 
   // Confirmación — réplica 1:1 de /confirmacion-llamada (medida en prod):

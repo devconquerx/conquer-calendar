@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import 'plyr/dist/plyr.css'
 import UnmuteOverlay from './UnmuteOverlay'
 import ReturningOverlay from './ReturningOverlay'
+import { useRouter } from '../../lib/router'
 
 const STORAGE_KEY = 'vsl_progress'
 const LEGACY_STORAGE_KEY = 'videolitics'
@@ -55,6 +56,13 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
   const buttonShownRef = useRef(false)
   const milestonesReportedRef = useRef(new Set())
 
+  // Se evalúa UNA vez, al montar, y de ahí que viva en un ref: lo que importa es
+  // cómo se llegó a esta página, no lo que pase después. `useRouter()` devuelve
+  // null fuera de la SPA (navegación con recarga completa), que es justo el caso
+  // en el que tampoco hay activación de usuario.
+  const router = useRouter()
+  const vinoDeNavegacionRef = useRef(!!router?.hasNavigated?.())
+
   const videoUrl = videoUrls?.[0] || ''
 
   useEffect(() => {
@@ -63,11 +71,12 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
     const stored = getStoredProgress(videoUrl)
     const isReturning = stored && stored.progress_percent > 0
 
-    // Conquer Legal: al llegar desde el submit de la landing (navegación SPA, mismo
-    // documento) el navegador conserva la activación de usuario, así que el vídeo
-    // puede arrancar CON sonido sin overlay. Solo para visitantes nuevos.
-    const autoplayUnmuted = !!theme?.video?.autoplayUnmuted
-    const tryUnmuted = autoplayUnmuted && !isReturning
+    // Arrancar CON sonido solo si se llegó aquí navegando dentro de la SPA (el
+    // submit de la landing): esa navegación no recarga el documento, así que el
+    // navegador conserva la activación de usuario y permite el audio. Si se entró
+    // directo o se recargó no la hay, y hay que pedir el clic con el overlay.
+    // Y solo para visitantes nuevos: si hay progreso manda el overlay de reanudar.
+    const tryUnmuted = vinoDeNavegacionRef.current && !isReturning
 
     if (isReturning) {
       setStoredData(stored)
