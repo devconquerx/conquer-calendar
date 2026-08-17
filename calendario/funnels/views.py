@@ -324,6 +324,12 @@ class ReservarView(View):
 # son /agenda/<producto>/<region>/. Añadir aquí nuevas marcas/productos.
 PRODUCTO_A_ESCUELA = {
     'fullstack': 'conquer-blocks',
+    # Especialización no es una escuela aparte, es una variante de Conquer Blocks
+    # (para el CRM y las tags va como 'cb', ver SCHOOL_SLUG_TO_CODE). Necesita su
+    # propio producto igualmente, porque su FunnelForm es otro y sin esta entrada
+    # /agenda/especializacion/<region>/ da 404. Misma situación que 'kids' con
+    # Languages. La URL replica la del funnel viejo (especializacion/<region>).
+    'especializacion': 'conquer-blocks-esp',
     'proptrading': 'conquer-finance',
     'english': 'conquer-languages',
     'legal': 'conquer-legal',
