@@ -58,6 +58,14 @@ export default {
   // (Landing/HeroSection/BulletPoints/LandingForm) se activa con esta bandera.
   paperboard: true,
 
+  // El contenedor GTM de Blocks (heredado de Webflow, aún sirviendo tráfico
+  // real vía Calendly) dispara el Schedule con el trigger "page load en
+  // *confirmacion-llamada*", así que el StepForm debe navegar a la
+  // confirmación con recarga real, no pushState — mismo fix que Finance
+  // (ver conquerfinance.js). Flag de MARCA: no toca el GTM en vivo, solo
+  // cambia cómo conquer-calendar navega en su propio flujo.
+  gtmHardConfirmation: true,
+
   // Acento de marca (naranja). Los degradados se inyectan por estilo inline /
   // CSS vars para que Tailwind no tenga que generarlos en build time.
   accent: {
