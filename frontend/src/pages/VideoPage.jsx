@@ -4,7 +4,6 @@ import AgendarButton from '../components/vsl/AgendarButton'
 import { getTheme } from '../themes'
 import { CB_CARD_SHADOW } from '../themes/conquerblocks'
 import { sendVideoProgressToBackend } from '../api'
-import { reportLegacyVideoProgress } from '../lib/legacyVideoProgress'
 import { safeHtml } from '../lib/sanitize'
 import { useRouter } from '../lib/router'
 
@@ -43,10 +42,11 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
 
   const handleProgress = useCallback(
     (percent) => {
+      // Una sola llamada: el backend guarda el %, lo reenvía al CRM en los hitos
+      // y escribe el campo por marca+región en ActiveCampaign en cada tramo.
+      // Antes había un segundo POST desde aquí a video-progress-tracker.php
+      // (crm-test); ese trabajo lo hace ahora el servidor.
       sendVideoProgressToBackend({ email, percent, school: school?.slug, region })
-      // Sistema legacy paralelo (réplica de sendPercentageOfVideoViewed del
-      // viejo): no-op si la escuela/región no tiene mapeo — ver legacyVideoProgress.js.
-      reportLegacyVideoProgress({ email, percent, schoolSlug: school?.slug, region })
     },
     [email, school, region]
   )

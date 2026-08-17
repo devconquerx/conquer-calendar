@@ -34,6 +34,17 @@ FUNNEL_TAG_MAP = {
 # el nuevo). Los valores por nombre se resuelven aparte en push_lead.
 ALL_SCHOOL_TAG_IDS = {tag for tag in FUNNEL_TAG_MAP.values() if str(tag).isdigit()}
 
+# Campos de "% del VSL visto", por marca + región. Sustituyen al
+# video-progress-tracker.php que vivía en crm-test y resolvía estos mismos IDs
+# por nombre en cada petición. Los de `cg` (Conquer Legal) no existían y se
+# crearon para poder cubrir también esa escuela. 'fi' es alias de 'cf'.
+VSL_PERCENT_FIELD_MAP = {
+    ('cb', 'eu'): '81', ('cb', 'latam'): '82', ('cb', 'us'): '83',
+    ('cf', 'eu'): '84', ('cf', 'latam'): '85', ('cf', 'us'): '86',
+    ('cl', 'eu'): '87', ('cl', 'latam'): '88', ('cl', 'us'): '89',
+    ('cg', 'eu'): '118', ('cg', 'latam'): '119', ('cg', 'us'): '120',
+}
+
 # List IDs per school
 SCHOOL_LIST_MAP = {
     'cb': '19',
@@ -222,3 +233,53 @@ def push_lead(lead):
             lead.save(update_fields=['is_form_vsl_processed'])
         except Exception as save_err:
             logger.error(f'[ActiveCampaign] Lead {lead.pk} failed to save is_form_vsl_processed: {save_err}')
+
+
+def push_vsl_percent(lead, percent, region=None):
+    """Escribe el % de VSL visto en el campo marca+región del contacto de AC.
+
+    Reemplaza al video-progress-tracker.php: mismo destino (esta misma cuenta de
+    ActiveCampaign), mismos campos y misma cadencia — cada 10%, no solo los
+    hitos 25/50/75/100 que se reenvían al CRM.
+
+    `region` es la que reporta el navegador; si no llega, se deduce del lead.
+    Si la combinación marca+región no tiene campo, no-op: igual de inocuo que
+    el `return` temprano que hacía el JS legacy cuando no había mapeo.
+    """
+    api_url = getattr(settings, 'ACTIVECAMPAIGN_API_URL', '')
+    api_key = getattr(settings, 'ACTIVECAMPAIGN_API_KEY', '')
+    if not api_url or not api_key:
+        logger.warning('[ActiveCampaign] API not configured')
+        return
+
+    if not lead.email or not percent:
+        return
+
+    school_code = get_school_code(lead)
+    if school_code == 'fi':
+        school_code = 'cf'
+
+    region_key = (region or '').lower().strip()
+    if not region_key:
+        region_key = (get_region_from_lead(lead) or '').lower()
+    if region_key == 'usa':
+        region_key = 'us'
+
+    field_id = VSL_PERCENT_FIELD_MAP.get((school_code, region_key))
+    if not field_id:
+        logger.info(
+            '[ActiveCampaign] Lead %s: sin campo VSL para marca=%s region=%s, se omite',
+            lead.pk, school_code, region_key,
+        )
+        return
+
+    client = ActiveCampaignClient()
+    contact = client.create_or_update_contact(lead.email, field_values={field_id: str(percent)})
+    if not contact:
+        logger.warning('[ActiveCampaign] Lead %s: fallo al escribir el %% de VSL', lead.pk)
+        return
+
+    logger.info(
+        '[ActiveCampaign] Lead %s: vsl %s%% -> campo %s (%s-%s)',
+        lead.pk, percent, field_id, school_code, region_key,
+    )

@@ -81,6 +81,20 @@ def process_activecampaign(self, lead_id):
 
 
 @shared_task(**RETRY_POLICY)
+def process_vsl_activecampaign(self, lead_id, percent, region=None):
+    """Escribe el % de VSL visto en ActiveCampaign (cada 10%).
+
+    A diferencia del resto de tareas de este módulo no marca ningún tag *_done:
+    se dispara una vez por cada tramo reportado, así que no la recoge el sweep.
+    """
+    from calendario.leads.models import Lead
+    from calendario.leads.services import activecampaign
+
+    lead = Lead.objects.get(pk=lead_id)
+    activecampaign.push_vsl_percent(lead, percent, region)
+
+
+@shared_task(**RETRY_POLICY)
 def process_neverbounce(self, lead_id):
     from calendario.leads.models import Lead
     from calendario.leads.services import neverbounce

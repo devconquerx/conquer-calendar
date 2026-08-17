@@ -170,6 +170,7 @@ def video_progress(request):
     except (TypeError, ValueError):
         percent = 0
     school = (data.get('school') or '').strip()
+    region = (data.get('region') or '').strip()
 
     if not email or percent <= 0:
         return JsonResponse({'status': 'skipped'})
@@ -209,6 +210,17 @@ def video_progress(request):
     # Reenvía el progreso del VSL al CRM ingest (mismo hito y campo que guardamos).
     if milestone_to_send:
         _patch_vsl_progress_to_crm(email, brand_field, milestone_to_send)
+
+    # ActiveCampaign, campo por marca+región. Sustituye al POST que la página de
+    # vídeo hacía desde el navegador a video-progress-tracker.php: mismo destino
+    # y misma cadencia (cada 10%, de ahí que vaya fuera del `if milestone`), pero
+    # desde el servidor, sin exponer un endpoint sin autenticar ni depender de
+    # que el navegador del usuario no lo bloquee.
+    try:
+        from .tasks import process_vsl_activecampaign
+        process_vsl_activecampaign.delay(lead.pk, percent, region)
+    except Exception:
+        logger.exception('No se pudo encolar el %% de VSL a ActiveCampaign para lead %s', lead.pk)
 
     return JsonResponse({'status': 'ok'})
 
