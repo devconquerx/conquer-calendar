@@ -207,7 +207,9 @@ def sweep_incomplete_leads():
 
     requeued = 0
     for lead in leads.iterator(chunk_size=200):
-        tag_names = set(lead.tags.names())
+        # .all() reutiliza la caché de prefetch_related; .names() la descarta y
+        # relanza un values_list por cada lead (N+1).
+        tag_names = set(t.name for t in lead.tags.all())
         # Mismo gate que dispatch_lead_tasks: Legal no usa la API directa de
         # conversiones (van por el server container de sGTM).
         es_legal = get_school_code(lead) == 'cg'

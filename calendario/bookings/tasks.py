@@ -158,7 +158,7 @@ def dispatch_schedule_tasks(reserva_id):
     reserva = Reserva.objects.select_related('event_type').prefetch_related('tags').get(pk=reserva_id)
 
     # Guard: evita doble despacho
-    if 'sch_tasks_dispatched' in set(reserva.tags.names()):
+    if 'sch_tasks_dispatched' in set(t.name for t in reserva.tags.all()):
         logger.info('Reserva %s: tasks already dispatched, skipping', reserva_id)
         return
     reserva.tags.add('sch_tasks_dispatched')
@@ -246,7 +246,9 @@ def sweep_incomplete_reservas():
 
     requeued = 0
     for reserva in reservas.iterator(chunk_size=200):
-        tag_names = set(reserva.tags.names())
+        # .all() reutiliza la caché de prefetch_related; .names() la descarta y
+        # relanza un values_list por cada reserva (N+1).
+        tag_names = set(t.name for t in reserva.tags.all())
         et = reserva.event_type
         is_schedule = bool(et and et.crm_destino == 'schedule')
 
