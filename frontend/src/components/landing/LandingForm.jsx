@@ -133,7 +133,13 @@ export default function LandingForm({ program, region, formConfig, school, theme
   // obligatorio). Si no es visible, el teléfono se captura por honeypot/autofill.
   const showPhone = !!landing.showPhone || (isFinanceEuAbTest && formVariant === '56')
   const phoneVisible = showPhone || (showWhatsappOptin && wantsWhatsapp)
-  const enablePhoneHoneypot = !phoneVisible
+  // Honeypot de teléfono: campo oculto con autocomplete="tel" que captura el
+  // número si el navegador lo autorrellena. Se puede apagar por funnel desde la
+  // config (landing.phoneHoneypot === false); por defecto sigue activo.
+  // Réplica del viejo, donde no era uniforme: Blocks lo aplica solo en EU/EU-2 y
+  // en LATAM/US llama a disablePhoneCapture() (quita el `name`, no captura nada),
+  // mientras que Finance y Legal lo aplican siempre y Languages no lo usa.
+  const enablePhoneHoneypot = !phoneVisible && landing.phoneHoneypot !== false
 
   // País desde geo
   useEffect(() => {
