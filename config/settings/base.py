@@ -274,6 +274,16 @@ FUNNEL_HOST_ESCUELA = env.dict('CALENDARIO_FUNNEL_HOST_ESCUELA', default={
 # prefijo a sus URLs de navegación. Vacío = el funnel solo se sirve en la raíz.
 FUNNEL_BASE_PATHS = env.list('CALENDARIO_FUNNEL_BASE_PATHS', default=['/preview'])
 
+# Base pública desde la que se sirve cada escuela, para los enlaces del panel
+# /funnels/. Es la URL COMPLETA, prefijo incluido: unas marcas ya están cortadas
+# en la raíz de su dominio y otras siguen bajo /preview mientras dura el corte
+# en Cloudflare, así que el prefijo va aquí y no se calcula. Sin entrada para una
+# escuela, sus enlaces salen relativos (mismo dominio que el panel), que es lo
+# que hace falta en local: por eso el default va vacío y los dominios reales se
+# fijan en prod.py — si no, el panel de local abriría producción.
+# Override por env: CALENDARIO_FUNNEL_PUBLIC_BASE="escuela=https://dominio,…"
+FUNNEL_PUBLIC_BASE = env.dict('CALENDARIO_FUNNEL_PUBLIC_BASE', default={})
+
 
 # ──────────────────────────────────────────────────────────────────────
 # Tracking / conversiones (lead + schedule). Todas las claves tienen

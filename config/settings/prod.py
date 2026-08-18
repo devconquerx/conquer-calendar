@@ -30,6 +30,23 @@ CSRF_TRUSTED_ORIGINS = env.list(
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
+# Enlaces del panel /funnels/ hacia el dominio real de cada marca. Se usa el
+# subdominio www porque las rutas del worker en Cloudflare están dadas de alta
+# como `*.dominio/...` y ese comodín NO cubre el ápice. Blocks, Legal y Finance
+# ya se sirven en la raíz de su dominio; Languages sigue detrás de /preview
+# hasta que se le den de alta las rutas definitivas — cuando pase, basta con
+# quitarle el sufijo aquí. Especialización y Kids no tienen dominio propio:
+# viven bajo el de su marca madre.
+if not FUNNEL_PUBLIC_BASE:  # NOQA: F405 — viene de base.py, vacío salvo override por env
+    FUNNEL_PUBLIC_BASE = {
+        'conquer-blocks': 'https://www.conquerblocks.com',
+        'conquer-blocks-esp': 'https://www.conquerblocks.com',
+        'conquer-finance': 'https://www.conquerfinance.com',
+        'conquer-legal': 'https://www.conquerlegal.com',
+        'conquer-languages': 'https://www.conquerlanguages.com/preview',
+        'conquer-languages-kids': 'https://www.conquerlanguages.com/preview',
+    }
+
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_CONTENT_TYPE_NOSNIFF = True

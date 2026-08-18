@@ -756,19 +756,32 @@ class FunnelStatusView(View):
 
     def get(self, request):
         base = _base_path(request)
+        publicos = getattr(settings, 'FUNNEL_PUBLIC_BASE', None) or {}
         filas = []
         for f in FunnelForm.objects.all().order_by('escuela', 'region'):
             cfg = f.config or {}
             tiene_video = bool(cfg.get('video')) or f.escuela in _VIDEO_DEFAULTS
+
+            # Base pública de la marca (FUNNEL_PUBLIC_BASE), si la tiene: los
+            # enlaces salen absolutos contra su dominio en vez de contra el del
+            # panel, que es donde el funnel se ve de verdad. Ese valor ya trae su
+            # propio prefijo cuando toca (p.ej. .../preview mientras dura el
+            # corte), así que SUSTITUYE a app_base_path — sumarlos lo duplicaría.
+            publico = (publicos.get(f.escuela) or '').rstrip('/')
+            ruta_base = '' if publico else base
+
+            def _abs(url):
+                return f'{publico}{url}' if (publico and url) else url
 
             # Las escuelas SIN la escuela en el path (finance, languages…)
             # resuelven por Host, así que sus rutas raíz no funcionan desde el
             # dominio del panel (calendar.localhost / el dominio del calendario).
             # Se les añade ?escuela=<slug>: en dev DEBUG lo usa el fallback de
             # _escuela_por_host; en los dominios de marca el parámetro se ignora.
+            # Con base pública sobra: ahí el Host ya resuelve la escuela.
             def _link(url):
-                if not url or f.escuela in _ESCUELAS_RUTA_PATH:
-                    return url
+                if not url or publico or f.escuela in _ESCUELAS_RUTA_PATH:
+                    return _abs(url)
                 return f'{url}?escuela={f.escuela}'
 
             filas.append({
@@ -779,10 +792,10 @@ class FunnelStatusView(View):
                 'has_landing': 'landing' in cfg,
                 'has_welcome': 'welcome' in cfg,
                 'has_video': tiene_video,
-                'landing_url': _link(_landing_url(f.escuela, f.region, base=base, slug=f.slug)),
-                'video_url': _link(_video_url(f.escuela, f.region, base=base, slug=f.slug)),
-                'stepform_url': stepform_url(f.escuela, f.region, base=base) or '',
-                'confirmation_url': _link(confirmacion_url(f.escuela, f.region, base=base)),
+                'landing_url': _link(_landing_url(f.escuela, f.region, base=ruta_base, slug=f.slug)),
+                'video_url': _link(_video_url(f.escuela, f.region, base=ruta_base, slug=f.slug)),
+                'stepform_url': _abs(stepform_url(f.escuela, f.region, base=ruta_base)) or '',
+                'confirmation_url': _link(confirmacion_url(f.escuela, f.region, base=ruta_base)),
             })
         return render(request, 'pages/public/funnel/status.html', {
             'filas': filas,
