@@ -485,18 +485,18 @@ _VIDEO_DEFAULTS = {
 
 
 # Plantillas de landing por marca (las que no estén aquí usan la landing React).
-_LANDING_TEMPLATE_POR_ESCUELA = {
-    'conquer-languages': 'pages/public/funnel/landing_languages.html',
-}
+# Vacío: Languages tenía aquí una plantilla suelta (landing_languages.html) que
+# se quedó fuera del sistema de diseño paperboard y, sobre todo, fuera del SPA:
+# su formulario mandaba al backend solo nombre y email, sin UTMs, click IDs ni
+# cookies de píxel, y navegaba al vídeo con recarga completa. Ahora Languages
+# usa el renderer compartido, igual que Blocks, Finance y Legal.
+_LANDING_TEMPLATE_POR_ESCUELA = {}
 
 
 # Plantillas de la página de vídeo por marca (las que no estén aquí usan la
-# página de vídeo React por defecto, dentro del shell SPA). conquer-languages
-# tiene su propio diseño (HTML + Tailwind + Plyr) que replica
-# conquerlanguages.com.
-_VIDEO_TEMPLATE_POR_ESCUELA = {
-    'conquer-languages': 'pages/public/funnel/video_languages.html',
-}
+# página de vídeo React por defecto, dentro del shell SPA). Vacío por el mismo
+# motivo que el mapa de arriba.
+_VIDEO_TEMPLATE_POR_ESCUELA = {}
 
 
 def _render_ssr(*, stage, slug, escuela, region, program,

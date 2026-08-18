@@ -10,10 +10,10 @@
     del formulario se aplica como background-image vía CSS/React, así que el
     navegador no la descubre hasta que el bundle monta. Precargarla aquí la baja
     en paralelo con el JS. Solo en la landing y en marcas con tema paperboard
-    (legal/blocks); el resto usa el tema blanco y no la necesita.
+    (legal/blocks/languages); el resto usa el tema blanco y no la necesita.
   {% endcomment %}
   {% if stage == 'landing' %}
-    {% if 'legal' in escuela or 'blocks' in escuela or 'legal' in slug or 'blocks' in slug %}
+    {% if 'legal' in escuela or 'blocks' in escuela or 'languages' in escuela or 'legal' in slug or 'blocks' in slug or 'languages' in slug %}
   <link rel="preload" as="image" href="{% vite_asset_url 'src/assets/img/cb/paperboard-texture.avif' %}" fetchpriority="high">
     {% endif %}
   {% endif %}
