@@ -14,6 +14,13 @@ import instructorMaskBottom from '../assets/img/cb/instructor-mask-bottom.svg'
 import tornTransition from '../assets/img/cb/torn-transition.png'
 import tornTransition2000 from '../assets/img/cb/torn-transition-2000.png'
 import gridBackground from '../assets/img/cb/grid-background.avif'
+// Iconos de los bullets: los mismos "conquie" del set cb/ que usa Conquer
+// Blocks. Son monocromos y no llevan color de marca, así que se comparten tal
+// cual; el orden aquí sigue el de los bullets de Languages (dinero → confianza
+// → método), no el de Blocks.
+import bulletIcon1 from '../assets/img/cb/conquie-dinero2.svg'
+import bulletIcon2 from '../assets/img/cb/conquie-cool2.svg'
+import bulletIcon3 from '../assets/img/cb/conquie-escribir.svg'
 // Assets propios de la marca, descargados de conquerlanguages.com.
 import logo from '../assets/img/languages/logo.svg'
 import instructorPhoto from '../assets/img/languages/andy.webp'
@@ -100,11 +107,7 @@ export default {
     tornTransition2000,
     gridBackground,
     pixels: { deco: pixelDeco, deco2: pixelDeco2, sm7: pixelDeco, lg8: pixelDeco2 },
-    // Languages no tiene todavía un set propio de iconos ilustrados para los
-    // bullets (Blocks y Legal sí). BulletPoints los pinta solo si existen, así
-    // que sin ellos las filas salen como tarjetas de texto: correcto, aunque no
-    // es la versión final. En cuanto haya iconos de marca, se listan aquí.
-    bulletIcons: [],
+    bulletIcons: [bulletIcon1, bulletIcon2, bulletIcon3],
     instructorMask,
     instructorMaskBottom, // borde pixelado abajo (móvil); el derecho es desktop
     instructorPhoto,
@@ -145,9 +148,10 @@ export default {
       description: 'text-gray-600',
     },
     bullets: {
-      // Sistema paperboard: icono 64px, <strong> en 700. El check dorado
-      // (#E0A52E) es el de la landing vieja de Languages.
-      iconSize: '64px',
+      // Sistema paperboard: icono 48px como Conquer Blocks (Legal lo sube a 64),
+      // <strong> en 700. El check dorado (#E0A52E) es el de la landing vieja de
+      // Languages y solo se usa en el renderer no-paperboard.
+      iconSize: '48px',
       strongWeight: '700',
       checkBg: 'bg-amber-100',
       checkIcon: 'text-[#E0A52E]',
