@@ -122,6 +122,12 @@ export default function LandingForm({ program, region, formConfig, school, theme
     ? !!landing.whatsappOptin
     : (theme.id === 'conquerlegal' || (isFinanceEuAbTest && formVariant === '55') || (isBlocksEuAbTest && formVariant === blocksEuTestVariant))
 
+  // Texto de consentimiento comercial ("aceptas recibir comunicaciones
+  // comerciales"). Se puede ocultar por funnel desde la config
+  // (landing.commercialConsent === false); por defecto se muestra. La línea de
+  // la política de privacidad NO se toca: esa se mantiene siempre.
+  const showCommercialConsent = landing.commercialConsent !== false
+
   // Mostrar campo de teléfono visible: por config (showPhone), al marcar el
   // check de WhatsApp, o por la variante A/B 56 de Finance EU (siempre visible,
   // obligatorio). Si no es visible, el teléfono se captura por honeypot/autofill.
@@ -546,15 +552,17 @@ export default function LandingForm({ program, region, formConfig, school, theme
         {whatsappOptinField && <div className="mt-3">{whatsappOptinField}</div>}
 
         <div className="mt-3 text-xs text-black leading-relaxed">
-          <p className="mb-0">
-            {/* El A/B de Finance EU cambia este texto en el viejo (updateComplianceText,
-                se dispara junto con el checkbox/campo de WhatsApp de ambas variantes
-                55/56 — no es específico de una sola) para mencionar WhatsApp; el resto
-                de marcas conserva el texto genérico. */}
-            {isFinanceEuAbTest
-              ? 'Al continuar aceptas que te enviemos tips, la repetición de la clase y recursos exclusivos por email/whatsapp. (Tranqui, solo contenido útil, nada de spam).'
-              : 'Al proporcionarnos tu correo electrónico, aceptas recibir comunicaciones comerciales por parte de nuestra empresa.'}
-          </p>
+          {showCommercialConsent && (
+            <p className="mb-0">
+              {/* El A/B de Finance EU cambia este texto en el viejo (updateComplianceText,
+                  se dispara junto con el checkbox/campo de WhatsApp de ambas variantes
+                  55/56 — no es específico de una sola) para mencionar WhatsApp; el resto
+                  de marcas conserva el texto genérico. */}
+              {isFinanceEuAbTest
+                ? 'Al continuar aceptas que te enviemos tips, la repetición de la clase y recursos exclusivos por email/whatsapp. (Tranqui, solo contenido útil, nada de spam).'
+                : 'Al proporcionarnos tu correo electrónico, aceptas recibir comunicaciones comerciales por parte de nuestra empresa.'}
+            </p>
+          )}
           <p>
             Al continuar, confirmas que has leído y aceptas nuestra{' '}
             <a href={school?.privacyPolicyUrl || theme.footer?.legal?.privacy || '#'} target="_blank" rel="noopener noreferrer" style={{ backgroundImage: accent.linkGradient }} className="underline bg-clip-text text-transparent">
