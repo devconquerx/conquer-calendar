@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.contrib import admin
 from django.urls import re_path
@@ -15,7 +17,18 @@ from calendario.funnels.views import (
 
 
 def health(request):
-    return JsonResponse({"status": "ok", "service": "conquer-calendario"})
+    """Latido del servicio + de qué despliegue viene la respuesta.
+
+    `sha` (sellado en la imagen al construirla) y `color` (blue/green) los usa
+    deploy/prod-deploy.sh para comprobar que la URL pública sirve exactamente el
+    commit que se acaba de desplegar. En local salen vacíos.
+    """
+    return JsonResponse({
+        "status": "ok",
+        "service": "conquer-calendario",
+        "sha": os.environ.get("DEPLOY_SHA", ""),
+        "color": os.environ.get("DEPLOY_COLOR", ""),
+    })
 
 
 urlpatterns = [

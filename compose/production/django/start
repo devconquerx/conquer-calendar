@@ -4,12 +4,26 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
+# OJO: aquí NO se corren `migrate` ni `collectstatic`.
+#
+# Con despliegue azul/verde el contenedor nuevo arranca MIENTRAS el viejo sigue
+# sirviendo tráfico: si cada arranque migrara, dos versiones del código podrían
+# tocar el esquema a la vez, y además collectstatic (que tarda ~30s con los
+# assets de Metronic) retrasaba el arranque justo cuando más prisa hay.
+# deploy/prod-deploy.sh los ejecuta una sola vez, one-off, antes de levantar el
+# color nuevo.
+#
+# Aviso no bloqueante si el esquema se quedó atrás: preferimos arrancar (la
+# mayoría de migraciones son aditivas y el código tolera el desfase) antes que
+# negarnos a levantar y dejar el sitio caído.
+if ! python manage.py migrate --check >/dev/null 2>&1; then
+    >&2 echo "AVISO: hay migraciones sin aplicar. Corre deploy/prod-deploy.sh o 'manage.py migrate'."
+fi
 
 exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers "${GUNICORN_WORKERS:-3}" \
     --timeout "${GUNICORN_TIMEOUT:-120}" \
+    --graceful-timeout "${GUNICORN_GRACEFUL_TIMEOUT:-30}" \
     --access-logfile - \
     --error-logfile -
