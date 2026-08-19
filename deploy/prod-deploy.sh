@@ -299,6 +299,10 @@ cmd_deploy() {
   dcc "$new" run --rm -T --no-deps "django-$new" python manage.py collectstatic --noinput </dev/null
 
   # 3) Arranca el color nuevo en su puerto (nadie le manda tráfico todavía).
+  # Guarda: si por lo que sea el destino coincidiera con el que está sirviendo,
+  # pararíamos el sitio al recrearlo. Antes muerto que servir 502.
+  [[ "$(active_color_from_nginx 2>/dev/null || true)" != "$new" ]] \
+    || die "El color destino ($new) es el que está sirviendo. Abortado para no cortar tráfico."
   say "Arrancando el color $new…"
   dcc "$new" rm -sf "django-$new" "node-ssr-$new" >/dev/null 2>&1 || true
   dcc "$new" up -d "node-ssr-$new" "django-$new"
@@ -483,7 +487,14 @@ EOF
   dcc blue run --rm -T --no-deps django-blue python manage.py collectstatic --noinput </dev/null
 
   say "4/6 · Levantando blue en :8001…"
-  dcc blue up -d node-ssr-blue django-blue
+  # Al reanudar un bootstrap, blue puede estar YA sirviendo tráfico. Recrearlo
+  # aquí lo tiraría unos segundos con nginx apuntándole: 502 para todo el mundo.
+  # Si ya sirve, se valida tal cual y no se toca.
+  if [[ "$(active_color_from_nginx 2>/dev/null || true)" == "blue" && "$(docker inspect -f '{{.State.Running}}' "$(cid_for blue django)" 2>/dev/null)" == "true" ]]; then
+    warn "blue ya está sirviendo tráfico: NO se recrea (recrearlo cortaría requests). Se valida tal cual."
+  else
+    dcc blue up -d node-ssr-blue django-blue
+  fi
   wait_healthy blue
   assert_version blue 8001 "$sha"
   smoke 8001 || die "blue no pasa los smoke tests; el backend viejo sigue sirviendo."
