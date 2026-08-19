@@ -112,6 +112,33 @@ class RegionTest(CorreosDominioBase):
         self.assertIsNone(_conexion(self.blocks))
 
 
+class ApiKeyPorRegionTest(CorreosDominioBase):
+    """Cada región de Mailgun necesita su propia API key.
+
+    La key de EEUU lista los dominios europeos —parece válida— pero al enviar por
+    ellos devuelve 401 Forbidden, que es como se descubrió esto.
+    """
+
+    @override_settings(
+        EMAIL_BACKEND=BACKEND_MAILGUN,
+        ANYMAIL={'MAILGUN_API_KEY': 'key-global'},
+        MAILGUN_API_KEY_POR_REGION={'eu': 'key-europea', 'us': 'key-americana'},
+    )
+    def test_cada_region_usa_su_key(self):
+        eu = _conexion(self.blocks)
+        us = _conexion(DominioRemitente.objects.get(dominio='calendar.conquerx.com'))
+        self.assertEqual(eu.api_key, 'key-europea')
+        self.assertEqual(us.api_key, 'key-americana')
+
+    @override_settings(
+        EMAIL_BACKEND=BACKEND_MAILGUN,
+        ANYMAIL={'MAILGUN_API_KEY': 'key-global'},
+        MAILGUN_API_KEY_POR_REGION={'eu': '', 'us': ''},
+    )
+    def test_sin_key_de_region_se_usa_la_global(self):
+        self.assertEqual(_conexion(self.blocks).api_key, 'key-global')
+
+
 class FormatoTest(CorreosDominioBase):
 
     def test_texto_plano_va_sin_html(self):

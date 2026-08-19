@@ -193,6 +193,14 @@ ANYMAIL = {
     'MAILGUN_API_KEY': MAILGUN_API_KEY,
     'MAILGUN_SENDER_DOMAIN': env.str('MAILGUN_SENDER_DOMAIN', default='mg.conquerx.com'),
 }
+# Las API keys de Mailgun están atadas a una región: la key de EEUU lee los
+# dominios europeos pero al enviar por ellos devuelve 401 Forbidden. Cada región
+# necesita la suya, y los dominios de envío (DominioRemitente) declaran en cuál
+# viven. Vacío = se usa MAILGUN_API_KEY, que es el comportamiento de siempre.
+MAILGUN_API_KEY_POR_REGION = {
+    'us': env.str('MAILGUN_API_KEY_US', default=''),
+    'eu': env.str('MAILGUN_API_KEY_EU', default=''),
+}
 
 ADMIN_URL = "admin/"
 

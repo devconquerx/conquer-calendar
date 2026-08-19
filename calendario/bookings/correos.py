@@ -162,22 +162,41 @@ def _dominio_de(plantilla):
     return dominio
 
 
+def _api_key_de(dominio):
+    """API key de Mailgun propia de la región del dominio, o '' si no hay ninguna.
+
+    Las keys de Mailgun están atadas a una región: la de EEUU lista los dominios
+    europeos —así que parece válida— pero al enviar por ellos devuelve 401
+    Forbidden. Por eso cada región lleva la suya en el entorno.
+
+    Vacío significa "la de siempre": se deja que Anymail lea la global de
+    ANYMAIL['MAILGUN_API_KEY'], que es lo que hacía antes de existir esto.
+    """
+    por_region = getattr(settings, 'MAILGUN_API_KEY_POR_REGION', {}) or {}
+    return por_region.get(dominio.region) or ''
+
+
 def _conexion(dominio):
     """Conexión SMTP/API para este dominio, o None para la conexión por defecto.
 
     Cada dominio de Mailgun vive en una región (UE o EEUU) y hay que atacar su
-    endpoint: el global `MAILGUN_SENDER_DOMAIN` apunta a uno solo, así que sin
-    esto los dominios de las academias darían 404.
+    endpoint con la key de esa región: el global `MAILGUN_SENDER_DOMAIN` apunta a
+    uno solo, así que sin esto los dominios de las academias darían 404 o 401.
 
     Fuera de producción el backend es consola o locmem; en ese caso no forzamos
     Mailgun para no intentar salir a internet en local ni en los tests.
     """
     if dominio is None or settings.EMAIL_BACKEND != _BACKEND_MAILGUN:
         return None
+    extra = {}
+    api_key = _api_key_de(dominio)
+    if api_key:
+        extra['api_key'] = api_key
     return get_connection(
         backend=_BACKEND_MAILGUN,
         api_url=dominio.api_url,
         sender_domain=dominio.dominio,
+        **extra,
     )
 
 
