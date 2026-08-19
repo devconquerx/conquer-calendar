@@ -3,6 +3,8 @@ import json
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
@@ -32,8 +34,27 @@ class GrupoListView(RequierePermisoMixin, ListView):
         return qs.distinct()
 
     def get_context_data(self, **kwargs):
+        from django.db.models import Count
+        from calendario.event_types.models import EventTypeXHost
+        from calendario.event_types.utils import event_types_visibles
+
         ctx = super().get_context_data(**kwargs)
         ctx['es_admin'] = self.request.user.es_admin
+
+        # Nº de tipos de evento (de los que este usuario ve) en los que está
+        # cada miembro, para la columna "Eventos" de la tabla.
+        visibles_ids = event_types_visibles(self.request.user).values_list('id', flat=True)
+        conteos = dict(
+            EventTypeXHost.objects
+            .filter(event_type_id__in=visibles_ids)
+            .values_list('host_id')
+            .annotate(total=Count('id'))
+        )
+        for grupo in ctx['grupos']:
+            for membresia in grupo.membresias.all():
+                membresia.usuario.num_eventos = conteos.get(membresia.usuario_id, 0)
+
+        ctx['puede_editar_eventos'] = self.request.user.tiene_permiso('event_types.editar')
         return ctx
 
 
@@ -252,3 +273,117 @@ class GrupoMiembrosUpdateView(LoginRequiredMixin, View):
         form.save()
         messages.success(request, f'Miembros del grupo "{grupo.nombre}" actualizados.')
         return redirect(reverse_lazy('panel_grupos:grupo_list'))
+
+
+
+class MiembroEventosView(LoginRequiredMixin, View):
+    """Alta y baja masiva de un miembro del grupo en varios tipos de evento.
+
+    GET  → JSON con los eventos visibles y si el miembro está en cada uno.
+    POST → JSON; deja al miembro exactamente en los eventos marcados.
+
+    Solo se tocan los tipos de evento dentro del alcance de quien edita: los que
+    no ve no aparecen en la lista ni se ven afectados al guardar.
+    """
+
+    def _contexto_o_403(self, grupo_pk, usuario_pk):
+        grupo = get_object_or_404(Grupo, pk=grupo_pk)
+        user = self.request.user
+        if not user.tiene_permiso('event_types.editar'):
+            raise PermissionDenied('No tienes permisos para editar tipos de evento.')
+        if not user.es_admin and not GrupoXUsuario.objects.filter(
+            grupo=grupo, usuario=user, es_supervisor=True
+        ).exists():
+            raise PermissionDenied('No supervisas este grupo.')
+        membresia = get_object_or_404(
+            GrupoXUsuario.objects.select_related('usuario'), grupo=grupo, usuario_id=usuario_pk
+        )
+        return grupo, membresia.usuario
+
+    def get(self, request, pk, usuario_pk):
+        from calendario.event_types.models import EventTypeXHost
+        from calendario.event_types.utils import event_types_visibles
+
+        _, miembro = self._contexto_o_403(pk, usuario_pk)
+        visibles = (
+            event_types_visibles(request.user)
+            .select_related('host')
+            .distinct()
+            .order_by('nombre')
+        )
+        asignados = set(
+            EventTypeXHost.objects.filter(host=miembro).values_list('event_type_id', flat=True)
+        )
+        eventos = [
+            {
+                'id': et.pk,
+                'nombre': et.nombre,
+                'activo': et.activo,
+                'duracion': et.duracion_minutos,
+                'creador': et.host.nombre_display(),
+                'asignado': et.pk in asignados,
+                'es_creador': et.host_id == miembro.pk,
+            }
+            for et in visibles
+        ]
+        return JsonResponse({
+            'miembro': miembro.nombre_display(),
+            'eventos': eventos,
+            'total_asignados': sum(1 for e in eventos if e['asignado']),
+        })
+
+    def post(self, request, pk, usuario_pk):
+        from calendario.event_types.models import EventType, EventTypeXHost
+        from calendario.event_types.utils import event_types_visibles
+
+        _, miembro = self._contexto_o_403(pk, usuario_pk)
+        visibles_ids = set(
+            event_types_visibles(request.user).values_list('id', flat=True)
+        )
+
+        marcados = set()
+        for raw in request.POST.getlist('eventos'):
+            try:
+                marcados.add(int(raw))
+            except (TypeError, ValueError):
+                continue
+        marcados &= visibles_ids
+
+        actuales = set(
+            EventTypeXHost.objects
+            .filter(host=miembro, event_type_id__in=visibles_ids)
+            .values_list('event_type_id', flat=True)
+        )
+
+        # Al creador de un tipo de evento no se le saca de su propio pool: el
+        # evento se quedaría sin organizador y dejaría de ofrecer horas.
+        propios = set(
+            EventType.objects.filter(pk__in=actuales, host=miembro).values_list('id', flat=True)
+        )
+        anadir = marcados - actuales
+        quitar = (actuales - marcados) - propios
+
+        with transaction.atomic():
+            if quitar:
+                EventTypeXHost.objects.filter(
+                    host=miembro, event_type_id__in=quitar
+                ).delete()
+            if anadir:
+                EventTypeXHost.objects.bulk_create([
+                    EventTypeXHost(
+                        event_type_id=et_id,
+                        host=miembro,
+                        prioridad=EventTypeXHost.PRIORIDAD_DEFECTO,
+                    )
+                    for et_id in anadir
+                ])
+
+        total = EventTypeXHost.objects.filter(
+            host=miembro, event_type_id__in=visibles_ids
+        ).count()
+        return JsonResponse({
+            'ok': True,
+            'anadidos': len(anadir),
+            'quitados': len(quitar),
+            'total': total,
+        })

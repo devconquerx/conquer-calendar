@@ -30,15 +30,8 @@ class EventTypeListView(RequierePermisoMixin, ListView):
     paginate_by = 24
 
     def get_queryset(self):
-        if self.request.user.es_admin:
-            qs = EventType.objects.all()
-        else:
-            from calendario.grupos.utils import miembros_de_mis_grupos
-            q = Q(host=self.request.user) | Q(hosts_pool__host=self.request.user)
-            grupo_ids = miembros_de_mis_grupos(self.request.user)
-            if grupo_ids:
-                q |= Q(host_id__in=grupo_ids)
-            qs = EventType.objects.filter(q)
+        from .utils import event_types_visibles
+        qs = event_types_visibles(self.request.user)
 
         q = self.request.GET.get('q', '').strip()
         if q:

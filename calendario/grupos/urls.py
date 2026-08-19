@@ -8,6 +8,7 @@ urlpatterns = [
     path('nuevo/', views.GrupoCreateView.as_view(), name='grupo_create'),
     path('<int:pk>/editar/', views.GrupoUpdateView.as_view(), name='grupo_update'),
     path('<int:pk>/miembros/', views.GrupoMiembrosUpdateView.as_view(), name='grupo_miembros'),
+    path('<int:pk>/miembros/<int:usuario_pk>/eventos/', views.MiembroEventosView.as_view(), name='miembro_eventos'),
     path('<int:pk>/permisos/', views.GrupoPermisosView.as_view(), name='grupo_permisos'),
     path('<int:pk>/eliminar/', views.GrupoDeleteView.as_view(), name='grupo_delete'),
 ]
