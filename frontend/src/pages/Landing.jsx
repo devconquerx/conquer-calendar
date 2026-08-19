@@ -1,7 +1,7 @@
 import HeroSection from '../components/landing/HeroSection'
 import LandingForm from '../components/landing/LandingForm'
 import BulletPoints from '../components/landing/BulletPoints'
-import { getTheme } from '../themes'
+import { getTheme, useVariantTheme } from '../themes'
 import { CB_CARD_SHADOW } from '../themes/conquerblocks'
 import { safeHtml } from '../lib/sanitize'
 
@@ -10,9 +10,11 @@ export default function Landing({ school, program, region, formConfig, nextUrl, 
   // Rediseño por página: un tema puede pedir que SOLO su landing use el sistema
   // paperboard (hoy: Finance, que toma prestados los tokens de Legal vía
   // `landingPaper`) sin cambiar de sistema en el resto de etapas del funnel.
-  const theme = !baseTheme.paperboard && baseTheme.landingVariant === 'paperboard'
+  const pageTheme = !baseTheme.paperboard && baseTheme.landingVariant === 'paperboard'
     ? { ...baseTheme, ...baseTheme.landingPaper, paperboard: true, hexboard: false }
     : baseTheme
+  // Variante A/B de diseño (Blocks LATAM 58: fondo blanco en vez de papel).
+  const theme = useVariantTheme(pageTheme)
   const t = theme.landing
   const isPaper = !!theme.paperboard
   const assets = theme.assets
@@ -63,6 +65,9 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
   // ancho real de producción (container-large 1280/1064) en desktop, conservando
   // el padding lateral en móvil. Equivale al `padding-global` externo de Webflow.
   const columnMaxWidth = `calc(${contentWidth} + 40px)`
+  // Variante de fondo blanco (A/B): sin textura y con el papel de las tarjetas
+  // en blanco. El resto (bordes arena, sombras, acento naranja) no cambia.
+  const isWhite = !!theme.whiteBackground
   const pageStyle = assets?.paperboardTexture ? {
     backgroundImage: `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url(${assets.paperboardTexture})`,
     backgroundSize: 'cover',
@@ -72,7 +77,7 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
   // Tarjetas: textura paperboard (overlay blanco 0.6 sobre #F6F6F6) + sombra en
   // capas de producción (inline para evitar el bug de color de Tailwind).
   const cardStyle = {
-    backgroundColor: '#F6F6F6',
+    backgroundColor: isWhite ? '#FFFFFF' : '#F6F6F6',
     backgroundImage: assets?.paperboardTexture
       ? `linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url(${assets.paperboardTexture})`
       : undefined,
@@ -103,7 +108,7 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
   } : undefined
 
   return (
-    <div className="min-h-screen overflow-x-hidden relative flex flex-col font-funnel bg-cb-bg text-cb-ink" style={pageStyle}>
+    <div className={`min-h-screen overflow-x-hidden relative flex flex-col font-funnel text-cb-ink ${isWhite ? 'bg-white' : 'bg-cb-bg'}`} style={pageStyle}>
       {/* Pixeles decorativos (réplica de producción: 150px, opacidad 0.2).
           Posiciones definidas por theme; se alternan los dos SVG. */}
       {assets?.pixels?.deco && (theme.landing?.decoPixels || []).map((pos, i) => (

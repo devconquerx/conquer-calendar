@@ -1,6 +1,8 @@
 import FunnelApp from '../FunnelApp'
 import FunnelRouter from '../lib/router'
 import TrackingProvider from '../components/tracking/TrackingProvider'
+import FormVariantProvider from '../lib/formVariantContext'
+import { getTheme } from '../themes'
 
 /* Árbol compartido por el cliente (hydrate/createRoot) y el servidor (SSR).
    NO debe tocar el DOM a nivel de módulo: todas las lecturas de window/document
@@ -22,19 +24,28 @@ export default function FunnelRoot({
   const initialStage = stage || 'landing'
   return (
     <TrackingProvider>
-      <FunnelRouter initialStage={initialStage} urls={urls}>
-        <FunnelApp
-          slug={slug || ''}
-          escuela={escuela || ''}
-          region={region || ''}
-          program={program || ''}
-          formConfig={formConfig}
-          videoEnabled={videoEnabled}
-          search={search}
-          initialStage={initialStage}
-          initialStageComponent={initialStageComponent}
-        />
-      </FunnelRouter>
+      {/* La variante A/B se resuelve una vez para TODO el funnel (aquí, por
+          encima del router): la consumen tanto el form de la landing como el
+          tema de cada etapa. */}
+      <FormVariantProvider
+        themeId={getTheme(escuela, slug).id}
+        region={region || ''}
+        funnelSlug={slug || ''}
+      >
+        <FunnelRouter initialStage={initialStage} urls={urls}>
+          <FunnelApp
+            slug={slug || ''}
+            escuela={escuela || ''}
+            region={region || ''}
+            program={program || ''}
+            formConfig={formConfig}
+            videoEnabled={videoEnabled}
+            search={search}
+            initialStage={initialStage}
+            initialStageComponent={initialStageComponent}
+          />
+        </FunnelRouter>
+      </FormVariantProvider>
     </TrackingProvider>
   )
 }

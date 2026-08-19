@@ -1,4 +1,6 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useMemo } from 'react'
+import { useFormVariant } from '../lib/formVariantContext'
+import { toWhiteBackground } from './whiteBackground'
 import conquerblocks from './conquerblocks'
 import conquerlegal from './conquerlegal'
 import conquerfinance from './conquerfinance'
@@ -35,6 +37,19 @@ export function getTheme(...hints) {
     if (brand && THEMES[brand]) return THEMES[brand]
   }
   return defaultTheme
+}
+
+/* Aplica al tema ya resuelto (incluido el rediseño por página: `landingPaper`,
+   `stepformPaper`…) la variante A/B de diseño que le toque a este visitante.
+   Hoy solo existe una: el fondo blanco de la LANDING de Conquer Blocks LATAM,
+   así que solo la llaman la landing y su formulario; las demás etapas siguen
+   con el tema de marca tal cual. */
+export function useVariantTheme(theme) {
+  const { whiteBackground } = useFormVariant()
+  return useMemo(
+    () => (whiteBackground ? toWhiteBackground(theme) : theme),
+    [theme, whiteBackground]
+  )
 }
 
 export const ThemeContext = createContext(defaultTheme)

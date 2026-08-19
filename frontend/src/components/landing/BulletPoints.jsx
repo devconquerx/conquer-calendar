@@ -43,7 +43,8 @@ export default function BulletPoints({ formConfig, theme }) {
     const iconSize = t?.iconSize || '48px'
     const strongWeight = t?.strongWeight || '600'
     const cardStyle = {
-      backgroundColor: '#F6F6F6',
+      // Variante de fondo blanco (A/B de Blocks LATAM): papel → blanco liso.
+      backgroundColor: theme.whiteBackground ? '#FFFFFF' : '#F6F6F6',
       backgroundImage: theme.assets?.paperboardTexture
         ? `linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url(${theme.assets.paperboardTexture})`
         : undefined,
