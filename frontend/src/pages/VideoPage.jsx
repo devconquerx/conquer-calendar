@@ -80,6 +80,7 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
         goToStepForm={goToStepForm}
         theme={theme}
         school={school}
+        hideFooterLogo={hideFooterLogo}
       />
     )
   }
@@ -219,7 +220,7 @@ function HexVideoPage({ assets, video, urls, pct, showButton, onShowButton, onPr
    con glow de marca y el CTA pixelado; cierre con otra transición rasgada y
    footer claro con logo y píxeles decorativos. El acento (naranja Blocks / azul
    Legal) y los textos salen del tema; `config['video']` puede sobreescribirlos. */
-function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButton, onProgress, goToStepForm, theme, school }) {
+function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButton, onProgress, goToStepForm, theme, school, hideFooterLogo = false }) {
   const v = theme.video || {}
   // Textos del hero: prioridad a config['video'], luego tokens del tema.
   const subtitle = video.subtitle || v.subtitle || 'Vídeo'
