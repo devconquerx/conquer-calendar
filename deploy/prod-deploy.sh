@@ -40,6 +40,8 @@ UPSTREAM_FILE="${UPSTREAM_FILE:-/etc/nginx/conf.d/calendar-upstream.conf}"
 SITE_AVAILABLE="/etc/nginx/sites-available/calendar.conquerx.com.conf"
 SITE_ENABLED="/etc/nginx/sites-enabled/calendar.conquerx.com.conf"
 DJANGO_IMAGE="conquer_calendario_production_django"
+SSR_IMAGE="conquer_calendario_node_ssr"
+KEEP_IMAGE_TAGS="${KEEP_IMAGE_TAGS:-5}"   # versiones etiquetadas que se conservan
 HEALTH_HOST="${HEALTH_HOST:-calendar.conquerx.com}"
 
 DRAIN_SECONDS="${DRAIN_SECONDS:-25}"
@@ -144,6 +146,33 @@ EOF
   # Recarga elegante: nginx arranca workers con la config nueva y los viejos
   # terminan sus requests en vuelo antes de salir. No se pierde ninguno.
   nginx -s reload
+}
+
+# ── Imágenes ─────────────────────────────────────────────────────────────────
+# Cada build se etiqueta con su commit. Sin esto, la imagen anterior se queda
+# SIN etiqueta (dangling) y el `docker image prune` del final del despliegue se
+# la lleva por delante: el contenedor parado sigue corriendo con sus capas, pero
+# la imagen ya no se puede volver a etiquetar y el rollback se queda a medias
+# (Django vuelve atrás, Celery no). Una imagen etiquetada nunca es dangling.
+tag_images_with_sha() {  # $1=sha
+  docker tag "$DJANGO_IMAGE:latest" "$DJANGO_IMAGE:$1" 2>/dev/null || true
+  docker tag "$SSR_IMAGE:latest" "$SSR_IMAGE:$1" 2>/dev/null || true
+}
+
+# Conserva las N etiquetas más recientes y las de los colores activo/standby.
+prune_old_image_tags() {
+  local img keep_sha_1 keep_sha_2 tag n=0
+  keep_sha_1="$(state_get ACTIVE_SHA)"; keep_sha_2="$(state_get STANDBY_SHA)"
+  for img in "$DJANGO_IMAGE" "$SSR_IMAGE"; do
+    n=0
+    while read -r tag; do
+      [[ -z "$tag" || "$tag" == "latest" ]] && continue
+      n=$((n + 1))
+      (( n <= KEEP_IMAGE_TAGS )) && continue
+      [[ "$tag" == "$keep_sha_1" || "$tag" == "$keep_sha_2" ]] && continue
+      docker rmi "$img:$tag" >/dev/null 2>&1 || true
+    done < <(docker images "$img" --format '{{.Tag}}|{{.CreatedAt}}' | sort -t'|' -k2 -r | cut -d'|' -f1)
+  done
 }
 
 # ── Salud del color candidato ────────────────────────────────────────────────
@@ -285,6 +314,7 @@ cmd_deploy() {
   else
     say "Construyendo imágenes (frontend + django + node-ssr)…"
     dcc "$new" build "django-$new" "node-ssr-$new"
+    tag_images_with_sha "$sha"
   fi
 
   # 2) Migraciones y estáticos one-off, con la imagen nueva y el color viejo aún
@@ -352,6 +382,9 @@ cmd_deploy() {
   dcc "$active" stop "django-$active" "node-ssr-$active"
   ok "Color $active parado (intacto para rollback)."
 
+  # Limpieza conservadora: se queda con las últimas KEEP_IMAGE_TAGS versiones y
+  # SIEMPRE con las del color activo y la del standby (el objetivo del rollback).
+  prune_old_image_tags
   docker image prune -f >/dev/null 2>&1 || true
   ok "Despliegue completado: $new @ $sha sirviendo. Rollback disponible → $active."
   cmd_status
@@ -377,15 +410,26 @@ cmd_rollback() {
   wait_healthy "$old"
   smoke "$old_port" || warn "Algún smoke test del color $old falla; se continúa igualmente (es el rollback)."
 
-  # Celery vuelve también a la imagen vieja, si la tenemos registrada.
-  old_img="$(state_get STANDBY_IMAGE)"
-  if [[ -n "$old_img" ]] && docker image inspect "$old_img" >/dev/null 2>&1; then
+  # Celery vuelve también a la imagen vieja. Se busca primero por la etiqueta de
+  # commit (`imagen:<sha>`), que es la que sobrevive al prune; el id guardado en
+  # el estado es sólo el plan B.
+  local old_sha
+  old_sha="$(state_get STANDBY_SHA)"
+  old_img=""
+  if [[ -n "$old_sha" ]] && docker image inspect "$DJANGO_IMAGE:$old_sha" >/dev/null 2>&1; then
+    old_img="$DJANGO_IMAGE:$old_sha"
+  else
+    old_img="$(state_get STANDBY_IMAGE)"
+    docker image inspect "$old_img" >/dev/null 2>&1 || old_img=""
+  fi
+  if [[ -n "$old_img" ]]; then
     say "Devolviendo Celery a la imagen anterior…"
     docker tag "$old_img" "$DJANGO_IMAGE:latest"
     dc stop -t 130 celeryworker celerybeat
     dc up -d --force-recreate celeryworker celerybeat
   else
-    warn "No hay imagen previa registrada: Celery se queda en la versión nueva."
+    warn "No queda imagen de la versión anterior: Celery SIGUE con el código nuevo."
+    warn "El front sí volvió atrás. Si las tareas de fondo son el problema, hay que redesplegar el commit bueno."
   fi
 
   say "Devolviendo el tráfico a $old…"
@@ -480,6 +524,7 @@ EOF
   export GIT_SHA="$sha"
   say "2/6 · Construyendo imágenes del color blue…"
   dcc blue build django-blue node-ssr-blue
+  tag_images_with_sha "$sha"
 
   say "3/6 · Migraciones + estáticos…"
   dc up -d redis
