@@ -353,6 +353,8 @@ def stepform_url(escuela, region, base=''):
     `base` antepone un prefijo de path (p.ej. /preview) para mantener la
     navegación dentro del prefijo cuando el funnel se sirve detrás de él.
     """
+    if escuela == 'conquer-languages' and region == 'ge':
+        return f'{base}/ge/schedule'
     if escuela == 'conquer-legal' and region:
         return f'{base}/hub/agendar-{region}'
     producto = PRODUCTO_POR_ESCUELA.get(escuela)
@@ -421,6 +423,10 @@ def _video_url(escuela, region, base='', slug=None):
     # comparten escuela+región — de ahí el caso especial por slug.
     if slug == 'blocks-eu-2':
         return f'{base}/conquer-blocks/video-2-clase-eu/'
+    # Conquer Languages GE (la variante en inglés) no sigue la convención de
+    # region: replica las rutas de producción /ge/*, que están en inglés.
+    if escuela == 'conquer-languages' and region == 'ge':
+        return f'{base}/ge/video-training'
     if escuela == 'conquer-legal':
         return f'{base}/hub/video-{region}'
     if escuela == 'conquer-finance':
@@ -434,6 +440,8 @@ def _video_url(escuela, region, base='', slug=None):
 def _landing_url(escuela, region, base='', slug=None):
     if slug == 'blocks-eu-2':
         return f'{base}/conquer-blocks/clase-2-online-gratuita-eu/'
+    if escuela == 'conquer-languages' and region == 'ge':
+        return f'{base}/ge/free-online-training'
     if escuela == 'conquer-legal':
         return f'{base}/hub/registro-{region}'
     if escuela == 'conquer-finance':
@@ -445,6 +453,8 @@ def _landing_url(escuela, region, base='', slug=None):
 
 # URL de la página de confirmación de llamada por marca (misma convención).
 def confirmacion_url(escuela, region, base=''):
+    if escuela == 'conquer-languages' and region == 'ge':
+        return f'{base}/ge/confirmation'
     if escuela == 'conquer-legal':
         return f'{base}/hub/confirmacion'
     if escuela == 'conquer-finance':

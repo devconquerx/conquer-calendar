@@ -110,6 +110,33 @@ urlpatterns = [
         FunnelConfirmationView.as_view(), {'escuela': 'conquer-legal'},
         name='confirmacion_hub_legal',
     ),
+
+    # Rutas /ge/* de Conquer Languages GE, la variante en inglés. Replican las
+    # de producción (conquerlanguages.com/ge/free-online-training, /ge/video-training,
+    # /ge/schedule), que no siguen la convención `<algo>-<region>` del resto:
+    # están en inglés y la región va en el prefijo. Por eso se fija la región a
+    # 'ge' aquí en vez de capturarla del path. Van antes del catch-all de
+    # booking, igual que las de Legal.
+    re_path(
+        r'^ge/free-online-training/?$',
+        FunnelClaseView.as_view(), {'escuela': 'conquer-languages', 'region': 'ge'},
+        name='clase_ge_languages',
+    ),
+    re_path(
+        r'^ge/video-training/?$',
+        FunnelVideoView.as_view(), {'escuela': 'conquer-languages', 'region': 'ge'},
+        name='video_ge_languages',
+    ),
+    re_path(
+        r'^ge/schedule/?$',
+        FunnelAgendaView.as_view(), {'producto': 'english', 'region': 'ge'},
+        name='agenda_ge_languages',
+    ),
+    re_path(
+        r'^ge/confirmation/?$',
+        FunnelConfirmationView.as_view(), {'escuela': 'conquer-languages', 'region': 'ge'},
+        name='confirmacion_ge_languages',
+    ),
     path('webhooks/', include('calendario.google_calendar.urls')),
     re_path(
         r'^(?P<user_slug>[-a-zA-Z0-9_.]+)/(?P<event_type_slug>[-a-zA-Z0-9_]+)/',

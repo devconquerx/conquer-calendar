@@ -1,4 +1,9 @@
-export default function WelcomeScreen({ field, onNext, theme }) {
+export default function WelcomeScreen({ field, onNext, theme, messages }) {
+  // El hint del Enter sale de config.messages, igual que en NavigationControls:
+  // estaba escrito a mano en castellano y se colaba en el funnel en inglés (GE),
+  // que sí trae su propia traducción ('press').
+  const m = messages || {}
+  const enterHint = m['label.button.enterHint'] || 'presiona'
   // Hexboard (Finance): réplica del welcome de QuillForms en producción —
   // título Roboto 400 24px, descripción 20px negra (máx 640px), botón negro
   // radio 10 (padding 9/23/9/20) con el hint "presiona Enter" a su derecha.
@@ -26,7 +31,7 @@ export default function WelcomeScreen({ field, onNext, theme }) {
             </svg>
           </button>
           <span className="hidden md:inline text-gray-700 text-[15px]">
-            presiona <strong>Enter ↵</strong>
+            {enterHint} <strong>Enter ↵</strong>
           </span>
         </div>
       </div>
@@ -71,7 +76,7 @@ export default function WelcomeScreen({ field, onNext, theme }) {
         {field.buttonText || 'Comenzar'}
       </button>
       <span className="hidden md:inline text-gray-400 text-xs mt-3">
-        presiona <strong>Enter ↵</strong>
+        {enterHint} <strong>Enter ↵</strong>
       </span>
     </div>
   )

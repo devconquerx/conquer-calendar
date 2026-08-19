@@ -454,7 +454,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   const renderStep = () => {
     if (!current) return null
     if (isWelcome) {
-      return <WelcomeScreen field={welcomeField} onNext={handleNext} theme={theme} />
+      return <WelcomeScreen field={welcomeField} onNext={handleNext} theme={theme} messages={messages} />
     }
     return (
       <FormStep
