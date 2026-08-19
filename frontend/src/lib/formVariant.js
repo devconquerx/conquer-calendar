@@ -12,7 +12,8 @@
  * montar, igual que el resto del código dependiente de localStorage/geo en
  * este proyecto (progressive enhancement, sin bloquear el render inicial).
  */
-export function resolveFormVariant({ storageKey, variants }) {
+export function resolveFormVariant(experiment) {
+  const { storageKey, variants } = experiment || {}
   if (typeof window === 'undefined' || !storageKey || !variants?.length) return null
 
   const url = new URL(window.location.href)
@@ -37,7 +38,8 @@ export function resolveFormVariant({ storageKey, variants }) {
     necesita el dato pero no debe meter al visitante en el experimento (p.ej. el
     StepForm, que adjunta la variante del vídeo a la prellamada: quien llega por
     link directo sin pasar por el vídeo no entra en el test). */
-export function readFormVariant({ storageKey, variants } = {}) {
+export function readFormVariant(experiment) {
+  const { storageKey, variants } = experiment || {}
   if (typeof window === 'undefined' || !storageKey || !variants?.length) return null
   let stored = null
   try { stored = localStorage.getItem(storageKey) } catch (_) {}
