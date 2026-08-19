@@ -1,5 +1,9 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
-import { getFormVariantExperiment, resolveFormVariant } from './formVariant'
+import {
+  getFormVariantExperiment,
+  getVideoVariantExperiment,
+  resolveFormVariant,
+} from './formVariant'
 
 /* Variante A/B del visitante, resuelta UNA vez para todo el funnel y expuesta
    por contexto: la necesitan tanto el formulario de la landing (la manda al
@@ -47,4 +51,25 @@ export default function FormVariantProvider({ themeId, region, funnelSlug, child
   )
 
   return <FormVariantContext.Provider value={value}>{children}</FormVariantContext.Provider>
+}
+
+/* Variante del test de la PÁGINA DE VÍDEO. A diferencia de la de la landing no
+   se resuelve en el root: se asigna aquí, al montar la página de vídeo, para
+   que solo entre en el experimento quien la ve de verdad (a la reserva se
+   llega también por link directo del setter, sin pasar por el vídeo). El
+   StepForm luego la LEE de localStorage, sin asignar, para colgarla de la
+   prellamada. */
+export function useVideoVariant(funnelSlug) {
+  const experiment = useMemo(() => getVideoVariantExperiment(funnelSlug), [funnelSlug])
+  const [variant, setVariant] = useState(null)
+
+  useVariantEffect(() => {
+    if (!experiment) return
+    setVariant(resolveFormVariant(experiment))
+  }, [experiment])
+
+  return {
+    variant,
+    hideFooterLogo: !!experiment && variant === experiment.hideFooterLogoVariant,
+  }
 }

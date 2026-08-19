@@ -17,6 +17,7 @@ import { getPrefillRespuestas } from './lib/prefillParams'
 import { countryFromPhone } from './lib/phoneCountry'
 import { validateBlock } from './lib/validateBlock'
 import { getTheme, ThemeContext } from './themes'
+import { getVideoVariantExperiment, readFormVariant } from './lib/formVariant'
 import { useRouter } from './lib/router'
 import './funnel.css'
 
@@ -109,6 +110,17 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   // Antes había un re-registro aquí y cada recorrido creaba DOS LeadRegisters
   // en el CRM (el segundo con page_url=/agenda/...).
 
+  /* Tracking que viaja a la Prellamada. Le añade la variante del A/B de la
+     página de vídeo, que se guarda en PreSchedule.utm_form_variant (la del
+     test de la landing va aparte, en el Lead). Se LEE, no se asigna: quien
+     entra por link directo a la reserva sin pasar por el vídeo no está en el
+     experimento y no manda nada. */
+  const buildPreSchedulePayload = useCallback(() => {
+    const payload = tracking.buildFullPayload()
+    const videoVariant = readFormVariant(getVideoVariantExperiment(slug))
+    return videoVariant ? { ...payload, utm_form_variant: videoVariant } : payload
+  }, [tracking, slug])
+
   const handleNext = (value) => {
     if (!current) return
     let updated =
@@ -133,7 +145,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
       // submitForm(..., false) de conquerx-funnels-new). El submit del último
       // bloque la finaliza vía submitResolver. Fire-and-forget.
       if (updated.phone) {
-        sendPreSchedule(slug, updated, tracking.buildFullPayload())
+        sendPreSchedule(slug, updated, buildPreSchedulePayload())
       }
       setCurrentIndex(i => i + 1)
     } else {
@@ -263,7 +275,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   const submitResolver = async (finalRespuestas) => {
     setPhase('resolving')
     try {
-      const result = await postResolver(slug, finalRespuestas, tracking.buildFullPayload())
+      const result = await postResolver(slug, finalRespuestas, buildPreSchedulePayload())
       // Dispara el evento Lead en todas las plataformas (Meta/Google/GA4/TikTok)
       fireAllLead({
         eventId: tracking.eventId,
