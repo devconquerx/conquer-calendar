@@ -12,9 +12,10 @@
         <p class="text-danger">Esta acción no se puede deshacer.</p>
         <form method="post">
             {% csrf_token %}
+            {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-danger">Sí, eliminar</button>
-                <a href="{% url 'panel_disponibilidad:bloque_list' %}" class="btn btn-light">Cancelar</a>
+                <a href="{% url 'panel_disponibilidad:bloque_list' %}{% if editando_a_otro %}?host={{ host_objetivo.pk }}{% endif %}" class="btn btn-light">Cancelar</a>
             </div>
         </form>
     </div>

@@ -363,11 +363,27 @@ class MiPerfilView(LoginRequiredMixin, UpdateView):
 
 
 class ActualizarTimezoneView(LoginRequiredMixin, View):
+    """Cambia la zona horaria propia o, con `host=<pk>`, la de un usuario que
+    el que edita pueda gestionar (admin, o supervisor de su grupo)."""
+
     def post(self, request):
+        objetivo = request.user
+        host_pk = request.POST.get('host')
+        if host_pk and str(host_pk) != str(request.user.pk):
+            from calendario.grupos.utils import hosts_editables
+            objetivo = hosts_editables(request.user).filter(pk=host_pk).first()
+            if objetivo is None:
+                raise PermissionDenied("No puedes cambiar la zona horaria de este usuario.")
+
         form = TimezoneForm(request.POST)
         if form.is_valid():
-            request.user.timezone = form.cleaned_data['timezone']
-            request.user.save(update_fields=['timezone'])
+            objetivo.timezone = form.cleaned_data['timezone']
+            objetivo.save(update_fields=['timezone'])
+            if objetivo.pk != request.user.pk:
+                messages.success(
+                    request,
+                    f"Zona horaria de {objetivo.nombre_display()} actualizada.",
+                )
         next_url = request.POST.get('next') or request.META.get('HTTP_REFERER', '/')
         return redirect(next_url)
 

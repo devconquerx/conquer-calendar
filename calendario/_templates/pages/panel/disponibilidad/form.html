@@ -10,6 +10,7 @@
     <div class="card-body">
         <form method="post">
             {% csrf_token %}
+            {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
             {% if form.non_field_errors %}
             <div class="alert alert-danger">
                 {% for error in form.non_field_errors %}
@@ -20,7 +21,7 @@
             {{ form.as_p }}
             <div class="d-flex gap-2 mt-4">
                 <button type="submit" class="btn btn-primary">Guardar</button>
-                <a href="{% url 'panel_disponibilidad:bloque_list' %}" class="btn btn-light">Cancelar</a>
+                <a href="{% url 'panel_disponibilidad:bloque_list' %}{% if editando_a_otro %}?host={{ host_objetivo.pk }}{% endif %}" class="btn btn-light">Cancelar</a>
             </div>
         </form>
     </div>
