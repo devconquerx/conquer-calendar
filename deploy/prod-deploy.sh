@@ -218,18 +218,31 @@ assert_version() {  # $1=color $2=puerto $3=sha esperado (vacío = no comprobar)
 }
 
 verify_through_nginx() {  # $1=puerto esperado $2=color esperado (opcional)
-  local port="$1" color="${2:-}" out code upstream body served_color
-  out="$(curl -sk --max-time 15 -D - -o /dev/null -H "Host: $HEALTH_HOST" "https://127.0.0.1/health/" || true)"
-  code="$(printf '%s' "$out" | head -1 | awk '{print $2}')"
-  upstream="$(printf '%s' "$out" | grep -i '^x-upstream:' | tr -d '\r' | awk '{print $2}')"
-  [[ "$code" == "200" ]] || { warn "nginx devolvió $code en /health/"; return 1; }
-  [[ "$upstream" == "127.0.0.1:$port" ]] || { warn "nginx sigue apuntando a $upstream (esperado 127.0.0.1:$port)"; return 1; }
-  if [[ -n "$color" ]]; then
-    body="$(curl -sk --max-time 15 -H "Host: $HEALTH_HOST" "https://127.0.0.1/health/" || true)"
-    served_color="$(json_field "$body" color)"
-    [[ "$served_color" == "$color" ]] || { warn "La URL pública responde color='$served_color' (esperado $color)"; return 1; }
-  fi
-  ok "nginx sirviendo desde $upstream (HTTP $code${color:+, color $color})."
+  local port="$1" color="${2:-}" out code upstream body served_color try
+  # Se reintenta unos segundos: `nginx -s reload` vuelve enseguida, pero durante
+  # un instante los workers viejos siguen atendiendo con la config anterior y
+  # responderían el upstream de antes. No es un fallo, es la recarga en curso.
+  for try in $(seq 1 12); do
+    out="$(curl -sk --max-time 15 -D - -o /dev/null -H "Host: $HEALTH_HOST" "https://127.0.0.1/health/" || true)"
+    code="$(printf '%s' "$out" | head -1 | awk '{print $2}')"
+    upstream="$(printf '%s' "$out" | grep -i '^x-upstream:' | tr -d '\r' | awk '{print $2}')"
+    served_color=""
+    if [[ "$code" == "200" && "$upstream" == "127.0.0.1:$port" ]]; then
+      if [[ -z "$color" ]]; then
+        ok "nginx sirviendo desde $upstream (HTTP $code)."
+        return 0
+      fi
+      body="$(curl -sk --max-time 15 -H "Host: $HEALTH_HOST" "https://127.0.0.1/health/" || true)"
+      served_color="$(json_field "$body" color)"
+      if [[ "$served_color" == "$color" ]]; then
+        ok "nginx sirviendo desde $upstream (HTTP $code, color $color)."
+        return 0
+      fi
+    fi
+    sleep 1
+  done
+  warn "Tras 12s nginx sigue respondiendo HTTP $code desde ${upstream:-?}${served_color:+ (color $served_color)}; esperábamos 127.0.0.1:$port${color:+ / $color}."
+  return 1
 }
 
 preflight() {
@@ -436,7 +449,11 @@ cmd_bootstrap() {
 
   say "1/6 · Upstream de nginx apuntando al backend actual…"
   mkdir -p "$STATE_DIR"
-  if [[ -n "$legacy" ]]; then
+  if active_color_from_nginx >/dev/null 2>&1; then
+    # Reanudando un bootstrap a medias: nginx ya sirve desde un color. Devolver
+    # el tráfico al backend viejo sería un vaivén gratuito.
+    say "El upstream ya apunta a $(active_color_from_nginx); no se toca."
+  elif [[ -n "$legacy" ]]; then
     # Paso puente: el upstream apunta al contenedor viejo (:8000) para poder
     # instalar ya la config nueva de nginx sin mover tráfico.
     cat > "$UPSTREAM_FILE" <<EOF
