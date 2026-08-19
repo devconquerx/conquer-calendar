@@ -113,6 +113,11 @@ export default function LandingForm({ program, region, formConfig, school, theme
   const consentPrivacyPre = landing.consentPrivacyPre || 'Al continuar, confirmas que has leído y aceptas nuestra'
   const consentPrivacyLink = landing.consentPrivacyLink || 'política de privacidad.'
 
+  // Placeholders de los dos campos. Mismo motivo que los textos legales: en GE
+  // la landing viva los sirve en inglés ("First name *" / "Your best email *").
+  const phName = landing.namePlaceholder || 'Nombre sin apellidos *'
+  const phEmail = landing.emailPlaceholder || 'Tu mejor email *'
+
   // Mostrar campo de teléfono visible: por config (showPhone), al marcar el
   // check de WhatsApp, o por la variante A/B 56 de Finance EU (siempre visible,
   // obligatorio). Si no es visible, el teléfono se captura por honeypot/autofill.
@@ -440,7 +445,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
           <div>
             <input
               type="text"
-              placeholder="Nombre sin apellidos *"
+              placeholder={phName}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={inputCls(errors.name)}
@@ -456,7 +461,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
               // del lead con document.querySelector('#email') para las
               // enhanced conversions de Google Ads. Sin este id llega vacío.
               id="email"
-              placeholder="Tu mejor email *"
+              placeholder={phEmail}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={inputCls(errors.email)}
@@ -515,7 +520,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
           <div>
             <input
               type="text"
-              placeholder="Nombre sin apellidos *"
+              placeholder={phName}
               value={name}
               onChange={(e) => setName(e.target.value)}
               style={{ '--tw-ring-color': accent.ring }}
@@ -531,7 +536,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
               // email del lead con document.querySelector('#email') para las
               // enhanced conversions de Google Ads. Inocuo para Blocks/Legal.
               id="email"
-              placeholder="Tu mejor email *"
+              placeholder={phEmail}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={{ '--tw-ring-color': accent.ring }}
@@ -586,7 +591,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
       <div>
         <input
           type="text"
-          placeholder="Nombre sin apellidos *"
+          placeholder={phName}
           value={name}
           onChange={(e) => setName(e.target.value)}
           className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none text-sm transition-colors ${errors.name ? t.inputError : t.input}`}
@@ -597,7 +602,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
       <div>
         <input
           type="email"
-          placeholder="Tu mejor email *"
+          placeholder={phEmail}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none text-sm transition-colors ${errors.email ? t.inputError : t.input}`}
