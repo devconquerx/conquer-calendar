@@ -1,62 +1,140 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Producción — despliegue AZUL/VERDE (zero downtime).
+#
+# Hay DOS copias completas del front (django + su node-ssr): `blue` y `green`.
+# En todo momento una está sirviendo tráfico y la otra es la "standby" donde
+# aterriza el despliegue nuevo. nginx (en el host) apunta a una u otra vía
+# /etc/nginx/conf.d/calendar-upstream.conf, que reescribe deploy/prod-deploy.sh
+# y aplica con `nginx -s reload` (recarga elegante: los requests en vuelo
+# terminan en el worker viejo, los nuevos van al color nuevo → 0 requests
+# perdidos).
+#
+#   blue  → 127.0.0.1:8001
+#   green → 127.0.0.1:8002
+#
+# Cada color usa PROFILES de compose, así que sólo corre el que se pide
+# explícitamente. NUNCA uses `docker compose -f production.yml up -d` a secas
+# ni `--remove-orphans`: usa deploy/prod-deploy.sh (o `--profile <color>`).
+#
+# redis, celeryworker y celerybeat NO tienen color: son únicos y compartidos
+# (dos celerybeat a la vez duplicarían tareas programadas → correos dobles).
+# ─────────────────────────────────────────────────────────────────────────────
+
 volumes:
   calendario_production_redis_data: {}
 
+# ── Plantillas compartidas por los dos colores ───────────────────────────────
+
+x-django-build: &django-build
+  context: .
+  dockerfile: ./compose/production/django/Dockerfile
+  # El Dockerfile tiene 3 etapas (frontend, django, node-ssr); fijamos el target
+  # para que esta imagen sea la de Django y no la última etapa.
+  target: django
+  args:
+    # Se lee del .env del directorio del compose (/home/conquer-calendar/app/.env).
+    # Vite lo embebe en el bundle del frontend en build time.
+    VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+    # Lo pone deploy/prod-deploy.sh: queda dentro de la imagen y /health/ lo
+    # devuelve, para verificar qué commit está sirviendo de verdad.
+    GIT_SHA: ${GIT_SHA:-}
+
+x-node-ssr-build: &node-ssr-build
+  context: .
+  dockerfile: ./compose/production/django/Dockerfile
+  target: node-ssr
+  args:
+    VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+
+x-django-web: &django-web
+  image: conquer_calendario_production_django
+  restart: unless-stopped
+  env_file:
+    - /home/conquer-calendar/.env
+  command: /start
+  volumes:
+    - ./staticfiles:/app/staticfiles
+    - ./calendario-media:/calendario-media
+    - /etc/conquer:/etc/conquer:ro
+  depends_on:
+    - redis
+  # Gunicorn hace shutdown elegante con SIGTERM (--graceful-timeout 30). Damos
+  # margen de sobra para que ningún request en vuelo muera por SIGKILL.
+  stop_grace_period: 45s
+  healthcheck:
+    test: ["CMD", "curl", "-f", "-H", "Host: calendar.conquerx.com", "http://127.0.0.1:8000/health/"]
+    interval: 10s
+    timeout: 5s
+    retries: 3
+    start_period: 15s
+
+x-node-ssr: &node-ssr
+  image: conquer_calendario_node_ssr
+  restart: unless-stopped
+  expose:
+    - "3000"
+  stop_grace_period: 15s
+  healthcheck:
+    test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+    interval: 10s
+    timeout: 5s
+    retries: 3
+    start_period: 5s
+
+x-celery-env: &celery-env
+  CELERY_BROKER_URL: "redis://redis:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+
 services:
-  django:
-    build:
-      context: .
-      dockerfile: ./compose/production/django/Dockerfile
-      # El Dockerfile ahora tiene 3 etapas (frontend, django, node-ssr); fijamos
-      # el target para que esta imagen sea la de Django y no la última etapa.
-      target: django
-      args:
-        # Se lee del .env del directorio del compose (/home/conquer-calendar/app/.env).
-        # Vite lo embebe en el bundle del frontend en build time.
-        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
-    image: conquer_calendario_production_django
-    restart: unless-stopped
-    env_file:
-      - /home/conquer-calendar/.env
-    command: /start
+  # ── Color BLUE ─────────────────────────────────────────────────────────────
+  django-blue:
+    <<: *django-web
+    build: *django-build
+    profiles: ["blue"]
     ports:
-      - "127.0.0.1:8000:8000"
-    volumes:
-      - ./staticfiles:/app/staticfiles
-      - ./calendario-media:/calendario-media
-      - /etc/conquer:/etc/conquer:ro
-    depends_on:
-      - redis
-      - node-ssr
+      - "127.0.0.1:8001:8000"
     environment:
-      CELERY_BROKER_URL: "redis://redis:6379/0"
-      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "-H", "Host: calendar.conquerx.com", "http://127.0.0.1:8000/health/"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+      <<: *celery-env
+      # Cada color habla con SU propio SSR: así el swap de un color no deja al
+      # otro renderizando con el bundle equivocado.
+      FUNNEL_SSR_URL: "http://node-ssr-blue:3000/render"
+      DEPLOY_COLOR: "blue"
+    labels:
+      conquer.role: "django"
+      conquer.color: "blue"
 
-  # Servicio de render SSR del funnel (interno; Django le hace POST /render).
-  # Si está caído, Django cae a CSR (root vacío), por eso NO bloquea el deploy.
-  node-ssr:
-    build:
-      context: .
-      dockerfile: ./compose/production/django/Dockerfile
-      target: node-ssr
-      args:
-        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
-    image: conquer_calendario_node_ssr
-    restart: unless-stopped
-    expose:
-      - "3000"
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+  node-ssr-blue:
+    <<: *node-ssr
+    build: *node-ssr-build
+    profiles: ["blue"]
+    labels:
+      conquer.role: "node-ssr"
+      conquer.color: "blue"
 
+  # ── Color GREEN ────────────────────────────────────────────────────────────
+  django-green:
+    <<: *django-web
+    build: *django-build
+    profiles: ["green"]
+    ports:
+      - "127.0.0.1:8002:8000"
+    environment:
+      <<: *celery-env
+      FUNNEL_SSR_URL: "http://node-ssr-green:3000/render"
+      DEPLOY_COLOR: "green"
+    labels:
+      conquer.role: "django"
+      conquer.color: "green"
+
+  node-ssr-green:
+    <<: *node-ssr
+    build: *node-ssr-build
+    profiles: ["green"]
+    labels:
+      conquer.role: "node-ssr"
+      conquer.color: "green"
+
+  # ── Servicios sin color (únicos) ───────────────────────────────────────────
   celeryworker:
     image: conquer_calendario_production_django
     restart: unless-stopped
@@ -67,11 +145,15 @@ services:
       - ./calendario-media:/calendario-media
       - /etc/conquer:/etc/conquer:ro
     environment:
-      CELERY_BROKER_URL: "redis://redis:6379/0"
-      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+      <<: *celery-env
     depends_on:
-      - django
       - redis
+    # Warm shutdown de Celery: con SIGTERM deja de aceptar tareas nuevas y
+    # termina las que tiene en vuelo. CELERY_TASK_TIME_LIMIT es 120s, así que
+    # damos 130s antes del SIGKILL → ninguna tarea (CRM, correos) se pierde.
+    stop_grace_period: 130s
+    labels:
+      conquer.role: "celeryworker"
 
   celerybeat:
     image: conquer_calendario_production_django
@@ -83,12 +165,16 @@ services:
       - ./calendario-media:/calendario-media
       - /etc/conquer:/etc/conquer:ro
     environment:
-      CELERY_BROKER_URL: "redis://redis:6379/0"
-      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+      <<: *celery-env
     depends_on:
-      - django
       - redis
+    stop_grace_period: 20s
+    labels:
+      conquer.role: "celerybeat"
 
+  # OJO: no le añadas claves (ni labels) sin necesidad. Cualquier cambio de
+  # config hace que compose RECREE el contenedor, y Redis es el broker de
+  # Celery: recrearlo tira la cola. Se deja exactamente como estaba.
   redis:
     image: redis:7-alpine
     restart: unless-stopped

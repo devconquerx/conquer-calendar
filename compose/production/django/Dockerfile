@@ -60,6 +60,14 @@ COPY . /app
 # en .dockerignore, así que esta es la única fuente del dist en la imagen).
 COPY --from=frontend /app/frontend/dist /app/frontend/dist
 
+# Commit del que salió esta imagen. /health/ lo devuelve, así que el despliegue
+# puede comprobar que la URL pública sirve EXACTAMENTE el commit que creía haber
+# desplegado (y no una imagen vieja que compose no llegó a adoptar).
+# Va al final a propósito: el COPY de arriba ya invalida la caché en cada commit,
+# así que esto no cuesta ni una capa extra de build.
+ARG GIT_SHA=""
+ENV DEPLOY_SHA=${GIT_SHA}
+
 ENTRYPOINT ["/entrypoint"]
 
 

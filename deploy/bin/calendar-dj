@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+#
+# calendar-dj — ejecuta un comando dentro del contenedor Django que está
+# sirviendo AHORA MISMO. Instalado en /usr/local/bin/calendar-dj.
+#
+# Con el despliegue azul/verde el nombre del contenedor ya no es fijo
+# (app-django-blue-1 / app-django-green-1), así que el cron no puede hacer
+# `docker exec app-django-1 …`. Este helper resuelve el contenedor por
+# etiqueta y color activo.
+#
+# Uso:  calendar-dj python manage.py enviar_recordatorios
+#
+set -euo pipefail
+
+STATE_DIR="${STATE_DIR:-/home/conquer-calendar/deploy}"
+color="$(cat "$STATE_DIR/active_color" 2>/dev/null || true)"
+
+cid=""
+if [[ -n "$color" ]]; then
+  cid="$(docker ps -q --filter "label=conquer.role=django" --filter "label=conquer.color=$color" | head -1)"
+fi
+# Plan B: cualquier django vivo. Plan C: el worker de Celery (misma imagen,
+# mismo entorno) — así un despliegue en curso nunca deja al cron sin dónde
+# correr.
+[[ -n "$cid" ]] || cid="$(docker ps -q --filter "label=conquer.role=django" | head -1)"
+[[ -n "$cid" ]] || cid="$(docker ps -q --filter "label=conquer.role=celeryworker" | head -1)"
+
+if [[ -z "$cid" ]]; then
+  echo "calendar-dj: no hay ningún contenedor de la app corriendo" >&2
+  exit 1
+fi
+
+exec docker exec "$cid" "$@"
