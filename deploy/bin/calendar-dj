@@ -24,6 +24,11 @@ fi
 # correr.
 [[ -n "$cid" ]] || cid="$(docker ps -q --filter "label=conquer.role=django" | head -1)"
 [[ -n "$cid" ]] || cid="$(docker ps -q --filter "label=conquer.role=celeryworker" | head -1)"
+# Plan D: por nombre. Cubre los contenedores creados antes de que existieran las
+# etiquetas (p.ej. mientras se migra al azul/verde), para que el cron nunca se
+# quede sin sitio donde ejecutarse.
+[[ -n "$cid" ]] || cid="$(docker ps -q --filter "name=^app-django" | head -1)"
+[[ -n "$cid" ]] || cid="$(docker ps -q --filter "name=^app-celeryworker" | head -1)"
 
 if [[ -z "$cid" ]]; then
   echo "calendar-dj: no hay ningún contenedor de la app corriendo" >&2
