@@ -8,9 +8,9 @@ import { fireAllLead } from '../../lib/pixelEvents'
 import { registerLead } from '../../api'
 import { useRouter } from '../../lib/router'
 import { autocorrectEmail } from '../../lib/emailCorrection'
-import { getTheme } from '../../themes'
+import { getTheme, useVariantTheme } from '../../themes'
 import countries from '../../data/countries'
-import { resolveFormVariant } from '../../lib/formVariant'
+import { useFormVariant } from '../../lib/formVariantContext'
 
 const getFlagUrl = (iso2) => `https://flagcdn.com/w40/${iso2?.toLowerCase()}.png`
 
@@ -68,8 +68,10 @@ export default function LandingForm({ program, region, formConfig, school, theme
   const { countryCode: geoCountryCode, loading: geoLoading } = useGeoLocation()
 
   // `themeOverride` llega cuando la página fuerza una variante de diseño (hoy:
-  // la landing de Finance renderizando con el sistema paperboard de Legal).
-  const theme = themeOverride || getTheme(school?.slug)
+  // la landing de Finance renderizando con el sistema paperboard de Legal, y la
+  // landing paperboard, que ya pasa su tema con la variante A/B aplicada).
+  const ownTheme = useVariantTheme(useMemo(() => getTheme(school?.slug), [school?.slug]))
+  const theme = themeOverride || ownTheme
   const t = theme.landing.form
   const isPaper = !!theme.paperboard
   const accent = theme.accent || {}
@@ -80,47 +82,21 @@ export default function LandingForm({ program, region, formConfig, school, theme
   // Check opcional "Envíame la repetición por WhatsApp". Al marcarlo se revela el
   // campo de teléfono para capturar el número de WhatsApp del lead. Activo
   // siempre en Conquer Legal; en Conquer Finance EU y Conquer Blocks EU es
-  // parte de un A/B (ver abajo), no incondicional. Forzable por config con
+  // parte de un A/B, no incondicional. Forzable por config con
   // landing.whatsappOptin.
-  const isEuRegion = String(region || '').toLowerCase() === 'eu'
 
-  // A/B de teléfono/WhatsApp en EU, uno por marca/landing (réplica exacta de
-  // conquerx-funnels-new, cada una con su propio storageKey/variantes):
-  // - Finance EU: `form_variant_cf`, 55 (checkbox, igual que Legal) / 56
-  //   (campo siempre visible y OBLIGATORIO, sin checkbox).
-  // - Blocks EU, landing principal (cb-eu, slug `blocks-eu`): `form_variant_cb_eu`,
-  //   51 (control: sin checkbox, solo honeypot, igual que LATAM/US) / 52 (test:
-  //   checkbox de WhatsApp, mismo mecanismo que Finance 55).
-  // - Blocks EU, segunda landing (cb-eu-2, slug `blocks-eu-2`): mismo mecanismo
-  //   pero con su propio experimento independiente, `form_variant_cb_eu_2`,
-  //   53 (control) / 54 (test) — persiste aparte para no mezclar el split de
-  //   ambas landings.
-  // Se resuelve en un efecto — no en SSR/primer render, que muestra el estado
-  // por defecto (honeypot, sin A/B) hasta montar — igual que el resto del
-  // estado de este componente que depende de localStorage/geo (país, etc).
-  // `?force_form_variant=<código>` fuerza y persiste la variante (para QA),
-  // igual que en el funnel viejo.
-  const isFinanceEuAbTest = theme.id === 'conquerfinance' && isEuRegion
-  const isBlocksEuAbTest = theme.id === 'conquerblocks' && isEuRegion
-  const isBlocksEu2 = isBlocksEuAbTest && funnelSlug === 'blocks-eu-2'
-  const blocksEuTestVariant = isBlocksEu2 ? '54' : '52'
-  const abTestConfig = isFinanceEuAbTest
-    ? { storageKey: 'form_variant_cf', variants: ['55', '56'] }
-    : isBlocksEuAbTest
-      ? (isBlocksEu2
-          ? { storageKey: 'form_variant_cb_eu_2', variants: ['53', '54'] }
-          : { storageKey: 'form_variant_cb_eu', variants: ['51', '52'] })
-      : null
-  const [formVariant, setFormVariant] = useState(null)
-  useEffect(() => {
-    if (!abTestConfig) return
-    setFormVariant(resolveFormVariant(abTestConfig))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Variante A/B de este visitante. El catálogo de experimentos (qué landing
+  // tiene cuál, con qué storageKey y qué cambia cada variante) vive en
+  // lib/formVariant.js, y la asignación la hace <FormVariantProvider> una sola
+  // vez para todo el funnel — en el cliente, tras montar: en SSR/primer render
+  // no hay variante y se muestra el estado de control, igual que el resto del
+  // estado que depende de localStorage/geo (país, etc).
+  const { variant: formVariant, experiment } = useFormVariant()
 
   const showWhatsappOptin = landing.whatsappOptin != null
     ? !!landing.whatsappOptin
-    : (theme.id === 'conquerlegal' || (isFinanceEuAbTest && formVariant === '55') || (isBlocksEuAbTest && formVariant === blocksEuTestVariant))
+    : (theme.id === 'conquerlegal'
+        || (!!experiment?.whatsappOptinVariant && formVariant === experiment.whatsappOptinVariant))
 
   // Texto de consentimiento comercial ("aceptas recibir comunicaciones
   // comerciales"). Se puede ocultar por funnel desde la config
@@ -128,10 +104,21 @@ export default function LandingForm({ program, region, formConfig, school, theme
   // la política de privacidad NO se toca: esa se mantiene siempre.
   const showCommercialConsent = landing.commercialConsent !== false
 
+  // Textos de las dos líneas legales. Por defecto van en castellano, que es lo
+  // que sirven todas las marcas; el funnel puede sobrescribirlos desde la config
+  // (landing.consentText / consentPrivacyPre / consentPrivacyLink) para los que
+  // no están en español — hoy Conquer Languages GE, réplica de su landing viva.
+  const consentText = landing.consentText
+    || 'Al proporcionarnos tu correo electrónico, aceptas recibir comunicaciones comerciales por parte de nuestra empresa.'
+  const consentPrivacyPre = landing.consentPrivacyPre || 'Al continuar, confirmas que has leído y aceptas nuestra'
+  const consentPrivacyLink = landing.consentPrivacyLink || 'política de privacidad.'
+
   // Mostrar campo de teléfono visible: por config (showPhone), al marcar el
   // check de WhatsApp, o por la variante A/B 56 de Finance EU (siempre visible,
   // obligatorio). Si no es visible, el teléfono se captura por honeypot/autofill.
-  const showPhone = !!landing.showPhone || (isFinanceEuAbTest && formVariant === '56')
+  const isAlwaysPhoneVariant = !!experiment?.alwaysPhoneVariant
+    && formVariant === experiment.alwaysPhoneVariant
+  const showPhone = !!landing.showPhone || isAlwaysPhoneVariant
   const phoneVisible = showPhone || (showWhatsappOptin && wantsWhatsapp)
   // Honeypot de teléfono: campo oculto con autocomplete="tel" que captura el
   // número si el navegador lo autorrellena. Se puede apagar por funnel desde la
@@ -166,7 +153,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
     // Variante 55 (checkbox) Y 56 (siempre visible) de Finance EU son ambas un
     // campo de WhatsApp, no de teléfono genérico — solo la 55 pasaba por
     // showWhatsappOptin; la 56 caía al placeholder de ejemplo numérico.
-    if (isFinanceEuAbTest && showPhone) return 'Número de WhatsApp *'
+    if (isAlwaysPhoneVariant) return 'Número de WhatsApp *'
     if (showWhatsappOptin) return 'Número de WhatsApp'
     if (!selectedCountry?.iso2) return 'Teléfono *'
     try {
@@ -174,7 +161,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
       if (ex) return ex.format('NATIONAL')
     } catch {}
     return 'Teléfono *'
-  }, [selectedCountry, showWhatsappOptin, isFinanceEuAbTest, showPhone])
+  }, [selectedCountry, showWhatsappOptin, isAlwaysPhoneVariant])
 
   const filteredCountries = useMemo(() => {
     if (!search) return countries
@@ -220,7 +207,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
       const digits = phone.replace(/\D/g, '')
       // En la variante 56 de Finance EU el teléfono es obligatorio (igual que en
       // conquerx-funnels-new, donde el campo era visible y required desde el inicio).
-      const phoneRequired = wantsWhatsapp || (isFinanceEuAbTest && formVariant === '56')
+      const phoneRequired = wantsWhatsapp || isAlwaysPhoneVariant
       if (phoneRequired && !digits) {
         newErrors.phone = 'Ingresa tu número de WhatsApp'
       } else if (digits) {
@@ -279,8 +266,9 @@ export default function LandingForm({ program, region, formConfig, school, theme
       conditions: `Acepta las políticas: ${new Date().toISOString()}`,
     }
 
-    // Variante A/B resuelta (hoy: Finance EU, 55/56) — el Lead.utm_form_variant
-    // y su forwarding al CRM ya existían, solo faltaba poblarlo.
+    // Variante A/B resuelta (Finance EU 55/56, Blocks EU 51/52 y EU-2 53/54,
+    // Blocks LATAM 57/58) — el Lead.utm_form_variant y su forwarding al CRM ya
+    // existían, solo faltaba poblarlo.
     if (formVariant) body.utm_form_variant = formVariant
 
     if (phoneData) {
@@ -484,10 +472,10 @@ export default function LandingForm({ program, region, formConfig, school, theme
 
         <div className="mt-[20px] md:mt-[25px] text-black" style={{ fontFamily: 'Poppins, sans-serif' }}>
           <p className="text-[12px] leading-[12px]">
-            Al proporcionarnos tu correo electrónico, aceptas recibir comunicaciones comerciales por parte de nuestra empresa.
+            {consentText}
           </p>
           <p className="mt-[10px] text-[12px] leading-[12px]">
-            Al continuar, confirmas que has leído y aceptas nuestra{' '}
+            {consentPrivacyPre}{' '}
             <a
               href={school?.privacyPolicyUrl || theme.footer?.legal?.privacy || '#'}
               target="_blank"
@@ -495,7 +483,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
               className="underline"
               style={{ color: hx.privacyLinkColor || '#73bac8' }}
             >
-              política de privacidad.
+              {consentPrivacyLink}
             </a>
           </p>
         </div>
@@ -564,15 +552,15 @@ export default function LandingForm({ program, region, formConfig, school, theme
                   se dispara junto con el checkbox/campo de WhatsApp de ambas variantes
                   55/56 — no es específico de una sola) para mencionar WhatsApp; el resto
                   de marcas conserva el texto genérico. */}
-              {isFinanceEuAbTest
+              {experiment?.whatsappComplianceText
                 ? 'Al continuar aceptas que te enviemos tips, la repetición de la clase y recursos exclusivos por email/whatsapp. (Tranqui, solo contenido útil, nada de spam).'
-                : 'Al proporcionarnos tu correo electrónico, aceptas recibir comunicaciones comerciales por parte de nuestra empresa.'}
+                : consentText}
             </p>
           )}
           <p>
-            Al continuar, confirmas que has leído y aceptas nuestra{' '}
+            {consentPrivacyPre}{' '}
             <a href={school?.privacyPolicyUrl || theme.footer?.legal?.privacy || '#'} target="_blank" rel="noopener noreferrer" style={{ backgroundImage: accent.linkGradient }} className="underline bg-clip-text text-transparent">
-              política de privacidad.
+              {consentPrivacyLink}
             </a>
           </p>
         </div>
