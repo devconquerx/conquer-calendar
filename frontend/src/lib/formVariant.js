@@ -62,6 +62,17 @@ const FORM_VARIANT_EXPERIMENTS = [
     alwaysPhoneVariant: '56',
     whatsappComplianceText: true,
   },
+  // Finance LATAM (fi-latam, slug `finance-latam`): 61 (control: la landing tal
+  // cual) / 62 (test: fondo blanco). Mismo test de diseño que Blocks LATAM.
+  // Finance EU queda FUERA a propósito: su landing ya corre el A/B de
+  // teléfono/WhatsApp (55/56) y `utm_form_variant` es un único campo por lead,
+  // así que no puede llevar dos experimentos a la vez sin ambigüedad.
+  {
+    match: ({ funnelSlug }) => funnelSlug === 'finance-latam',
+    storageKey: 'form_variant_cf_latam',
+    variants: ['61', '62'],
+    whiteBackgroundVariant: '62',
+  },
   // Blocks EU, segunda landing (cb-eu-2, slug `blocks-eu-2`): mismo mecanismo
   // que la principal pero con experimento independiente, para no mezclar splits.
   {
@@ -91,6 +102,13 @@ const FORM_VARIANT_EXPERIMENTS = [
     storageKey: 'form_variant_cb_latam',
     variants: ['57', '58'],
     whiteBackgroundVariant: '58',
+  },
+  // Blocks US (cb-us, slug `blocks-us`): 59 (control) / 60 (fondo blanco).
+  {
+    match: ({ funnelSlug }) => funnelSlug === 'blocks-us',
+    storageKey: 'form_variant_cb_us',
+    variants: ['59', '60'],
+    whiteBackgroundVariant: '60',
   },
 ]
 
