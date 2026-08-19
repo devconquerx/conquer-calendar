@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import VideoPlayer from '../components/vsl/VideoPlayer'
 import AgendarButton from '../components/vsl/AgendarButton'
 import { getTheme } from '../themes'
+import { useVideoVariant } from '../lib/formVariantContext'
 import { CB_CARD_SHADOW } from '../themes/conquerblocks'
 import { sendVideoProgressToBackend } from '../api'
 import { safeHtml } from '../lib/sanitize'
@@ -11,9 +12,13 @@ import { useRouter } from '../lib/router'
    Muestra el video (autoplay muted + overlays), revela el botón al alcanzar el
    buttonPercent y, al pulsarlo, redirige al StepForm conservando el query string
    (name/email/phone/event_id/journey_id que vienen de la landing). */
-export default function VideoPage({ school, region, formConfig, videoUrls, buttonPercent, nextUrl, search }) {
+export default function VideoPage({ school, region, formConfig, videoUrls, buttonPercent, nextUrl, search, funnelSlug = '' }) {
   const router = useRouter()
   const [showButton, setShowButton] = useState(false)
+  // A/B del logo del footer (Blocks EU/LATAM/US y Finance EU/LATAM). Se asigna
+  // aquí —no en el root— para que solo entre en el test quien ve esta página;
+  // el StepForm la lee después y la cuelga de la prellamada.
+  const { hideFooterLogo } = useVideoVariant(funnelSlug)
 
   const baseTheme = getTheme(school?.slug)
   // Rediseño por página: un tema puede pedir que SOLO su página de vídeo use el
@@ -370,12 +375,18 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
         {assets.pixels?.lg8 && (
           <img src={assets.pixels.lg8} alt="" aria-hidden="true" className="absolute -top-[12px] right-4 w-[75px] z-[2] md:top-[13px] md:right-[15px] md:w-[100px] pointer-events-none select-none" />
         )}
-        {/* z-10: el logo va SIEMPRE por encima de los píxeles decorativos. */}
+        {/* z-10: el logo va SIEMPRE por encima de los píxeles decorativos.
+            En la variante de test del A/B el bloque se queda (misma altura de
+            franja y mismos píxeles) pero sin las dos imágenes del logo. */}
         <div className="relative z-10 py-8 flex justify-center">
-          {/* Móvil: logo vertical compacto (125px), igual que producción. */}
-          <img src={assets.logo} alt={school?.slug || ''} className="md:hidden h-auto w-[125px]" />
-          {/* Desktop: logo de footer a tamaño completo (sin cambios). */}
-          <img src={footerLogo} alt={school?.slug || ''} className="hidden md:block h-auto" style={{ width: footerLogoWidth }} />
+          {!hideFooterLogo && (
+            <>
+              {/* Móvil: logo vertical compacto (125px), igual que producción. */}
+              <img src={assets.logo} alt={school?.slug || ''} className="md:hidden h-auto w-[125px]" />
+              {/* Desktop: logo de footer a tamaño completo (sin cambios). */}
+              <img src={footerLogo} alt={school?.slug || ''} className="hidden md:block h-auto" style={{ width: footerLogoWidth }} />
+            </>
+          )}
         </div>
       </footer>
     </div>

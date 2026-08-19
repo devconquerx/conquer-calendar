@@ -33,6 +33,17 @@ export function resolveFormVariant({ storageKey, variants }) {
   return assigned
 }
 
+/** Lee la variante ya asignada SIN asignar ninguna. Para cuando otra etapa
+    necesita el dato pero no debe meter al visitante en el experimento (p.ej. el
+    StepForm, que adjunta la variante del vídeo a la prellamada: quien llega por
+    link directo sin pasar por el vídeo no entra en el test). */
+export function readFormVariant({ storageKey, variants } = {}) {
+  if (typeof window === 'undefined' || !storageKey || !variants?.length) return null
+  let stored = null
+  try { stored = localStorage.getItem(storageKey) } catch (_) {}
+  return stored && variants.includes(stored) ? stored : null
+}
+
 /* ── Experimentos A/B activos ─────────────────────────────────────────────
    Uno por landing/funnel, con su propio `storageKey` (así el split de cada
    experimento persiste aparte aunque las landings compartan dominio, igual
@@ -111,6 +122,39 @@ const FORM_VARIANT_EXPERIMENTS = [
     whiteBackgroundVariant: '60',
   },
 ]
+
+/* ── Experimentos de la PÁGINA DE VÍDEO ───────────────────────────────────
+   Familia aparte de la de arriba, y por eso no comparten ni storageKey ni
+   códigos: la variante de la landing viaja en el Lead (`utm_form_variant` de
+   LeadRegister) y esta viaja en la PRELLAMADA (`utm_form_variant` de
+   PreSchedule). Al vivir en entidades distintas, un funnel puede correr los dos
+   tests a la vez sin que un dato pise al otro — de ahí que aquí sí esté
+   finance-eu, que en la landing ya tiene el suyo.
+
+   Hoy todos prueban lo mismo: `hideFooterLogoVariant` es la variante que oculta
+   el logo del footer del vídeo (la franja de papel y los píxeles se quedan).
+   La numeración es independiente de la de la landing (otra entidad) y arranca
+   en 1. Las filas viejas de PreSchedule que ocupaban estos códigos (enero-mayo
+   de 2026, las dejó un backfill del CRM que copiaba la variante del
+   LeadRegister, hoy apagado) se reetiquetaron sumándoles 10000, así que este
+   rango queda libre para los tests nuevos. */
+const VIDEO_VARIANT_EXPERIMENTS = [
+  { funnelSlug: 'blocks-eu', storageKey: 'form_variant_video_cb_eu', variants: ['1', '2'] },
+  { funnelSlug: 'blocks-latam', storageKey: 'form_variant_video_cb_latam', variants: ['3', '4'] },
+  { funnelSlug: 'blocks-us', storageKey: 'form_variant_video_cb_us', variants: ['5', '6'] },
+  { funnelSlug: 'finance-eu', storageKey: 'form_variant_video_cf_eu', variants: ['7', '8'] },
+  { funnelSlug: 'finance-latam', storageKey: 'form_variant_video_cf_latam', variants: ['9', '10'] },
+].map((exp) => ({
+  ...exp,
+  // Segundo código del par = variante de test (sin logo); el primero es control.
+  hideFooterLogoVariant: exp.variants[1],
+}))
+
+/** Experimento de la página de vídeo para este funnel, o null si no tiene. */
+export function getVideoVariantExperiment(funnelSlug) {
+  if (!funnelSlug) return null
+  return VIDEO_VARIANT_EXPERIMENTS.find((exp) => exp.funnelSlug === funnelSlug) || null
+}
 
 /** Experimento que aplica a este funnel, o null si no hay ninguno activo. */
 export function getFormVariantExperiment({ themeId, region, funnelSlug } = {}) {
