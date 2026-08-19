@@ -44,8 +44,24 @@ function applyFavicon(favicon) {
    por navegación client-side siguen siendo lazy + Suspense (un spinner ahí es
    aceptable y no hay HTML del servidor que igualar). */
 export default function FunnelApp({ slug, escuela, region, program, formConfig, videoEnabled, search, initialStage, initialStageComponent }) {
-  const { stage } = useRouter()
+  const router = useRouter()
+  const stage = router?.stage
   const school = { slug: escuela }
+
+  /* Query string que ve la etapa. El de `search` es el del ARRANQUE (lo captura
+     funnel-spa.jsx del documento servido, y en SSR lo manda Django), así que
+     solo vale mientras seguimos en la etapa inicial: ahí el HTML del servidor y
+     el del cliente tienen que coincidir para hidratar.
+
+     En cuanto se navega dentro de la SPA el query string cambia —la landing le
+     añade name/email/phone al pasar al vídeo, y de ahí al StepForm— y el del
+     arranque queda obsoleto. Sin esto, el StepForm leía el query de la landing
+     y no pre-rellenaba nada (y la página de vídeo se quedaba sin el email para
+     el seguimiento de progreso). */
+  const navegado = router?.hasNavigated?.() || false
+  const stageSearch = typeof window === 'undefined' || (stage === initialStage && !navegado)
+    ? search
+    : window.location.search
 
   // El favicon depende de la escuela (no de la etapa): se aplica una vez para
   // landing, vídeo, stepform y confirmación.
@@ -98,7 +114,7 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
           formConfig={formConfig}
           videoUrls={video.videoUrls || []}
           buttonPercent={video.buttonPercent || 75}
-          search={search}
+          search={stageSearch}
           funnelSlug={slug}
         />
       )
@@ -106,7 +122,7 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
     if (stage === 'confirmation') {
       return <Comp escuela={escuela} slug={slug} />
     }
-    return <Comp slug={slug} escuela={escuela} formConfig={formConfig} search={search} />
+    return <Comp slug={slug} escuela={escuela} formConfig={formConfig} search={stageSearch} />
   }
 
   // Etapa SSR'd inicial → componente no-lazy, render síncrono sin Suspense.
