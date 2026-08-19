@@ -15,7 +15,11 @@ logger = logging.getLogger(__name__)
 _SCHOOL_CRM_CODE = {
     'conquer-blocks': 'cb', 'conquerblocks': 'cb', 'conquer-blocks-esp': 'cb',
     'conquer-finance': 'fi', 'conquerfinance': 'fi', 'cf': 'fi',
-    'conquer-languages': 'cl', 'conquerlanguages': 'cl',
+    # Kids no es una escuela aparte para el CRM: es una línea de Languages y va
+    # como 'cl', igual que 'conquer-blocks-esp' va como 'cb'. Sin esta entrada
+    # el slug viajaba crudo ('conquer-languages-kids') y el CRM lo guardaba como
+    # escuela desconocida.
+    'conquer-languages': 'cl', 'conquerlanguages': 'cl', 'conquer-languages-kids': 'cl',
     'conquer-legal': 'cg', 'conquerlegal': 'cg',
 }
 

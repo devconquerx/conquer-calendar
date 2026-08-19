@@ -43,11 +43,18 @@ for f in Lead._meta.get_fields():
 # FunnelForm.slug (canónico del calendario) → código de funnel del CRM
 # (vocabulario del proyecto viejo: cb/fi/cl/cg-<region>). Es lo que se guarda
 # en Lead.funnel y viaja al ingest del CRM, a AC y a Respond.io. Sin entrada
-# aquí (especialización, kids) se conserva el slug tal cual.
+# aquí (especialización) se conserva el slug tal cual.
+#
+# OJO con dejar un slug sin traducir: el ingest del CRM, en
+# `_normalize_lead_funnel`, SUSTITUYE por el utm_campaign cualquier funnel que
+# no esté en su STANDARD_LEAD_FUNNELS. Un lead de kids llegaba con
+# 'languages-kids-eu' y se guardaba con el nombre de la campaña como funnel.
 _FUNNEL_SLUG_TO_CRM_CODE = {
     'blocks-latam': 'cb-latam', 'blocks-eu': 'cb-eu', 'blocks-us': 'cb-us', 'blocks-eu-2': 'cb-eu-2',
     'finance-latam': 'fi-latam', 'finance-eu': 'fi-eu', 'finance-us': 'fi-us',
     'languages-latam': 'cl-latam', 'languages-eu': 'cl-eu', 'languages-us': 'cl-us',
+    'languages-kids-latam': 'cl-kids-latam', 'languages-kids-eu': 'cl-kids-eu',
+    'languages-kids-us': 'cl-kids-us',
     'legal-eu': 'cg-eu',
 }
 
