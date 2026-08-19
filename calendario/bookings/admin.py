@@ -7,7 +7,8 @@ from django.http import HttpResponse
 from django.urls import path, reverse
 from django.utils.html import format_html, mark_safe
 
-from .models import ConfigCorreoDefault, ConfigCorreoEvento, ConfigCorreoGrupo, LogCorreo, PlantillaCorreo, Reserva
+from .models import (ConfigCorreoDefault, ConfigCorreoEvento, ConfigCorreoGrupo, DominioRemitente,
+                     LogCorreo, PlantillaCorreo, Reserva)
 from calendario.leads.admin import _tag_check
 from calendario.monitoring.models import TaskFailureLog, AlertLog
 
@@ -32,6 +33,37 @@ VARIABLES_CORREO = [
     ('{{link_reagendar}}',      'Botón: reagendar (vuelve a la página del evento)'),
     ('{{link_confirmar}}',      'Botón: confirmar asistencia'),
 ]
+
+
+@admin.register(DominioRemitente)
+class DominioRemitenteAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'dominio', 'region', 'from_email', 'reply_to', 'activo', 'plantillas_que_lo_usan')
+    list_filter = ('region', 'activo')
+    search_fields = ('nombre', 'dominio', 'from_email', 'reply_to')
+    fieldsets = (
+        (None, {
+            'fields': ('nombre', 'dominio', 'activo'),
+        }),
+        ('Mailgun', {
+            'fields': ('region',),
+            'description': (
+                'La región tiene que ser la misma en la que está dado de alta el dominio en Mailgun. '
+                'Si no coincide, el envío falla con «Unknown sender domain» aunque el dominio esté verificado.'
+            ),
+        }),
+        ('Direcciones', {
+            'fields': ('from_email', 'reply_to'),
+            'description': (
+                'El «From» es desde donde sale el correo; el «Reply-To» es a dónde llegan las respuestas '
+                'cuando el destinatario le da a Responder. Pueden ser distintos: lo normal es enviar desde '
+                'noreply@ y recibir las respuestas en un buzón que alguien atienda.'
+            ),
+        }),
+    )
+
+    @admin.display(description='Plantillas')
+    def plantillas_que_lo_usan(self, obj):
+        return obj.plantillas.count()
 
 
 class PlantillaCorreoAdminForm(forms.ModelForm):
@@ -63,15 +95,22 @@ class PlantillaCorreoAdminForm(forms.ModelForm):
 @admin.register(PlantillaCorreo)
 class PlantillaCorreoAdmin(admin.ModelAdmin):
     form = PlantillaCorreoAdminForm
-    list_display = ('nombre', 'activa', 'recordatorio_1_activo', 'recordatorio_1_horas',
+    list_display = ('nombre', 'dominio', 'formato', 'activa', 'recordatorio_1_activo', 'recordatorio_1_horas',
                     'recordatorio_2_activo', 'recordatorio_2_horas', 'fecha_creacion', 'ver_preview')
-    list_filter = ('activa',)
+    list_filter = ('activa', 'formato', 'dominio')
     search_fields = ('nombre',)
     readonly_fields = ('ver_preview',)
     fieldsets = (
+        ('Envío', {
+            'fields': ('dominio', 'formato'),
+            'description': (
+                'Desde qué dominio sale este correo y en qué formato. Si dejas el dominio vacío se usa '
+                'el remitente por defecto de la app. En texto plano se ignoran el logo y los colores.'
+            ),
+        }),
         ('Identidad visual', {
             'fields': ('nombre', 'logo', 'color_encabezado', 'ver_preview'),
-            'description': 'Color en formato hexadecimal, ej: #111827 (negro), #1a56db (azul), #16a34a (verde).',
+            'description': 'Color en formato hexadecimal, ej: #111827 (negro), #1a56db (azul), #16a34a (verde). Solo aplica en formato HTML.',
         }),
         ('Contenido', {
             'fields': ('texto_encabezado', 'cuerpo', 'variables', 'pie_pagina'),

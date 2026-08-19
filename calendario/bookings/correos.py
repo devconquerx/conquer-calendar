@@ -2,7 +2,7 @@ from datetime import timedelta
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.templatetags.static import static
 from django.template.loader import render_to_string
 
@@ -151,8 +151,38 @@ def _logo_url(plantilla):
         return None
 
 
+_BACKEND_MAILGUN = 'anymail.backends.mailgun.EmailBackend'
+
+
+def _dominio_de(plantilla):
+    """Dominio de envío efectivo de la plantilla, o None para el de siempre."""
+    dominio = plantilla.dominio if plantilla.dominio_id else None
+    if dominio is None or not dominio.activo:
+        return None
+    return dominio
+
+
+def _conexion(dominio):
+    """Conexión SMTP/API para este dominio, o None para la conexión por defecto.
+
+    Cada dominio de Mailgun vive en una región (UE o EEUU) y hay que atacar su
+    endpoint: el global `MAILGUN_SENDER_DOMAIN` apunta a uno solo, así que sin
+    esto los dominios de las academias darían 404.
+
+    Fuera de producción el backend es consola o locmem; en ese caso no forzamos
+    Mailgun para no intentar salir a internet en local ni en los tests.
+    """
+    if dominio is None or settings.EMAIL_BACKEND != _BACKEND_MAILGUN:
+        return None
+    return get_connection(
+        backend=_BACKEND_MAILGUN,
+        api_url=dominio.api_url,
+        sender_domain=dominio.dominio,
+    )
+
+
 def _enviar(reserva, tipo_correo, destinatario, plantilla):
-    from .models import LogCorreo
+    from .models import LogCorreo, PlantillaCorreo
 
     site_url = getattr(settings, 'SITE_URL', '').rstrip('/')
     vars_dict = _build_vars(reserva, site_url)
@@ -168,7 +198,14 @@ def _enviar(reserva, tipo_correo, destinatario, plantilla):
         else 'https://krctool.s3.eu-west-3.amazonaws.com/logo_conquercrm_email.png'
     )
 
-    html_content = render_to_string('correos/base.html', {
+    dominio    = _dominio_de(plantilla)
+    from_email = (dominio.from_email if dominio and dominio.from_email
+                  else settings.DEFAULT_FROM_EMAIL)
+    reply_to   = [dominio.reply_to] if dominio and dominio.reply_to else None
+    es_texto   = plantilla.formato == PlantillaCorreo.Formato.TEXTO
+
+    # En texto plano no se monta el HTML: el correo es el cuerpo tal cual.
+    html_content = '' if es_texto else render_to_string('correos/base.html', {
         'logo_url':         _logo_url(plantilla),
         'default_logo_url': default_logo_url,
         'color_encabezado': plantilla.color_encabezado or '#111827',
@@ -182,14 +219,17 @@ def _enviar(reserva, tipo_correo, destinatario, plantilla):
     exitoso = False
     error_detalle = ''
     try:
-        send_mail(
+        mensaje = EmailMultiAlternatives(
             subject=asunto,
-            message=cuerpo_texto,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[destinatario],
-            html_message=html_content,
-            fail_silently=False,
+            body=cuerpo_texto,
+            from_email=from_email,
+            to=[destinatario],
+            reply_to=reply_to,
+            connection=_conexion(dominio),
         )
+        if html_content:
+            mensaje.attach_alternative(html_content, 'text/html')
+        mensaje.send(fail_silently=False)
         exitoso = True
     except Exception as exc:
         error_detalle = str(exc)
@@ -201,7 +241,7 @@ def _enviar(reserva, tipo_correo, destinatario, plantilla):
         destinatario=destinatario,
         exitoso=exitoso,
         error_detalle=error_detalle,
-        html_content=html_content,
+        html_content=html_content or cuerpo_texto,
         payload=vars_dict,
     )
 

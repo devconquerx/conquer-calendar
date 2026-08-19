@@ -7,7 +7,84 @@ from django.db.models import Q, F
 from taggit.managers import TaggableManager
 
 
+class DominioRemitente(models.Model):
+    """Dominio verificado en Mailgun desde el que se envían correos.
+
+    Existe para que cada academia envíe desde su propio dominio sin tocar
+    código: el admin edita remitente y buzón de respuestas, y surte efecto
+    en el siguiente envío.
+
+    OJO con `region`: Mailgun tiene dos infraestructuras separadas (UE y
+    EEUU) y un dominio vive solo en una. Enviar contra la región equivocada
+    devuelve 404 "Unknown sender domain" aunque el dominio esté verificado.
+    """
+
+    class Region(models.TextChoices):
+        EU = 'eu', 'Europa (api.eu.mailgun.net)'
+        US = 'us', 'Estados Unidos (api.mailgun.net)'
+
+    API_URLS = {
+        Region.EU: 'https://api.eu.mailgun.net/v3',
+        Region.US: 'https://api.mailgun.net/v3',
+    }
+
+    nombre = models.CharField(
+        max_length=100,
+        verbose_name='Nombre',
+        help_text='Etiqueta para reconocerlo en el admin. Ej. Conquer Blocks.',
+    )
+    dominio = models.CharField(
+        max_length=255,
+        unique=True,
+        verbose_name='Dominio',
+        help_text='Dominio verificado en Mailgun. Ej. conquerblocks.com',
+    )
+    region = models.CharField(
+        max_length=2,
+        choices=Region.choices,
+        default=Region.EU,
+        verbose_name='Región de Mailgun',
+        help_text='La región en la que está dado de alta el dominio. Si no coincide, el envío falla.',
+    )
+    from_email = models.CharField(
+        max_length=255,
+        verbose_name='Remitente (From)',
+        help_text='Dirección desde la que sale el correo. Ej. Conquer Blocks <noreply@conquerblocks.com>',
+    )
+    reply_to = models.EmailField(
+        blank=True,
+        default='',
+        verbose_name='Responder a (Reply-To)',
+        help_text=(
+            'Buzón real al que llegan las respuestas del destinatario. '
+            'Déjalo vacío solo si nadie va a leer las respuestas.'
+        ),
+    )
+    activo = models.BooleanField(
+        default=True,
+        verbose_name='Activo',
+        help_text='Si se desactiva, las plantillas que lo usen vuelven al remitente por defecto de la app.',
+    )
+
+    class Meta:
+        db_table = 'dominios_remitente'
+        ordering = ['nombre']
+        verbose_name = 'Dominio de envío'
+        verbose_name_plural = 'Dominios de envío'
+
+    def __str__(self):
+        return f'{self.nombre} ({self.dominio})'
+
+    @property
+    def api_url(self):
+        return self.API_URLS[self.region]
+
+
 class PlantillaCorreo(models.Model):
+    class Formato(models.TextChoices):
+        HTML = 'html', 'HTML (con logo, colores y botones)'
+        TEXTO = 'texto', 'Texto plano (sin HTML)'
+
     nombre = models.CharField(max_length=150)
     logo = models.FileField(upload_to='plantillas_correo/', blank=True, null=True)
     color_encabezado = models.CharField(max_length=7, default='#111827', verbose_name='Color del encabezado')
@@ -29,6 +106,25 @@ class PlantillaCorreo(models.Model):
     recordatorio_1_horas = models.PositiveSmallIntegerField(default=24, verbose_name='Recordatorio 1 — horas antes')
     recordatorio_2_activo = models.BooleanField(default=False, verbose_name='Recordatorio 2 activo')
     recordatorio_2_horas = models.PositiveSmallIntegerField(default=1, verbose_name='Recordatorio 2 — horas antes')
+    dominio = models.ForeignKey(
+        DominioRemitente,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='plantillas',
+        verbose_name='Dominio de envío',
+        help_text=(
+            'Desde qué dominio sale este correo. Vacío = remitente por defecto '
+            'de la app (el de siempre).'
+        ),
+    )
+    formato = models.CharField(
+        max_length=10,
+        choices=Formato.choices,
+        default=Formato.HTML,
+        verbose_name='Formato del correo',
+        help_text='En texto plano se envía solo el cuerpo, sin logo, colores ni botones.',
+    )
     activa = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
@@ -117,6 +213,11 @@ class Reserva(models.Model):
     )
     recordatorio_1_enviado = models.BooleanField(default=False)
     recordatorio_2_enviado = models.BooleanField(default=False)
+    # Intentos fallidos de envío. Solo se marca `*_enviado` cuando el correo
+    # sale de verdad; el contador acota los reintentos para que una dirección
+    # rota no se reintente cada 5 minutos hasta que empiece la sesión.
+    recordatorio_1_intentos = models.PositiveSmallIntegerField(default=0)
+    recordatorio_2_intentos = models.PositiveSmallIntegerField(default=0)
 
     # Botón "Confirmar asistencia" de los correos. No cambia nada en Google
     # Calendar (el invitado ya entra como 'accepted'): es solo la señal de que

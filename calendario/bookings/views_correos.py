@@ -53,6 +53,15 @@ class PlantillaCorreoPreviewView(LoginRequiredMixin, View):
 
         campos = set(v.strip('{}') for v in (plantilla.campos_visibles or []))
 
+        # En texto plano la preview tiene que enseñar exactamente lo que se
+        # envía, si no engaña: mostraría el diseño bonito y al destinatario le
+        # llegaría el cuerpo pelado.
+        if plantilla.formato == PlantillaCorreo.Formato.TEXTO:
+            return HttpResponse(
+                _render_demo(plantilla.cuerpo),
+                content_type='text/plain; charset=utf-8',
+            )
+
         html = render_to_string('correos/base.html', {
             'logo_url': logo_url,
             'default_logo_url': default_logo_url,
