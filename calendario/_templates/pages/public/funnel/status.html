@@ -38,35 +38,32 @@
     <table>
       <thead>
         <tr>
+          <th>Funnel</th>
           <th>Escuela</th>
           <th>Región</th>
           <th>Activo</th>
-          <th>Landing</th>
-          <th>Welcome</th>
-          <th>Vídeo</th>
-          <th>Enlaces</th>
+          <th>Etapas que publica</th>
         </tr>
       </thead>
       <tbody>
         {% for f in filas %}
         <tr>
+          <td class="esc">{{ f.nombre }}<br><span class="reg">{{ f.slug }}</span></td>
           <td class="esc">{{ f.escuela }}</td>
           <td class="reg">{{ f.region }}</td>
           <td>{% if f.activo %}<span class="badge ok">on</span>{% else %}<span class="badge off">off</span>{% endif %}</td>
-          <td>{% if f.has_landing %}<span class="badge ok">✓</span>{% else %}<span class="badge no">·</span>{% endif %}</td>
-          <td>{% if f.has_welcome %}<span class="badge ok">✓</span>{% else %}<span class="badge no">·</span>{% endif %}</td>
-          <td>{% if f.has_video %}<span class="badge ok">✓</span>{% else %}<span class="badge no">·</span>{% endif %}</td>
           <td>
-            <a class="link" href="{{ f.landing_url }}" target="_blank" rel="noopener">landing</a> ·
-            <a class="link" href="{{ f.video_url }}" target="_blank" rel="noopener">vídeo</a> ·
+            {% if f.landing_url %}<a class="link" href="{{ f.landing_url }}" target="_blank" rel="noopener">landing</a>{% else %}<span class="link muted">landing</span>{% endif %} ·
+            {% if f.video_url %}<a class="link" href="{{ f.video_url }}" target="_blank" rel="noopener">vídeo</a>{% else %}<span class="link muted">vídeo</span>{% endif %} ·
             {% if f.stepform_url %}<a class="link" href="{{ f.stepform_url }}" target="_blank" rel="noopener">stepform</a>{% else %}<span class="link muted">stepform</span>{% endif %} ·
-            <a class="link" href="{{ f.confirmation_url }}" target="_blank" rel="noopener">confirmación</a>
+            {% if f.confirmation_url %}<a class="link" href="{{ f.confirmation_url }}" target="_blank" rel="noopener">confirmación</a>{% else %}<span class="link muted">confirmación</span>{% endif %}
+            {% if f.solo_stepform %}<br><span class="reg">solo StepForm</span>{% endif %}
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    <p class="legend">✓ implementado · · pendiente · "stepform" en gris = falta mapeo de producto para esa escuela.</p>
+    <p class="legend">En gris = esa etapa no existe para ese funnel, no es que falte por hacer. Las líneas que cuelgan de otra marca (Especialización de Blocks, Kids de Languages) solo publican StepForm: su tráfico entra directo al formulario.</p>
   </div>
 </body>
 </html>

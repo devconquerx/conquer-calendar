@@ -412,6 +412,15 @@ def _escuela_por_host(request):
 _ESCUELAS_RUTA_PATH = ('conquer-blocks', 'conquer-legal')
 
 
+# Líneas que SOLO tienen StepForm: no publican landing, vídeo ni confirmación
+# propios (así es también en el funnel viejo). Son variantes de una marca madre
+# —Especialización cuelga de Blocks y Kids de Languages— y su tráfico entra
+# directo al formulario desde la web de la marca. Sus URLs de landing/vídeo se
+# calcularían igual por convención, pero apuntan a páginas que no existen: el
+# panel /funnels/ las marca en gris en lugar de ofrecer enlaces rotos.
+_ESCUELAS_SOLO_STEPFORM = ('conquer-blocks-esp', 'conquer-languages-kids')
+
+
 # URLs de la página de video por marca. Conquer Legal replica las rutas de
 # producción bajo /hub/ (conquerlegal.com/hub/video-<region>). Conquer Finance
 # replica EXACTAMENTE las URLs vivas de www.conquerfinance.com (Webflow): sin
@@ -794,18 +803,28 @@ class FunnelStatusView(View):
                     return _abs(url)
                 return f'{url}?escuela={f.escuela}'
 
+            # Etapas que esta línea publica de verdad. Las de solo-StepForm no
+            # tienen landing/vídeo/confirmación propios, así que se dejan vacías
+            # en lugar de calcular una URL que daría 404.
+            solo_stepform = f.escuela in _ESCUELAS_SOLO_STEPFORM
+            landing = '' if solo_stepform else _link(_landing_url(f.escuela, f.region, base=ruta_base, slug=f.slug))
+            video = '' if solo_stepform else _link(_video_url(f.escuela, f.region, base=ruta_base, slug=f.slug))
+            confirmacion = '' if solo_stepform else _link(confirmacion_url(f.escuela, f.region, base=ruta_base))
+
             filas.append({
                 'escuela': f.escuela,
                 'region': f.region,
                 'nombre': f.nombre,
+                'slug': f.slug,
                 'activo': f.activo,
+                'solo_stepform': solo_stepform,
                 'has_landing': 'landing' in cfg,
                 'has_welcome': 'welcome' in cfg,
                 'has_video': tiene_video,
-                'landing_url': _link(_landing_url(f.escuela, f.region, base=ruta_base, slug=f.slug)),
-                'video_url': _link(_video_url(f.escuela, f.region, base=ruta_base, slug=f.slug)),
+                'landing_url': landing,
+                'video_url': video,
                 'stepform_url': _abs(stepform_url(f.escuela, f.region, base=ruta_base)) or '',
-                'confirmation_url': _link(confirmacion_url(f.escuela, f.region, base=ruta_base)),
+                'confirmation_url': confirmacion,
             })
         return render(request, 'pages/public/funnel/status.html', {
             'filas': filas,
