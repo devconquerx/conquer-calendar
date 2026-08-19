@@ -21,7 +21,14 @@ export default function Confirmation({ escuela = '', slug = '' }) {
   const theme = !baseTheme.paperboard && baseTheme.confirmationVariant === 'paperboard'
     ? { ...baseTheme, ...baseTheme.confirmationPaper, paperboard: true, hexboard: false }
     : baseTheme
-  const isPaper = !!theme.paperboard && !!theme.confirmation
+  /* El renderer paperboard necesita los tokens de contenido de ESE sistema
+     (los 3 pasos: badges, copy, imágenes). No basta con que el tema tenga un
+     bloque `confirmation`: Conquer Languages hereda el del tema por defecto vía
+     `...defaultTheme` —que es para el renderer clásico, con clases de color en
+     vez de copy— y entraba aquí con tokens ajenos, reventando el render de la
+     confirmación en las 5 marcas de Languages. Se comprueba `paso1Badge`, que
+     solo existe en las confirmaciones paperboard (Blocks, Legal, Finance). */
+  const isPaper = !!theme.paperboard && !!theme.confirmation?.paso1Badge
   const assets = theme.assets
   const { eventId, journeyId } = useTracking()
 
@@ -535,7 +542,7 @@ function PaperboardConfirmation({ theme, assets }) {
                 </div>
               )}
               <div className={c.paso2ParagraphClass || 'text-base md:text-lg text-[#333] leading-[1.5] font-normal space-y-5'}>
-                {c.paso2Paragraphs.map((p, i) => (
+                {(c.paso2Paragraphs || []).map((p, i) => (
                   <p key={i}>{p}</p>
                 ))}
               </div>

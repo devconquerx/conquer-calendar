@@ -64,11 +64,16 @@ export function readFormVariant(experiment) {
      TODO el experimento (las dos variantes), no en una sola.
 
    `?force_form_variant=<código>` fuerza y persiste la variante (para QA),
-   igual que en el funnel viejo. */
+   igual que en el funnel viejo.
+
+   Todos se anclan al SLUG exacto del funnel, no a marca+región: hay funnels
+   que comparten ambas cosas con otro y no deben heredar su experimento
+   (`especializacion-eu` cuelga de la marca Blocks y de la región EU, pero es
+   un funnel aparte). Los slugs están verificados contra la BD de producción. */
 const FORM_VARIANT_EXPERIMENTS = [
   // Finance EU: 55 (checkbox, igual que Legal) / 56 (campo visible y obligatorio).
   {
-    match: ({ themeId, region }) => themeId === 'conquerfinance' && region === 'eu',
+    match: ({ funnelSlug }) => funnelSlug === 'finance-eu',
     storageKey: 'form_variant_cf',
     variants: ['55', '56'],
     whatsappOptinVariant: '55',
@@ -89,8 +94,7 @@ const FORM_VARIANT_EXPERIMENTS = [
   // Blocks EU, segunda landing (cb-eu-2, slug `blocks-eu-2`): mismo mecanismo
   // que la principal pero con experimento independiente, para no mezclar splits.
   {
-    match: ({ themeId, region, funnelSlug }) =>
-      themeId === 'conquerblocks' && region === 'eu' && funnelSlug === 'blocks-eu-2',
+    match: ({ funnelSlug }) => funnelSlug === 'blocks-eu-2',
     storageKey: 'form_variant_cb_eu_2',
     variants: ['53', '54'],
     whatsappOptinVariant: '54',
@@ -98,7 +102,7 @@ const FORM_VARIANT_EXPERIMENTS = [
   // Blocks EU, landing principal (cb-eu, slug `blocks-eu`): 51 (control: sin
   // checkbox, solo honeypot, igual que LATAM/US) / 52 (test: checkbox WhatsApp).
   {
-    match: ({ themeId, region }) => themeId === 'conquerblocks' && region === 'eu',
+    match: ({ funnelSlug }) => funnelSlug === 'blocks-eu',
     storageKey: 'form_variant_cb_eu',
     variants: ['51', '52'],
     whatsappOptinVariant: '52',
