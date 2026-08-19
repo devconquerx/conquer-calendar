@@ -494,6 +494,16 @@
     return actual ? actual.eventos.filter(function (e) { return e.asignado; }) : [];
   }
 
+  // Los eventos que el miembro ya tiene, primero; debajo el resto. Dentro de
+  // cada bloque se respeta el orden alfabético que manda el servidor. Solo se
+  // ordena al abrir el modal: si se reordenara al marcar, el ítem saltaría de
+  // sitio bajo el cursor.
+  function ordenarPorAsignado(eventos) {
+    return eventos.slice().sort(function (a, b) {
+      return (b.asignado ? 1 : 0) - (a.asignado ? 1 : 0);
+    });
+  }
+
   function pintarContador() {
     var n = marcados().length;
     contador.textContent = n + ' de ' + actual.eventos.length + ' seleccionados';
@@ -582,7 +592,7 @@
     fetch(actual.url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function (data) {
-        actual.eventos = data.eventos;
+        actual.eventos = ordenarPorAsignado(data.eventos);
         render();
         buscador.focus();
       })

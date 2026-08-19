@@ -514,7 +514,7 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         # quitándole la palabra a ese evento en Google (lo reconcilia el sync).
         nombre_invitado = nombre_invitado.strip()
         abierta = titulo_libera_horario(
-            construir_titulo_evento(et, nombre_invitado),
+            construir_titulo_evento(et, nombre_invitado, host_elegido),
             et.gcal_palabras_ignorar_lista,
         )
 

@@ -252,21 +252,35 @@ def obtener_busy_intervalos_local(host, time_min_utc, time_max_utc, palabras_ign
     ]
 
 
-def construir_titulo_evento(et, nombre_invitado):
+def construir_titulo_evento(et, nombre_invitado, host=None):
     """
     Título que llevará el evento de Google Calendar de una reserva.
 
-    Igual que Calendly, la app NUNCA añade nada al título: sale tal cual del
-    formato configurado en el tipo de evento. Si quieres que las reservas de un
-    tipo de evento se puedan pisar entre sí, mete la palabra/emoji de las reglas
-    free/busy en el NOMBRE del tipo de evento.
+    Formato único para todas las agendas: "Invitado y Host - Nombre del evento".
+    Primero las personas y al final el evento, que es como se leen las agendas de
+    un vistazo. Si no se sabe el host (llamadas antiguas sin ese dato) se cae a
+    "Invitado - Nombre del evento".
+
+    El campo `EventType.formato_titulo_gcal` ya no se consulta: el formato dejó de
+    ser configurable por tipo de evento. El campo sigue en el modelo para no tocar
+    la base de datos.
+
+    Igual que Calendly, la app NUNCA añade nada más al título. Si quieres que las
+    reservas de un tipo de evento se puedan pisar entre sí, mete la palabra/emoji
+    de las reglas free/busy en el NOMBRE del tipo de evento.
 
     Se expone aparte de `_titulo_evento` porque al crear la reserva hay que saber
     el título antes de que exista el evento en Google (ver `crear_reserva`).
     """
-    if et.formato_titulo_gcal == 'invitado_evento':
-        return f'{nombre_invitado} - {et.nombre}'
-    return f'{et.nombre} con {nombre_invitado}'
+    personas = (nombre_invitado or '').strip()
+    nombre_host = host.nombre_display().strip() if host else ''
+    if personas and nombre_host:
+        personas = f'{personas} y {nombre_host}'
+    elif nombre_host:
+        personas = nombre_host
+    if not personas:
+        return et.nombre
+    return f'{personas} - {et.nombre}'
 
 
 def _html_a_texto(html):
@@ -326,7 +340,9 @@ def _descripcion_evento(reserva, meet_url=''):
 
 
 def _titulo_evento(reserva):
-    return construir_titulo_evento(reserva.event_type, reserva.nombre_invitado)
+    return construir_titulo_evento(
+        reserva.event_type, reserva.nombre_invitado, reserva.host,
+    )
 
 
 def _extraer_meet_uri(conference_data):

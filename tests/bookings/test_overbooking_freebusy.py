@@ -61,7 +61,10 @@ class OverbookingFreeBusyTest(TestCase):
     def test_titulo_es_el_del_formato_sin_anadidos(self, _ev, _conf):
         r = _reservar(self.et, slot_futuro(), 'a@x.com')
         # La palabra sale del nombre del tipo de evento, no la mete la app.
-        self.assertEqual(_titulo_evento(r), f'{PALABRA} Reunión test con Lead')
+        self.assertEqual(
+            _titulo_evento(r),
+            f'Lead y {r.host.nombre_display()} - {PALABRA} Reunión test',
+        )
 
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
