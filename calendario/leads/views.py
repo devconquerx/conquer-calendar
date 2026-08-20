@@ -30,6 +30,8 @@ DIRECT_FIELDS = [
     '_fbp', '_fbc', '_ttp', '_ga', '_gid',
     # Tracking
     'event_id', 'journey_id', 'user_agent',
+    # IPv6 resuelta en cliente: el servidor solo ve la IPv4 de Cloudflare.
+    'ipv6_address',
     # Other
     'page_url', 'funnel', 'school', 'product', 'conditions',
 ]

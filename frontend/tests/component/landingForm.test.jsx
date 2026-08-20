@@ -52,6 +52,24 @@ describe('formulario de la landing', () => {
     expect('utm_form_variant' in (await enviar(container))).toBe(false)
   })
 
+  it('manda el prefijo del pais detectado aunque el lead no deje telefono', async () => {
+    // El CRM recibia este campo siempre relleno. El funnel viejo lo lograba
+    // metiendo un '+34' fijo; aqui va el prefijo real del pais del visitante.
+    const { container } = montar({ slug: 'blocks-latam' })
+    const body = await enviar(container)
+    expect('lead_phone' in body).toBe(false)
+    expect(body.lead_phone_prefix).toMatch(/^\+\d+$/)
+  })
+
+  it('el honeypot de apellido pide el autofill del navegador (family-name)', async () => {
+    // Con autocomplete="off" el navegador no lo rellenaba y last_name llegaba
+    // siempre vacio al CRM.
+    const { container } = montar({ slug: 'blocks-latam' })
+    const hp = container.querySelector('input[name="last_name"]')
+    expect(hp).toBeTruthy()
+    expect(hp.getAttribute('autocomplete')).toBe('family-name')
+  })
+
   it('NO manda la variante del vídeo en el lead: esa va en la prellamada', async () => {
     const { container } = montar({ slug: 'blocks-latam', storageKey: 'form_variant_video_cb_latam', variante: '4' })
     const body = await enviar(container)

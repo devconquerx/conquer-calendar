@@ -61,7 +61,7 @@ export function getClickIds() {
 /**
  * Build a flat tracking payload combining UTMs + click IDs + pixel cookies + tracking IDs.
  */
-export function buildTrackingPayload({ eventId, journeyId, uuid, utmParams, clickIds, pixelCookies }) {
+export function buildTrackingPayload({ eventId, journeyId, uuid, utmParams, clickIds, pixelCookies, ipv6 }) {
   return {
     event_id: eventId,
     journey_id: journeyId,
@@ -72,6 +72,11 @@ export function buildTrackingPayload({ eventId, journeyId, uuid, utmParams, clic
     _fbc: pixelCookies?._fbc || '',
     _fbp: pixelCookies?._fbp || '',
     _ttp: pixelCookies?._ttp || '',
+    // IPv6 del visitante, resuelta en cliente. El servidor solo ve la IPv4 que
+    // le entrega Cloudflare, así que sin esto el campo llegaba siempre vacío.
+    // Solo se incluye si se resolvió: si el fetch aún no volvió, mejor omitirla
+    // que pisar con '' un valor que el CRM ya tuviera.
+    ...(ipv6 ? { ipv6_address: ipv6 } : {}),
     user_agent: navigator.userAgent || '',
     url: window.location.href,
   }

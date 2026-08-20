@@ -285,6 +285,13 @@ export default function LandingForm({ program, region, formConfig, school, theme
       body.lead_phone = phoneDigits
       body.lead_phone_prefix = phonePrefix
       body.lead_country = phoneCountry
+    } else if (fallbackCountry?.phoneCode) {
+      // Sin teléfono mandamos igualmente el prefijo del país detectado, que es
+      // como el CRM venía recibiendo este campo siempre relleno. OJO: el funnel
+      // viejo lo rellenaba con un `+34` fijo (`formData.set('lead_phone_prefix',
+      // '+34')`), que para un lead de Perú era un dato falso; aquí va el prefijo
+      // real de su país.
+      body.lead_phone_prefix = `+${fallbackCountry.phoneCode}`
     }
     if (wasCorrected) body.original_email = originalEmail
     if (showWhatsappOptin) body.wants_whatsapp = wantsWhatsapp
@@ -326,9 +333,20 @@ export default function LandingForm({ program, region, formConfig, school, theme
     window.location.href = `${dest}?${params.toString()}`
   }
 
+  // Honeypot de apellido: el navegador lo autorrellena con el apellido guardado
+  // y así el CRM recibe `last_name` sin pedirle un campo más al visitante (el
+  // formulario solo pide "Nombre sin apellidos"). Réplica de
+  // `injectLastNameHoneypotInput` de conquerx-funnels-new: la clave es
+  // `autocomplete="family-name"` —con `off` el autofill no entra y el campo
+  // llegaba vacío— y ocultarlo con un contenedor de 1×1 opaco 0 fuera de
+  // pantalla, no con un `top` negativo: Chrome se salta el autofill en campos
+  // que quedan completamente fuera del viewport en vertical.
   const honeypotField = (
-    <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }} aria-hidden="true">
-      <input type="text" name="last_name" ref={honeypotRef} tabIndex={-1} autoComplete="off" placeholder="Apellido" />
+    <div
+      style={{ position: 'absolute', left: '-10000px', top: 0, width: 1, height: 1, opacity: 0, overflow: 'hidden' }}
+      aria-hidden="true"
+    >
+      <input type="text" name="last_name" ref={honeypotRef} tabIndex={-1} autoComplete="family-name" />
     </div>
   )
 

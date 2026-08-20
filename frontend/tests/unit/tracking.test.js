@@ -31,4 +31,15 @@ describe('tracking que viaja al backend', () => {
   it('omite el uuid cuando no lo hay (la landing no crea prellamada)', () => {
     expect('uuid' in buildTrackingPayload({ eventId: 'e', journeyId: 'j' })).toBe(false)
   })
+
+  it('incluye la IPv6 cuando se ha resuelto', () => {
+    const payload = buildTrackingPayload({ eventId: 'e', journeyId: 'j', ipv6: '2001:db8::42' })
+    expect(payload.ipv6_address).toBe('2001:db8::42')
+  })
+
+  it('omite la IPv6 si aun no se resolvio, en vez de mandarla vacia', () => {
+    // Mandar '' pisaria en el CRM una IPv6 que ya tuviera ese lead.
+    expect('ipv6_address' in buildTrackingPayload({ eventId: 'e', journeyId: 'j' })).toBe(false)
+    expect('ipv6_address' in buildTrackingPayload({ eventId: 'e', journeyId: 'j', ipv6: '' })).toBe(false)
+  })
 })

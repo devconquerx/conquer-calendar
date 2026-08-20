@@ -47,6 +47,7 @@ def push_lead(lead):
         'lead_country': lead.lead_country,
         'date_submitted': lead.date_submitted.isoformat() if lead.date_submitted else None,
         'ip_address': lead.ip_address,
+        'ipv6_address': lead.ipv6_address,
         'page_url': lead.page_url,
         'funnel': lead.funnel,
         'school': _SCHOOL_CRM_CODE.get((lead.school or '').lower().strip(), lead.school),

@@ -15,6 +15,24 @@ export default function TrackingProvider({ children }) {
   const [utmParams] = useState(() => getUtmParams())
   const [clickIds] = useState(() => getClickIds())
   const [pixelCookies] = useState(() => getPixelCookies())
+  // IPv6 del visitante. Django solo ve la IPv4 que le pasa Cloudflare, así que
+  // hay que preguntarla desde el cliente igual que hacía conquerx-funnels-new
+  // (`api64.ipify.org`, quedándose con la respuesta solo si trae ':', porque el
+  // servicio devuelve la IPv4 cuando no hay IPv6). Es un dato de matching para
+  // las CAPI de Meta y TikTok. Fire-and-forget: si falla o tarda, el formulario
+  // se envía igual y el campo va vacío, como hasta ahora.
+  const [ipv6, setIpv6] = useState('')
+
+  useEffect(() => {
+    let cancelado = false
+    fetch('https://api64.ipify.org?format=json')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelado && d?.ip && d.ip.includes(':')) setIpv6(d.ip)
+      })
+      .catch(() => {})
+    return () => { cancelado = true }
+  }, [])
 
   useEffect(() => {
     pushToDataLayer({
@@ -35,8 +53,9 @@ export default function TrackingProvider({ children }) {
         utmParams,
         clickIds,
         pixelCookies,
+        ipv6,
       }),
-    [eventId, journeyId, prellamadaUuid, utmParams, clickIds, pixelCookies]
+    [eventId, journeyId, prellamadaUuid, utmParams, clickIds, pixelCookies, ipv6]
   )
 
   const value = useMemo(
