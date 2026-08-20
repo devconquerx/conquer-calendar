@@ -19,6 +19,7 @@ from calendario.bookings.exceptions import ReservaDuplicadaError, SlotNoDisponib
 from calendario.bookings.models import Reserva
 from calendario.bookings.services import crear_reserva, mismo_invitado, reemplazar_reserva
 from calendario.bookings.views_public import _enviar_correos_confirmacion
+from .ab_tests import tests_para_panel
 from .models import FunnelForm, Prellamada
 from .scoring import resolver_outcome
 
@@ -829,4 +830,5 @@ class FunnelStatusView(View):
         return render(request, 'pages/public/funnel/status.html', {
             'filas': filas,
             'app_base_path': base,
+            'tests_ab': tests_para_panel(),
         })

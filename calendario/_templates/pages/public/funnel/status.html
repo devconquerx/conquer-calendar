@@ -29,6 +29,10 @@
     a.link:hover { text-decoration: underline; }
     a.muted { color: #4b5563; pointer-events: none; }
     .legend { margin-top: 1.25rem; color: #6b7280; font-size: .8rem; }
+    h2 { font-size: 1.05rem; margin: 2.5rem 0 .25rem; }
+    .cod { display: inline-block; min-width: 1.6rem; text-align: center; padding: .05rem .4rem; margin-right: .35rem;
+           border-radius: 4px; background: #1c2130; color: #cbd5e1; font-variant-numeric: tabular-nums; font-weight: 600; }
+    .dato { color: #9aa0ad; font-size: .8rem; }
   </style>
 </head>
 <body>
@@ -63,6 +67,32 @@
         {% endfor %}
       </tbody>
     </table>
+    <h2>Tests A/B activos</h2>
+    <p class="sub">{{ tests_ab|length }} tests corriendo. La variante se asigna en el navegador (50/50) y se guarda por visitante; el código viaja al CRM en el campo <code>utm_form_variant</code> de la entidad indicada.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Funnel</th>
+          <th>Qué prueba</th>
+          <th>Opción A</th>
+          <th>Opción B</th>
+          <th>Se guarda en</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tests_ab %}
+        <tr>
+          <td class="esc">{{ t.funnel }}</td>
+          <td>{{ t.prueba }}</td>
+          <td><span class="cod">{{ t.a_codigo }}</span>{{ t.a_etiqueta }}</td>
+          <td><span class="cod">{{ t.b_codigo }}</span>{{ t.b_etiqueta }}</td>
+          <td class="dato">{{ t.entidad }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="legend">Los códigos no se repiten entre tests, así que un número identifica siempre un único test y una única opción. Los de la landing se leen en <code>LeadRegister</code> y los del vídeo en <code>PreSchedule</code>; un mismo funnel puede correr los dos a la vez porque viven en entidades distintas. Para forzar una opción al probar: <code>?force_form_variant=&lt;código&gt;</code>.</p>
+
     <p class="legend">En gris = esa etapa no existe para ese funnel, no es que falte por hacer. Las líneas que cuelgan de otra marca (Especialización de Blocks, Kids de Languages) solo publican StepForm: su tráfico entra directo al formulario.</p>
   </div>
 </body>
