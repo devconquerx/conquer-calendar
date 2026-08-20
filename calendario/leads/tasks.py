@@ -81,6 +81,17 @@ def process_activecampaign(self, lead_id):
 
 
 @shared_task(**RETRY_POLICY)
+def process_funnelchat(self, lead_id):
+    from calendario.leads.models import Lead
+    from calendario.leads.services import funnelchat
+
+    lead = Lead.objects.get(pk=lead_id)
+    funnelchat.push_lead(lead)
+    lead.tags.add('funnelchat_done')
+    logger.info('Lead %s: funnelchat_done', lead_id)
+
+
+@shared_task(**RETRY_POLICY)
 def process_vsl_activecampaign(self, lead_id, percent, region=None):
     """Escribe el % de VSL visto en ActiveCampaign (cada 10%).
 
@@ -213,6 +224,7 @@ def dispatch_lead_tasks(lead_id):
         process_respondio.delay(lead_id)
         process_activecampaign.delay(lead_id)
         process_neverbounce.delay(lead_id)
+        process_funnelchat.delay(lead_id)
 
     logger.info('Lead %s: dispatched processing tasks', lead_id)
 
@@ -270,6 +282,10 @@ def sweep_incomplete_leads():
 
         if lead.email and 'activecampaign_done' not in tag_names and 'activecampaign_failed' not in tag_names:
             process_activecampaign.delay(lead.pk)
+            requeued += 1
+
+        if lead.email and 'funnelchat_done' not in tag_names and 'funnelchat_failed' not in tag_names:
+            process_funnelchat.delay(lead.pk)
             requeued += 1
 
         if (lead.email and 'neverbounce_done' not in tag_names
