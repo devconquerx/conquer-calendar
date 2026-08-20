@@ -94,7 +94,7 @@ describe('registro de experimentos', () => {
         expect(exp.variants).toHaveLength(2)
         expect(exp.variants[0]).not.toBe(exp.variants[1])
         expect(exp.storageKey).toMatch(/^form_variant_/)
-        const banderas = ['whiteBackgroundVariant', 'hideFooterLogoVariant', 'whatsappOptinVariant', 'alwaysPhoneVariant']
+        const banderas = ['whiteBackgroundVariant', 'hideFooterVariant', 'whatsappOptinVariant', 'alwaysPhoneVariant']
         const declaradas = banderas.filter((b) => exp[b])
         expect(declaradas.length).toBeGreaterThan(0)
         // La variante que señala cada bandera tiene que existir en el par.

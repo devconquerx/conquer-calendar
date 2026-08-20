@@ -70,6 +70,6 @@ export function useVideoVariant(funnelSlug) {
 
   return {
     variant,
-    hideFooterLogo: !!experiment && variant === experiment.hideFooterLogoVariant,
+    hideFooter: !!experiment && variant === experiment.hideFooterVariant,
   }
 }

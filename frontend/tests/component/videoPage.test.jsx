@@ -13,10 +13,12 @@ const montar = ({ slug, escuela, variante, storageKey }) =>
     { escuela, slug, variante, storageKey }
   )
 
-/* A/B del logo del footer (Blocks EU/LATAM/US y Finance EU/LATAM). Este test
-   renderiza la página entera: cualquier variable fuera de alcance o acceso a
+/* A/B del footer de la página de vídeo (Blocks EU/LATAM/US y Finance EU/LATAM):
+   la variante de test quita el footer ENTERO —rasgado inferior, franja de papel
+   y logo— para que la zona oscura del vídeo llegue hasta el final.
+   Renderiza la página entera: cualquier variable fuera de alcance o acceso a
    undefined revienta aquí, que es como se coló el fallo del 19/08. */
-describe('página de vídeo — A/B del logo del footer', () => {
+describe('página de vídeo — A/B del footer', () => {
   const CASOS = [
     { marca: 'Blocks LATAM', slug: 'blocks-latam', escuela: 'conquer-blocks', storageKey: 'form_variant_video_cb_latam', control: '3', sinLogo: '4' },
     { marca: 'Blocks EU', slug: 'blocks-eu', escuela: 'conquer-blocks', storageKey: 'form_variant_video_cb_eu', control: '1', sinLogo: '2' },
@@ -33,13 +35,9 @@ describe('página de vídeo — A/B del logo del footer', () => {
       expect(logosVisibles(footer).length).toBeGreaterThan(0)
     })
 
-    it(`${c.marca}: la variante de test lo oculta y conserva la franja y los píxeles`, () => {
+    it(`${c.marca}: la variante de test quita el footer entero`, () => {
       const { container } = montar({ ...c, variante: c.sinLogo })
-      const footer = container.querySelector('footer')
-      expect(footer).toBeTruthy()
-      expect(logosVisibles(footer)).toHaveLength(0)
-      // Los decorativos siguen ahí: solo se va el logo, no el footer.
-      expect(footer.querySelectorAll('img[aria-hidden="true"]').length).toBeGreaterThan(0)
+      expect(container.querySelector('footer')).toBeNull()
     })
   }
 

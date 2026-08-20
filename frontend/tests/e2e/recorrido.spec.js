@@ -77,7 +77,7 @@ test.describe('A/B de fondo blanco (landing)', () => {
   })
 })
 
-test.describe('A/B del logo del footer (página de vídeo)', () => {
+test.describe('A/B del footer (página de vídeo)', () => {
   // :visible descarta el logo del otro breakpoint (móvil/escritorio se
   // conmutan por clases, así que ambos están en el DOM).
   const logosDelFooter = (page) => page.locator('footer img:not([aria-hidden="true"]):visible')
@@ -89,13 +89,18 @@ test.describe('A/B del logo del footer (página de vídeo)', () => {
     await expect(logosDelFooter(page).first()).toBeVisible()
   })
 
-  test('la variante de test lo oculta y deja la franja con sus píxeles', async ({ page }) => {
+  test('la variante de test quita el footer entero: el negro llega al final', async ({ page }) => {
     await simularBackend(page)
     await forzarVariante(page, 'form_variant_video_cb_latam', '4')
     await page.goto(urlEtapa({ stage: 'video', video: 1 }))
-    await expect(page.locator('footer')).toBeVisible()
-    await expect(logosDelFooter(page)).toHaveCount(0)
-    await expect(page.locator('footer img[aria-hidden="true"]').first()).toBeAttached()
+    await expect(page.locator('footer')).toHaveCount(0)
+    // Lo último de la página es la zona oscura del vídeo.
+    const fondoFinal = await page.evaluate(() => {
+      const raiz = document.querySelector('#funnel-root > div')
+      const ultimo = raiz.lastElementChild
+      return getComputedStyle(ultimo).backgroundColor
+    })
+    expect(fondoFinal).toBe('rgb(0, 0, 0)')
   })
 
   test('quien no pasa por el vídeo no entra en el experimento', async ({ page }) => {

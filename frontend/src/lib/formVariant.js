@@ -137,8 +137,9 @@ const FORM_VARIANT_EXPERIMENTS = [
    tests a la vez sin que un dato pise al otro — de ahí que aquí sí esté
    finance-eu, que en la landing ya tiene el suyo.
 
-   Hoy todos prueban lo mismo: `hideFooterLogoVariant` es la variante que oculta
-   el logo del footer del vídeo (la franja de papel y los píxeles se quedan).
+   Hoy todos prueban lo mismo: `hideFooterVariant` es la variante que quita el
+   footer de la página de vídeo — rasgado inferior, franja de papel y logo—, de
+   modo que la zona oscura del vídeo llega hasta el final de la página.
    La numeración es independiente de la de la landing (otra entidad) y arranca
    en 1. Las filas viejas de PreSchedule que ocupaban estos códigos (enero-mayo
    de 2026, las dejó un backfill del CRM que copiaba la variante del
@@ -152,8 +153,8 @@ const VIDEO_VARIANT_EXPERIMENTS = [
   { funnelSlug: 'finance-latam', storageKey: 'form_variant_video_cf_latam', variants: ['9', '10'] },
 ].map((exp) => ({
   ...exp,
-  // Segundo código del par = variante de test (sin logo); el primero es control.
-  hideFooterLogoVariant: exp.variants[1],
+  // Segundo código del par = variante de test (sin footer); el primero es control.
+  hideFooterVariant: exp.variants[1],
 }))
 
 /** Experimento de la página de vídeo para este funnel, o null si no tiene. */

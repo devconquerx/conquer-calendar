@@ -15,10 +15,10 @@ import { useRouter } from '../lib/router'
 export default function VideoPage({ school, region, formConfig, videoUrls, buttonPercent, nextUrl, search, funnelSlug = '' }) {
   const router = useRouter()
   const [showButton, setShowButton] = useState(false)
-  // A/B del logo del footer (Blocks EU/LATAM/US y Finance EU/LATAM). Se asigna
+  // A/B del footer del vídeo (Blocks EU/LATAM/US y Finance EU/LATAM). Se asigna
   // aquí —no en el root— para que solo entre en el test quien ve esta página;
   // el StepForm la lee después y la cuelga de la prellamada.
-  const { hideFooterLogo } = useVideoVariant(funnelSlug)
+  const { hideFooter } = useVideoVariant(funnelSlug)
 
   const baseTheme = getTheme(school?.slug)
   // Rediseño por página: un tema puede pedir que SOLO su página de vídeo use el
@@ -80,7 +80,7 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
         goToStepForm={goToStepForm}
         theme={theme}
         school={school}
-        hideFooterLogo={hideFooterLogo}
+        hideFooter={hideFooter}
       />
     )
   }
@@ -220,7 +220,7 @@ function HexVideoPage({ assets, video, urls, pct, showButton, onShowButton, onPr
    con glow de marca y el CTA pixelado; cierre con otra transición rasgada y
    footer claro con logo y píxeles decorativos. El acento (naranja Blocks / azul
    Legal) y los textos salen del tema; `config['video']` puede sobreescribirlos. */
-function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButton, onProgress, goToStepForm, theme, school, hideFooterLogo = false }) {
+function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButton, onProgress, goToStepForm, theme, school, hideFooter = false }) {
   const v = theme.video || {}
   // Textos del hero: prioridad a config['video'], luego tokens del tema.
   const subtitle = video.subtitle || v.subtitle || 'Vídeo'
@@ -339,7 +339,10 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
         </main>
 
         {/* Transición zona oscura → footer. Sin rotar: rasgado arriba (lo
-            transparente deja ver la retícula) y papel crema abajo. */}
+            transparente deja ver la retícula) y papel crema abajo.
+            En la variante de test del A/B no hay footer al que transicionar: la
+            zona oscura llega hasta el final, así que el rasgado sobra. */}
+        {!hideFooter && (
         <div className="relative">
           {/* Píxel que asoma sobre el borde rasgado (solo el cuadrado superior). */}
           {assets.pixels?.sm7 && (
@@ -356,12 +359,16 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* ── Footer claro ── */}
       {/* `isolate` acota los z-index de las capas al footer. Réplica del orden de
           producción: fondo crema → píxel izq (oculto, solo asoma arriba) → velo
-          crema → píxel der (visible) → logo (encima, limpio). */}
+          crema → píxel der (visible) → logo (encima, limpio).
+          La variante de test del A/B lo quita entero: la página termina en la
+          zona oscura del vídeo. */}
+      {!hideFooter && (
       <footer className="relative isolate" style={paperStyle}>
         {/* Píxel izquierdo (móvil): queda DETRÁS del velo crema, así solo asoma por
             encima del footer sobre la transición — igual que producción (z-index bajo). */}
@@ -380,16 +387,13 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
             En la variante de test del A/B el bloque se queda (misma altura de
             franja y mismos píxeles) pero sin las dos imágenes del logo. */}
         <div className="relative z-10 py-8 flex justify-center">
-          {!hideFooterLogo && (
-            <>
-              {/* Móvil: logo vertical compacto (125px), igual que producción. */}
-              <img src={assets.logo} alt={school?.slug || ''} className="md:hidden h-auto w-[125px]" />
-              {/* Desktop: logo de footer a tamaño completo (sin cambios). */}
-              <img src={footerLogo} alt={school?.slug || ''} className="hidden md:block h-auto" style={{ width: footerLogoWidth }} />
-            </>
-          )}
+          {/* Móvil: logo vertical compacto (125px), igual que producción. */}
+          <img src={assets.logo} alt={school?.slug || ''} className="md:hidden h-auto w-[125px]" />
+          {/* Desktop: logo de footer a tamaño completo (sin cambios). */}
+          <img src={footerLogo} alt={school?.slug || ''} className="hidden md:block h-auto" style={{ width: footerLogoWidth }} />
         </div>
       </footer>
+      )}
     </div>
   )
 }
