@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import 'plyr/dist/plyr.css'
+// El sprite de iconos del reproductor, servido por nosotros. Por defecto Plyr
+// se lo pide por XHR a cdn.plyr.io en CADA carga de la página de vídeo: cuando
+// esa petición se bloquea —bloqueadores, navegadores embebidos de las apps, red
+// mala— lanza un error crudo ("Error: 0" en Sentry) y los controles se quedan
+// sin iconos. Vite lo copia a /static/assets con su hash.
+// (copiado de plyr/dist/plyr.svg — al subir de versión de Plyr, refréscalo)
+import spriteDeIconos from '../../assets/vendor/plyr-3.8.4.svg?url'
 import UnmuteOverlay from './UnmuteOverlay'
 import ReturningOverlay from './ReturningOverlay'
 import { useRouter } from '../../lib/router'
@@ -116,6 +123,7 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
         hideControls: false,
         autoplay: true,
         muted: true,
+        iconUrl: spriteDeIconos,
         controls: isDebug
           ? ['play-large', 'restart', 'rewind', 'play', 'fast-forward', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen']
           : ['play', 'mute', 'volume', 'fullscreen'],
@@ -168,6 +176,44 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
 
       player.on('ended', () => {
         if (onAgendarClick) onAgendarClick()
+      })
+
+      /* Errores del reproductor.
+         Plyr los emite como un CustomEvent 'error' que burbujea hasta window, y
+         ahí el manejador global del navegador lo recoge: en Sentry llegaban como
+         "<unknown>", sin mensaje ni forma de saber qué había pasado (FUNNELS-69,
+         ~100 al día, el 80% desde el navegador de TikTok en iPhone).
+         Se captura aquí, con el estado real del <video> —que es donde vive el
+         motivo—, y se corta la propagación para que deje de reportarse a ciegas. */
+      player.on('error', (evento) => {
+        evento?.stopPropagation?.()
+        const media = videoRef.current
+        const fallo = media?.error
+        const MOTIVOS = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' }
+        const contexto = {
+          motivo: MOTIVOS[fallo?.code] || 'sin MediaError',
+          codigo: fallo?.code ?? null,
+          detalle: fallo?.message || '',
+          silenciado: !!media?.muted,
+          pausado: !!media?.paused,
+          segundo: Math.round(media?.currentTime || 0),
+          readyState: media?.readyState ?? null,
+          networkState: media?.networkState ?? null,
+          pantallaCompleta: !!(document.fullscreenElement || document.webkitFullscreenElement || media?.webkitDisplayingFullscreen),
+          fuente: (media?.currentSrc || '').slice(-60),
+        }
+        console.warn('[VSL] error del reproductor', contexto)
+        // Import perezoso: este módulo también se compila para el SSR, donde
+        // @sentry/react no debe cargarse.
+        import('@sentry/react')
+          .then(({ captureMessage }) => {
+            captureMessage(`[VSL] error del reproductor: ${contexto.motivo}`, {
+              level: 'error',
+              tags: { motivo_video: contexto.motivo },
+              extra: contexto,
+            })
+          })
+          .catch(() => {})
       })
 
       if (tryUnmuted) {
