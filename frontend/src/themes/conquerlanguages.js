@@ -24,6 +24,9 @@ import confFiesta from '../assets/img/cb/confirmation/conquie-fiesta.svg'
 import confRayo from '../assets/img/cb/confirmation/conquie-rayo.svg'
 import confMovil from '../assets/img/cb/confirmation/conquie-movil2.svg'
 import confPlay from '../assets/img/cb/confirmation/conquie-play.svg'
+// Mockup del Paso 2 en la versión de Languages (móvil con su logo sobre el teal
+// de marca). El de Blocks lleva su naranja quemado en la imagen.
+import confMockup from '../assets/img/languages/confirmation/conquer-mockup.webp'
 // Iconos de los bullets: los mismos "conquie" del set cb/ que usa Conquer
 // Blocks. Son monocromos y no llevan color de marca, así que se comparten tal
 // cual; el orden aquí sigue el de los bullets de Languages (dinero → confianza
@@ -149,9 +152,7 @@ export default {
 
     paso2Badge: 'Paso 2 • Confirma tu cita',
     paso2BadgeIcon: null,
-    // El mockup de Blocks lleva su naranja; Languages usa la foto de Andy, igual
-    // que Legal usa la suya en este hueco.
-    paso2Image: instructorPhoto,
+    paso2Image: confMockup,
     paso2ImageMode: 'photo',
     paso2HeadingIcon: confMovil,
     paso2Heading: 'Mantente al tanto de tu teléfono',
