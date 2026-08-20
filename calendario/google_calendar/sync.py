@@ -107,6 +107,13 @@ def _reconciliar_overbooking(host, titulos_por_event_id):
     cuyo evento de Google Calendar tiene en el título alguna de las palabras/emojis
     configuradas en su tipo de evento puede reservarse encima (overbooking).
 
+    El cálculo de slots ya no depende de este flag para decidir si una reserva
+    bloquea: allí manda el título del evento contra las palabras del tipo que se
+    está consultando (ver `_abiertas_para_event_type` en bookings.services). Aquí
+    el flag se mantiene al día porque sigue siendo lo que relaja la restricción de
+    unicidad (host, inicio_utc) en la base de datos, y el respaldo para reservas
+    cuyo evento todavía no está en la copia local.
+
     `titulos_por_event_id`: dict {google_event_id: titulo} de los eventos
     sincronizados en esta pasada. Solo toca reservas confirmadas del host cuyo
     google_event_id esté en ese dict. Idempotente: solo escribe si el flag cambia.
@@ -130,6 +137,17 @@ def _reconciliar_overbooking(host, titulos_por_event_id):
         palabras = r.event_type.gcal_palabras_ignorar_lista
         nuevo = titulo_libera_horario(titulo, palabras)
         if nuevo == r.permite_overbooking:
+            continue
+        # Cerrar una reserva que comparte horario con otra dejaría dos exclusivas
+        # en el mismo slot y la restricción de unicidad lo rechazaría. Esa
+        # convivencia es legítima —el slot se ofreció porque las reglas del tipo
+        # que se reservó liberaban lo que había—, así que se deja el flag como
+        # está en vez de intentarlo y comerse el IntegrityError en cada pasada.
+        if not nuevo and Reserva.objects.filter(
+            host=host,
+            inicio_utc=r.inicio_utc,
+            estado=Reserva.Estado.CONFIRMADA,
+        ).exclude(pk=r.pk).exists():
             continue
         # Savepoint por reserva: si quitar la palabra a esta reserva dejaría DOS
         # exclusivas (sin palabra) en el mismo slot, la restricción de unicidad

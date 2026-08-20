@@ -84,6 +84,43 @@ def _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc, palabras_i
     return obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
 
 
+def _abiertas_para_event_type(host, reservas, palabras_ignorar, desde_utc, hasta_utc):
+    """
+    Devuelve `esta_abierta(reserva)`: True si esa reserva NO debe bloquear el
+    hueco para el tipo de evento que se está consultando.
+
+    Manda el título real del evento en Google Calendar comparado contra
+    `palabras_ignorar` (las reglas del tipo consultado), igual que ya se hace con
+    los eventos ajenos en `obtener_busy_intervalos_local`. Así una reserva nuestra
+    y una reunión de Calendly con el mismo título se tratan igual.
+
+    Respaldo: si la reserva no tiene su evento en la copia local (aún sin
+    sincronizar, o el host lo borró en Google) no hay título que comparar y se
+    usa `permite_overbooking`, el flag que dejó el sync al crearla.
+    """
+    if not reservas:
+        return lambda r: False
+
+    from calendario.google_calendar.models import GoogleCalendarEvento
+
+    gids = [r.google_event_id for r in reservas if r.google_event_id]
+    titulos = {}
+    if gids:
+        titulos = dict(
+            GoogleCalendarEvento.objects
+            .filter(host=host, google_event_id__in=gids)
+            .exclude(estado='cancelled')
+            .values_list('google_event_id', 'titulo')
+        )
+
+    def esta_abierta(reserva):
+        if reserva.google_event_id in titulos:
+            return titulo_libera_horario(titulos[reserva.google_event_id], palabras_ignorar)
+        return reserva.permite_overbooking
+
+    return esta_abierta
+
+
 def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_override=None):
     """
     Devuelve lista de inicio_utc aware-UTC disponibles para un host concreto.
@@ -159,14 +196,22 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
         ).select_related('event_type').order_by('inicio_utc')
     )
 
-    # Reglas free/busy (estilo Calendly): una reserva "abierta"
-    # (permite_overbooking=True) no bloquea el slot, así entran varias reservas
-    # encima. Una reserva está abierta cuando el título de su evento en Google
-    # Calendar matchea alguna de las palabras configuradas en el tipo de evento;
-    # el sync mantiene el flag al día, así que el host cierra un horario quitándole
-    # la palabra a ese evento en Google. Sin palabras configuradas (o con títulos
-    # que no matchean), ninguna reserva está abierta y el comportamiento es el de
-    # siempre.
+    # Reglas free/busy (estilo Calendly): una reserva "abierta" no bloquea el
+    # slot, así entran varias reservas encima.
+    #
+    # Quién decide si está abierta son las palabras de ESTE `event_type` —el que
+    # el invitado tiene delante— contra el título que el evento tiene en Google
+    # Calendar. NO las palabras del tipo con el que se creó la reserva. Es como
+    # funciona Calendly: las reglas viven en el tipo que se está reservando y se
+    # evalúan contra el título de lo que ya hay en la agenda, venga de donde
+    # venga (un evento personal, una reunión de Calendly o una reserva nuestra).
+    #
+    # Antes se miraba `permite_overbooking`, que el sync calcula con las palabras
+    # del tipo DE LA RESERVA. Eso hacía que una reserva creada desde un tipo sin
+    # reglas bloqueara para todos los demás tipos, aunque su título matcheara las
+    # palabras de ellos: los eventos de Calendly liberaban el hueco y los nuestros
+    # no. El flag se sigue usando como respaldo para las reservas cuyo evento aún
+    # no está en la copia local (sin título no hay nada que comparar).
     #
     # El tope MAX_RESERVAS_POR_SLOT cierra el horario solo: mientras las abiertas
     # que arrancan a esa hora no lleguen al tope no bloquean; al alcanzarlo vuelven
@@ -178,12 +223,16 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     # Ojo: al llegar al tope NO se puede apagar `permite_overbooking`, porque dos
     # reservas exclusivas en el mismo slot violarían esa restricción. Por eso el
     # tope se aplica aquí, en el cálculo, y no en la BD.
+    esta_abierta = _abiertas_para_event_type(
+        host, reservas, palabras_ignorar,
+        desde_utc - timedelta(hours=24), hasta_utc + timedelta(hours=24),
+    )
     abiertas_por_inicio = Counter(
-        r.inicio_utc for r in reservas if r.permite_overbooking
+        r.inicio_utc for r in reservas if esta_abierta(r)
     )
     reservas = [
         r for r in reservas
-        if not r.permite_overbooking
+        if not esta_abierta(r)
         or abiertas_por_inicio[r.inicio_utc] >= MAX_RESERVAS_POR_SLOT
     ]
 
@@ -517,6 +566,30 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
             construir_titulo_evento(et, nombre_invitado, host_elegido),
             et.gcal_palabras_ignorar_lista,
         )
+
+        # Si el host ya tiene algo a esa hora, la nueva reserva solo entra encima
+        # cuando las reglas de ESTE tipo de evento liberan lo que hay — el mismo
+        # criterio con el que se ofreció el slot. Si no lo liberan, es que el hueco
+        # se ocupó entre medias: se rechaza aquí en vez de dejar que reviente la
+        # restricción de unicidad. Y cuando sí conviven, es la reserva nueva la
+        # que renuncia a la exclusividad, porque esa restricción solo admite una
+        # reserva con `permite_overbooking=False` por (host, inicio_utc).
+        existentes = list(
+            Reserva.objects.filter(
+                host=host_elegido,
+                inicio_utc=inicio_utc,
+                estado=Reserva.Estado.CONFIRMADA,
+            ).select_related('event_type')
+        )
+        if existentes:
+            libera = _abiertas_para_event_type(
+                host_elegido, existentes, et.gcal_palabras_ignorar_lista,
+                inicio_utc, fin_utc,
+            )
+            if (len(existentes) >= MAX_RESERVAS_POR_SLOT
+                    or not all(libera(r) for r in existentes)):
+                raise SlotNoDisponibleError("Ese slot ya no está disponible.")
+            abierta = True
 
         if hay_conflicto_calendario(
             host_elegido.email, inicio_utc, fin_utc, et.gcal_palabras_ignorar_lista,
