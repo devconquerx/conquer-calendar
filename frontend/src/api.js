@@ -80,15 +80,38 @@ export function registerLead(payload) {
  * actualiza el Lead. Fire-and-forget: nunca bloquea ni rompe la reproducción.
  */
 export function sendVideoProgressToBackend({ email, percent, school, region }) {
-  fetch(apiUrl('/f/api/video-progress/'), {
+  const url = apiUrl('/f/api/video-progress/')
+  const cuerpo = JSON.stringify({ email, percent, school, region })
+
+  // sendBeacon es la API pensada exactamente para esto: el navegador se queda
+  // con el envío y lo entrega aunque la página se cierre o el visitante navegue
+  // al StepForm en mitad del ping. Además, al mandar el cuerpo como text/plain
+  // es una "simple request" y desaparece el preflight CORS (eran ~4.000 OPTIONS
+  // al día sólo de este endpoint). El endpoint es csrf_exempt y lee el body con
+  // json.loads, así que ni las cabeceras ni el content-type le hacen falta.
+  if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+    try {
+      if (navigator.sendBeacon(url, new Blob([cuerpo], { type: 'text/plain;charset=UTF-8' }))) return
+    } catch (_) {
+      // Si la cola del navegador lo rechaza, cae al fetch de abajo.
+    }
+  }
+
+  // Reserva para navegadores sin sendBeacon.
+  //
+  // Un fallo aquí NO se reporta a Sentry: en telemetría fire-and-forget, que un
+  // ping no salga (red móvil que se cae, pestaña cerrada, un bloqueador que
+  // corta la llamada cross-origin) es una condición esperada, no un error
+  // accionable. Se medía en el 0,045% de los pings, y como hay un ping cada 10%
+  // y el servidor guarda el máximo, el siguiente cubre al que se perdió.
+  fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': getCsrf(),
     },
-    body: JSON.stringify({ email, percent, school, region }),
+    body: cuerpo,
   }).catch((err) => {
-    console.error('[API] Error sending video progress:', err)
-    Sentry.captureException(err, { tags: { action: 'sendVideoProgressToBackend' } })
+    console.warn('[API] No se pudo enviar el progreso de vídeo:', err)
   })
 }
