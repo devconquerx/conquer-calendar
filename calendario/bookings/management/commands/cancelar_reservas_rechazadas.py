@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from calendario.bookings.models import Reserva
+from calendario.bookings.models import CancelacionReserva, Reserva
 from calendario.bookings.services import cancelar_reserva
 from calendario.google_calendar.models import (
     GoogleCalendarEvento, GoogleCalendarSyncEstado,
@@ -29,6 +29,8 @@ class Command(BaseCommand):
                             help='Procesar como mucho N reservas (0 = sin límite)')
         parser.add_argument('--host', type=str, default='',
                             help='Limitar a un host por email')
+        parser.add_argument('--sin-correo', action='store_true',
+                            help='Cancela sin que Google avise al invitado.')
         parser.add_argument('--incluir-invitado-declinado', action='store_true',
                             help='Cancelar también cuando quien rechazó fue el invitado')
 
@@ -108,7 +110,12 @@ class Command(BaseCommand):
         hechas = fallidas = 0
         for r, _motivo in a_cancelar:
             try:
-                cancelar_reserva(r)
+                cancelar_reserva(
+                    r,
+                    origen=CancelacionReserva.Origen.COMANDO,
+                    detalle=f'cancelar_reservas_rechazadas: {_motivo}',
+                    avisar_invitado=not opts['sin_correo'],
+                )
                 hechas += 1
             except Exception as e:
                 fallidas += 1

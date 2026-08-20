@@ -167,6 +167,25 @@ def _reconciliar_overbooking(host, titulos_por_event_id):
             )
 
 
+def _fecha_corte_cancelacion():
+    """
+    A partir de cuándo el sync puede cancelar por un rechazo en Google.
+
+    Se configura con `CANCELAR_RECHAZOS_DESDE` (fecha ISO en settings). Sin
+    valor, no cancela nada: es preferible quedarse corto a repetir el incidente
+    del 20/08/2026, cuando esto se activó sobre meses de rechazos acumulados.
+    """
+    valor = getattr(settings, 'CANCELAR_RECHAZOS_DESDE', None)
+    if not valor:
+        return django_tz.now() + timedelta(days=3650)  # nunca
+    if isinstance(valor, str):
+        fecha = datetime.fromisoformat(valor)
+        if django_tz.is_naive(fecha):
+            fecha = django_tz.make_aware(fecha, timezone.utc)
+        return fecha
+    return valor
+
+
 def _cancelar_reservas_rechazadas(host, google_event_ids):
     """
     Cancela las reservas cuyo evento el host rechazó o canceló en Google Calendar.
@@ -185,7 +204,7 @@ def _cancelar_reservas_rechazadas(host, google_event_ids):
     """
     if not google_event_ids:
         return
-    from calendario.bookings.models import Reserva
+    from calendario.bookings.models import CancelacionReserva, Reserva
     from calendario.bookings.services import cancelar_reserva
 
     reservas = (
@@ -194,12 +213,30 @@ def _cancelar_reservas_rechazadas(host, google_event_ids):
             host=host,
             estado=Reserva.Estado.CONFIRMADA,
             google_event_id__in=list(google_event_ids),
+            # Corte de arranque: solo reservas nacidas DESPUÉS de activar esto.
+            #
+            # El sync incremental no trae "los rechazos de ahora", trae cualquier
+            # evento que se haya tocado. Sin este corte, un rechazo de hace
+            # semanas se cancela hoy y le llega un correo al invitado por una
+            # cita que ya nadie esperaba: eso fue el incidente del 20/08/2026,
+            # ~8 cancelaciones por hora drenando meses de histórico.
+            #
+            # Filtrar por fecha de creación se limpia solo: según pasan los días
+            # todas las reservas vivas son posteriores al corte y el filtro deja
+            # de descartar nada. El arrastre anterior se procesa aparte y a mano
+            # con el comando `cancelar_reservas_rechazadas`.
+            fecha_creacion__gte=_fecha_corte_cancelacion(),
         )
         .select_related('event_type', 'host')
     )
     for r in reservas:
         try:
-            cancelar_reserva(r)
+            cancelar_reserva(
+                r,
+                origen=CancelacionReserva.Origen.SYNC_GCAL,
+                usuario=host,
+                detalle=f'{host.email} rechazó la invitación en Google Calendar',
+            )
             logger.info(
                 "sync: reserva %s cancelada porque el host la rechazó en Google "
                 "(host=%s, inicio=%s, invitado=%s)",
@@ -371,6 +408,11 @@ def sincronizar_host_incremental(host):
                 next_sync_token = None
                 hay_cambios = False
                 titulos_por_event_id = {}
+                # El rechazo se lee del item crudo, que es donde está el
+                # responseStatus: `_parse_evento` ya no distingue un rechazo de
+                # un evento que el host marcó a mano como "Disponible" (los dos
+                # salen transparent) y ese sí debe seguir con su reserva en pie.
+                rechazados_en_google = []
 
                 while request is not None:
                     response = request.execute()
@@ -378,6 +420,8 @@ def sincronizar_host_incremental(host):
                         google_event_id = item.get('id')
                         if not google_event_id:
                             continue
+                        if item.get('status') == 'cancelled' or _host_declino(item):
+                            rechazados_en_google.append(google_event_id)
                         campos = _parse_evento(item)
                         if campos is None:
                             continue
@@ -397,19 +441,12 @@ def sincronizar_host_incremental(host):
                 # reservas tocadas en este sync incremental.
                 _reconciliar_overbooking(host, titulos_por_event_id)
 
-                # DESACTIVADO: aquí se cancelaban las reservas cuyo evento salía
-                # rechazado por el host. La idea era buena pero la premisa no: el
-                # sync incremental no trae "los rechazos de ahora", trae CUALQUIER
-                # evento que se haya tocado, así que un rechazo de hace semanas se
-                # cancelaba hoy. En producción salían ~8 por hora, cada una con su
-                # correo al invitado, drenando meses de rechazos viejos. Además el
-                # equipo rechaza invitaciones también cuando la cita se reagenda
-                # con otro host, y entonces el aviso llega por una cita que el
-                # invitado ya había movido.
-                #
-                # Mientras se decide qué significa un rechazo para el negocio, el
-                # arrastre se procesa a mano y por tandas con el comando
-                # `cancelar_reservas_rechazadas`, que simula por defecto.
+                # Un "No" del host en la invitación es su forma de cancelar: no
+                # entran a la app. Igual que Calendly, que cancela la reunión y
+                # avisa al invitado (verificado en su producto el 20/08/2026).
+                # El corte por fecha de creación evita repetir el drenaje del
+                # histórico; ver `_fecha_corte_cancelacion`.
+                _cancelar_reservas_rechazadas(host, rechazados_en_google)
 
                 if hay_cambios:
                     _invalidar_cache_por_host(host)

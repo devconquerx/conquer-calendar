@@ -445,3 +445,20 @@ CKEDITOR_CONFIGS = {
         ],
     },
 }
+
+# Desde cuándo el sync puede cancelar una reserva porque el host rechazó la
+# invitación en Google Calendar. Solo se tocan reservas CREADAS después de esta
+# fecha: el sync incremental trae cualquier evento modificado, no solo los
+# rechazos recientes, así que sin este corte se cancelaría el histórico entero
+# de golpe (pasó el 20/08/2026). Vacío = el sync no cancela nada.
+CANCELAR_RECHAZOS_DESDE = env.str('CANCELAR_RECHAZOS_DESDE', default='')
+
+# Quién puede ver el registro de cancelaciones en el panel.
+CANCELACIONES_EMAILS_AUTORIZADOS = [
+    e.strip().lower()
+    for e in env.str(
+        'CANCELACIONES_EMAILS_AUTORIZADOS',
+        default='santiago.tovar@conquerx.com',
+    ).split(',')
+    if e.strip()
+]

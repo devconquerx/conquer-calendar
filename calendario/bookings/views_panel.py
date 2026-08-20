@@ -1,7 +1,10 @@
 from datetime import timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -11,7 +14,7 @@ from django.views.generic import ListView, DetailView
 
 from calendario.permisos.mixins import RequierePermisoMixin
 from calendario.users.models import User
-from .models import Reserva
+from .models import CancelacionReserva, Reserva
 from .services import cancelar_reserva, eliminar_reserva
 
 
@@ -252,6 +255,67 @@ class ReservaCancelarView(RequierePermisoMixin, View):
                 return redirect('panel_reservas:reserva_detail', pk=pk)
         qs = Reserva.objects.all() if request.user.tiene_permiso('reservas.ver_todas') else Reserva.objects.filter(host=request.user)
         reserva = get_object_or_404(qs, pk=pk)
-        cancelar_reserva(reserva)
+        from .models import CancelacionReserva
+        cancelar_reserva(
+            reserva,
+            origen=CancelacionReserva.Origen.PANEL,
+            usuario=request.user,
+            detalle=request.user.email,
+        )
         messages.success(request, f"Reserva de '{reserva.nombre_invitado}' cancelada.")
         return redirect('panel_reservas:reserva_detail', pk=pk)
+
+
+class CancelacionesListView(LoginRequiredMixin, ListView):
+    """
+    Registro de quién canceló cada reserva y desde dónde.
+
+    Nace del incidente del 20/08/2026: hubo una tanda de cancelaciones y no se
+    pudo responder a "¿quién canceló esto?" porque los logs del contenedor se
+    van en cada despliegue. Los closers no entran a la app —solo ven Google
+    Calendar y sus correos—, así que cuando una reserva suya desaparece la
+    respuesta no puede ser "lo hizo el sistema".
+
+    Restringida por email en `CANCELACIONES_EMAILS_AUTORIZADOS`, no por el
+    sistema de permisos, porque de momento la ve una sola persona.
+    """
+    model = CancelacionReserva
+    template_name = 'pages/panel/reservas/cancelaciones.html'
+    context_object_name = 'cancelaciones'
+    paginate_by = 50
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        autorizados = getattr(settings, 'CANCELACIONES_EMAILS_AUTORIZADOS', [])
+        if (request.user.email or '').lower() not in autorizados:
+            raise PermissionDenied('Esta vista es privada.')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        qs = (CancelacionReserva.objects
+              .select_related('reserva', 'reserva__host', 'reserva__event_type', 'usuario')
+              .order_by('-creada_en'))
+        email = (self.request.GET.get('email') or '').strip()
+        if email:
+            qs = qs.filter(reserva__email_invitado__icontains=email)
+        origen = (self.request.GET.get('origen') or '').strip()
+        if origen:
+            qs = qs.filter(origen=origen)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['email'] = self.request.GET.get('email', '')
+        ctx['origen'] = self.request.GET.get('origen', '')
+        ctx['origenes'] = CancelacionReserva.Origen.choices
+        base = CancelacionReserva.objects.all()
+        ctx['total'] = base.count()
+        ctx['ultimas_24h'] = base.filter(
+            creada_en__gte=timezone.now() - timedelta(hours=24)
+        ).count()
+        ctx['por_origen'] = {
+            valor: base.filter(origen=valor).count()
+            for valor, _etiqueta in CancelacionReserva.Origen.choices
+        }
+        return ctx

@@ -1,0 +1,138 @@
+{% extends 'layout/panel.html' %}
+{% load tz %}
+
+{% block title %}Registro de cancelaciones · {% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header border-0 pt-6">
+        <div class="card-title">
+            <h3 class="fw-medium mb-0">Registro de cancelaciones</h3>
+        </div>
+        <div class="card-toolbar">
+            <span class="badge badge-light-primary fs-7 me-2">{{ total }} en total</span>
+            <span class="badge badge-light-warning fs-7">{{ ultimas_24h }} en las últimas 24 h</span>
+        </div>
+    </div>
+
+    <div class="card-body pt-0">
+
+        <form method="get" class="d-flex flex-wrap gap-3 mb-6">
+            <input type="text" name="email" value="{{ email }}"
+                   class="form-control form-control-sm w-auto"
+                   placeholder="Buscar por email del invitado" style="min-width:280px;" />
+
+            <select name="origen" class="form-select form-select-sm w-auto">
+                <option value="">Todos los orígenes</option>
+                {% for valor, etiqueta in origenes %}
+                <option value="{{ valor }}" {% if origen == valor %}selected{% endif %}>
+                    {{ etiqueta }} ({{ por_origen|default_if_none:"" }})
+                </option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
+            {% if email or origen %}
+            <a href="{% url 'panel_reservas:cancelaciones' %}" class="btn btn-sm btn-light">Limpiar</a>
+            {% endif %}
+        </form>
+
+        <div class="table-responsive">
+            <table class="table align-middle table-row-dashed fs-6 gy-3">
+                <thead>
+                    <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                        <th>Cancelada el</th>
+                        <th>Invitado</th>
+                        <th>Cita</th>
+                        <th>Host</th>
+                        <th>Quién la canceló</th>
+                        <th>Desde dónde</th>
+                        <th>¿Se avisó?</th>
+                    </tr>
+                </thead>
+                <tbody class="fw-semibold text-gray-700">
+                    {% for c in cancelaciones %}
+                    <tr>
+                        <td class="text-nowrap">{{ c.creada_en|localtime|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <a href="{% url 'panel_reservas:reserva_detail' c.reserva_id %}">
+                                {{ c.reserva.nombre_invitado|default:"—" }}
+                            </a>
+                            <div class="text-muted fs-8">{{ c.reserva.email_invitado }}</div>
+                        </td>
+                        <td class="text-nowrap">
+                            {{ c.reserva.inicio_utc|localtime|date:"d/m/Y H:i" }}
+                            <div class="text-muted fs-8">{{ c.reserva.event_type.nombre|truncatechars:38 }}</div>
+                        </td>
+                        <td class="fs-8">{{ c.reserva.host.email }}</td>
+                        <td>
+                            {% if c.usuario %}
+                                {{ c.usuario.nombre_display }}
+                            {% elif c.origen == 'publica' %}
+                                <span class="text-muted">El propio invitado</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                            {% if c.detalle %}<div class="text-muted fs-8">{{ c.detalle|truncatechars:60 }}</div>{% endif %}
+                        </td>
+                        <td>
+                            {% if c.origen == 'sync_gcal' %}
+                                <span class="badge badge-light-warning">Rechazo en Google Calendar</span>
+                            {% elif c.origen == 'panel' %}
+                                <span class="badge badge-light-primary">Panel interno</span>
+                            {% elif c.origen == 'publica' %}
+                                <span class="badge badge-light-info">Enlace del invitado</span>
+                            {% elif c.origen == 'comando' %}
+                                <span class="badge badge-light-dark">Mantenimiento</span>
+                            {% elif c.origen == 'reagendada' %}
+                                <span class="badge badge-light-success">Reagendada</span>
+                            {% else %}
+                                <span class="badge badge-light-danger">Sin identificar</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.correo_enviado %}
+                                <span class="badge badge-light-success">Sí</span>
+                            {% else %}
+                                <span class="badge badge-light">No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-10">
+                            {% if email or origen %}
+                                No hay cancelaciones que encajen con la búsqueda.
+                            {% else %}
+                                Todavía no se ha registrado ninguna cancelación.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <div class="d-flex justify-content-center mt-6">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item previous">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if email %}&email={{ email }}{% endif %}{% if origen %}&origen={{ origen }}{% endif %}">Anterior</a>
+                </li>
+                {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item next">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if email %}&email={{ email }}{% endif %}{% if origen %}&origen={{ origen }}{% endif %}">Siguiente</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

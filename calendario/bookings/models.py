@@ -475,3 +475,71 @@ class LogCorreo(models.Model):
 
     def __str__(self):
         return f'{self.tipo} → {self.destinatario} ({self.enviado_en:%Y-%m-%d %H:%M})'
+
+
+class CancelacionReserva(models.Model):
+    """
+    Quién canceló una reserva, desde dónde y cuándo.
+
+    Existe porque el 20/08/2026 hubo una tanda de cancelaciones y no se pudo
+    responder a "¿quién canceló esto?": los logs del contenedor se van en cada
+    despliegue, y la reserva solo guarda el estado final. Los closers no entran
+    a la app —solo ven Google Calendar y sus correos—, así que cuando una
+    reserva suya desaparece necesitan una respuesta mejor que "lo hizo el
+    sistema".
+
+    Va en una tabla aparte y no en campos de `Reserva` para no engordar la tabla
+    más consultada de la app, y para que el histórico se conserve aunque la
+    reserva se reagende después.
+    """
+
+    class Origen(models.TextChoices):
+        PANEL = 'panel', 'Panel interno'
+        PUBLICA = 'publica', 'El invitado, desde su enlace'
+        SYNC_GCAL = 'sync_gcal', 'Rechazo del host en Google Calendar'
+        COMANDO = 'comando', 'Comando de mantenimiento'
+        REAGENDADA = 'reagendada', 'Reagendada (se movió a otra hora)'
+        DESCONOCIDO = 'desconocido', 'Sin identificar'
+
+    reserva = models.ForeignKey(
+        Reserva,
+        on_delete=models.CASCADE,
+        related_name='cancelaciones',
+    )
+    origen = models.CharField(
+        max_length=20,
+        choices=Origen.choices,
+        default=Origen.DESCONOCIDO,
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='cancelaciones_hechas',
+        help_text='Quién la canceló, cuando se sabe (panel o comando).',
+    )
+    detalle = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Email del host que rechazó, del invitado que canceló, etc.',
+    )
+    correo_enviado = models.BooleanField(
+        default=False,
+        help_text='Si se avisó al invitado por Google al cancelar.',
+    )
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'cancelaciones_reserva'
+        verbose_name = 'cancelación de reserva'
+        verbose_name_plural = 'cancelaciones de reservas'
+        ordering = ['-creada_en']
+        indexes = [
+            models.Index(fields=['-creada_en'], name='ix_cancelacion_fecha'),
+            models.Index(fields=['origen'], name='ix_cancelacion_origen'),
+        ]
+
+    def __str__(self):
+        return f'{self.reserva_id} — {self.get_origen_display()} ({self.creada_en:%Y-%m-%d %H:%M})'

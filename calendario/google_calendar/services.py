@@ -495,11 +495,15 @@ def crear_evento_google(reserva_pk):
             reserva.save(update_fields=['google_sync_estado', 'fecha_actualizacion'])
 
 
-def cancelar_evento_google(reserva_pk):
+def cancelar_evento_google(reserva_pk, avisar_invitado=True):
     """
     Marca el evento en Google Calendar como cancelado: cambia el título a
     'Cancelado: ...' y lo pone transparente para liberar el hueco en freebusy.
-    Notifica a todos los attendees via sendUpdates='all'.
+
+    `avisar_invitado=True` (por defecto) notifica a los attendees con
+    sendUpdates='all', que es el correo de cancelación que le llega al invitado.
+    En False el evento se marca igual pero en silencio: sirve para poner al día
+    reservas viejas sin escribir a gente por citas que ya nadie esperaba.
     """
     from calendario.bookings.models import Reserva
 
@@ -531,7 +535,7 @@ def cancelar_evento_google(reserva_pk):
                 'transparency': 'transparent',
                 'attendees': attendees_declinados,
             },
-            sendUpdates='all',
+            sendUpdates='all' if avisar_invitado else 'none',
         ).execute()
         logger.info(
             "cancelar_evento_google: OK reserva=%s host=%s event_id=%s",

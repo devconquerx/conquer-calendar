@@ -578,7 +578,12 @@ class CancelarPublicaView(View):
 
     def post(self, request, token):
         reserva = get_object_or_404(Reserva, confirmacion_token=token)
-        cancelar_reserva(reserva)
+        from .models import CancelacionReserva
+        cancelar_reserva(
+            reserva,
+            origen=CancelacionReserva.Origen.PUBLICA,
+            detalle=reserva.email_invitado,
+        )
         return render(request, 'pages/public/booking/cancelada.html', {'reserva': reserva})
 
 

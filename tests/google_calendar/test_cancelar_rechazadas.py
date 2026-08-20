@@ -9,7 +9,7 @@ invitado no se enteraba de nada.
 """
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from calendario.bookings.models import Reserva
 from calendario.google_calendar.sync import (
@@ -50,6 +50,11 @@ class HostDeclinoTest(TestCase):
         self.assertFalse(_host_declino({'id': 'x', 'status': 'confirmed'}))
 
 
+# El corte de arranque (`CANCELAR_RECHAZOS_DESDE`) hace que por defecto no se
+# cancele nada: sin él, activar esto sobre una base con rechazos viejos los
+# drenaría todos de golpe. Aquí se pone una fecha pasada para probar el
+# comportamiento en sí.
+@override_settings(CANCELAR_RECHAZOS_DESDE='2020-01-01T00:00:00')
 @patch(PATCH_CANCELAR_GCAL)
 @patch(PATCH_CONFLICTO, return_value=False)
 @patch(PATCH_CREAR)
@@ -84,7 +89,7 @@ class CancelarReservasRechazadasTest(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             _cancelar_reservas_rechazadas(self.host, ['gcal-evt-1'])
         # cancelar_evento_google hace el patch con sendUpdates='all'.
-        mock_cancelar_gcal.assert_called_once_with(r.pk)
+        mock_cancelar_gcal.assert_called_once_with(r.pk, avisar_invitado=True)
 
     def test_libera_el_hueco(self, *_):
         from calendario.bookings.services import calcular_slots

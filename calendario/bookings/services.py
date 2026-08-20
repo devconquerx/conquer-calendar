@@ -651,8 +651,18 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
             vieja = None
 
         if vieja and vieja.estado == Reserva.Estado.CONFIRMADA:
+            from .models import CancelacionReserva
             vieja.estado = Reserva.Estado.CANCELADA
             vieja.save(update_fields=['estado', 'fecha_actualizacion'])
+            # Reagendar también es cancelar: sin esta fila, la reserva vieja
+            # aparecería como cancelada sin que nadie sepa por qué, que es justo
+            # lo que hace preguntar "¿quién canceló esto?".
+            CancelacionReserva.objects.create(
+                reserva=vieja,
+                origen=CancelacionReserva.Origen.REAGENDADA,
+                detalle=f'movida a {inicio_utc:%Y-%m-%d %H:%M} UTC',
+                correo_enviado=bool(vieja.google_event_id),
+            )
             vieja_et_id = vieja.event_type_id
             transaction.on_commit(lambda: invalidar_slots(vieja_et_id))
             if vieja.google_event_id:
@@ -677,20 +687,40 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
         )
 
 
-def cancelar_reserva(reserva):
+def cancelar_reserva(reserva, origen=None, usuario=None, detalle='', avisar_invitado=True):
     """
     Cancela una reserva idempotente. Si ya está cancelada, no hace nada.
     También cancela el evento en Google Calendar.
+
+    `origen`, `usuario` y `detalle` quedan guardados en `CancelacionReserva`
+    para poder responder después a "¿quién canceló esto y desde dónde?". Los
+    closers no entran a la app, así que cuando una reserva suya desaparece esa
+    es la única forma de darles una respuesta que no sea "lo hizo el sistema".
+
+    `avisar_invitado=False` cancela sin que Google mande el correo (patch con
+    sendUpdates='none'). Sirve para poner al día reservas viejas sin escribir a
+    gente por citas que ya nadie esperaba.
     """
+    from .models import CancelacionReserva
+
     if reserva.estado == Reserva.Estado.CANCELADA:
         return reserva
     with transaction.atomic():
         reserva.estado = Reserva.Estado.CANCELADA
         reserva.save(update_fields=['estado', 'fecha_actualizacion'])
+        CancelacionReserva.objects.create(
+            reserva=reserva,
+            origen=origen or CancelacionReserva.Origen.DESCONOCIDO,
+            usuario=usuario if (usuario and usuario.is_authenticated) else None,
+            detalle=detalle[:255],
+            correo_enviado=bool(avisar_invitado and reserva.google_event_id),
+        )
         et_id = reserva.event_type_id
         transaction.on_commit(lambda: invalidar_slots(et_id))
         if reserva.google_event_id:
-            transaction.on_commit(lambda: cancelar_evento_google(reserva.pk))
+            transaction.on_commit(
+                lambda: cancelar_evento_google(reserva.pk, avisar_invitado=avisar_invitado)
+            )
     return reserva
 
 
