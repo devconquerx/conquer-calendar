@@ -353,6 +353,11 @@ cmd_deploy() {
   say "Precalentando workers…"
   warmup "$new_port"
 
+  # Mantiene al día el helper del cron: vive en el repo pero se ejecuta desde
+  # /usr/local/bin, y hasta ahora sólo lo instalaba el bootstrap, así que un
+  # arreglo suyo se desplegaba sin llegar nunca a usarse.
+  install -m 0755 deploy/bin/calendar-dj /usr/local/bin/calendar-dj
+
   # 5) Celery a la versión nueva ANTES del swap: así el worker ya conoce las
   #    tareas nuevas cuando el Django nuevo empiece a encolarlas. El worker hace
   #    warm shutdown (termina lo que tiene en vuelo) y lo que llegue mientras
