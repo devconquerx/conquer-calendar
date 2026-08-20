@@ -483,6 +483,9 @@ function PaperboardConfirmation({ theme, assets }) {
           <p className={`text-white ${c.paso1TextClass || 'font-medium text-lg md:text-xl leading-[1.3]'} ${c.paso1TextMb || 'mb-12'} max-w-[820px] mx-auto`}>
             {withBold(c.paso1Text, c.paso1TextBold)}
           </p>
+          {/* Sin vídeo configurado no se pinta el marco: dejarlo dibujaba un
+              iframe vacío. Lo usa Conquer Languages, que aún no tiene el suyo. */}
+          {c.paso1Video && (
           <div className="max-w-[1024px] mx-auto">
             <VideoFrame frame={c.videoFrame} accent={theme.accent} borderColor={c.videoBorderColor} glow={c.videoGlow}>
               <iframe
@@ -496,6 +499,7 @@ function PaperboardConfirmation({ theme, assets }) {
               />
             </VideoFrame>
           </div>
+          )}
         </div>
       </section>
 
@@ -598,6 +602,7 @@ function PaperboardConfirmation({ theme, assets }) {
             )}
           </div>
 
+          {c.paso3Thumbnail && (
           <div className="max-w-[1024px] mx-auto">
             <a href={c.paso3Video} target="_blank" rel="noopener noreferrer" className="block group">
               <VideoFrame frame={c.videoFrame} accent={theme.accent} borderColor={c.videoBorderColor} glow={c.videoGlow}>
@@ -621,6 +626,7 @@ function PaperboardConfirmation({ theme, assets }) {
               </VideoFrame>
             </a>
           </div>
+          )}
         </div>
       </section>
 

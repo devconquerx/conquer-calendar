@@ -14,6 +14,18 @@ import instructorMaskBottom from '../assets/img/cb/instructor-mask-bottom.svg'
 import tornTransition from '../assets/img/cb/torn-transition.png'
 import tornTransition2000 from '../assets/img/cb/torn-transition-2000.png'
 import gridBackground from '../assets/img/cb/grid-background.avif'
+// Assets de la página de confirmación. Son los mismos del set cb/: la textura,
+// el rasgado, la máscara y los "conquie" son monocromos y ya se comparten entre
+// marcas (Legal hace lo mismo). Lo único propio de Languages es el acento y el
+// contenido.
+import confPaperboard from '../assets/img/cb/confirmation/paperboard-texture.avif'
+import confTorn from '../assets/img/cb/confirmation/torn-transition.png'
+import confMaskBottom from '../assets/img/cb/confirmation/instructor-mask-bottom.svg'
+import confFiesta from '../assets/img/cb/confirmation/conquie-fiesta.svg'
+import confRayo from '../assets/img/cb/confirmation/conquie-rayo.svg'
+import confMovil from '../assets/img/cb/confirmation/conquie-movil2.svg'
+import confPlay from '../assets/img/cb/confirmation/conquie-play.svg'
+import confMockup from '../assets/img/cb/confirmation/conquer-mockup.png'
 // Iconos de los bullets: los mismos "conquie" del set cb/ que usa Conquer
 // Blocks. Son monocromos y no llevan color de marca, así que se comparten tal
 // cual; el orden aquí sigue el de los bullets de Languages (dinero → confianza
@@ -88,6 +100,111 @@ export default {
     glow: '0 2px 20px 6px rgba(112,179,196,0.30)',
     headerLogoWidth: '150px',
     footerLogoWidth: '240px',
+  },
+
+  // Página de confirmación de llamada — misma arquitectura paperboard que
+  // Conquer Blocks (mismos tokens de espaciado, medidos en su producción), con
+  // el acento teal de Languages y el copy de la marca.
+  confirmation: {
+    heroIcon: confFiesta,
+    heroIconSmall: confRayo,
+    felicidades: '¡Felicidades!',
+    felicidadesGradient: CL_TEXT_GRADIENT,
+    heroTitle: 'Tu llamada ha sido reservada',
+    importanteTitle: 'Importante',
+    importanteText: 'completa estos 3 pasos ahora para poder aprovechar tu llamada al máximo',
+    boxImage: cardBackground,
+    accentGradient: CL_TEXT_GRADIENT,
+    navbarLogoOnly: true,
+    texture: confPaperboard,
+    torn: confTorn,
+    paperboardTiled: true,
+    heroSectionPad: 'pt-4 pb-8',
+    navbarMb: 'mb-0',
+    heroIconMb: 'mb-10',
+    heroTitleMb: 'mb-10',
+    boxPadY: 'py-10 md:py-12',
+    importanteTitleMb: 'mb-4',
+    heroDecos: ['top-[60px] left-0 w-[150px]', 'top-[239px] right-0 w-[150px]'],
+    heroIconSize: 'w-32 h-32',
+    heroMaxWidth: '740px',
+    boxMaxWidth: '740px',
+    badgeText: 'text-lg md:text-xl',
+
+    paso1Badge: 'Paso 1 • Mira este vídeo',
+    paso1BadgeIcon: null,
+    paso1Text: 'Mira este vídeo de 47 segundos para entender tus siguientes pasos lógicos',
+    paso1TextBold: '47 segundos',
+    paso1SectionPad: 'pt-12 pb-20',
+    paso1BadgeMb: 'mb-10',
+    paso1TextClass: 'font-light text-base leading-[1.25]',
+    paso1TextMb: 'mb-10',
+    paso1Video: null,
+    videoFrame: null,
+    videoBorderColor: CL_TEAL,
+    videoGlow: 'none',
+
+    paso2Badge: 'Paso 2 • Confirma tu cita',
+    paso2BadgeIcon: null,
+    paso2Image: confMockup,
+    paso2ImageMode: 'photo',
+    paso2HeadingIcon: confMovil,
+    paso2Heading: 'Mantente al tanto de tu teléfono',
+    paso2Paragraphs: [
+      'te contactaremos por llamada para confirmar la cita el día y la hora acordadas, una vez confirmada la sesión con tu asesor, te enviaremos el enlace de la videollamada.',
+      'Es importante que contestes confirmando 👍 tu llamada, ya que estamos recibiendo muchísimas solicitudes y queremos hablar con personas que estén comprometidas en ser un caso de éxito.',
+    ],
+    paso2Divider: false,
+    paso2SectionPad: 'py-12 lg:py-20',
+    paso2BadgeMb: 'mb-5',
+    paso2CardMax: 'max-w-[1024px] mx-auto',
+    paso2ImgWidth: 'lg:w-[511px]',
+    paso2MinHeight: '511px',
+    paso2MobileBox: 'aspect-square lg:aspect-auto',
+    paso2MaskMobile: confMaskBottom,
+    paso2HeadingClass: 'text-[32px] md:text-[40px] font-medium leading-[1.1]',
+    paso2IconClass: 'w-[93px] h-auto hidden lg:block',
+    paso2IconMobileFloat: true,
+    paso2ContentPad: 'p-6 lg:p-12',
+    paso2HeadingMb: 'mb-7',
+    paso2ParagraphClass: 'text-sm md:text-base text-[#171717] leading-[1.25] font-light space-y-5',
+    paso2ReminderMt: 'mt-7 lg:mt-5',
+    reminderPad: 'px-6 md:px-12 py-6',
+    reminderText: 'Recuerda conectarte puntual y estando en un lugar tranquilo y cómodo.',
+    reminderTextClass: 'text-center font-medium text-xl md:text-[24px] leading-[1.1]',
+
+    paso3Badge: 'Paso 3 • Descubre',
+    paso3BadgeIcon: null,
+    paso3TitlePre: 'Descubre más acerca de la oportunidad de ',
+    paso3TitleAccent: 'hablar inglés con fluidez',
+    paso3Subtitle:
+      'Disfruta de este vídeo donde revelamos más datos, errores comunes y falsas creencias acerca del aprendizaje del inglés.',
+    paso3SubtitleAccent: 'Además te enseñaremos nuestra academia por dentro',
+    paso3Thumbnail: null,
+    paso3PlayIcon: confPlay,
+    paso3Video: null,
+    paso3SectionPad: 'pt-6 pb-12',
+    paso3BadgeMb: 'mb-5',
+    paso3TitleSize: 'text-3xl md:text-[48px]',
+    paso3TitleLeading: 'leading-[1.1]',
+    paso3TitleMb: 'mb-5',
+    paso3TitleMaxW: 'max-w-[768px]',
+    paso3SubtitleMaxW: 'max-w-[560px]',
+    paso3SubtitleClass: 'text-white text-base font-light leading-[1.25]',
+    paso3SubtitleAccentClass: 'text-base font-light leading-[1.25] inline-block',
+    paso3SubtitleMb: 'mb-5',
+    paso3SubtitleBlockMb: 'mb-5',
+    paso3PlayClass: 'w-8 h-8 md:w-16 md:h-16 lg:w-[102px] lg:h-[102px]',
+    paso3ThumbFilter: 'brightness(0.65) blur(3px)',
+
+    footerMode: 'minimal',
+    footerPadY: 'py-8',
+    footerLogoHeight: 'h-[37px] md:h-[106px] w-auto',
+    footer: {
+      contactPhone: '+971 58 848 2637',
+      contactEmail: 'admisiones@conquerx.com',
+      copyrightBrand: 'Conquer Languages',
+    },
   },
 
   // Fondo de página paperboard (usado por el StepForm), igual que Blocks/Legal.
