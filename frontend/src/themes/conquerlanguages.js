@@ -27,6 +27,8 @@ import confPlay from '../assets/img/cb/confirmation/conquie-play.svg'
 // Mockup del Paso 2 en la versión de Languages (móvil con su logo sobre el teal
 // de marca). El de Blocks lleva su naranja quemado en la imagen.
 import confMockup from '../assets/img/languages/confirmation/conquer-mockup.webp'
+// Portada del vídeo del Paso 3 (16:9), la misma que sirve producción.
+import confStep3Thumb from '../assets/img/languages/confirmation/paso3-thumbnail.webp'
 // Iconos de los bullets: los mismos "conquie" del set cb/ que usa Conquer
 // Blocks. Son monocromos y no llevan color de marca, así que se comparten tal
 // cual; el orden aquí sigue el de los bullets de Languages (dinero → confianza
@@ -186,9 +188,9 @@ export default {
     paso3Subtitle:
       'Disfruta de este vídeo donde revelamos más datos, errores comunes y falsas creencias acerca del aprendizaje del inglés.',
     paso3SubtitleAccent: 'Además te enseñaremos nuestra academia por dentro',
-    paso3Thumbnail: null,
+    paso3Thumbnail: confStep3Thumb,
     paso3PlayIcon: confPlay,
-    paso3Video: null,
+    paso3Video: 'https://youtu.be/Z45XDlhS_Is',
     paso3SectionPad: 'pt-6 pb-12',
     paso3BadgeMb: 'mb-5',
     paso3TitleSize: 'text-3xl md:text-[48px]',
