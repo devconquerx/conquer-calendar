@@ -44,6 +44,21 @@ import instructorPhoto from '../assets/img/languages/andy.webp'
 import pixelDeco from '../assets/img/languages/pixel-6x6-2.svg'
 import pixelDeco2 from '../assets/img/languages/pixel-5x5-5.svg'
 
+// ═══════════════════════════════════════════════════════════════════════════
+// TEMPORAL — INTERRUPTOR GLOBAL del pixel-art de Conquer Languages.
+//
+// A `false` (petición de negocio) desaparece TODO el pixelado de la marca, en
+// las cuatro etapas (landing, vídeo, stepform y confirmación de llamada):
+//   · racimos de píxeles decorativos del fondo
+//   · borde pixelado del canto de las fotos (instructor y Paso 2)
+//   · borde pixelado de los botones (CTA de landing/vídeo y botones del form)
+//
+// Ponlo a `true` y vuelve todo tal cual estaba, sin tocar nada más: las
+// posiciones (`landing.decoPixels`, `confirmation.heroDecos`) y los assets
+// siguen definidos, solo quedan inertes mientras esté apagado.
+// ═══════════════════════════════════════════════════════════════════════════
+const CL_PIXEL_STYLE = false
+
 // Teal de marca. El CTA de producción es plano (#70B3C4); aquí se degrada a
 // tres paradas como en Blocks/Legal para que el botón encaje en la línea
 // paperboard, manteniendo el color de marca en la parada central.
@@ -75,6 +90,8 @@ export default {
     auroraGradient: `linear-gradient(60deg,${CL_TEAL_LIGHT},${CL_TEAL_DARK},${CL_TEAL_LIGHT},${CL_TEAL_DARK})`,
     buttonGradient: CL_GRADIENT,
     buttonWeight: '800',
+    // Canto del CTA: sin pixel-art se recorta a rectángulo plano.
+    ...(CL_PIXEL_STYLE ? {} : { buttonClip: 'none' }),
     linkGradient: `linear-gradient(to right,${CL_TEAL_LIGHT},${CL_TEAL_DARK})`,
     ring: CL_TEAL,
     solid: CL_TEAL,
@@ -169,7 +186,7 @@ export default {
     paso2ImgWidth: 'lg:w-[511px]',
     paso2MinHeight: '511px',
     paso2MobileBox: 'aspect-square lg:aspect-auto',
-    paso2MaskMobile: confMaskBottom,
+    paso2MaskMobile: CL_PIXEL_STYLE ? confMaskBottom : undefined,
     paso2HeadingClass: 'text-[32px] md:text-[40px] font-medium leading-[1.1]',
     paso2IconClass: 'w-[93px] h-auto hidden lg:block',
     paso2IconMobileFloat: true,
@@ -230,10 +247,17 @@ export default {
     tornTransition,
     tornTransition2000,
     gridBackground,
-    pixels: { deco: pixelDeco, deco2: pixelDeco2, sm7: pixelDeco, lg8: pixelDeco2 },
+    // Sin `pixels` no se pinta ningún racimo: todos los puntos de render
+    // (Landing, VideoPage, Confirmation) están guardados por `assets.pixels`.
+    pixels: CL_PIXEL_STYLE
+      ? { deco: pixelDeco, deco2: pixelDeco2, sm7: pixelDeco, lg8: pixelDeco2 }
+      : undefined,
     bulletIcons: [bulletIcon1, bulletIcon2, bulletIcon3],
-    instructorMask,
-    instructorMaskBottom, // borde pixelado abajo (móvil); el derecho es desktop
+    // Sin máscara el canto de la foto queda recto: tanto la landing como el
+    // Paso 2 de la confirmación sólo aplican `mask-image` si estas existen.
+    instructorMask: CL_PIXEL_STYLE ? instructorMask : undefined,
+    // borde pixelado abajo (móvil); el derecho es desktop
+    instructorMaskBottom: CL_PIXEL_STYLE ? instructorMaskBottom : undefined,
     instructorPhoto,
     // La foto de Andy es cuadrada (700×700) y viene "alejada", igual que la de
     // Legal: se pinta como background del cuadro con zoom y punto focal.
@@ -321,5 +345,7 @@ export default {
     '--theme-form-texture': `url(${paperboardTexture})`,
     '--theme-btn-gradient': CL_GRADIENT,
     '--theme-form-shadow': clShadow,
+    // Botones del stepform (NavigationControls / WelcomeScreen).
+    ...(CL_PIXEL_STYLE ? {} : { '--theme-btn-clip': 'none' }),
   },
 }

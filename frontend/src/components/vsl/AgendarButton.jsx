@@ -25,7 +25,8 @@ export function CtaButton({ theme, onClick, text, size = 'lg' }) {
           fontFamily: 'Montserrat, sans-serif',
           backgroundImage: accent.buttonGradient || 'linear-gradient(90deg, #FFBF00, #FF4000)',
           fontWeight: accent.ctaWeight || accent.buttonWeight || '800',
-          clipPath: CB_PIXEL_CLIP,
+          // `accent.buttonClip: 'none'` deja el CTA plano (Languages).
+          clipPath: accent.buttonClip || CB_PIXEL_CLIP,
         }}
       >
         {text}
