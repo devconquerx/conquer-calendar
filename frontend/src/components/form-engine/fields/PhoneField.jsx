@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { AsYouType, getExampleNumber, parsePhoneNumber } from 'libphonenumber-js'
 import examples from 'libphonenumber-js/mobile/examples'
+import { construirE164 } from '../../../lib/telefono'
 import countries from '../../../data/countries'
 import useGeoLocation from '../../../hooks/useGeoLocation'
 
@@ -81,9 +82,7 @@ export default function PhoneField({ field, value, onChange, onNext }) {
   // Update parent with full E.164 phone string
   useEffect(() => {
     if (selectedCountry && phoneNumber) {
-      const rawDigits = phoneNumber.replace(/\D/g, '')
-      const fullNumber = `+${selectedCountry.phoneCode}${rawDigits}`
-      onChange(fullNumber)
+      onChange(construirE164(phoneNumber, selectedCountry.iso2, selectedCountry.phoneCode))
     }
   }, [selectedCountry, phoneNumber])
 

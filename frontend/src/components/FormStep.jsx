@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { isValidPhoneNumber } from 'libphonenumber-js'
+import { mensajeTelefonoInvalido } from '../lib/telefono'
 import { validateBlock } from '../lib/validateBlock'
 import TextField from './form-engine/fields/TextField'
 import EmailField from './form-engine/fields/EmailField'
@@ -65,9 +66,7 @@ export default function FormStep({
 
     if (block.name === 'phone-number') {
       setFieldError(
-        !value?.trim()
-          ? 'El teléfono es obligatorio'
-          : 'Número inválido. Incluye el código de país (ej: +34 612345678)'
+        !value?.trim() ? 'El teléfono es obligatorio' : mensajeTelefonoInvalido(value)
       )
     } else if (block.name === 'email' && value) {
       setFieldError(messages?.['label.errorAlert.email'] || '¡Correo electrónico no válido!')

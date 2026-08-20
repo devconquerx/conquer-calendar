@@ -1,11 +1,12 @@
 import { isValidPhoneNumber } from 'libphonenumber-js'
+import { normalizarTelefono } from './telefono'
 
 export function validateBlock(block, value, messages = {}) {
   const req = block.attributes?.required
 
   if (block.name === 'phone-number') {
     if (!value?.trim()) return false
-    try { return isValidPhoneNumber(value) } catch { return false }
+    try { return isValidPhoneNumber(normalizarTelefono(value)) } catch { return false }
   }
 
   if (block.name === 'long-text') {

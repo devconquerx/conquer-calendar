@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { isPossiblePhoneNumber, AsYouType, getExampleNumber, parsePhoneNumberFromString } from 'libphonenumber-js'
 import examples from 'libphonenumber-js/mobile/examples'
+import { construirE164, partirE164 } from '../../lib/telefono'
 import Spinner from '../shared/Spinner'
 import useTracking from '../../hooks/useTracking'
 import useGeoLocation from '../../hooks/useGeoLocation'
@@ -216,7 +217,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
       if (phoneRequired && !digits) {
         newErrors.phone = 'Ingresa tu número de WhatsApp'
       } else if (digits) {
-        const fullNumber = `+${selectedCountry?.phoneCode || ''}${digits}`
+        const fullNumber = construirE164(phone, selectedCountry?.iso2, selectedCountry?.phoneCode)
         if (!isPossiblePhoneNumber(fullNumber)) {
           newErrors.phone = 'Teléfono no válido'
         }
@@ -243,10 +244,14 @@ export default function LandingForm({ program, region, formConfig, school, theme
     let phoneCountry = ''
 
     if (phoneVisible && phone.trim() && selectedCountry) {
-      phoneDigits = phone.replace(/\D/g, '')
-      phonePrefix = `+${selectedCountry.phoneCode}`
-      phoneData = `${phonePrefix}${phoneDigits}`
-      phoneCountry = selectedCountry.en
+      phoneData = construirE164(phone, selectedCountry.iso2, selectedCountry.phoneCode)
+      // Las piezas salen del número ya normalizado, no de lo tecleado: si pegó
+      // el número entero, los dígitos llevan el prefijo dentro y el CRM
+      // guardaría "+34" y "34612345678" por separado.
+      const partes = partirE164(phoneData)
+      phoneDigits = partes.nacional || phone.replace(/\D/g, '')
+      phonePrefix = partes.prefijo || `+${selectedCountry.phoneCode}`
+      phoneCountry = (partes.iso2 && countries.find((c) => c.iso2 === partes.iso2)?.en) || selectedCountry.en
     } else if (enablePhoneHoneypot) {
       const autofillPhone = parseAutofillPhone(phoneHoneypotRef.current?.value, fallbackCountry)
       if (autofillPhone) {
