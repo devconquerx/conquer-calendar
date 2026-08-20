@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { leer } from '../lib/safeStorage'
 import { getTheme } from '../themes'
 import useTracking from '../hooks/useTracking'
 import { fireAllSchedule } from '../lib/pixelEvents'
@@ -34,9 +35,9 @@ export default function Confirmation({ escuela = '', slug = '' }) {
 
   useEffect(() => {
     const calendlyEventUuid =
-      (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_calendly_event_uuid')) || ''
+      leer('cqx_calendly_event_uuid') || ''
     const scheduleEventId =
-      (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_schedule_event_id')) || ''
+      leer('cqx_schedule_event_id') || ''
 
     fireAllSchedule({
       eventId,

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { leer } from '../lib/safeStorage'
 import { postReservar } from '../api'
 import useTracking from '../hooks/useTracking'
 import { fireAllSchedule } from '../lib/pixelEvents'
@@ -83,7 +84,7 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
         inicio_utc: slot.utc,
         tz: slot.tz,
         // Mismo id de Schedule que usa el píxel (dedup CAPI/CRM, como el viejo).
-        schedule_event_id: (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_schedule_event_id')) || '',
+        schedule_event_id: leer('cqx_schedule_event_id') || '',
         nombre: nombre.trim(),
         email: email.trim(),
         telefono: telefono.trim(),
@@ -102,7 +103,7 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
             journeyId: tracking.journeyId,
             schoolSlug: escuela,
             calendlyEventUuid: '',
-            scheduleEventId: (typeof localStorage !== 'undefined' && localStorage.getItem('cqx_schedule_event_id')) || '',
+            scheduleEventId: leer('cqx_schedule_event_id') || '',
           })
           if (eventoInfo?.confirmacion_tipo === 'url' && eventoInfo?.confirmacion_url) {
             window.location.href = eventoInfo.confirmacion_url

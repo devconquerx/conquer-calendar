@@ -1,6 +1,7 @@
 /**
  * Tracking ID generation utilities.
  */
+import { guardar, leer } from './safeStorage'
 
 function randomSuffix() {
   return Math.random().toString(36).substring(2, 8)
@@ -37,6 +38,11 @@ export function getOrCreateEventId() {
  * Persistent journey ID across the entire visitor session.
  * Reads from URL param first, then localStorage, then generates new.
  * Format: "jrn_{timestamp}_{random6}" — never expires.
+ *
+ * Si el navegador tiene el almacenamiento bloqueado no se persiste y cada carga
+ * genera uno nuevo: se pierde reconocer a quien vuelve otro día, pero el
+ * recorrido de ESTA visita se mantiene porque el journey_id viaja de etapa a
+ * etapa por la URL. Antes esto lanzaba y dejaba la landing en blanco.
  */
 export function getOrCreateJourneyId() {
   // En SSR (sin window/localStorage) devolvemos uno desechable; el cliente lo
@@ -45,15 +51,15 @@ export function getOrCreateJourneyId() {
   const urlParams = new URLSearchParams(window.location.search)
   const urlJourneyId = urlParams.get('journey_id')
   if (urlJourneyId) {
-    localStorage.setItem('cqx_journey_id', urlJourneyId)
+    guardar('cqx_journey_id', urlJourneyId)
     return urlJourneyId
   }
 
-  const stored = localStorage.getItem('cqx_journey_id')
+  const stored = leer('cqx_journey_id')
   if (stored) return stored
 
   const newId = `jrn_${Date.now()}_${randomSuffix()}`
-  localStorage.setItem('cqx_journey_id', newId)
+  guardar('cqx_journey_id', newId)
   return newId
 }
 

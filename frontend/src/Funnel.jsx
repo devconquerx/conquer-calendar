@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { guardar } from './lib/safeStorage'
 import { fetchConfig, postResolver, postReservar, sendPreSchedule } from './api'
 import useTracking from './hooks/useTracking'
 import { fireAllLead } from './lib/pixelEvents'
@@ -42,9 +43,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   // Django, que lo genera en `trackingParams` al montar el form).
   const scheduleEventId = useMemo(() => {
     const id = tracking.generateScheduleEventId()
-    if (typeof localStorage !== 'undefined') {
-      try { localStorage.setItem('cqx_schedule_event_id', id) } catch (_) {}
-    }
+    guardar('cqx_schedule_event_id', id)
     return id
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -190,7 +189,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
     // escrito antes de navegar para que enhanced conversions/CAPI lo lleven.
     const bookedEmail = outcome?.prefill?.email || params.get('email') || ''
     if (bookedEmail) {
-      try { localStorage.setItem('calendly_email', bookedEmail) } catch (_) {}
+      guardar('calendly_email', bookedEmail)
     }
     const etUrl = outcome?.evento_info?.confirmacion_tipo === 'url' && outcome?.evento_info?.confirmacion_url
     if (etUrl) {
