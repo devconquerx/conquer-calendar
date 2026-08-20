@@ -127,6 +127,26 @@ const FORM_VARIANT_EXPERIMENTS = [
     variants: ['59', '60'],
     whiteBackgroundVariant: '60',
   },
+  // Languages, las tres regiones (cl-latam / cl-eu / cl-us): mismo test de
+  // fondo blanco. Su landing usa el mismo renderer paperboard que Blocks.
+  {
+    match: ({ funnelSlug }) => funnelSlug === 'languages-latam',
+    storageKey: 'form_variant_cl_latam',
+    variants: ['63', '64'],
+    whiteBackgroundVariant: '64',
+  },
+  {
+    match: ({ funnelSlug }) => funnelSlug === 'languages-eu',
+    storageKey: 'form_variant_cl_eu',
+    variants: ['65', '66'],
+    whiteBackgroundVariant: '66',
+  },
+  {
+    match: ({ funnelSlug }) => funnelSlug === 'languages-us',
+    storageKey: 'form_variant_cl_us',
+    variants: ['67', '68'],
+    whiteBackgroundVariant: '68',
+  },
 ]
 
 /* ── Experimentos de la PÁGINA DE VÍDEO ───────────────────────────────────
@@ -151,6 +171,9 @@ const VIDEO_VARIANT_EXPERIMENTS = [
   { funnelSlug: 'blocks-us', storageKey: 'form_variant_video_cb_us', variants: ['5', '6'] },
   { funnelSlug: 'finance-eu', storageKey: 'form_variant_video_cf_eu', variants: ['7', '8'] },
   { funnelSlug: 'finance-latam', storageKey: 'form_variant_video_cf_latam', variants: ['9', '10'] },
+  { funnelSlug: 'languages-latam', storageKey: 'form_variant_video_cl_latam', variants: ['11', '12'] },
+  { funnelSlug: 'languages-eu', storageKey: 'form_variant_video_cl_eu', variants: ['13', '14'] },
+  { funnelSlug: 'languages-us', storageKey: 'form_variant_video_cl_us', variants: ['15', '16'] },
 ].map((exp) => ({
   ...exp,
   // Segundo código del par = variante de test (sin footer); el primero es control.

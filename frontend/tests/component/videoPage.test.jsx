@@ -25,6 +25,9 @@ describe('página de vídeo — A/B del footer', () => {
     { marca: 'Blocks US', slug: 'blocks-us', escuela: 'conquer-blocks', storageKey: 'form_variant_video_cb_us', control: '5', sinLogo: '6' },
     { marca: 'Finance EU', slug: 'finance-eu', escuela: 'conquer-finance', storageKey: 'form_variant_video_cf_eu', control: '7', sinLogo: '8' },
     { marca: 'Finance LATAM', slug: 'finance-latam', escuela: 'conquer-finance', storageKey: 'form_variant_video_cf_latam', control: '9', sinLogo: '10' },
+    { marca: 'Languages LATAM', slug: 'languages-latam', escuela: 'conquer-languages', storageKey: 'form_variant_video_cl_latam', control: '11', sinLogo: '12' },
+    { marca: 'Languages EU', slug: 'languages-eu', escuela: 'conquer-languages', storageKey: 'form_variant_video_cl_eu', control: '13', sinLogo: '14' },
+    { marca: 'Languages US', slug: 'languages-us', escuela: 'conquer-languages', storageKey: 'form_variant_video_cl_us', control: '15', sinLogo: '16' },
   ]
 
   for (const c of CASOS) {
@@ -42,7 +45,7 @@ describe('página de vídeo — A/B del footer', () => {
   }
 
   it('un funnel sin experimento renderiza con logo y no reserva clave en localStorage', () => {
-    const { container } = montar({ slug: 'languages-latam', escuela: 'conquer-languages' })
+    const { container } = montar({ slug: 'languages-ge', escuela: 'conquer-languages' })
     expect(logosVisibles(container.querySelector('footer')).length).toBeGreaterThan(0)
     expect(Object.keys(localStorage).filter((k) => k.startsWith('form_variant_video'))).toHaveLength(0)
   })

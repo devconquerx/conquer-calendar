@@ -35,6 +35,9 @@ describe('landing — A/B de fondo blanco', () => {
     { marca: 'Blocks LATAM', slug: 'blocks-latam', escuela: 'conquer-blocks', storageKey: 'form_variant_cb_latam', control: '57', blanco: '58' },
     { marca: 'Blocks US', slug: 'blocks-us', escuela: 'conquer-blocks', region: 'us', storageKey: 'form_variant_cb_us', control: '59', blanco: '60' },
     { marca: 'Finance LATAM', slug: 'finance-latam', escuela: 'conquer-finance', storageKey: 'form_variant_cf_latam', control: '61', blanco: '62' },
+    { marca: 'Languages LATAM', slug: 'languages-latam', escuela: 'conquer-languages', storageKey: 'form_variant_cl_latam', control: '63', blanco: '64' },
+    { marca: 'Languages EU', slug: 'languages-eu', escuela: 'conquer-languages', region: 'eu', storageKey: 'form_variant_cl_eu', control: '65', blanco: '66' },
+    { marca: 'Languages US', slug: 'languages-us', escuela: 'conquer-languages', region: 'us', storageKey: 'form_variant_cl_us', control: '67', blanco: '68' },
   ]
 
   for (const c of CASOS) {

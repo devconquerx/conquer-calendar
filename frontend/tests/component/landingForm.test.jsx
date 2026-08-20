@@ -47,7 +47,8 @@ describe('formulario de la landing', () => {
   })
 
   it('no manda utm_form_variant en un funnel sin experimento', async () => {
-    const { container } = montar({ slug: 'languages-latam', escuela: 'conquer-languages' })
+    // languages-ge no participa en ningún A/B (las tres regiones grandes sí).
+    const { container } = montar({ slug: 'languages-ge', escuela: 'conquer-languages', region: 'ge' })
     expect('utm_form_variant' in (await enviar(container))).toBe(false)
   })
 
