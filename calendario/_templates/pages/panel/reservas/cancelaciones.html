@@ -11,7 +11,8 @@
         </div>
         <div class="card-toolbar">
             <span class="badge badge-light-primary fs-7 me-2">{{ total }} en total</span>
-            <span class="badge badge-light-warning fs-7">{{ ultimas_24h }} en las últimas 24 h</span>
+            <span class="badge badge-light-warning fs-7 me-2">{{ ultimas_24h }} en las últimas 24 h</span>
+            <span class="badge badge-light-success fs-7">{{ con_otra_cita }} de esta página reagendaron</span>
         </div>
     </div>
 
@@ -47,6 +48,7 @@
                         <th>Host</th>
                         <th>Quién la canceló</th>
                         <th>Desde dónde</th>
+                        <th>¿Sigue con cita?</th>
                         <th>¿Se avisó?</th>
                     </tr>
                 </thead>
@@ -70,6 +72,13 @@
                                 {{ c.usuario.nombre_display }}
                             {% elif c.origen == 'publica' %}
                                 <span class="text-muted">El propio invitado</span>
+                            {% elif c.origen == 'sync_gcal' %}
+                                <span class="text-muted">Sin identificar</span>
+                                <div class="text-muted fs-8">
+                                    Google no dice quién rechazó. Varias personas
+                                    pueden editar el calendario del host: mirar
+                                    Informes &rarr; Auditoría &rarr; Calendar.
+                                </div>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
@@ -91,6 +100,17 @@
                             {% endif %}
                         </td>
                         <td>
+                            {% if c.otra_cita %}
+                                <span class="badge badge-light-success">Sí, reagendó</span>
+                                <div class="text-muted fs-8">
+                                    {{ c.otra_cita.inicio_utc|localtime|date:"d/m H:i" }}
+                                    con {{ c.otra_cita.host.email|cut:"@conquerblocks.com"|cut:"@conquerx.com"|cut:"@conquerfinance.com"|cut:"@conquerlanguages.com" }}
+                                </div>
+                            {% else %}
+                                <span class="badge badge-light-danger">No, se quedó sin cita</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if c.correo_enviado %}
                                 <span class="badge badge-light-success">Sí</span>
                             {% else %}
@@ -100,7 +120,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-10">
+                        <td colspan="8" class="text-center text-muted py-10">
                             {% if email or origen %}
                                 No hay cancelaciones que encajen con la búsqueda.
                             {% else %}

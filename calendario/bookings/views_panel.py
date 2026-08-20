@@ -306,6 +306,30 @@ class CancelacionesListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+
+        # Media historia sin esto: una cancelación puede ser una baja de verdad o
+        # un lead que volvió a reservar por otro enlace. En el segundo caso la
+        # app crea una reserva nueva y la vieja se queda huérfana, así que la
+        # cancelación aparece suelta y hace saltar al closer sin motivo. Se
+        # resuelve en UNA consulta para la página que se está viendo, no una por
+        # fila.
+        pagina = list(ctx.get('cancelaciones') or [])
+        emails = {c.reserva.email_invitado.lower() for c in pagina
+                  if c.reserva.email_invitado}
+        vivas = {}
+        if emails:
+            for r in (Reserva.objects
+                      .filter(estado=Reserva.Estado.CONFIRMADA,
+                              inicio_utc__gte=timezone.now())
+                      .select_related('host', 'event_type')
+                      .order_by('inicio_utc')):
+                clave = (r.email_invitado or '').lower()
+                if clave in emails and clave not in vivas:
+                    vivas[clave] = r
+        for c in pagina:
+            c.otra_cita = vivas.get((c.reserva.email_invitado or '').lower())
+        ctx['con_otra_cita'] = sum(1 for c in pagina if getattr(c, 'otra_cita', None))
+
         ctx['email'] = self.request.GET.get('email', '')
         ctx['origen'] = self.request.GET.get('origen', '')
         ctx['origenes'] = CancelacionReserva.Origen.choices

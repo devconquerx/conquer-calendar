@@ -156,3 +156,94 @@ class CorteDeArranqueTest(TestCase):
             _cancelar_reservas_rechazadas(host, ['gcal-viejo'])
         r.refresh_from_db()
         self.assertEqual(r.estado, Reserva.Estado.CONFIRMADA)
+
+
+class NoAtribuirElRechazoAlHostTest(TestCase):
+    """
+    Un rechazo en Google no se le atribuye al host.
+
+    Lo único que se sabe es que su invitación figura rechazada; quién lo hizo no
+    lo dice la API. En estos calendarios los setters, cuentas antiguas y el grupo
+    de toda la empresa tienen permiso de escritura, así que señalar al host es
+    acusarle de algo que puede no haber hecho.
+    """
+
+    @patch(PATCH_CANCELAR_GCAL)
+    @patch(PATCH_CONFLICTO, return_value=False)
+    @patch(PATCH_CREAR)
+    def test_el_registro_no_señala_al_host(self, *_):
+        from calendario.bookings.services import crear_reserva
+        from calendario.google_calendar.sync import _cancelar_reservas_rechazadas
+
+        host = crear_host()
+        et = crear_event_type(host)
+        for dia in range(7):
+            crear_disponibilidad(host, dia=dia)
+        r = crear_reserva(
+            event_type=et, inicio_utc=slot_futuro(),
+            nombre_invitado='Lead', email_invitado='lead@x.com',
+        )
+        r.google_event_id = 'gcal-rechazado'
+        r.save(update_fields=['google_event_id'])
+
+        with self.settings(CANCELAR_RECHAZOS_DESDE='2020-01-01T00:00:00'):
+            _cancelar_reservas_rechazadas(host, ['gcal-rechazado'])
+
+        registro = CancelacionReserva.objects.get(reserva=r)
+        self.assertEqual(registro.origen, CancelacionReserva.Origen.SYNC_GCAL)
+        # Nadie firma el rechazo: no se sabe quién fue.
+        self.assertIsNone(registro.usuario)
+        # Y el texto describe el hecho, no acusa a nadie de haberlo provocado.
+        self.assertIn('figura rechazada', registro.detalle)
+        self.assertNotIn('rechazó la invitación', registro.detalle)
+
+
+@patch(PATCH_CANCELAR_GCAL)
+@patch(PATCH_CONFLICTO, return_value=False)
+@patch(PATCH_CREAR)
+class OtraCitaDelMismoLeadTest(TestCase):
+    """
+    Una cancelación suelta asusta; con la cita nueva al lado, no.
+
+    Cuando un lead reserva otra vez por un enlace distinto en vez de usar el
+    botón de reagendar, la app crea una reserva nueva y la vieja se queda
+    huérfana: la cancelación aparece sin contexto y el closer cree que ha
+    perdido el lead.
+    """
+
+    def setUp(self):
+        self.host = crear_host(email='santiago.tovar@conquerx.com')
+        self.et = crear_event_type(self.host)
+        for dia in range(7):
+            crear_disponibilidad(self.host, dia=dia)
+
+    def _reserva(self, email, inicio):
+        from calendario.bookings.services import crear_reserva
+        return crear_reserva(
+            event_type=self.et, inicio_utc=inicio,
+            nombre_invitado='Lead', email_invitado=email,
+        )
+
+    def test_marca_al_lead_que_volvio_a_reservar(self, *_):
+        from datetime import timedelta
+        vieja = self._reserva('vuelve@x.com', slot_futuro())
+        cancelar_reserva(vieja, origen=CancelacionReserva.Origen.SYNC_GCAL)
+        nueva = self._reserva('vuelve@x.com', slot_futuro() + timedelta(days=1))
+
+        self.client.force_login(self.host)
+        with self.settings(CANCELACIONES_EMAILS_AUTORIZADOS=['santiago.tovar@conquerx.com']):
+            resp = self.client.get(reverse('panel_reservas:cancelaciones'))
+        fila = resp.context['cancelaciones'][0]
+        self.assertEqual(fila.otra_cita, nueva)
+        self.assertEqual(resp.context['con_otra_cita'], 1)
+
+    def test_el_que_se_quedo_sin_cita_no_se_marca(self, *_):
+        sola = self._reserva('sin_nada@x.com', slot_futuro())
+        cancelar_reserva(sola, origen=CancelacionReserva.Origen.SYNC_GCAL)
+
+        self.client.force_login(self.host)
+        with self.settings(CANCELACIONES_EMAILS_AUTORIZADOS=['santiago.tovar@conquerx.com']):
+            resp = self.client.get(reverse('panel_reservas:cancelaciones'))
+        fila = resp.context['cancelaciones'][0]
+        self.assertIsNone(fila.otra_cita)
+        self.assertEqual(resp.context['con_otra_cita'], 0)

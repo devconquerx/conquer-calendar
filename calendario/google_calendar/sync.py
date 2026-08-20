@@ -231,11 +231,19 @@ def _cancelar_reservas_rechazadas(host, google_event_ids):
     )
     for r in reservas:
         try:
+            # OJO con la autoría: `usuario` se deja vacío a propósito. Lo único
+            # que sabemos es que la invitación del host FIGURA rechazada; quién
+            # la rechazó no lo dice la API de Google. Y en estos calendarios hay
+            # varias identidades con permiso de escritura —los setters, cuentas
+            # antiguas y hasta el grupo de toda la empresa—, así que cualquiera
+            # pudo hacerlo. Poner aquí al host lo señalaba a él por algo que a
+            # lo mejor no hizo (pasó el 20/08/2026 con una cita de Ezequiel).
+            # Para saber el autor real hay que mirar los registros de auditoría
+            # de Google Workspace: Informes → Auditoría → Eventos de Calendar.
             cancelar_reserva(
                 r,
                 origen=CancelacionReserva.Origen.SYNC_GCAL,
-                usuario=host,
-                detalle=f'{host.email} rechazó la invitación en Google Calendar',
+                detalle=f'la invitación de {host.email} figura rechazada en Google Calendar',
             )
             logger.info(
                 "sync: reserva %s cancelada porque el host la rechazó en Google "
