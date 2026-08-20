@@ -1,5 +1,6 @@
-import { useEffect, lazy, Suspense } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useRouter } from './lib/router'
+import { lazyConReintento } from './lib/lazyConReintento'
 import { getTheme } from './themes'
 import Landing from './pages/Landing'
 import Spinner from './components/shared/Spinner'
@@ -8,9 +9,9 @@ import Spinner from './components/shared/Spinner'
    que la landing —la ruta crítica del LCP— no arrastre en su bundle el
    reproductor de vídeo (Plyr), el motor de formularios ni el widget de
    calendario, que ahí no se usan. Cada una viaja en su propio chunk. */
-const VideoPage = lazy(() => import('./pages/VideoPage'))
-const Funnel = lazy(() => import('./Funnel'))
-const Confirmation = lazy(() => import('./components/Confirmation'))
+const VideoPage = lazyConReintento(() => import('./pages/VideoPage'))
+const Funnel = lazyConReintento(() => import('./Funnel'))
+const Confirmation = lazyConReintento(() => import('./components/Confirmation'))
 
 const stageFallback = (
   <div className="flex min-h-screen items-center justify-center">
@@ -82,8 +83,12 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
       if (done) return
       done = true
       cleanup()
-      import('./Funnel')
-      if (videoEnabled) import('./pages/VideoPage')
+      // Con .catch(): que una precarga no llegue es normal (mala cobertura) y
+      // no debe reportarse como error — antes salían de dos en dos en Sentry.
+      // Que además no bloquee la navegación posterior es cosa de
+      // lazyConReintento, porque el navegador memoriza el fallo.
+      import('./Funnel').catch(() => {})
+      if (videoEnabled) import('./pages/VideoPage').catch(() => {})
     }
     events.forEach((e) => window.addEventListener(e, prefetch, { passive: true }))
     return cleanup
