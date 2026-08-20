@@ -167,6 +167,52 @@ def _reconciliar_overbooking(host, titulos_por_event_id):
             )
 
 
+def _cancelar_reservas_rechazadas(host, google_event_ids):
+    """
+    Cancela las reservas cuyo evento el host rechazó o canceló en Google Calendar.
+
+    Los closers no entran a la app: cancelan dándole a "No" en la invitación de
+    Google. Hasta ahora eso solo soltaba el freno del calendario —el sync quita
+    el evento de la copia local—, pero la reserva seguía confirmada, así que el
+    hueco no se liberaba, el invitado no se enteraba y le seguían llegando los
+    recordatorios de una cita a la que no iba a ir nadie.
+
+    `cancelar_reserva` cierra las tres cosas de una: libera el hueco, saca la
+    reserva del envío de recordatorios (filtran por confirmada) y avisa al
+    invitado, porque `cancelar_evento_google` hace el patch con sendUpdates='all'.
+    Es idempotente, así que un evento que vuelva a pasar por el sync no reabre
+    nada ni duplica avisos.
+    """
+    if not google_event_ids:
+        return
+    from calendario.bookings.models import Reserva
+    from calendario.bookings.services import cancelar_reserva
+
+    reservas = (
+        Reserva.objects
+        .filter(
+            host=host,
+            estado=Reserva.Estado.CONFIRMADA,
+            google_event_id__in=list(google_event_ids),
+        )
+        .select_related('event_type', 'host')
+    )
+    for r in reservas:
+        try:
+            cancelar_reserva(r)
+            logger.info(
+                "sync: reserva %s cancelada porque el host la rechazó en Google "
+                "(host=%s, inicio=%s, invitado=%s)",
+                r.pk, host.email, r.inicio_utc, r.email_invitado,
+            )
+        except Exception:
+            # Que una reserva falle no puede tumbar el sync del host entero.
+            logger.exception(
+                "sync: no se pudo cancelar la reserva %s rechazada en Google (host=%s)",
+                r.pk, host.email,
+            )
+
+
 def _upsert_evento(host, google_event_id, campos):
     """Upsert de un evento. Si cancelled/transparent, lo borra."""
     cancelado = campos['estado'] == 'cancelled'
@@ -325,6 +371,12 @@ def sincronizar_host_incremental(host):
                 next_sync_token = None
                 hay_cambios = False
                 titulos_por_event_id = {}
+                # Eventos que el host rechazó o canceló en esta pasada. Se
+                # recogen del item crudo, que es donde está el responseStatus;
+                # `_parse_evento` ya no distingue un rechazo de un evento que el
+                # host marcó a mano como "Disponible" (los dos salen transparent)
+                # y ese sí debe seguir con su reserva en pie.
+                rechazados_en_google = []
 
                 while request is not None:
                     response = request.execute()
@@ -332,6 +384,8 @@ def sincronizar_host_incremental(host):
                         google_event_id = item.get('id')
                         if not google_event_id:
                             continue
+                        if item.get('status') == 'cancelled' or _host_declino(item):
+                            rechazados_en_google.append(google_event_id)
                         campos = _parse_evento(item)
                         if campos is None:
                             continue
@@ -350,6 +404,14 @@ def sincronizar_host_incremental(host):
                 # Reglas free/busy: reconciliar el flag de overbooking de las
                 # reservas tocadas en este sync incremental.
                 _reconciliar_overbooking(host, titulos_por_event_id)
+
+                # Un "No" del host en la invitación es su forma de cancelar.
+                # Solo se hace en el sync incremental, que trae únicamente lo que
+                # cambió: el completo repuebla el calendario entero y cancelaría
+                # de golpe todo el histórico de rechazos viejos, avisando a
+                # invitados de citas que ya pasaron. Ese arrastre se resuelve
+                # aparte, con el comando `cancelar_reservas_rechazadas`.
+                _cancelar_reservas_rechazadas(host, rechazados_en_google)
 
                 if hay_cambios:
                     _invalidar_cache_por_host(host)

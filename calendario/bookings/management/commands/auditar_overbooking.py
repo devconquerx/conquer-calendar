@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from calendario.bookings.models import Reserva
+from calendario.bookings.services import _abiertas_para_event_type
 from calendario.event_types.models import EventType, EventTypeXHost
 from calendario.google_calendar.models import GoogleCalendarEvento
 from calendario.google_calendar.services import titulo_libera_horario
@@ -74,9 +75,11 @@ class Command(BaseCommand):
             palabras_limpias = {_sin_invisibles(p).strip().casefold()
                                 for p in palabras if _sin_invisibles(p).strip()}
 
-            # Caso 1 (bug de código): reservas nuestras cuyo título SÍ matchea las
-            # reglas del tipo consultado, pero que bloquean igual porque el flag
-            # permite_overbooking se calculó con las reglas del tipo de la reserva.
+            # Caso 1: reservas nuestras cuyo título SÍ matchea las reglas de este
+            # tipo y que aun así siguen bloqueando el hueco. Se pregunta con la
+            # misma función que usa el cálculo de slots, no por el flag en la BD:
+            # `permite_overbooking` puede seguir en False y el hueco estar abierto,
+            # porque quien manda es el título contra las palabras de este tipo.
             reservas_atrapadas = []
             # Caso 2 (configuración): eventos que bloquean y llevan una marca que
             # otros tipos sí reconocen, pero este no.
@@ -90,13 +93,18 @@ class Command(BaseCommand):
                     .exclude(estado='cancelled')
                 }
 
-                for r in (Reserva.objects
-                          .filter(host=host, estado=Reserva.Estado.CONFIRMADA,
-                                  inicio_utc__lt=hasta, fin_utc__gt=ahora,
-                                  permite_overbooking=False)
-                          .select_related('event_type')):
+                reservas = list(
+                    Reserva.objects
+                    .filter(host=host, estado=Reserva.Estado.CONFIRMADA,
+                            inicio_utc__lt=hasta, fin_utc__gt=ahora)
+                    .select_related('event_type')
+                )
+                esta_abierta = _abiertas_para_event_type(
+                    host, reservas, palabras, ahora, hasta)
+                for r in reservas:
                     ev = eventos.get(r.google_event_id)
-                    if ev and titulo_libera_horario(ev.titulo, palabras):
+                    if (ev and titulo_libera_horario(ev.titulo, palabras)
+                            and not esta_abierta(r)):
                         reservas_atrapadas.append({
                             'reserva_id': r.pk,
                             'host': host.email,
@@ -139,13 +147,13 @@ class Command(BaseCommand):
                 'nombre': et.nombre,
                 'reglas': palabras,
                 'hosts': len(hosts),
-                'reservas_atrapadas_por_el_flag': sorted(
+                'reservas_que_siguen_bloqueando': sorted(
                     reservas_atrapadas, key=lambda d: d['inicio_utc']),
                 'eventos_con_marca_no_reconocida': sorted(
                     eventos_sin_regla, key=lambda d: d['inicio_utc']),
             })
 
-        informe['total_reservas_atrapadas_por_el_flag'] = tot_reservas
+        informe['total_reservas_que_siguen_bloqueando'] = tot_reservas
         informe['total_eventos_con_marca_no_reconocida'] = tot_eventos
 
         self.stdout.write(
@@ -153,11 +161,11 @@ class Command(BaseCommand):
         self.stdout.write(
             f"Tipos de evento afectados: {len(informe['tipos'])}")
         self.stdout.write(self.style.WARNING(
-            f"Reservas nuestras atrapadas por el flag (bug de código): {tot_reservas}"))
+            f"Reservas que siguen bloqueando pese a matchear las reglas: {tot_reservas}"))
         self.stdout.write(self.style.WARNING(
             f"Eventos con marca que el tipo no reconoce (configuración): {tot_eventos}"))
         for t in informe['tipos']:
-            n1 = len(t['reservas_atrapadas_por_el_flag'])
+            n1 = len(t['reservas_que_siguen_bloqueando'])
             n2 = len(t['eventos_con_marca_no_reconocida'])
             self.stdout.write(
                 f"  ET{t['event_type']:<4d} flag={n1:<4d} config={n2:<4d} {t['nombre']}")
