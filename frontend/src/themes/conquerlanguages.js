@@ -6,7 +6,6 @@
 // propios de Languages.
 import defaultTheme from './default'
 import paperboardTexture from '../assets/img/cb/paperboard-texture.avif'
-import cardBackground from '../assets/img/cb/card-background.png'
 import instructorMask from '../assets/img/cb/instructor-mask-right.svg'
 import instructorMaskBottom from '../assets/img/cb/instructor-mask-bottom.svg'
 // Activos neutros de la página de vídeo (papel rasgado crema + retícula oscura),
@@ -25,7 +24,6 @@ import confFiesta from '../assets/img/cb/confirmation/conquie-fiesta.svg'
 import confRayo from '../assets/img/cb/confirmation/conquie-rayo.svg'
 import confMovil from '../assets/img/cb/confirmation/conquie-movil2.svg'
 import confPlay from '../assets/img/cb/confirmation/conquie-play.svg'
-import confMockup from '../assets/img/cb/confirmation/conquer-mockup.png'
 // Iconos de los bullets: los mismos "conquie" del set cb/ que usa Conquer
 // Blocks. Son monocromos y no llevan color de marca, así que se comparten tal
 // cual; el orden aquí sigue el de los bullets de Languages (dinero → confianza
@@ -113,7 +111,10 @@ export default {
     heroTitle: 'Tu llamada ha sido reservada',
     importanteTitle: 'Importante',
     importanteText: 'completa estos 3 pasos ahora para poder aprovechar tu llamada al máximo',
-    boxImage: cardBackground,
+    // El PNG de Blocks (cardBackground) es naranja: aquí se usa un degradado
+    // teal por CSS en vez de una imagen de otra marca.
+    boxImage: null,
+    boxGradient: `linear-gradient(120deg, ${CL_TEAL_LIGHT} 0%, ${CL_TEAL} 45%, ${CL_TEAL_DARK} 100%)`,
     accentGradient: CL_TEXT_GRADIENT,
     navbarLogoOnly: true,
     texture: confPaperboard,
@@ -139,14 +140,18 @@ export default {
     paso1BadgeMb: 'mb-10',
     paso1TextClass: 'font-light text-base leading-[1.25]',
     paso1TextMb: 'mb-10',
-    paso1Video: null,
+    paso1Video:
+      'https://iframe.mediadelivery.net/embed/348662/8536ee79-a3ef-4714-9e2a-514e574f98bb'
+      + '?autoplay=false&loop=false&muted=false&preload=true&responsive=true',
     videoFrame: null,
     videoBorderColor: CL_TEAL,
     videoGlow: 'none',
 
     paso2Badge: 'Paso 2 • Confirma tu cita',
     paso2BadgeIcon: null,
-    paso2Image: confMockup,
+    // El mockup de Blocks lleva su naranja; Languages usa la foto de Andy, igual
+    // que Legal usa la suya en este hueco.
+    paso2Image: instructorPhoto,
     paso2ImageMode: 'photo',
     paso2HeadingIcon: confMovil,
     paso2Heading: 'Mantente al tanto de tu teléfono',
@@ -219,7 +224,6 @@ export default {
   assets: {
     logo,
     paperboardTexture,
-    cardBackground,
     tornTransition,
     tornTransition2000,
     gridBackground,
