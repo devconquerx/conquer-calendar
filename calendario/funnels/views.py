@@ -603,7 +603,7 @@ def _spa_render(request, funnel, stage, escuela=None, region=None):
         search=('?' + qs) if qs else '',
     )
 
-    return render(
+    respuesta = render(
         request,
         'pages/public/funnel/spa.html',
         {
@@ -625,6 +625,18 @@ def _spa_render(request, funnel, stage, escuela=None, region=None):
             'ssr_html': ssr_html,
         },
     )
+
+    # El HTML del funnel NO se cachea en ningún sitio. Sin `Cache-Control` las
+    # cachés intermedias aplican heurísticas propias y se quedan con una copia:
+    # así fue como, tras mover conquerlanguages.com a Django, el navegador
+    # embebido de TikTok siguió sirviendo durante horas la landing del proyecto
+    # viejo a parte de los visitantes —misma URL, mismo anuncio, unos con la
+    # nueva y otros con la vieja—, y esos leads se iban a Make en vez de al
+    # calendario. Además cada respuesta lleva dentro `funnel-config` (contenido
+    # y A/B del visitante), que tampoco debe compartirse entre usuarios.
+    respuesta['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    respuesta['Pragma'] = 'no-cache'
+    return respuesta
 
 
 class FunnelClaseView(View):
