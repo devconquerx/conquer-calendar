@@ -108,10 +108,19 @@ def process_neverbounce(self, lead_id):
             neverbounce.validate_email(lead)
             lead.refresh_from_db(fields=['neverbounce_result'])
         except Exception as exc:
-            # Un timeout no es una respuesta, es que no dio tiempo a preguntar, así
-            # que se reintenta antes de darlo por perdido. Antes se capturaba aquí
-            # sin más: el lead quedaba con `neverbounce_skipped` al primer fallo y
-            # el sweep excluye ese tag, con lo que nadie volvía a preguntar nunca.
+            # Aquí ya no llegan los timeouts de lectura (el servicio los registra
+            # como 'unknown' y no relanza), sino los fallos transitorios de
+            # verdad: conexión caída, 5xx, respuesta ilegible. Esos sí merecen
+            # reintento, porque la siguiente vez pueden funcionar.
+            #
+            # Sólo se reporta como error cuando se agotan los intentos: antes se
+            # logueaba uno por intento, así que un único lead generaba hasta
+            # cuatro eventos en Sentry aunque el reintento acabara bien.
+            if self.request.retries < self.max_retries:
+                logger.warning(
+                    'Lead %s: NeverBounce falló (intento %s de %s), se reintenta: %s',
+                    lead_id, self.request.retries + 1, self.max_retries + 1, exc,
+                )
             try:
                 raise self.retry(exc=exc)
             except self.MaxRetriesExceededError:

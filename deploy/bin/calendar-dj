@@ -35,4 +35,6 @@ if [[ -z "$cid" ]]; then
   exit 1
 fi
 
-exec docker exec "$cid" "$@"
+# -i para que un script por stdin (`calendar-dj python manage.py shell < x.py`)
+# llegue de verdad al contenedor; sin él se ejecuta en vacío y no avisa.
+exec docker exec -i "$cid" "$@"
