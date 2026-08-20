@@ -18,6 +18,12 @@ services:
       - ./.envs/.local/.postgres
     ports:
       - "8002:8000"
+    # Dominio local para el proxy de OrbStack (escucha en :80 y enruta por
+    # nombre). Chrome resuelve *.localhost a 127.0.0.1 solo; sin este label el
+    # proxy no sabe a qué contenedor mandar calendar.localhost y devuelve su
+    # propio "404 page not found".
+    labels:
+      - "dev.orbstack.domains=calendar.localhost"
     command: /start
     environment:
       CELERY_BROKER_URL: "redis://redis:6379/0"
@@ -65,4 +71,4 @@ services:
     env_file:
       - ./.envs/.local/.postgres
     ports:
-      - "5434:5432"
+      - "5435:5432"
