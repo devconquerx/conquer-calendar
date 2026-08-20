@@ -371,12 +371,6 @@ def sincronizar_host_incremental(host):
                 next_sync_token = None
                 hay_cambios = False
                 titulos_por_event_id = {}
-                # Eventos que el host rechazó o canceló en esta pasada. Se
-                # recogen del item crudo, que es donde está el responseStatus;
-                # `_parse_evento` ya no distingue un rechazo de un evento que el
-                # host marcó a mano como "Disponible" (los dos salen transparent)
-                # y ese sí debe seguir con su reserva en pie.
-                rechazados_en_google = []
 
                 while request is not None:
                     response = request.execute()
@@ -384,8 +378,6 @@ def sincronizar_host_incremental(host):
                         google_event_id = item.get('id')
                         if not google_event_id:
                             continue
-                        if item.get('status') == 'cancelled' or _host_declino(item):
-                            rechazados_en_google.append(google_event_id)
                         campos = _parse_evento(item)
                         if campos is None:
                             continue
@@ -405,13 +397,19 @@ def sincronizar_host_incremental(host):
                 # reservas tocadas en este sync incremental.
                 _reconciliar_overbooking(host, titulos_por_event_id)
 
-                # Un "No" del host en la invitación es su forma de cancelar.
-                # Solo se hace en el sync incremental, que trae únicamente lo que
-                # cambió: el completo repuebla el calendario entero y cancelaría
-                # de golpe todo el histórico de rechazos viejos, avisando a
-                # invitados de citas que ya pasaron. Ese arrastre se resuelve
-                # aparte, con el comando `cancelar_reservas_rechazadas`.
-                _cancelar_reservas_rechazadas(host, rechazados_en_google)
+                # DESACTIVADO: aquí se cancelaban las reservas cuyo evento salía
+                # rechazado por el host. La idea era buena pero la premisa no: el
+                # sync incremental no trae "los rechazos de ahora", trae CUALQUIER
+                # evento que se haya tocado, así que un rechazo de hace semanas se
+                # cancelaba hoy. En producción salían ~8 por hora, cada una con su
+                # correo al invitado, drenando meses de rechazos viejos. Además el
+                # equipo rechaza invitaciones también cuando la cita se reagenda
+                # con otro host, y entonces el aviso llega por una cita que el
+                # invitado ya había movido.
+                #
+                # Mientras se decide qué significa un rechazo para el negocio, el
+                # arrastre se procesa a mano y por tandas con el comando
+                # `cancelar_reservas_rechazadas`, que simula por defecto.
 
                 if hay_cambios:
                     _invalidar_cache_por_host(host)
