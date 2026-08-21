@@ -453,11 +453,38 @@ RESERVA_TRACKING_FIELDS = (
 )
 
 
+# Tope de cada campo de tracking, leído del propio modelo para que no se quede
+# desfasado si alguien cambia un max_length. Mismo mecanismo que
+# `_FIELD_MAX_LENGTHS` en leads/views.py.
+_TRACKING_MAX_LENGTHS = {
+    f.name: f.max_length
+    for f in Reserva._meta.get_fields()
+    if getattr(f, 'max_length', None)
+}
+
+
 def _tracking_kwargs(tracking):
     """Extrae los campos de tracking de un dict (p.ej. Prellamada.tracking) a los
-    kwargs del modelo Reserva. Devuelve '' para los que falten."""
+    kwargs del modelo Reserva. Devuelve '' para los que falten.
+
+    Recorta al tope de cada columna. El tracking es un dato de marketing: si no
+    cabe, se guarda lo que quepa, pero NUNCA puede tumbar la reserva. Pasaba de
+    verdad (FUNNELS-67): el funnel viejo metía en el link de /agenda/ un
+    parámetro `url` con la landing entera dentro —con su ttclid de TikTok, ~280
+    caracteres— y la URL se pasaba de los 1.500 de `Reserva.url`. Postgres
+    rechazaba el INSERT y el visitante se comía un 500 después de haber elegido
+    hora. Lo que importa para atribuir (utm_*, journey_id) va al principio de la
+    URL, así que sobrevive al recorte.
+    """
     tr = tracking if isinstance(tracking, dict) else {}
-    return {f: (tr.get(f) or '') for f in RESERVA_TRACKING_FIELDS}
+    kwargs = {}
+    for f in RESERVA_TRACKING_FIELDS:
+        valor = tr.get(f) or ''
+        if not isinstance(valor, str):
+            valor = str(valor)
+        tope = _TRACKING_MAX_LENGTHS.get(f)
+        kwargs[f] = valor[:tope] if tope else valor
+    return kwargs
 
 
 # Separadores que la gente (y los forms de las landings) mete dentro del número:

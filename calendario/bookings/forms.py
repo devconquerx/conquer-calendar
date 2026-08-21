@@ -38,12 +38,30 @@ class BookingForm(forms.Form):
     email_invitado = forms.EmailField()
     telefono_invitado = forms.CharField(max_length=50)
     notas = forms.CharField(max_length=1000, required=False, widget=forms.Textarea(attrs={'rows': 3}))
-    url = forms.CharField(max_length=1500, required=False, widget=forms.HiddenInput)
+    # Sin max_length a propósito: la página mete aquí `window.location.href` al
+    # enviar, y una URL con mucho parámetro de anuncio dentro puede pasarse de
+    # los 1.500 de la columna. Rechazar la reserva por eso sería absurdo —el
+    # tracking es un dato de marketing—, así que se recorta en `clean_url`.
+    # Misma decisión que `_tracking_kwargs` en services.py (ver FUNNELS-67).
+    url = forms.CharField(required=False, widget=forms.HiddenInput)
     # pre_email del setter que generó el link directo de reagendamiento (viaja
     # como query param en la página, round-tripea por este hidden). Mismo
     # mecanismo que event_id/journey_id en el flujo del funnel — snapshot en
     # Reserva.setter vía RESERVA_TRACKING_FIELDS.
-    setter = forms.CharField(max_length=140, required=False, widget=forms.HiddenInput)
+    setter = forms.CharField(required=False, widget=forms.HiddenInput)
+
+    def clean_url(self):
+        return self._recortar('url')
+
+    def clean_setter(self):
+        return self._recortar('setter')
+
+    def _recortar(self, campo):
+        """Recorta un campo de tracking al tope de su columna en Reserva."""
+        from calendario.bookings.models import Reserva
+        valor = self.cleaned_data.get(campo) or ''
+        tope = Reserva._meta.get_field(campo).max_length
+        return valor[:tope] if tope else valor
 
     def clean_nombre_invitado(self):
         v = self.cleaned_data['nombre_invitado'].strip()
