@@ -1,26 +1,11 @@
 """Production settings."""
 
-import sys
-
 import sentry_sdk
 
 from .base import *  # NOQA
 from .base import env
 
 DEBUG = False
-
-
-def _descartar_ruido(event, hint):
-    """Filtro de eventos antes de mandarlos a Sentry.
-
-    Una sesión de `manage.py shell` es una consola interactiva: lo que falla ahí
-    es la consulta de quien la escribe (un nombre de campo mal puesto), no la
-    aplicación. Llegaban como issues nuevas y ensuciaban el triaje de los
-    errores de producción de verdad.
-    """
-    if 'shell' in sys.argv and sys.argv[0].endswith('manage.py'):
-        return None
-    return event
 
 # ---------------------------------------------------------------------------
 # Sentry — error tracking + performance monitoring
@@ -31,7 +16,6 @@ sentry_sdk.init(
     traces_sample_rate=0.2,
     profiles_sample_rate=0.1,
     environment=env.str('SENTRY_ENVIRONMENT', default='production'),
-    before_send=_descartar_ruido,
 )
 
 ALLOWED_HOSTS = env.list(
