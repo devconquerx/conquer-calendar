@@ -495,6 +495,17 @@ def crear_evento_google(reserva_pk):
             reserva.save(update_fields=['google_sync_estado', 'fecha_actualizacion'])
 
 
+def _evento_ya_cancelado(servicio, event_id):
+    """¿Google ya tiene este evento como `cancelled`? Solo se usa en el camino
+    de error, así que la llamada extra sale prácticamente gratis."""
+    try:
+        return servicio.events().get(
+            calendarId='primary', eventId=event_id,
+        ).execute().get('status') == 'cancelled'
+    except Exception:
+        return False
+
+
 def cancelar_evento_google(reserva_pk, avisar_invitado=True):
     """
     Marca el evento en Google Calendar como cancelado: cambia el título a
@@ -523,6 +534,20 @@ def cancelar_evento_google(reserva_pk, avisar_invitado=True):
             calendarId='primary',
             eventId=reserva.google_event_id,
         ).execute()
+        # Si el evento ya está cancelado en Google no hay nada que marcar, y
+        # además NO se puede: patchear un evento cancelado devuelve 403
+        # Forbidden (no es falta de permisos — comprobado, `events().list` del
+        # mismo host funciona; es Google diciendo "esto ya es una lápida").
+        # Pasa a diario: alguien borra la cita desde su propio Google Calendar,
+        # Google nos avisa por el webhook y llegamos aquí a cancelar algo que ya
+        # estaba cancelado. Los dos sistemas están de acuerdo, no hay nada que
+        # arreglar: se sale en silencio, igual que con un 404/410.
+        if evento_actual.get('status') == 'cancelled':
+            logger.info(
+                "cancelar_evento_google: el evento ya estaba cancelado en Google "
+                "reserva=%s event_id=%s", reserva_pk, reserva.google_event_id,
+            )
+            return
         attendees_declinados = [
             {**a, 'responseStatus': 'declined'}
             for a in evento_actual.get('attendees', [])
@@ -546,6 +571,16 @@ def cancelar_evento_google(reserva_pk, avisar_invitado=True):
             logger.info(
                 "cancelar_evento_google: evento ya inexistente (HTTP %s) reserva=%s",
                 e.resp.status, reserva_pk,
+            )
+            return
+        # Carrera: el evento se canceló entre el `get` de arriba y el `patch`.
+        # Se vuelve a mirar antes de dar la voz de alarma, para no confundir
+        # esto con un 403 de verdad (delegación mal configurada, host fuera del
+        # dominio…), que sí hay que ver en Sentry.
+        if e.resp.status == 403 and _evento_ya_cancelado(servicio, reserva.google_event_id):
+            logger.info(
+                "cancelar_evento_google: se canceló mientras lo marcábamos reserva=%s",
+                reserva_pk,
             )
             return
         logger.error(
