@@ -31,6 +31,28 @@ def _host_declino(item):
     )
 
 
+def _invitados_que_declinaron(item):
+    """
+    Emails de los invitados —no el dueño del calendario— que rechazaron.
+
+    A diferencia del "No" del host, este no tacha el evento ni libera la hora:
+    para el calendario del host la cita sigue en pie, así que la copia local
+    debe seguir tratándola como ocupada hasta que se cancele la reserva.
+
+    Devuelve los emails y no un booleano a propósito: en estos eventos hay más
+    attendees que el invitado (setters, cuentas antiguas del workspace, la sala)
+    y el "No" de cualquiera de ellos no es una cancelación. Quien decide es el
+    email que figura en la reserva, y eso se compara luego.
+    """
+    return {
+        a['email'].lower()
+        for a in item.get('attendees', [])
+        if a.get('email')
+        and not a.get('self')
+        and a.get('responseStatus') == 'declined'
+    }
+
+
 def _parse_evento(item):
     """
     Extrae campos relevantes de un item de events.list.
@@ -186,23 +208,34 @@ def _fecha_corte_cancelacion():
     return valor
 
 
-def _cancelar_reservas_rechazadas(host, google_event_ids):
+def _cancelar_reservas_rechazadas(host, google_event_ids, declinados_por_invitado=None):
     """
-    Cancela las reservas cuyo evento el host rechazó o canceló en Google Calendar.
+    Cancela las reservas que en Google Calendar figuran rechazadas.
 
-    Los closers no entran a la app: cancelan dándole a "No" en la invitación de
-    Google. Hasta ahora eso solo soltaba el freno del calendario —el sync quita
-    el evento de la copia local—, pero la reserva seguía confirmada, así que el
-    hueco no se liberaba, el invitado no se enteraba y le seguían llegando los
-    recordatorios de una cita a la que no iba a ir nadie.
+    Dos caminos, porque Google los trata distinto:
+
+    - **El host** le da a "No" (o borra el evento). Google tacha el evento y
+      libera la hora, así que el sync ya quitaba el evento de la copia local,
+      pero la reserva seguía confirmada: el hueco no se liberaba, el invitado no
+      se enteraba y le seguían llegando recordatorios de una cita a la que no
+      iba a ir nadie. Llegan en `google_event_ids`.
+    - **El invitado** le da a "No". Google no tacha nada ni libera la hora —para
+      el host la cita sigue en pie—, así que aquí no había ninguna señal que
+      seguir. Llegan en `declinados_por_invitado` como {event_id: {emails}} y se
+      cancelan solo si el email que dijo que no es el de la reserva.
 
     `cancelar_reserva` cierra las tres cosas de una: libera el hueco, saca la
-    reserva del envío de recordatorios (filtran por confirmada) y avisa al
-    invitado, porque `cancelar_evento_google` hace el patch con sendUpdates='all'.
+    reserva del envío de recordatorios (filtran por confirmada) y avisa por
+    correo, porque `cancelar_evento_google` hace el patch con sendUpdates='all'
+    —que cuando cancela el invitado es justo lo que hace falta: el aviso le
+    llega al host, que es quien no se estaba enterando—.
     Es idempotente, así que un evento que vuelva a pasar por el sync no reabre
     nada ni duplica avisos.
     """
-    if not google_event_ids:
+    declinados_por_invitado = declinados_por_invitado or {}
+    rechazados_por_host = set(google_event_ids or [])
+    ids = rechazados_por_host | set(declinados_por_invitado)
+    if not ids:
         return
     from calendario.bookings.models import CancelacionReserva, Reserva
     from calendario.bookings.services import cancelar_reserva
@@ -212,14 +245,16 @@ def _cancelar_reservas_rechazadas(host, google_event_ids):
         .filter(
             host=host,
             estado=Reserva.Estado.CONFIRMADA,
-            google_event_id__in=list(google_event_ids),
+            google_event_id__in=list(ids),
             # Corte de arranque: solo reservas nacidas DESPUÉS de activar esto.
             #
             # El sync incremental no trae "los rechazos de ahora", trae cualquier
             # evento que se haya tocado. Sin este corte, un rechazo de hace
             # semanas se cancela hoy y le llega un correo al invitado por una
             # cita que ya nadie esperaba: eso fue el incidente del 20/08/2026,
-            # ~8 cancelaciones por hora drenando meses de histórico.
+            # ~8 cancelaciones por hora drenando meses de histórico. Con los
+            # rechazos de invitado el riesgo es mayor todavía, porque son
+            # bastantes más que los del host.
             #
             # Filtrar por fecha de creación se limpia solo: según pasan los días
             # todas las reservas vivas son posteriores al corte y el filtro deja
@@ -230,7 +265,7 @@ def _cancelar_reservas_rechazadas(host, google_event_ids):
         .select_related('event_type', 'host')
     )
     for r in reservas:
-        try:
+        if r.google_event_id in rechazados_por_host:
             # OJO con la autoría: `usuario` se deja vacío a propósito. Lo único
             # que sabemos es que la invitación del host FIGURA rechazada; quién
             # la rechazó no lo dice la API de Google. Y en estos calendarios hay
@@ -240,15 +275,26 @@ def _cancelar_reservas_rechazadas(host, google_event_ids):
             # lo mejor no hizo (pasó el 20/08/2026 con una cita de Ezequiel).
             # Para saber el autor real hay que mirar los registros de auditoría
             # de Google Workspace: Informes → Auditoría → Eventos de Calendar.
+            detalle = f'la invitación de {host.email} figura rechazada en Google Calendar'
+            quien = f'el host ({host.email})'
+        else:
+            # Aquí sí se sabe quién: el "No" viene firmado con el email del
+            # invitado de la reserva. Cualquier otro attendee que rechace
+            # (un setter, la sala, una cuenta vieja) no cancela nada.
+            if (r.email_invitado or '').lower() not in declinados_por_invitado.get(r.google_event_id, set()):
+                continue
+            detalle = f'{r.email_invitado} rechazó la invitación en Google Calendar'
+            quien = f'el invitado ({r.email_invitado})'
+        try:
             cancelar_reserva(
                 r,
                 origen=CancelacionReserva.Origen.SYNC_GCAL,
-                detalle=f'la invitación de {host.email} figura rechazada en Google Calendar',
+                detalle=detalle,
             )
             logger.info(
-                "sync: reserva %s cancelada porque el host la rechazó en Google "
+                "sync: reserva %s cancelada porque %s la rechazó en Google "
                 "(host=%s, inicio=%s, invitado=%s)",
-                r.pk, host.email, r.inicio_utc, r.email_invitado,
+                r.pk, quien, host.email, r.inicio_utc, r.email_invitado,
             )
         except Exception:
             # Que una reserva falle no puede tumbar el sync del host entero.
@@ -420,7 +466,10 @@ def sincronizar_host_incremental(host):
                 # responseStatus: `_parse_evento` ya no distingue un rechazo de
                 # un evento que el host marcó a mano como "Disponible" (los dos
                 # salen transparent) y ese sí debe seguir con su reserva en pie.
+                # El del invitado ni siquiera deja rastro en el evento parseado:
+                # no lo pone transparent porque la hora del host sigue ocupada.
                 rechazados_en_google = []
+                declinados_por_invitado = {}
 
                 while request is not None:
                     response = request.execute()
@@ -430,6 +479,12 @@ def sincronizar_host_incremental(host):
                             continue
                         if item.get('status') == 'cancelled' or _host_declino(item):
                             rechazados_en_google.append(google_event_id)
+                        else:
+                            # El "No" del host manda: si ya rechazó él, da igual
+                            # lo que respondiera el invitado.
+                            emails = _invitados_que_declinaron(item)
+                            if emails:
+                                declinados_por_invitado[google_event_id] = emails
                         campos = _parse_evento(item)
                         if campos is None:
                             continue
@@ -449,12 +504,16 @@ def sincronizar_host_incremental(host):
                 # reservas tocadas en este sync incremental.
                 _reconciliar_overbooking(host, titulos_por_event_id)
 
-                # Un "No" del host en la invitación es su forma de cancelar: no
-                # entran a la app. Igual que Calendly, que cancela la reunión y
-                # avisa al invitado (verificado en su producto el 20/08/2026).
+                # Un "No" en la invitación es la forma de cancelar de quien no
+                # entra a la app: los closers por un lado y los invitados por
+                # otro. En el host esto es lo que hace Calendly (verificado en
+                # su producto el 20/08/2026); en el invitado vamos más lejos que
+                # Calendly —él no lo cancela— por decisión de negocio.
                 # El corte por fecha de creación evita repetir el drenaje del
                 # histórico; ver `_fecha_corte_cancelacion`.
-                _cancelar_reservas_rechazadas(host, rechazados_en_google)
+                _cancelar_reservas_rechazadas(
+                    host, rechazados_en_google, declinados_por_invitado
+                )
 
                 if hay_cambios:
                     _invalidar_cache_por_host(host)

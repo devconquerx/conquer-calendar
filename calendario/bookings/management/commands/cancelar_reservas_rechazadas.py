@@ -9,7 +9,7 @@ from calendario.google_calendar.models import (
     GoogleCalendarEvento, GoogleCalendarSyncEstado,
 )
 from calendario.google_calendar.services import obtener_servicio_calendar
-from calendario.google_calendar.sync import _host_declino
+from calendario.google_calendar.sync import _host_declino, _invitados_que_declinaron
 
 
 class Command(BaseCommand):
@@ -56,13 +56,26 @@ class Command(BaseCommand):
         # Candidatas: su evento ya no está en la copia local. El sync borra de ahí
         # lo cancelado y lo rechazado por el host, así que esto los recoge todos.
         # Se confirma uno a uno contra Google antes de tocar nada.
+        #
+        # Con --incluir-invitado-declinado ese atajo no sirve: el "No" de un
+        # invitado no tacha el evento ni libera la hora, así que sigue en la
+        # copia local igual que cualquier cita viva. Hay que preguntarle a
+        # Google por todas, una a una — es lento y gasta cuota, para eso están
+        # --host, --dias y --limite.
         candidatas = [
             r for r in qs
             if r.host_id in hosts_ok
-            and not GoogleCalendarEvento.objects.filter(
-                host_id=r.host_id, google_event_id=r.google_event_id).exists()
+            and (
+                opts['incluir_invitado_declinado']
+                or not GoogleCalendarEvento.objects.filter(
+                    host_id=r.host_id, google_event_id=r.google_event_id).exists()
+            )
         ]
         self.stdout.write(f"Candidatas a revisar contra Google: {len(candidatas)}")
+        if opts['incluir_invitado_declinado']:
+            self.stdout.write(self.style.WARNING(
+                'Se consulta a Google una por una (incluye las que siguen en la '
+                'copia local); con muchas reservas esto tarda.'))
 
         servicios = {}
         a_cancelar, descartadas = [], []
@@ -72,15 +85,16 @@ class Command(BaseCommand):
                     servicios[r.host_id] = obtener_servicio_calendar(r.host.email)
                 item = servicios[r.host_id].events().get(
                     calendarId='primary', eventId=r.google_event_id).execute()
-                invitados = [a for a in item.get('attendees', []) if not a.get('self')]
-                invitado_declino = bool(invitados) and all(
-                    a.get('responseStatus') == 'declined' for a in invitados)
+                # Mismo criterio que el sync: manda el email que figura en la
+                # reserva, no "todos los attendees". En estos eventos hay
+                # setters y cuentas del workspace cuyo "No" no cancela nada.
+                invitado_declino = (r.email_invitado or '').lower() in _invitados_que_declinaron(item)
                 if item.get('status') == 'cancelled':
                     a_cancelar.append((r, 'evento cancelado en Google'))
                 elif _host_declino(item):
                     a_cancelar.append((r, 'el host rechazó la invitación'))
                 elif invitado_declino and opts['incluir_invitado_declinado']:
-                    a_cancelar.append((r, 'el invitado rechazó la invitación'))
+                    a_cancelar.append((r, f'{r.email_invitado} rechazó la invitación'))
                 else:
                     descartadas.append((r, 'sigue activo en Google'))
             except Exception as e:

@@ -1,10 +1,11 @@
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.test import TestCase
 
 from calendario.availability.models import BloqueHorarioSemanal
+from calendario.bookings.models import Reserva
 from calendario.bookings.services import calcular_slots
 from tests.factories import crear_disponibilidad, crear_event_type, crear_host
 
@@ -16,6 +17,12 @@ class CalcularSlotsTest(TestCase):
 
     def setUp(self):
         self.host = crear_host()
+        # El post_save de User (users/signals.py) le da a todo host nuevo
+        # disponibilidad de lunes a viernes de 00:00 a 23:59. Es el default de
+        # onboarding, para que un host recién creado no aparezca con la agenda
+        # en blanco. Aquí estorba: estos tests miden el cálculo sobre la
+        # disponibilidad que define cada uno, así que se parte de cero.
+        BloqueHorarioSemanal.objects.filter(host=self.host).delete()
 
     def test_sin_disponibilidad_no_hay_slots(self):
         et = crear_event_type(self.host)
@@ -35,19 +42,28 @@ class CalcularSlotsTest(TestCase):
         self.assertGreaterEqual(len(slots), 2)
 
     def test_buffer_despues_reduce_slots(self):
-        et_sin_buffer = crear_event_type(self.host, nombre='Sin buffer', duracion=30)
-        et_con_buffer = crear_event_type(
-            self.host, nombre='Con buffer', duracion=30
-        )
-        et_con_buffer.buffer_despues_minutos = 30
-        et_con_buffer.save()
-
+        # El buffer no recorta el final de la jornada: solo separa una cita de
+        # la siguiente, igual que Calendly. Con la agenda vacía no quita ni un
+        # slot, así que para verlo hace falta una reserva de por medio.
+        et = crear_event_type(self.host, duracion=30)
         crear_disponibilidad(self.host, dia=0, inicio=time(9, 0), fin=time(11, 0))
         lunes = self._proximo_dia(0)
 
-        slots_sin = calcular_slots(et_sin_buffer, lunes, lunes)
-        slots_con = calcular_slots(et_con_buffer, lunes, lunes)
+        inicio = datetime.combine(lunes, time(9, 0)).replace(
+            tzinfo=ZoneInfo(self.host.timezone))
+        Reserva.objects.create(
+            event_type=et, host=self.host,
+            inicio_utc=inicio, fin_utc=inicio + timedelta(minutes=30),
+            nombre_invitado='Previa', email_invitado='previa@x.com',
+        )
 
+        slots_sin = calcular_slots(et, lunes, lunes)
+        et.buffer_despues_minutos = 30
+        et.save()
+        slots_con = calcular_slots(et, lunes, lunes)
+
+        # Sin buffer quedan 9:30, 10:00 y 10:30; con media hora de margen
+        # detrás de la reserva, las 9:30 desaparecen.
         self.assertGreater(len(slots_sin), len(slots_con))
 
     def test_aviso_minimo_excluye_slots_proximos(self):

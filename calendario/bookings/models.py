@@ -496,7 +496,7 @@ class CancelacionReserva(models.Model):
     class Origen(models.TextChoices):
         PANEL = 'panel', 'Panel interno'
         PUBLICA = 'publica', 'El invitado, desde su enlace'
-        SYNC_GCAL = 'sync_gcal', 'Rechazo del host en Google Calendar'
+        SYNC_GCAL = 'sync_gcal', 'Rechazo en Google Calendar'
         COMANDO = 'comando', 'Comando de mantenimiento'
         REAGENDADA = 'reagendada', 'Reagendada (se movió a otra hora)'
         DESCONOCIDO = 'desconocido', 'Sin identificar'

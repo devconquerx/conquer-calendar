@@ -28,6 +28,19 @@ def obtener_credenciales_impersonadas(host_email, scopes):
 
 
 def obtener_servicio_calendar(host_email):
+    # Los tests no salen a Google. Es el único punto por el que se construye el
+    # cliente, así que cortando aquí no queda ninguna llamada de red suelta en
+    # la suite: cada una tardaba en morir con un invalid_grant (las credenciales
+    # de prueba no valen) y se llevaba décimas de segundo por test sin probar
+    # nada. El resultado observable es el mismo que ya había —todos los
+    # llamadores tratan esta excepción como fail-open/fail-soft, igual que
+    # trataban el fallo de credenciales—, solo que instantáneo. Un test que
+    # necesite la ruta real la parchea, como ya hacen los que simulan a Google.
+    if getattr(settings, 'TESTING', False):
+        raise ServiceAccountNoConfiguradaError(
+            'obtener_servicio_calendar está desactivado durante los tests '
+            '(settings.TESTING). Parchea la llamada si necesitas simular Google.'
+        )
     creds = obtener_credenciales_impersonadas(host_email, settings.GOOGLE_CALENDAR_SCOPES)
     return build('calendar', 'v3', credentials=creds, cache_discovery=False)
 

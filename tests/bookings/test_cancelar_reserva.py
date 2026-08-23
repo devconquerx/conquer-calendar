@@ -31,17 +31,23 @@ class CancelarReservaTest(TestCase):
         self.assertEqual(reserva.estado, Reserva.Estado.CANCELADA)
 
     def test_cancelar_llama_google(self):
-        """eliminar_evento_google se dispara vía on_commit solo si hay google_event_id."""
+        """
+        cancelar_evento_google se dispara vía on_commit solo si hay google_event_id.
+
+        Antes se borraba el evento; ahora se cancela (patch a cancelled) para
+        que Google avise al invitado con sendUpdates='all'. Un evento borrado
+        desaparece de la agenda sin que nadie se entere de nada.
+        """
         from calendario.bookings.services import cancelar_reserva
         reserva = self._reserva()
         reserva.google_event_id = 'evento-abc-123'
         reserva.save(update_fields=['google_event_id'])
 
-        with patch('calendario.bookings.services.eliminar_evento_google') as mock_eliminar:
+        with patch('calendario.bookings.services.cancelar_evento_google') as mock_cancelar:
             with self.captureOnCommitCallbacks(execute=True):
                 cancelar_reserva(reserva)
 
-        mock_eliminar.assert_called_once_with(reserva.pk)
+        mock_cancelar.assert_called_once_with(reserva.pk, avisar_invitado=True)
 
     def test_slot_liberado_tras_cancelacion(self):
         from calendario.bookings.services import cancelar_reserva

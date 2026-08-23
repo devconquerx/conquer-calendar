@@ -81,8 +81,12 @@ class PrioridadRoundRobinTest(TestCase):
         _set_prioridad(self.et, self.c, 3)
         # Caro arranca con carga y aun así se lleva las siguientes: la prioridad
         # se evalúa antes que el reparto por carga.
+        # Horas distintas del MISMO día, no días seguidos: slot_futuro empuja
+        # los fines de semana al lunes, así que dias=20/21/22 colapsan en el
+        # mismo instante cuando hoy+20 cae en sábado y la segunda reserva choca
+        # contra uq_reserva_host_inicio_confirmada.
         for i in range(3):
-            inicio = slot_futuro(dias=20 + i)
+            inicio = slot_futuro(dias=20, hora=10 + i)
             Reserva.objects.create(
                 event_type=self.et, host=self.c,
                 inicio_utc=inicio,
@@ -139,8 +143,9 @@ class PrioridadRoundRobinTest(TestCase):
     def test_el_excluido_no_gana_ni_siendo_el_unico_con_carga_cero(self, _ev, _conf):
         # Con carga 0 el reparto se lo daría a Ana; el 0 se evalúa antes.
         _set_prioridad(self.et, self.a, 0)
+        # Horas distintas del mismo día; ver el comentario de más arriba.
         for i in range(3):
-            inicio = slot_futuro(dias=20 + i)
+            inicio = slot_futuro(dias=20, hora=10 + i)
             Reserva.objects.create(
                 event_type=self.et, host=self.b,
                 inicio_utc=inicio, fin_utc=inicio + timedelta(minutes=30),

@@ -41,8 +41,16 @@ class CrearReservaTest(TestCase):
         inicio = slot_futuro()
         crear_reserva(self.et, inicio_utc=inicio)
 
+        # La segunda va a nombre de otra persona a propósito: repitiendo el
+        # invitado saltaría antes ReservaDuplicadaError ("ya tienes una cita
+        # futura"), que es otra regla. Lo que se prueba aquí es que el slot,
+        # una vez cogido, no se le da a nadie más.
+        from calendario.bookings.services import crear_reserva as svc_crear
         with self.assertRaises(SlotNoDisponibleError):
-            crear_reserva(self.et, inicio_utc=inicio)
+            svc_crear(
+                event_type=self.et, inicio_utc=inicio,
+                nombre_invitado='Otra persona', email_invitado='otra@x.com',
+            )
 
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=True)
     @patch('calendario.bookings.services.crear_evento_google')

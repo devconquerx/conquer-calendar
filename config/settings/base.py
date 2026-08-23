@@ -1,8 +1,16 @@
 import environ
 import os
+import sys
 from pathlib import Path
 
 env = environ.Env()
+
+# True cuando la suite está corriendo (`manage.py test`). Sirve para que el
+# código que sale a la red no lo haga en los tests: cada llamada real a Google
+# cuesta segundos y acaba en un error de credenciales que no prueba nada. Lo
+# consultan sitios muy concretos —el post_save que sincroniza un host nuevo—,
+# no es un interruptor para saltarse lógica de negocio.
+TESTING = 'test' in sys.argv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = environ.Path(__file__) - 3

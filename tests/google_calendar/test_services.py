@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock, patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from calendario.bookings.models import Reserva
 from calendario.google_calendar.services import consultar_freebusy
@@ -24,11 +24,21 @@ def _reserva_en_bd(host, et, inicio=None):
     )
 
 
+# Los tests de aquí simulan el cliente de Google parcheando `build`, así que
+# necesitan que `obtener_servicio_calendar` construya el servicio en vez de
+# cortarse por `settings.TESTING`: de ahí el override en cada uno. Sin él la
+# función lanza ServiceAccountNoConfiguradaError y el test pasaría por el
+# camino fail-open —devolviendo False o [] sin llegar al mock—, sin probar nada.
+#
+# El override va en el método y NO en la clase a propósito: envolviendo la clase
+# también cubre al setUp, y ahí `crear_host()` dispara el post_save que
+# sincroniza con Google de verdad, que es justo lo que se quiere evitar.
 class FreeBusyTest(TestCase):
 
     def setUp(self):
         self.host = crear_host()
 
+    @override_settings(TESTING=False)
     @patch('calendario.google_calendar.services.build')
     @patch('calendario.google_calendar.services.service_account')
     def test_freebusy_ocupado_devuelve_true(self, mock_sa, mock_build):
@@ -47,6 +57,7 @@ class FreeBusyTest(TestCase):
         resultado = consultar_freebusy(self.host.email, inicio, inicio + timedelta(minutes=30))
         self.assertTrue(resultado)
 
+    @override_settings(TESTING=False)
     @patch('calendario.google_calendar.services.build')
     @patch('calendario.google_calendar.services.service_account')
     def test_freebusy_libre_devuelve_false(self, mock_sa, mock_build):
@@ -65,6 +76,7 @@ class FreeBusyTest(TestCase):
         resultado = consultar_freebusy(self.host.email, inicio, inicio + timedelta(minutes=30))
         self.assertFalse(resultado)
 
+    @override_settings(TESTING=False)
     @patch('calendario.google_calendar.services.build')
     @patch('calendario.google_calendar.services.service_account')
     def test_freebusy_error_google_fail_open(self, mock_sa, mock_build):
@@ -91,6 +103,7 @@ class CrearEventoGoogleTest(TestCase):
         for dia in range(5):
             crear_disponibilidad(self.host, dia=dia)
 
+    @override_settings(TESTING=False)
     @patch('calendario.google_calendar.services.build')
     @patch('calendario.google_calendar.services.service_account')
     def test_crea_evento_y_guarda_meet_url(self, mock_sa, mock_build):
@@ -113,6 +126,7 @@ class CrearEventoGoogleTest(TestCase):
         self.assertEqual(reserva.google_meet_url, 'https://meet.google.com/test-abc')
         self.assertEqual(reserva.google_sync_estado, Reserva.GoogleSyncEstado.SINCRONIZADO)
 
+    @override_settings(TESTING=False)
     @patch('calendario.google_calendar.services.build')
     @patch('calendario.google_calendar.services.service_account')
     def test_error_google_marca_estado_error(self, mock_sa, mock_build):
@@ -133,6 +147,7 @@ class CrearEventoGoogleTest(TestCase):
         reserva.refresh_from_db()
         self.assertEqual(reserva.google_sync_estado, Reserva.GoogleSyncEstado.ERROR)
 
+    @override_settings(TESTING=False)
     @patch('calendario.google_calendar.services.build')
     @patch('calendario.google_calendar.services.service_account')
     def test_eliminar_evento_idempotente_404(self, mock_sa, mock_build):

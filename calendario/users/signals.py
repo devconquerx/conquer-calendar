@@ -35,11 +35,19 @@ def crear_disponibilidad_default(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=User)
 def inicializar_gcal(sender, instance, created, **kwargs):
+    from django.conf import settings
+
     # raw=True durante loaddata — saltamos para no interferir con la restauración
     if not created or kwargs.get('raw'):
         return
+    # En los tests no se sale a Google: casi todos crean un host en su setUp y
+    # cada uno se llevaba ~0,4 s esperando a que las credenciales de prueba
+    # fallaran con invalid_grant. Eran más de 50 s de los 250 de la suite, sin
+    # probar nada. Los tests que quieran esta ruta pueden forzarla con
+    # override_settings(TESTING=False) o llamando al sync directamente.
+    if getattr(settings, 'TESTING', False):
+        return
     try:
-        from django.conf import settings
         from calendario.google_calendar.sync import sincronizar_host_completo, registrar_canal_watch
         sincronizar_host_completo(instance)
         webhook_url = getattr(settings, 'GCAL_WEBHOOK_URL', '')
