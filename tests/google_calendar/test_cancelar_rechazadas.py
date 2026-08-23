@@ -177,7 +177,10 @@ class InvitadosQueDeclinaronTest(TestCase):
             _invitados_que_declinaron({'id': 'x', 'status': 'confirmed'}), set())
 
 
-@override_settings(CANCELAR_RECHAZOS_DESDE='2020-01-01T00:00:00')
+@override_settings(
+    CANCELAR_RECHAZOS_DESDE='2020-01-01T00:00:00',
+    CANCELAR_RECHAZOS_INVITADO_DESDE='2020-01-01T00:00:00',
+)
 @patch(PATCH_CANCELAR_GCAL)
 @patch(PATCH_CONFLICTO, return_value=False)
 @patch(PATCH_CREAR)
@@ -267,8 +270,14 @@ class CancelarPorRechazoDelInvitadoTest(TestCase):
 @patch(PATCH_CREAR)
 class CorteDeArranqueInvitadoTest(TestCase):
     """
-    El corte protege igual al rechazo del invitado, que es el caso peligroso:
-    hay muchos más "No" de invitados que de hosts acumulados en el histórico.
+    El rechazo del invitado tiene su PROPIO corte
+    (`CANCELAR_RECHAZOS_INVITADO_DESDE`), separado del que ya llevaba el host.
+
+    Es el caso peligroso: hay muchos más "No" de invitados acumulados que de
+    hosts, y el corte del host lleva puesto desde el incidente del 20/08/2026
+    con una fecha que ya dejó pasar días de reservas. Si compartieran corte,
+    estrenar esto cancelaría de golpe todo ese arrastre; y moverlo a la fecha
+    del despliegue apagaría cancelaciones de host que hoy funcionan bien.
     """
 
     def setUp(self):
@@ -288,8 +297,9 @@ class CorteDeArranqueInvitadoTest(TestCase):
         return r
 
     def test_sin_fecha_configurada_no_cancela_nada(self, *_):
+        # Así es como llega a producción: apagado.
         r = self._reserva()
-        with self.settings(CANCELAR_RECHAZOS_DESDE=''):
+        with self.settings(CANCELAR_RECHAZOS_INVITADO_DESDE=''):
             _cancelar_reservas_rechazadas(
                 self.host, [], {'gcal-evt-1': {'lead@x.com'}})
         r.refresh_from_db()
@@ -298,8 +308,29 @@ class CorteDeArranqueInvitadoTest(TestCase):
     def test_no_toca_reservas_anteriores_al_corte(self, *_):
         r = self._reserva()
         manana = (r.fecha_creacion + timedelta(days=1)).isoformat()
-        with self.settings(CANCELAR_RECHAZOS_DESDE=manana):
+        with self.settings(CANCELAR_RECHAZOS_INVITADO_DESDE=manana):
             _cancelar_reservas_rechazadas(
                 self.host, [], {'gcal-evt-1': {'lead@x.com'}})
         r.refresh_from_db()
         self.assertEqual(r.estado, Reserva.Estado.CONFIRMADA)
+
+    def test_el_corte_del_host_no_enciende_el_del_invitado(self, *_):
+        # El escenario exacto del despliegue: el host lleva su corte abierto
+        # desde hace días y el del invitado todavía sin poner. El "No" del
+        # invitado no puede cancelar nada por la puerta de atrás.
+        r = self._reserva()
+        with self.settings(CANCELAR_RECHAZOS_DESDE='2020-01-01T00:00:00',
+                           CANCELAR_RECHAZOS_INVITADO_DESDE=''):
+            _cancelar_reservas_rechazadas(
+                self.host, [], {'gcal-evt-1': {'lead@x.com'}})
+        r.refresh_from_db()
+        self.assertEqual(r.estado, Reserva.Estado.CONFIRMADA)
+
+    def test_el_host_sigue_cancelando_con_el_invitado_apagado(self, *_):
+        # Y al revés: apagar el del invitado no debe tocar lo que ya funciona.
+        r = self._reserva()
+        with self.settings(CANCELAR_RECHAZOS_DESDE='2020-01-01T00:00:00',
+                           CANCELAR_RECHAZOS_INVITADO_DESDE=''):
+            _cancelar_reservas_rechazadas(self.host, ['gcal-evt-1'])
+        r.refresh_from_db()
+        self.assertEqual(r.estado, Reserva.Estado.CANCELADA)

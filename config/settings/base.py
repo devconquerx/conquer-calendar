@@ -5,12 +5,19 @@ from pathlib import Path
 
 env = environ.Env()
 
-# True cuando la suite está corriendo (`manage.py test`). Sirve para que el
+# True solo cuando la suite está corriendo (`manage.py test`). Sirve para que el
 # código que sale a la red no lo haga en los tests: cada llamada real a Google
 # cuesta segundos y acaba en un error de credenciales que no prueba nada. Lo
-# consultan sitios muy concretos —el post_save que sincroniza un host nuevo—,
-# no es un interruptor para saltarse lógica de negocio.
-TESTING = 'test' in sys.argv
+# consultan sitios muy concretos —el post_save que sincroniza un host nuevo y
+# obtener_servicio_calendar—, no es un interruptor para saltarse lógica de
+# negocio.
+#
+# Se mira SOLO el subcomando, no `'test' in sys.argv`: así ningún comando de
+# management que reciba "test" como argumento puede encenderla por accidente.
+# Encendida en producción, la app dejaría de ver la ocupación real del
+# calendario y aceptaría reservas encima de eventos que ya existen, sin ruido
+# ninguno. Vale la pena que la condición sea estrecha.
+TESTING = sys.argv[1:2] == ['test']
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = environ.Path(__file__) - 3
@@ -460,6 +467,15 @@ CKEDITOR_CONFIGS = {
 # rechazos recientes, así que sin este corte se cancelaría el histórico entero
 # de golpe (pasó el 20/08/2026). Vacío = el sync no cancela nada.
 CANCELAR_RECHAZOS_DESDE = env.str('CANCELAR_RECHAZOS_DESDE', default='')
+
+# Lo mismo para el rechazo del INVITADO, que se añadió después y tiene su propio
+# interruptor a propósito. Dos razones: los "No" de invitados acumulados son
+# muchos más que los de hosts, y el corte del host ya lleva tiempo puesto y
+# funcionando —moverlo para estrenar esto apagaría cancelaciones de host que hoy
+# salen bien—. Vacío = el rechazo del invitado no cancela nada, que es como debe
+# llegar a producción: se enciende poniendo la fecha del despliegue, y así solo
+# actúa sobre lo que se reserve a partir de ese momento.
+CANCELAR_RECHAZOS_INVITADO_DESDE = env.str('CANCELAR_RECHAZOS_INVITADO_DESDE', default='')
 
 # Quién puede ver el registro de cancelaciones en el panel.
 CANCELACIONES_EMAILS_AUTORIZADOS = [
