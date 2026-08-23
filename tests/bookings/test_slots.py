@@ -7,6 +7,9 @@ from django.test import TestCase
 from calendario.availability.models import BloqueHorarioSemanal
 from calendario.bookings.models import Reserva
 from calendario.bookings.services import calcular_slots
+from calendario.google_calendar.models import (
+    GoogleCalendarEvento, GoogleCalendarSyncEstado,
+)
 from tests.factories import crear_disponibilidad, crear_event_type, crear_host
 
 TZ = 'America/Bogota'
@@ -157,3 +160,93 @@ class GridAlignmentTest(TestCase):
         busy = self._busy(time(10, 0), time(11, 0))
         slots = _calcular_slots_para_host(self.et, self.host, self.lunes, self.lunes, busy_override=busy)
         self.assertEqual(self._horas(slots), ['11:00', '12:00'])
+
+
+@patch(PATCH_BUSY, return_value=[])
+class BufferDelSlotCandidatoTest(TestCase):
+    """
+    El buffer se aplica por los dos lados y hay que probar los dos.
+
+    `test_buffer_despues_reduce_slots` cubre el margen que deja la RESERVA ya
+    existente. Este cubre el otro: el margen que el slot candidato reserva
+    detrás de sí mismo, que es lo que impide que una cita nueva quede pegada a
+    un evento externo de Google. Sin este test se podía borrar el buffer del
+    candidato y la suite entera seguía en verde (comprobado con una mutación el
+    23/08/2026, y también fallaba antes de tocar nada).
+    """
+
+    def setUp(self):
+        self.host = crear_host()
+        BloqueHorarioSemanal.objects.filter(host=self.host).delete()
+
+    def _slots_con_evento_externo(self, buffer_despues):
+        et = crear_event_type(self.host, duracion=30)
+        et.buffer_despues_minutos = buffer_despues
+        et.save()
+        crear_disponibilidad(self.host, dia=0, inicio=time(9, 0), fin=time(11, 0))
+        lunes = CalcularSlotsTest._proximo_dia(0)
+        tz_host = ZoneInfo(self.host.timezone)
+        # Evento ajeno de 10:00 a 10:30 (hora del host).
+        ocupado_desde = datetime.combine(lunes, time(10, 0)).replace(tzinfo=tz_host)
+        busy = [(ocupado_desde, ocupado_desde + timedelta(minutes=30))]
+        with patch(PATCH_BUSY, return_value=busy):
+            slots = calcular_slots(et, lunes, lunes)
+        return {s.astimezone(tz_host).strftime('%H:%M') for s in slots}
+
+    def test_sin_buffer_la_cita_puede_quedar_pegada_al_evento(self, _busy):
+        # 9:30 termina justo cuando empieza lo ajeno: cabe.
+        self.assertIn('09:30', self._slots_con_evento_externo(0))
+
+    def test_con_buffer_no_se_ofrece_el_slot_pegado(self, _busy):
+        # Con media hora de margen detrás, las 9:30 se comerían el evento ajeno.
+        self.assertNotIn('09:30', self._slots_con_evento_externo(30))
+
+
+class CopiaLocalTransparenteTest(TestCase):
+    """
+    Un evento 'transparent' de la copia local NO ocupa la agenda.
+
+    Es como se guarda lo que el host rechazó o marcó a mano como "Disponible":
+    Google no lo cuenta en freebusy y nosotros tampoco debemos. Sin este test se
+    podía quitar el filtro por transparencia de `obtener_busy_intervalos_local`
+    —con lo que cada evento rechazado volvería a bloquear su hueco— sin que
+    fallara un solo test.
+    """
+
+    def setUp(self):
+        self.host = crear_host()
+        BloqueHorarioSemanal.objects.filter(host=self.host).delete()
+        crear_disponibilidad(self.host, dia=0, inicio=time(9, 0), fin=time(11, 0))
+        self.et = crear_event_type(self.host, duracion=30)
+        self.lunes = CalcularSlotsTest._proximo_dia(0)
+        self.tz_host = ZoneInfo(self.host.timezone)
+        # Con el sync activo, los slots se calculan contra la copia local en vez
+        # de preguntarle a Google en vivo.
+        GoogleCalendarSyncEstado.objects.update_or_create(
+            host=self.host,
+            defaults={'estado': GoogleCalendarSyncEstado.ACTIVO,
+                      'sync_token': 'token'},
+        )
+
+    def _crear_evento(self, transparencia):
+        inicio = datetime.combine(self.lunes, time(10, 0)).replace(tzinfo=self.tz_host)
+        GoogleCalendarEvento.objects.create(
+            host=self.host,
+            google_event_id=f'evt-{transparencia}',
+            titulo='Reunión',
+            inicio_utc=inicio,
+            fin_utc=inicio + timedelta(minutes=30),
+            transparencia=transparencia,
+        )
+
+    def _horas_libres(self):
+        slots = calcular_slots(self.et, self.lunes, self.lunes)
+        return {s.astimezone(self.tz_host).strftime('%H:%M') for s in slots}
+
+    def test_un_evento_opaco_bloquea_su_hora(self):
+        self._crear_evento('opaque')
+        self.assertNotIn('10:00', self._horas_libres())
+
+    def test_un_evento_transparente_deja_la_hora_libre(self):
+        self._crear_evento('transparent')
+        self.assertIn('10:00', self._horas_libres())
