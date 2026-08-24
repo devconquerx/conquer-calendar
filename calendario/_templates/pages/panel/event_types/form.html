@@ -1264,11 +1264,11 @@ por debajo de la cabecera. Sus inputs no llevan name, así que no se envían.
                   </div>
                   <div>
                     <label class="form-label fw-semibold fs-7 mb-1">De</label>
-                    <input type="time" id="disp-fecha-hi" class="form-control form-control-sm" style="width:105px;" value="09:00">
+                    <input type="text" id="disp-fecha-hi" class="form-control form-control-sm js-hora24" style="width:105px;" value="09:00">
                   </div>
                   <div>
                     <label class="form-label fw-semibold fs-7 mb-1">A</label>
-                    <input type="time" id="disp-fecha-hf" class="form-control form-control-sm" style="width:105px;" value="17:00">
+                    <input type="text" id="disp-fecha-hf" class="form-control form-control-sm js-hora24" style="width:105px;" value="17:00">
                   </div>
                   <button type="button" class="btn btn-sm btn-primary" id="disp-add-fecha-btn">Añadir</button>
                 </div>
@@ -1299,7 +1299,7 @@ por debajo de la cabecera. Sus inputs no llevan name, así que no se envían.
 .disp-day-card.is-off .disp-slots,
 .disp-day-card.is-off .disp-add-slot { display:none; }
 .disp-slot { display:flex; align-items:center; gap:5px; }
-.disp-slot input[type="time"] {
+.disp-slot input[type="text"] {
   border:1px solid #e1e3ea; border-radius:6px; padding:4px 6px;
   font-size:12px; color:#374151; width:90px;
 }
@@ -1473,7 +1473,8 @@ por debajo de la cabecera. Sus inputs no llevan name, así que no se envían.
       row.className = 'disp-slot';
 
       var hiInput = document.createElement('input');
-      hiInput.type = 'time';
+      hiInput.type = 'text';
+      hiInput.className = 'js-hora24';
       hiInput.value = slot.hi;
       hiInput.addEventListener('change', function() {
         if (weeklyData[dia] && weeklyData[dia][idx]) weeklyData[dia][idx].hi = hiInput.value;
@@ -1485,7 +1486,8 @@ por debajo de la cabecera. Sus inputs no llevan name, así que no se envían.
       sep.textContent = '—';
 
       var hfInput = document.createElement('input');
-      hfInput.type = 'time';
+      hfInput.type = 'text';
+      hfInput.className = 'js-hora24';
       hfInput.value = slot.hf;
       hfInput.addEventListener('change', function() {
         if (weeklyData[dia] && weeklyData[dia][idx]) weeklyData[dia][idx].hf = hfInput.value;

@@ -251,3 +251,9 @@
 
 {% include 'partials/_scrolltop.html' %}
 {% endblock layout %}
+
+{% block javascript %}
+{{ block.super }}
+{# Las horas se ven y se envían en 24h para todos, sin depender del idioma del navegador #}
+<script src="{% static 'js/hora-24h.js' %}"></script>
+{% endblock javascript %}

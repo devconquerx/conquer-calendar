@@ -1381,9 +1381,9 @@
               {% csrf_token %}
               {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
               <input type="hidden" name="dia_semana" value="{{ grupo.dia_valor }}" />
-              <input type="time" name="hora_inicio" class="avail-time-input" value="09:00" required />
+              <input type="text" name="hora_inicio" class="avail-time-input js-hora24" value="09:00" required />
               <span class="avail-sep">–</span>
-              <input type="time" name="hora_fin" class="avail-time-input" value="17:00" required />
+              <input type="text" name="hora_fin" class="avail-time-input js-hora24" value="17:00" required />
               <button type="submit" class="avail-btn-save">Guardar</button>
               <button type="button" class="avail-btn-cancel cancel-init-btn" data-dia="{{ grupo.dia_valor }}">Cancelar</button>
             </form>
@@ -1400,13 +1400,13 @@
                   class="avail-time-row avail-row-edit">
               {% csrf_token %}
               {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
-              <input type="time" name="hora_inicio" value="{{ b.hora_inicio|time:'H:i' }}"
+              <input type="text" name="hora_inicio" value="{{ b.hora_inicio|time:'H:i' }}"
                      data-original="{{ b.hora_inicio|time:'H:i' }}"
-                     class="avail-time-input avail-time-editable" required />
+                     class="avail-time-input js-hora24 avail-time-editable" required />
               <span class="avail-sep">–</span>
-              <input type="time" name="hora_fin" value="{{ b.hora_fin|time:'H:i' }}"
+              <input type="text" name="hora_fin" value="{{ b.hora_fin|time:'H:i' }}"
                      data-original="{{ b.hora_fin|time:'H:i' }}"
-                     class="avail-time-input avail-time-editable" required />
+                     class="avail-time-input js-hora24 avail-time-editable" required />
               <span class="avail-row-actions">
                 <button type="submit" class="avail-btn-ok" title="Guardar cambios">
                   <i class="bi bi-check-lg"></i>
@@ -1463,13 +1463,13 @@
           </div>
           {% else %}
           <div class="avail-time-row">
-            <input type="time" value="{{ b.hora_inicio|time:'H:i' }}"
-                   class="avail-time-input"
+            <input type="text" value="{{ b.hora_inicio|time:'H:i' }}"
+                   class="avail-time-input js-hora24"
                    readonly
                    style="pointer-events:none; background:var(--bs-gray-100); color:var(--bs-gray-800);" />
             <span class="avail-sep">–</span>
-            <input type="time" value="{{ b.hora_fin|time:'H:i' }}"
-                   class="avail-time-input"
+            <input type="text" value="{{ b.hora_fin|time:'H:i' }}"
+                   class="avail-time-input js-hora24"
                    readonly
                    style="pointer-events:none; background:var(--bs-gray-100); color:var(--bs-gray-800);" />
           </div>
@@ -1491,9 +1491,9 @@
                 {% csrf_token %}
                 {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
                 <input type="hidden" name="dia_semana" value="{{ grupo.dia_valor }}" />
-                <input type="time" name="hora_inicio" class="avail-time-input" value="09:00" required />
+                <input type="text" name="hora_inicio" class="avail-time-input js-hora24" value="09:00" required />
                 <span class="avail-sep">–</span>
-                <input type="time" name="hora_fin" class="avail-time-input" value="17:00" required />
+                <input type="text" name="hora_fin" class="avail-time-input js-hora24" value="17:00" required />
                 <button type="submit" class="avail-btn-save">Guardar</button>
                 <button type="button"
                         class="avail-btn-cancel cancel-add-btn"
@@ -1536,13 +1536,13 @@
                 class="avail-time-row avail-row-edit">
             {% csrf_token %}
             {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
-            <input type="time" name="hora_inicio" value="{{ b.hora_inicio|time:'H:i' }}"
+            <input type="text" name="hora_inicio" value="{{ b.hora_inicio|time:'H:i' }}"
                    data-original="{{ b.hora_inicio|time:'H:i' }}"
-                   class="avail-time-input avail-time-editable" required />
+                   class="avail-time-input js-hora24 avail-time-editable" required />
             <span class="avail-sep">–</span>
-            <input type="time" name="hora_fin" value="{{ b.hora_fin|time:'H:i' }}"
+            <input type="text" name="hora_fin" value="{{ b.hora_fin|time:'H:i' }}"
                    data-original="{{ b.hora_fin|time:'H:i' }}"
-                   class="avail-time-input avail-time-editable" required />
+                   class="avail-time-input js-hora24 avail-time-editable" required />
             <span class="avail-row-actions">
               <button type="submit" class="avail-btn-ok" title="Guardar cambios">
                 <i class="bi bi-check-lg"></i>
@@ -2174,9 +2174,9 @@
     var row = document.createElement('div');
     row.className = 'fm-range-row';
     row.innerHTML =
-      '<input type="time" name="hora_inicio" class="avail-time-input" value="' + ini + '" required>' +
+      '<input type="text" name="hora_inicio" class="avail-time-input js-hora24" value="' + ini + '" required>' +
       '<span class="avail-sep">–</span>' +
-      '<input type="time" name="hora_fin" class="avail-time-input" value="' + fin + '" required>' +
+      '<input type="text" name="hora_fin" class="avail-time-input js-hora24" value="' + fin + '" required>' +
       '<button type="button" class="avail-btn-del fm-del-range" title="Quitar"><i class="bi bi-x-lg"></i></button>';
     row.querySelector('.fm-del-range').addEventListener('click', function () {
       if (rangesWrap.children.length > 1) row.remove();
