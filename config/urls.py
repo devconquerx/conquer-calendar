@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.views.generic import RedirectView
 
 from calendario.users.views import MagicLoginView, MagicLoginStopView
-from calendario.funnels.evento_views import EventoView
+from calendario.funnels.evento_views import EventoView, GraciasView
 from calendario.funnels.views import (
     FunnelAgendaView, FunnelClaseView, FunnelConfirmationView,
     FunnelVideoView, FunnelStatusView,
@@ -59,6 +59,12 @@ urlpatterns = [
     # registra aparte y lleva la escuela fijada: su dominio no es ambiguo.
     re_path(r'^cl-evento/?$', EventoView.as_view(), {'escuela': 'conquer-languages'},
             name='evento_languages'),
+    # Página de "gracias" del evento: presenta el grupo de WhatsApp y salta a él
+    # sola a los 15 s. Blocks y Finance la sirven bajo /evento/; Languages en la
+    # raíz, con otro nombre, tal como en Webflow.
+    re_path(r'^evento/gracias-comunidad/?$', GraciasView.as_view(), name='evento_gracias'),
+    re_path(r'^grupos-comunidad/?$', GraciasView.as_view(), {'escuela': 'conquer-languages'},
+            name='evento_gracias_languages'),
     # Panel interno de estado de los funnels (lista escuelas + enlaces).
     path('funnels/', FunnelStatusView.as_view(), name='funnel_status'),
     # URLs públicas canónicas por marca/producto (antes del catch-all de booking).

@@ -1,0 +1,17 @@
+{% comment %}
+A los 15 segundos la página salta sola al grupo, igual que el original
+(`setTimeout(redirectToNewPage, 15000)`). El botón sigue estando para quien no
+quiera esperar. No se toca el temporizador si el visitante ya se ha ido a la
+pestaña del grupo por su cuenta: `visibilitychange` lo cancela, porque volver y
+que te reenvíe otra vez es justo lo contrario de lo que se espera.
+{% endcomment %}
+<script>
+(function () {
+  var destino = "{{ whatsapp|escapejs }}";
+  if (!destino) return;
+  var salto = setTimeout(function () { window.location.href = destino; }, 15000);
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) clearTimeout(salto);
+  });
+})();
+</script>

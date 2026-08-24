@@ -1,0 +1,22 @@
+{% comment %}
+El CTA se repite tres veces en la página, una por tarjeta, tal como en el
+original. Va aparte para que las tres sean literalmente el mismo botón.
+
+El texto y la flechita cambian por marca: Blocks y Finance llevan "Unirme a la
+Comunidad VIP de WhatsApp" con el icono en diagonal del sistema de botones, y
+Languages lo lleva en mayúsculas y termina en ">>", sin icono.
+{% endcomment %}
+<div class="cta-fila">
+  <a class="button_wrap" href="{{ whatsapp }}" target="_blank" rel="noopener">
+    <div class="button_content">
+      <span class="button_text">{{ cta }}</span>
+      {% if icono_cta %}
+      <span class="button_icon" aria-hidden="true">
+        <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
+        </svg>
+      </span>
+      {% endif %}
+    </div>
+  </a>
+</div>

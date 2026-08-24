@@ -227,17 +227,50 @@ class RedireccionDeGraciasTest(TestCase):
         crudo = html[i:html.index('"', i)]
         return re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), crudo)
 
-    def test_cada_marca_apunta_a_la_suya(self):
-        self.assertEqual(self._gracias('www.conquerblocks.com'),
-                         'https://www.conquerblocks.com/gracias-comunidad')
-        self.assertEqual(self._gracias('www.conquerlanguages.com', '/cl-evento'),
-                         'https://www.conquerlanguages.com/grupos-comunidad')
+    def test_cada_marca_va_a_su_propia_pagina(self):
+        # Ruta relativa a propósito: sirve para cualquier host sin tener que
+        # resolver el dominio público de cada marca.
+        self.assertEqual(self._gracias('www.conquerblocks.com'), '/evento/gracias-comunidad')
+        self.assertEqual(self._gracias('www.conquerfinance.com'), '/evento/gracias-comunidad')
+        self.assertEqual(self._gracias('www.conquerlanguages.com', '/cl-evento'), '/grupos-comunidad')
 
-    def test_finance_va_a_la_de_blocks_como_el_original(self):
-        # No es un descuido: `conquerfinance.com/grupos-comunidad` está a
-        # medias (Lorem Ipsum), así que Finance no tiene página propia.
-        self.assertEqual(self._gracias('www.conquerfinance.com'),
-                         'https://www.conquerblocks.com/gracias-comunidad')
+    def test_la_pagina_de_gracias_responde_en_cada_dominio(self):
+        for host, ruta in (('www.conquerblocks.com', '/evento/gracias-comunidad'),
+                           ('www.conquerfinance.com', '/evento/gracias-comunidad'),
+                           ('www.conquerlanguages.com', '/grupos-comunidad')):
+            resp = self.client.get(ruta, HTTP_HOST=host)
+            self.assertEqual(resp.status_code, 200, f'{host}{ruta}')
+            html = resp.content.decode()
+            self.assertIn('comunidad vip', html.lower())
+            # El grupo se enlaza tres veces, una por tarjeta, como en el
+            # original: `button_wrap` sale además en el CSS, así que se cuentan
+            # los enlaces.
+            self.assertEqual(html.count('<a class="button_wrap"'), 3, f'{host}{ruta}')
+
+    def test_salta_sola_al_grupo_a_los_15_segundos(self):
+        html = self.client.get('/evento/gracias-comunidad',
+                               HTTP_HOST='www.conquerblocks.com').content.decode()
+        self.assertIn('15000', html)
+        self.assertIn('cb.conquerx.com', html)
+
+    def test_cada_marca_pinta_su_titular_degradado(self):
+        # `.conquer-gradient` no es la pareja del CTA: en Finance el titular es
+        # verde aunque el CTA también lo sea, y en Blocks naranja. Medido sobre
+        # las páginas originales.
+        cb = self.client.get('/evento/gracias-comunidad',
+                             HTTP_HOST='www.conquerblocks.com').content.decode()
+        cf = self.client.get('/evento/gracias-comunidad',
+                             HTTP_HOST='www.conquerfinance.com').content.decode()
+        self.assertIn('--titular-1:#ff4000', cb)
+        self.assertIn('--titular-2:#ff9800', cb)
+        self.assertIn('--titular-1:#3ac043', cf)
+        self.assertIn('--titular-2:#aed916', cf)
+
+    def test_languages_enlaza_su_grupo_y_no_el_de_blocks(self):
+        html = self.client.get('/grupos-comunidad',
+                               HTTP_HOST='www.conquerlanguages.com').content.decode()
+        self.assertIn('cl.conquerx.com', html)
+        self.assertNotIn('cb.conquerx.com', html)
 
     def test_no_se_mandan_datos_personales_en_la_url(self):
         js = (Path(__file__).resolve().parents[2]

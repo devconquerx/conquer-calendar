@@ -35,7 +35,6 @@ EVENTOS = {
         # el valor de reserva: normalmente lo manda la campaña (ver
         # `_funnel_de_la_edicion`), y este se usa cuando no viene ninguna.
         'funnel': 'cb-lanzamiento11',
-        'gracias': 'https://www.conquerblocks.com/gracias-comunidad',
         'titulo_pagina': 'Evento Online Simple',
         'barra': 'EVENTO EN DIRECTO : Domingo 16 de Agosto a las 19:00 de Madrid '
                  '(14:00 de Buenos Aires, 13:00 de Miami)',
@@ -72,10 +71,11 @@ EVENTOS = {
         # Sí, la de Blocks: es a donde manda el original. No es un descuido al
         # copiar la página —`conquerfinance.com/grupos-comunidad` existe pero
         # está a medias, con Lorem Ipsum—, así que Finance no tiene una propia.
-        'gracias': 'https://www.conquerblocks.com/gracias-comunidad',
         'marca': 'Conquer Finance',
         'gradiente_1': '#aed916',
         'gradiente_2': '#3ac043',
+        'titular_1': '#3ac043',
+        'titular_2': '#aed916',
         'logo': 'img/eventos/cf-logo-horizontal-blanco.png',
         'logo_ancho': 338,
         'foto': 'img/eventos/cf-evento-imagen.webp',
@@ -115,7 +115,6 @@ EVENTOS = {
         # Languages sí lo lleva fijo en la página (no lo saca de la campaña),
         # pero se acepta igual la campaña por coherencia. Edición en curso.
         'funnel': 'cl-lanzamiento9',
-        'gracias': 'https://www.conquerlanguages.com/grupos-comunidad',
         'barra': 'De 0 a inglés fluido en 90 días: El 6 de Septiembre a las 19:00 Madrid '
                  '(14:00 de Buenos Aires, 13:00 de Miami)',
         # El titular parte el destacado por el medio, no al final como el de
@@ -140,6 +139,64 @@ EVENTOS = {
     },
 }
 
+
+
+# Página de "gracias": el último paso real del registro. Presenta el grupo de
+# WhatsApp de asistentes, y a los 15 segundos salta sola a él.
+#
+# En Webflow, la de Finance manda al grupo de Blocks —las tres veces— porque su
+# página se clonó de la de Blocks y nadie cambió el enlace. Aquí se deja igual
+# de momento para no inventarse un grupo que no existe: cambiar `whatsapp` por
+# el enlace bueno es lo único que hace falta cuando lo haya.
+GRACIAS = {
+    'conquer-blocks': {
+        'plantilla': 'pages/public/evento/gracias-paperboard.html',
+        'ruta': 'evento/gracias-comunidad',
+        'titulo_pagina': 'Gracias Comunidad',
+        'whatsapp': 'https://cb.conquerx.com/1Qt1ef/',
+        'clase': 'Clase Privada de Conquer Blocks.',
+        'cta': 'Unirme a la Comunidad VIP de WhatsApp',
+        'icono_cta': True,
+        'marca': 'Conquer Blocks',
+        'logo': 'img/eventos/cb-logo-horizontal-blanco.png',
+        'logo_ancho': 152,
+        'gradiente_1': '#ff4000',
+        'gradiente_2': '#ff9800',
+        # El titular degradado (`.conquer-gradient`) no usa la misma pareja que
+        # el CTA ni en el mismo orden, así que va aparte en cada marca.
+        'titular_1': '#ff4000',
+        'titular_2': '#ff9800',
+    },
+    'conquer-finance': {
+        'plantilla': 'pages/public/evento/gracias-paperboard.html',
+        'ruta': 'evento/gracias-comunidad',
+        'titulo_pagina': '¡Registro Confirmado! - Trading Week | Conquer Finance',
+        # OJO: es el grupo de Blocks, tal como está hoy en Webflow.
+        'whatsapp': 'https://cb.conquerx.com/1Qt1ef/',
+        'clase': 'Clase Privada de Conquer Finance.',
+        'cta': 'Unirme a la Comunidad VIP de WhatsApp',
+        'icono_cta': True,
+        'marca': 'Conquer Finance',
+        'logo': 'img/eventos/cf-logo-horizontal-blanco.png',
+        'logo_ancho': 152,
+        'gradiente_1': '#aed916',
+        'gradiente_2': '#3ac043',
+        'titular_1': '#3ac043',
+        'titular_2': '#aed916',
+    },
+    'conquer-languages': {
+        'plantilla': 'pages/public/evento/gracias-languages.html',
+        'ruta': 'grupos-comunidad',
+        'titulo_pagina': 'Gracias-Comunidad',
+        'whatsapp': 'https://cl.conquerx.com/5P9e7L/',
+        'clase': 'Clase de 0 a Inglés fluido',
+        'cta': 'UNIRME A LA COMUNIDAD VIP DE WHATSAPP >>',
+        'icono_cta': False,
+        'marca': 'Conquer Languages',
+        'logo': 'img/eventos/cl-logo-horizontal.png',
+        'logo_ancho': 259,
+    },
+}
 
 
 def _funnel_de_la_edicion(request, evento):
@@ -174,6 +231,7 @@ class EventoView(TemplateView):
 
     def get(self, request, *args, **kwargs):
         escuela = kwargs.get('escuela') or _escuela_por_host(request)
+        self.escuela = escuela
         self.evento = EVENTOS.get(escuela)
         if not self.evento:
             raise Http404('No hay evento para esta escuela')
@@ -196,7 +254,28 @@ class EventoView(TemplateView):
         ctx['evento'] = self.evento
         ctx['funnel'] = _funnel_de_la_edicion(self.request, self.evento)
         ctx['titulo_pagina'] = self.evento['titulo_pagina']
-        ctx['gracias'] = self.evento['gracias']
+        ctx['gracias'] = '/' + GRACIAS[self.escuela]['ruta']
         # País por defecto del selector: el que detecte Cloudflare, y España si no.
         ctx['pais_detectado'] = (self.request.headers.get('CF-IPCountry') or 'ES').upper()
+        return ctx
+
+
+class GraciasView(TemplateView):
+    """Página de "gracias" del evento, a la que lleva el registro.
+
+    Se resuelve la escuela igual que en `EventoView`. No hace falta prohibir la
+    caché como allí: aquí no hay nada que cambie de un visitante a otro."""
+
+    def get(self, request, *args, **kwargs):
+        escuela = kwargs.get('escuela') or _escuela_por_host(request)
+        self.escuela = escuela
+        self.gracias = GRACIAS.get(escuela)
+        if not self.gracias:
+            raise Http404('No hay página de gracias para esta escuela')
+        self.template_name = self.gracias['plantilla']
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx.update(self.gracias)
         return ctx
