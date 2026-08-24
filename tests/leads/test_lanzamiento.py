@@ -125,3 +125,55 @@ class CodigoDeEdicionEnLaPantallaTest(TestCase):
         obtenido = self._funnel_renderizado('?utm_campaign=black-friday')
         self.assertEqual(obtenido, EVENTOS['conquer-blocks']['funnel'])
         self.assertTrue(es_lead_de_lanzamiento(Lead(funnel=obtenido)))
+
+
+class FunnelChatEnLanzamientosTest(TestCase):
+    """De los lanzamientos, solo Languages con teléfono dispara FunnelChat.
+
+    En Make ese módulo cuelga de la rama de Languages, que filtra `funnel` por
+    'cl'. Blocks no tiene módulo y Finance tampoco entra: su rama filtra por
+    'fi' y los códigos de lanzamiento de Finance son 'cf-lanzamientoN'.
+    """
+
+    def _crear(self, funnel, telefono='600111222'):
+        with patch(RUTA + 'process_crm_send'), patch(RUTA + 'process_funnelchat') as fc:
+            Lead.objects.create(email='lead@ejemplo.com', full_name='Ana',
+                                funnel=funnel, lead_phone=telefono)
+            return fc.delay.called
+
+    def test_languages_con_telefono_si(self):
+        self.assertTrue(self._crear('cl-lanzamiento9'))
+
+    def test_languages_sin_telefono_no(self):
+        self.assertFalse(self._crear('cl-lanzamiento9', telefono=''))
+
+    def test_blocks_no(self):
+        self.assertFalse(self._crear('cb-lanzamiento11'))
+
+    def test_finance_no(self):
+        # 'cf-lanzamiento11' no contiene 'fi', así que en Make nunca entró.
+        self.assertFalse(self._crear('cf-lanzamiento11'))
+
+
+class TriggersDeFunnelChatTest(TestCase):
+    """Los triggers tienen que ser exactamente los dos del escenario de Make."""
+
+    def test_languages_y_finance_apuntan_a_su_trigger(self):
+        from calendario.leads.services.funnelchat import SCHOOL_FUNNELCHAT_TRIGGER as T
+        cl = 'https://flows-api.funnelchat.app/api/v1/users/3231/triggers/7db0da3a-27df-4ae9-919a-0beabc5b1250'
+        fi = 'https://flows-api.funnelchat.app/api/v1/users/3231/triggers/db9c763c-6af4-4119-b953-ff238b87a321'
+        self.assertEqual(T.get('cl'), cl)
+        self.assertEqual(T.get('cf'), fi)
+        self.assertEqual(T.get('fi'), fi)
+        self.assertIsNone(T.get('cb'), 'Blocks no tiene módulo de FunnelChat en Make')
+
+    def test_se_manda_como_multipart(self):
+        from calendario.leads.services import funnelchat
+        lead = Lead(pk=1, email='a@b.com', full_name='Ana', funnel='cl-eu',
+                    lead_phone='600111222', lead_phone_prefix='+34')
+        with patch.object(funnelchat, 'requests') as req:
+            req.post.return_value.status_code = 200
+            funnelchat.push_lead(lead)
+        _, kwargs = req.post.call_args
+        self.assertIn('files', kwargs, 'Make lo mandaba como multipart')
+        self.assertEqual(kwargs['files']['phone'], (None, '+34600111222'))

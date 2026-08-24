@@ -206,6 +206,8 @@ def dispatch_lead_tasks(lead_id):
     from calendario.leads.models import Lead
     from calendario.leads.services.utils import fires_pixel_lead, is_from_meta, is_from_tiktok, is_from_google
 
+    from calendario.leads.services.utils import get_school_code
+
     lead = Lead.objects.get(pk=lead_id)
 
     # Los leads de evento van SOLO al CRM. No es una decisión nueva: en el
@@ -217,7 +219,16 @@ def dispatch_lead_tasks(lead_id):
     # postea directo al ingest y es el CRM quien valida el email.
     if es_lead_de_lanzamiento(lead):
         process_crm_send.delay(lead_id)
-        logger.info('Lead %s: lanzamiento → solo CRM', lead_id)
+        # La única excepción es FunnelChat, y solo en Languages: en Make cuelga
+        # de la rama de Languages, que filtra `funnel` por 'cl'. Los de Blocks
+        # no tienen módulo, y los de Finance tampoco entran porque esa rama
+        # filtra por 'fi' y sus códigos son 'cf-lanzamientoN'. Se ve en el log:
+        # los lanzamientos de Languages con teléfono son los únicos que gastan
+        # 4 operaciones (webhook + ingest + FunnelChat + Sheets), 1.467 de
+        # 1.715; los de Blocks y Finance se quedan en 3.
+        if get_school_code(lead) == 'cl' and lead.lead_phone:
+            process_funnelchat.delay(lead_id)
+        logger.info('Lead %s: lanzamiento → CRM (+FunnelChat si CL)', lead_id)
         return
 
     # Respaldo en Supabase: siempre, independiente del origen y del CRM.
@@ -227,7 +238,6 @@ def dispatch_lead_tasks(lead_id):
     # dispara el server container de sGTM (tags Google Ads/Meta del contenedor
     # de Legal) — empujarlas también por API las duplicaría. El resto de
     # marcas replica el push por API que hacía el CRM con el funnel viejo.
-    from calendario.leads.services.utils import get_school_code
     es_legal = get_school_code(lead) == 'cg'
 
     # Meta CAPI va para TODOS los leads de landings con pixel (cualquier fuente),
@@ -284,6 +294,10 @@ def sweep_incomplete_leads():
             if (settings.CRM_INGEST_ENABLED and lead.email
                     and 'crm_done' not in tag_names and 'crm_failed' not in tag_names):
                 process_crm_send.delay(lead.pk)
+                requeued += 1
+            if (get_school_code(lead) == 'cl' and lead.lead_phone
+                    and 'funnelchat_done' not in tag_names):
+                process_funnelchat.delay(lead.pk)
                 requeued += 1
             continue
 
