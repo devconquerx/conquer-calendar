@@ -8,9 +8,12 @@ bloque llega oculto y se revela sin recargar— lo arranca el JS del registro al
 mostrarlo. Si arrancara al cargar, el visitante que aún está rellenando el
 formulario se iría a WhatsApp a los 15 segundos.
 
-No se toca el temporizador si el visitante ya se ha ido a la pestaña del grupo
-por su cuenta: `visibilitychange` lo cancela, porque volver y que te reenvíe
-otra vez es justo lo contrario de lo que se espera.
+El temporizador corre pase lo que pase, como en el original. Hubo un intento de
+cancelarlo con `visibilitychange` —la idea era no reenviar a quien ya se había
+ido al grupo por su cuenta—, pero el efecto real era el contrario: bastaba
+cambiar de pestaña un segundo mientras esperabas para matarlo, y ya no saltaba
+nunca. Quien ya está en el grupo pierde poco con que le reabran la invitación;
+quien esperaba el salto y no llega se queda fuera del evento.
 {% endcomment %}
 <script>
 window.iniciarSaltoWhatsApp = (function () {
@@ -21,10 +24,7 @@ window.iniciarSaltoWhatsApp = (function () {
     var destino = caja && caja.dataset.whatsapp;
     if (!destino) return;
     lanzado = true;
-    var salto = setTimeout(function () { window.location.href = destino; }, 15000);
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden) clearTimeout(salto);
-    });
+    setTimeout(function () { window.location.href = destino; }, 15000);
   };
 })();
 </script>

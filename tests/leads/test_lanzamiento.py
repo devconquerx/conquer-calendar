@@ -535,3 +535,59 @@ class LaUrlQueDejaElPushStateSeAguantaTest(TestCase):
         html = self.client.get(url, HTTP_HOST='calendar.conquerx.com').content.decode()
         # La de Finance, no la de Blocks: se distinguen por el contenedor GTM.
         self.assertIn("st = 'MXTDVVBG'", html)
+
+
+class ElSaltoAlGrupoNoSeCancelaTest(TestCase):
+    """El temporizador de 15 s tiene que correr pase lo que pase.
+
+    Hubo un intento de cancelarlo con `visibilitychange` para no reenviar a
+    quien ya se había ido al grupo por su cuenta, pero el efecto era el
+    contrario: bastaba cambiar de pestaña un segundo mientras esperabas para
+    matarlo, y ya no saltaba nunca. El original no cancela nada.
+    """
+
+    def _salto(self, ruta, host):
+        html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+        return html[html.index('window.iniciarSaltoWhatsApp = '):]
+
+    def test_no_hay_nada_que_lo_cancele(self):
+        js = self._salto('/grupos-comunidad', 'www.conquerlanguages.com')
+        cuerpo = js[:js.index('</script>')]
+        self.assertIn('15000', cuerpo)
+        self.assertNotIn('clearTimeout', cuerpo)
+        self.assertNotIn('visibilitychange', cuerpo)
+
+    def test_la_pagina_suelta_lo_arranca_al_cargar(self):
+        html = self.client.get('/grupos-comunidad',
+                               HTTP_HOST='www.conquerlanguages.com').content.decode()
+        self.assertIn('window.iniciarSaltoWhatsApp();', html)
+
+    def test_en_la_del_evento_no_arranca_hasta_registrarse(self):
+        # Si arrancara al cargar, quien aún está rellenando el formulario se
+        # iría a WhatsApp a los 15 segundos.
+        html = self.client.get('/cl-evento', HTTP_HOST='www.conquerlanguages.com').content.decode()
+        self.assertIn('window.iniciarSaltoWhatsApp = ', html)
+        self.assertNotIn('window.iniciarSaltoWhatsApp();', html)
+        js = (Path(__file__).resolve().parents[2]
+              / 'calendario' / 'static' / 'js' / 'evento-registro.js').read_text(encoding='utf-8')
+        self.assertIn('window.iniciarSaltoWhatsApp()', js)
+
+
+class ElTelefonoSeVeComoUnSoloControlTest(TestCase):
+    """Prefijo y número forman un control único, como el original.
+
+    En Languages la regla del número dentro de `.tel-row` iba sin `[type=tel]`,
+    así que perdía por especificidad contra `.campo input[type=tel]` y el número
+    conservaba su propio borde y su radio: se veía un segundo recuadro dentro
+    del control y el prefijo quedaba descolgado.
+    """
+
+    def test_la_regla_del_numero_gana_a_la_general(self):
+        for ruta, host in (('/cl-evento', 'www.conquerlanguages.com'),
+                           ('/evento/evento-online', 'www.conquerblocks.com')):
+            html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+            estilos = html[:html.index('</style>')]
+            self.assertIn('.tel-row input[type=tel]{', estilos, f'{host}{ruta}')
+            # La general existe y es la que había que ganar.
+            self.assertIn('.campo input[type=text],.campo input[type=email],.campo input[type=tel]',
+                          estilos, f'{host}{ruta}')

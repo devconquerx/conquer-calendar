@@ -79,9 +79,13 @@ body{
 /* Prefijo + número: un solo control unido, como el original. El botón lleva
    bandera, prefijo y chevron; el desplegable tiene buscador. */
 .tel-row{display:flex;align-items:stretch;border:1px solid var(--borde-input);border-radius:20px;background:#fff}
-.tel-row input{flex:1 1 auto;border:0;border-radius:0 20px 20px 0;padding:8px 12px;font-size:14px;
+/* Con `[type=tel]`, no sin él: la regla general de arriba
+   (`.campo input[type=tel]`) es más específica que `.tel-row input` y le
+   devolvía al número su propio borde y su radio, de modo que se veía un
+   segundo recuadro dentro del control y el prefijo quedaba descolgado. */
+.tel-row input[type=tel]{flex:1 1 auto;border:0;border-radius:0 20px 20px 0;padding:8px 12px;font-size:14px;
   font-family:var(--fuente);color:var(--tinta);background:transparent;min-width:0}
-.tel-row input:focus-visible{outline:2px solid var(--teal-cta);outline-offset:-2px}
+.tel-row input[type=tel]:focus-visible{outline:2px solid var(--teal-cta);outline-offset:-2px}
 .prefijo{position:relative;flex:0 0 auto}
 .prefijo-boton{display:flex;align-items:center;gap:4px;height:100%;background:none;border:0;
   border-right:1px solid var(--borde-input);border-radius:20px 0 0 20px;padding:6px 10px;
