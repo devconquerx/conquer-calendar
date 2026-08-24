@@ -318,11 +318,11 @@ class DeteccionDePaisTest(TestCase):
 
 
 class GtmEnLasPantallasTest(TestCase):
-    """Las pantallas tienen que cargar el mismo contenedor que cargaba Webflow.
+    """Cada marca carga su contenedor en la pantalla del evento y en la de gracias.
 
-    Blocks lleva GTM-5PK5LTG y Languages GTM-MPB7S5C7, en la del evento y en la
-    de gracias. Finance no lleva ninguno: su página de Webflow tampoco, así que
-    enchufarle el suyo dispararía en producción cosas que hoy no se disparan.
+    Blocks y Languages son los que ya llevaba Webflow. Finance no llevaba
+    ninguno —sus lanzamientos estaban sin medir— y se le enchufa el suyo, que es
+    lo único que se aparta del original a propósito.
     """
 
     CASOS = (
@@ -330,14 +330,17 @@ class GtmEnLasPantallasTest(TestCase):
         ('www.conquerblocks.com', '/evento/gracias-comunidad', '5PK5LTG'),
         ('www.conquerlanguages.com', '/cl-evento', 'MPB7S5C7'),
         ('www.conquerlanguages.com', '/grupos-comunidad', 'MPB7S5C7'),
+        ('www.conquerfinance.com', '/evento/evento-online', 'MXTDVVBG'),
+        ('www.conquerfinance.com', '/evento/gracias-comunidad', 'MXTDVVBG'),
     )
 
-    def test_blocks_y_languages_cargan_su_contenedor(self):
+    def test_cada_marca_carga_su_contenedor(self):
         for host, ruta, st in self.CASOS:
             html = self.client.get(ruta, HTTP_HOST=host).content.decode()
             self.assertIn(f"st = '{st}'", html, f'{host}{ruta}')
 
-    def test_finance_no_carga_ninguno(self):
-        for ruta in ('/evento/evento-online', '/evento/gracias-comunidad'):
-            html = self.client.get(ruta, HTTP_HOST='www.conquerfinance.com').content.decode()
-            self.assertNotIn('gtm.start', html, ruta)
+    def test_ninguna_carga_el_de_otra(self):
+        for host, ruta, st in self.CASOS:
+            html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+            for otro in {c[2] for c in self.CASOS} - {st}:
+                self.assertNotIn(otro, html, f'{host}{ruta} carga {otro}')

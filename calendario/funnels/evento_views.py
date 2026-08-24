@@ -200,14 +200,14 @@ GRACIAS = {
 }
 
 
-# Marcas con contenedor de GTM en estas pantallas. Finance no aparece porque su
-# página de Webflow no carga ninguno —ni la del evento ni la de gracias—, así
-# que enchufarle el suyo dispararía en producción cosas que hoy no se disparan.
-GTM_EN_EVENTOS = ('conquer-blocks', 'conquer-languages')
-
-
 def _gtm(escuela):
-    return get_gtm_config(escuela) if escuela in GTM_EN_EVENTOS else {}
+    """Contenedor de GTM de la marca para estas pantallas.
+
+    Las tres lo llevan, incluida Finance. Su página de Webflow no cargaba
+    ninguno, así que esto es lo único que se aparta del original a propósito:
+    sus lanzamientos estaban sin medir y ahora miden como los demás.
+    """
+    return get_gtm_config(escuela)
 
 
 def _funnel_de_la_edicion(request, evento):
