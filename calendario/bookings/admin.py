@@ -3,12 +3,14 @@ import json
 from django import forms
 from django.contrib import admin
 from django.contrib.admin.widgets import FilteredSelectMultiple
+from django.db.models import Q
 from django.http import HttpResponse
 from django.urls import path, reverse
 from django.utils.html import format_html, mark_safe
 
 from .models import (ConfigCorreoDefault, ConfigCorreoEvento, ConfigCorreoGrupo, DominioRemitente,
                      LogCorreo, PlantillaCorreo, Reserva)
+from calendario.event_types.models import EventType
 from calendario.leads.admin import _tag_check
 from calendario.monitoring.models import TaskFailureLog, AlertLog
 
@@ -66,6 +68,31 @@ class DominioRemitenteAdmin(admin.ModelAdmin):
         return obj.plantillas.count()
 
 
+# Los tres huecos de ConfigCorreoEvento, para poder asignar la plantilla a varios
+# tipos de evento de una vez desde la propia plantilla en vez de ir uno por uno.
+# (campo del modelo ConfigCorreoEvento, campo del formulario, etiqueta)
+ROLES_PLANTILLA = (
+    ('plantilla_confirmacion_host', 'tipos_correo_host', 'Correo al host'),
+    ('plantilla_confirmacion_inv', 'tipos_correo_invitado', 'Correo al invitado'),
+    ('plantilla_recordatorio', 'tipos_recordatorio', 'Correo de recordatorio'),
+)
+
+
+class TiposEventoField(forms.ModelMultipleChoiceField):
+    def label_from_instance(self, obj):
+        etiqueta = f'{obj.nombre} — {obj.host}'
+        return etiqueta if obj.activo else f'{etiqueta} (inactivo)'
+
+
+def _campo_tipos_evento(etiqueta):
+    return TiposEventoField(
+        queryset=EventType.objects.all(),
+        required=False,
+        widget=FilteredSelectMultiple('tipos de evento', is_stacked=False),
+        label=etiqueta,
+    )
+
+
 class PlantillaCorreoAdminForm(forms.ModelForm):
     variables = forms.MultipleChoiceField(
         choices=VARIABLES_CORREO,
@@ -74,6 +101,9 @@ class PlantillaCorreoAdminForm(forms.ModelForm):
         label='Campos visibles en el correo',
         help_text='Los campos seleccionados aparecerán en el bloque de información del correo.',
     )
+    tipos_correo_host = _campo_tipos_evento('Correo al host')
+    tipos_correo_invitado = _campo_tipos_evento('Correo al invitado')
+    tipos_recordatorio = _campo_tipos_evento('Correo de recordatorio')
 
     class Meta:
         model = PlantillaCorreo
@@ -84,18 +114,87 @@ class PlantillaCorreoAdminForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             self.fields['variables'].initial = self.instance.campos_visibles or []
 
+        for campo_config, campo_form, _etiqueta in ROLES_PLANTILLA:
+            ya_asignados = self._tipos_asignados(campo_config)
+            # Los inactivos no se ofrecen, pero si alguno ya usa la plantilla tiene
+            # que seguir en la lista: si no, al guardar se quedaría fuera de la
+            # selección y lo desasignaríamos sin que nadie lo haya pedido.
+            self.fields[campo_form].queryset = (
+                EventType.objects
+                .filter(Q(activo=True) | Q(pk__in=ya_asignados))
+                .select_related('host')
+            )
+            self.fields[campo_form].initial = list(ya_asignados)
+
+    def _tipos_asignados(self, campo_config):
+        """IDs de los tipos de evento que ya usan esta plantilla en ese hueco."""
+        if not self.instance.pk:
+            return []
+        return list(
+            ConfigCorreoEvento.objects
+            .filter(**{campo_config: self.instance})
+            .values_list('event_type_id', flat=True)
+        )
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.campos_visibles = self.cleaned_data.get('variables', [])
         if commit:
             instance.save()
+            self.save_m2m()
+            self._sincronizar_tipos_evento(instance)
+        else:
+            # El admin guarda con commit=False y llama a save_m2m() después, cuando
+            # la plantilla ya tiene pk: es el momento de tocar las configs.
+            guardar_m2m = self.save_m2m
+
+            def _save_m2m():
+                guardar_m2m()
+                self._sincronizar_tipos_evento(instance)
+
+            self.save_m2m = _save_m2m
         return instance
+
+    def _sincronizar_tipos_evento(self, plantilla):
+        tocados = set()
+
+        for campo_config, campo_form, _etiqueta in ROLES_PLANTILLA:
+            elegidos = self.cleaned_data.get(campo_form)
+            if elegidos is None:
+                continue
+            ids = {tipo.pk for tipo in elegidos}
+
+            # Quitar de la caja = ese hueco vuelve a vacío, o sea a la config
+            # global (o la del grupo). No se borra la plantilla, solo el vínculo.
+            sobran = ConfigCorreoEvento.objects.filter(
+                **{campo_config: plantilla}
+            ).exclude(event_type_id__in=ids)
+            tocados.update(sobran.values_list('event_type_id', flat=True))
+            sobran.update(**{campo_config: None})
+
+            for tipo_id in ids:
+                config, _creada = ConfigCorreoEvento.objects.get_or_create(event_type_id=tipo_id)
+                if getattr(config, f'{campo_config}_id') != plantilla.pk:
+                    setattr(config, campo_config, plantilla)
+                    config.save(update_fields=[campo_config])
+                tocados.add(tipo_id)
+
+        # Una config con los tres huecos vacíos no aporta nada y además hace que el
+        # inline del tipo de evento deje de precargar los valores globales.
+        if tocados:
+            ConfigCorreoEvento.objects.filter(
+                event_type_id__in=tocados,
+                plantilla_confirmacion_host__isnull=True,
+                plantilla_confirmacion_inv__isnull=True,
+                plantilla_recordatorio__isnull=True,
+            ).delete()
 
 
 @admin.register(PlantillaCorreo)
 class PlantillaCorreoAdmin(admin.ModelAdmin):
     form = PlantillaCorreoAdminForm
-    list_display = ('nombre', 'dominio', 'formato', 'activa', 'recordatorio_1_activo', 'recordatorio_1_horas',
+    list_display = ('nombre', 'dominio', 'formato', 'activa', 'tipos_que_la_usan',
+                    'recordatorio_1_activo', 'recordatorio_1_horas',
                     'recordatorio_2_activo', 'recordatorio_2_horas', 'fecha_creacion', 'ver_preview')
     list_filter = ('activa', 'formato', 'dominio')
     search_fields = ('nombre',)
@@ -124,10 +223,31 @@ class PlantillaCorreoAdmin(admin.ModelAdmin):
         ('Estado', {
             'fields': ('activa',),
         }),
+        ('Aplicar esta plantilla a tipos de evento', {
+            'fields': ('tipos_correo_host', 'tipos_correo_invitado', 'tipos_recordatorio'),
+            'description': (
+                'Asigna esta plantilla a varios tipos de evento de una vez, sin entrar en cada uno. '
+                'A la derecha están los que ya la usan en ese correo. '
+                'Quitar uno de la derecha no borra nada: ese tipo de evento vuelve a la configuración '
+                'global (o a la de su grupo) para ese correo. '
+                'Solo se listan los tipos de evento activos.'
+            ),
+        }),
     )
 
     class Media:
         pass
+
+    @admin.display(description='Tipos de evento')
+    def tipos_que_la_usan(self, obj):
+        partes = []
+        for etiqueta, related in (('host', 'configs_confirmacion_host'),
+                                  ('invitado', 'configs_confirmacion_inv'),
+                                  ('recordatorio', 'configs_recordatorio_evento')):
+            total = getattr(obj, related).count()
+            if total:
+                partes.append(f'{etiqueta}: {total}')
+        return ' · '.join(partes) or '—'
 
     @admin.display(description='Preview')
     def ver_preview(self, obj):
