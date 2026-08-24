@@ -170,7 +170,13 @@ def process_crm_send(self, lead_id):
         geo.enrich_lead(lead)
     except Exception:
         logger.exception('Lead %s: geo enrichment falló; se continúa sin geo', lead_id)
-    crm.push_lead(lead)
+    enviado = crm.push_lead(lead)
+    if not enviado:
+        # Sin API key no ha salido nada. Se marca aparte para que el sweep lo
+        # reintente cuando la key vuelva, en vez de darlo por enviado.
+        lead.tags.add('crm_skipped')
+        logger.warning('Lead %s: crm_skipped (sin API key)', lead_id)
+        return
     lead.tags.add('crm_done')
     logger.info('Lead %s: crm_done', lead_id)
 
@@ -192,12 +198,27 @@ def process_supabase(self, lead_id):
 # Dispatch helper — called from the signal
 # ---------------------------------------------------------------------------
 
+from calendario.leads.services.utils import es_lead_de_lanzamiento  # noqa: F401
+
+
 def dispatch_lead_tasks(lead_id):
     """Evaluate conditions and enqueue applicable service tasks for a lead."""
     from calendario.leads.models import Lead
     from calendario.leads.services.utils import fires_pixel_lead, is_from_meta, is_from_tiktok, is_from_google
 
     lead = Lead.objects.get(pk=lead_id)
+
+    # Los leads de evento van SOLO al CRM. No es una decisión nueva: en el
+    # escenario de Make esas ramas están apagadas y se ve en el log de
+    # ejecuciones —un evento de Blocks consume 2 operaciones (webhook + CRM) y
+    # uno de Languages con teléfono 3 (webhook + CRM + FunnelChat)—; si
+    # salieran correos, Respond.io o las CAPI habría 5 o más, y no existe
+    # ninguna ejecución por encima de 4. Tampoco pasan por NeverBounce: Make
+    # postea directo al ingest y es el CRM quien valida el email.
+    if es_lead_de_lanzamiento(lead):
+        process_crm_send.delay(lead_id)
+        logger.info('Lead %s: lanzamiento → solo CRM', lead_id)
+        return
 
     # Respaldo en Supabase: siempre, independiente del origen y del CRM.
     process_supabase.delay(lead_id)
@@ -256,6 +277,16 @@ def sweep_incomplete_leads():
         # .all() reutiliza la caché de prefetch_related; .names() la descarta y
         # relanza un values_list por cada lead (N+1).
         tag_names = set(t.name for t in lead.tags.all())
+
+        # Misma regla que dispatch_lead_tasks: los de evento solo van al CRM,
+        # así que el sweep no debe reencolarles el resto de servicios.
+        if es_lead_de_lanzamiento(lead):
+            if (settings.CRM_INGEST_ENABLED and lead.email
+                    and 'crm_done' not in tag_names and 'crm_failed' not in tag_names):
+                process_crm_send.delay(lead.pk)
+                requeued += 1
+            continue
+
         # Mismo gate que dispatch_lead_tasks: Legal no usa la API directa de
         # conversiones (van por el server container de sGTM).
         es_legal = get_school_code(lead) == 'cg'

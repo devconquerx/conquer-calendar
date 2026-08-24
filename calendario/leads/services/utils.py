@@ -195,3 +195,13 @@ def is_from_tiktok(lead):
 def is_from_google(lead):
     src = (lead.utm_source or '').lower()
     return src == 'googleads' or bool(lead.gclid) or bool(lead.gbraid) or bool(lead.wbraid)
+
+
+def es_lead_de_lanzamiento(lead):
+    """¿Es un lead de una pantalla de evento (lanzamiento) y no del funnel?
+
+    Se mira el `funnel` porque es el discriminador que usaba el escenario viejo
+    de Make (`cb-lanzamiento11`, `cl-lanzamiento8`, `cf-lanzamiento9`…) y con el
+    que el CRM los indexa.
+    """
+    return 'lanzamiento' in (getattr(lead, 'funnel', '') or '').lower()

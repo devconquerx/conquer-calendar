@@ -4,6 +4,8 @@ import time
 import requests
 from django.conf import settings
 
+from calendario.leads.services.utils import es_lead_de_lanzamiento
+
 logger = logging.getLogger(__name__)
 
 # Lead.school (slug interno del calendario) → código de escuela del CRM, el
@@ -25,20 +27,33 @@ _SCHOOL_CRM_CODE = {
 
 
 def push_lead(lead):
-    """Send lead data to the CRM ingest API after NeverBounce validation."""
+    """Envía el Lead al ingest del CRM tras la validación de NeverBounce.
+
+    Devuelve True si se llegó a enviar y False si se omitió por falta de API
+    key. Lo devuelve en vez de tragárselo porque quien llama marca el lead como
+    enviado: sin este aviso, una key ausente o rotada dejaría todos los leads
+    marcados `crm_done` sin haber salido, y el sweep no los reintentaría nunca.
+    """
     base_url = settings.CRM_BASE_URL.rstrip('/')
     url = f'{base_url}/api/v1/ingest/lead-register/'
     api_key = settings.CRM_API_KEY
 
     if not api_key:
         logger.warning('[CRM] No API key configured, skipping lead %s', lead.pk)
-        return
+        return False
 
     payload = {
         # Discriminador de origen: con 'calendario' el CRM NO re-etiqueta ni
         # re-empuja conversiones (lo hace esta app); sin él (Make/funnel viejo)
         # el CRM sigue haciendo todo como siempre.
-        'source': 'calendario',
+        # `source: calendario` le dice al CRM que NO etiquete ni empuje
+        # conversiones, porque de eso se encarga esta app. Para los leads de
+        # evento es al revés: aquí solo se hace el POST y nada más, así que hay
+        # que dejar que el CRM haga su trabajo de siempre —Respond.io,
+        # ActiveCampaign, tags— igual que cuando los mandaba Make, que tampoco
+        # enviaba `source`. Sin esto llegaban sin una sola etiqueta y se
+        # quedaban fuera de los flujos.
+        **({} if es_lead_de_lanzamiento(lead) else {'source': 'calendario'}),
         'email': lead.email,
         'full_name': lead.full_name,
         'last_name': lead.last_name,
@@ -120,3 +135,5 @@ def push_lead(lead):
             lead.pk, elapsed_ms, response.status_code, response.text[:500],
         )
         response.raise_for_status()
+
+    return True
