@@ -304,6 +304,10 @@ body {
   width: 100%; transition: background .14s; margin-top: 4px;
 }
 .bk-submit:hover { background: var(--bk-blue-hover); }
+/* Enviado: el botón se apaga hasta que llegue la respuesta, para que se vea que
+   ya está en marcha y no invite a pulsar otra vez. */
+.bk-submit:disabled,
+.bk-submit:disabled:hover { background: #9cb8e8; cursor: progress; }
 
 /* ── Phone picker ── */
 .ph-wrap {
@@ -663,7 +667,7 @@ body {
                         style="resize:vertical;">{{ notas|default:'' }}</textarea>
             </div>
             {% endif %}
-            <button type="submit" class="bk-submit">Confirmar reserva</button>
+            <button type="submit" class="bk-submit" data-texto-enviando="Reservando…">Confirmar reserva</button>
           </div>
         </form>
       </div>
@@ -1397,6 +1401,54 @@ setTimeout(function () {
     });
   }
 })();
+
+/* Un solo envío por click.
+
+   El POST de reserva tarda un par de segundos en contestar: antes de responder
+   crea el evento en Google Calendar (con su Meet) y manda los dos correos. En
+   esa ventana no pasa nada visible, así que es normal volver a pulsar — y ese
+   segundo POST llegaba a un servidor que ya tenía la reserva hecha y sacaba el
+   cartel de "ya tienes una reserva" contra la propia persona que acababa de
+   reservar. Si aceptaba el cartel se cancelaba la reserva buena y se creaba
+   otra con otro profesor, que es la cita "doble" que veían los profes.
+
+   El backend ya es idempotente para el mismo hueco (crear_reserva), esto es la
+   otra mitad: que el segundo POST ni siquiera salga. */
+(function () {
+  var bloqueados = [];
+
+  document.querySelectorAll('form[method="post"]').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      // La validación del teléfono puede haber parado el envío: el botón sigue vivo.
+      if (e.defaultPrevented) return;
+
+      var btn = form.querySelector('button[type="submit"]');
+      if (!btn || btn.dataset.bloqueado === '1') return;
+
+      btn.dataset.bloqueado = '1';
+      bloqueados.push({ btn: btn, etiqueta: btn.textContent });
+
+      // En el siguiente tick: desactivarlo dentro del propio submit deja fuera
+      // el valor del botón en algunos navegadores.
+      setTimeout(function () {
+        btn.disabled = true;
+        if (btn.dataset.textoEnviando) btn.textContent = btn.dataset.textoEnviando;
+      }, 0);
+    });
+  });
+
+  // Si la navegación no llega a ocurrir —el visitante vuelve atrás, o el
+  // navegador restaura la página desde la bfcache— los botones tienen que
+  // volver a servir, o se queda mirando un formulario que no responde.
+  window.addEventListener('pageshow', function () {
+    bloqueados.forEach(function (b) {
+      b.btn.disabled = false;
+      b.btn.textContent = b.etiqueta;
+      delete b.btn.dataset.bloqueado;
+    });
+    bloqueados = [];
+  });
+})();
 </script>
 
 {% if mostrar_modal_duplicado %}
@@ -1433,6 +1485,8 @@ setTimeout(function () {
 .bk-modal-btn.cancel:hover { background: #f0f2f5; }
 .bk-modal-btn.primary { background: #0069ff; color: #fff; }
 .bk-modal-btn.primary:hover { background: #0052cc; }
+.bk-modal-btn:disabled,
+.bk-modal-btn:disabled:hover { background: #9cb8e8; cursor: progress; }
 </style>
 <div class="bk-modal-backdrop" id="bk-modal-dup">
   <div class="bk-modal" role="dialog" aria-modal="true" aria-labelledby="bk-modal-title">
@@ -1458,7 +1512,7 @@ setTimeout(function () {
       <input type="hidden" name="notas" value="{{ notas }}">
       <div class="bk-modal-actions">
         <button type="button" class="bk-modal-btn cancel" onclick="document.getElementById('bk-modal-dup').remove()">No, volver</button>
-        <button type="submit" class="bk-modal-btn primary">Sí, cancelar y agendar nueva</button>
+        <button type="submit" class="bk-modal-btn primary" data-texto-enviando="Guardando…">Sí, cancelar y agendar nueva</button>
       </div>
     </form>
   </div>

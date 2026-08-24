@@ -43,6 +43,19 @@ def _enviar_correos_confirmacion(reserva_pk):
     enviar_confirmacion_invitado(r)
 
 
+def _avisar_si_es_nueva(reserva):
+    """Programa los correos de confirmación salvo que la reserva ya existiera.
+
+    `crear_reserva` es idempotente ante un reenvío del mismo hueco: devuelve la
+    reserva que ya estaba en vez de crear otra. Los correos de esa reserva
+    salieron cuando se hizo de verdad, y repetirlos solo hace dudar de si se ha
+    reservado una vez o dos.
+    """
+    if getattr(reserva, 'reutilizada', False):
+        return
+    transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
+
+
 def _render_booking(request, ctx, invitado, status=200):
     """Pinta la página de reserva, ya sea la pública de siempre o la embebida.
 
@@ -363,7 +376,7 @@ class BookingFormView(View):
         except SlotNoDisponibleError as e:
             form.add_error(None, str(e))
             return self._render_with_errors(request, host, event_type, form)
-        transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
+        _avisar_si_es_nueva(reserva)
         return _redirect_confirmacion(event_type, reserva)
 
     def _render_with_errors(self, request, host, event_type, form, duplicado=None):
@@ -521,7 +534,7 @@ class TeamBookingFormView(View):
         except SlotNoDisponibleError as e:
             form.add_error(None, str(e))
             return self._render_with_errors(request, event_type, form)
-        transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
+        _avisar_si_es_nueva(reserva)
         return _redirect_confirmacion(event_type, reserva)
 
     def _render_with_errors(self, request, event_type, form, duplicado=None):
@@ -730,7 +743,7 @@ class ReemplazarPublicaView(View):
             # de la vieja para que pruebe otro horario.
             return redirect('public_token:confirmacion', token=vieja.confirmacion_token)
 
-        transaction.on_commit(lambda: _enviar_correos_confirmacion(nueva.pk))
+        _avisar_si_es_nueva(nueva)
         return _redirect_confirmacion(vieja.event_type, nueva)
 
 
@@ -842,7 +855,7 @@ class EnlaceUnicoFormView(View):
         enlace.usado_en = dj_timezone.now()
         enlace.save(update_fields=['usado', 'usado_en'])
 
-        transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
+        _avisar_si_es_nueva(reserva)
         return _redirect_confirmacion(event_type, reserva)
 
     def _render_with_errors(self, request, enlace, event_type, form, duplicado=None):

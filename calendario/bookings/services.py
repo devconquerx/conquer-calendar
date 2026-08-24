@@ -544,6 +544,38 @@ def buscar_reserva_duplicada(event_type, email_invitado, telefono_invitado=''):
     return _annotate_telefono_normalizado(qs).filter(coincide).order_by('inicio_utc').first()
 
 
+def buscar_reserva_identica(event_type, inicio_utc, email_invitado, telefono_invitado=''):
+    """La misma persona pidiendo exactamente el mismo hueco del mismo tipo.
+
+    A diferencia de `buscar_reserva_duplicada`, que busca "otra reserva futura
+    de este invitado" para ofrecerle cambiarla, esto busca la reserva que ya ES
+    la que está pidiendo: mismo tipo, mismo `inicio_utc`, mismo invitado. Dos
+    peticiones así no son dos reservas, son la misma pedida dos veces.
+
+    "El mismo invitado" es el mismo criterio de siempre —mismo email O mismo
+    teléfono—, para no tener dos definiciones de la misma persona conviviendo en
+    el mismo flujo. Dos alumnos que comparten teléfono cuentan como uno: es la
+    regla que se pidió, y se resuelve poniendo cada uno el suyo.
+    """
+    email_norm = (email_invitado or '').strip().lower()
+    tel_sufijo = _sufijo_telefono(telefono_invitado)
+    if not email_norm and not tel_sufijo:
+        return None
+
+    coincide = Q()
+    if email_norm:
+        coincide |= Q(email_invitado__iexact=email_norm)
+    if tel_sufijo:
+        coincide |= Q(telefono_norm__endswith=tel_sufijo)
+
+    qs = Reserva.objects.select_related('host', 'event_type').filter(
+        event_type=event_type,
+        inicio_utc=inicio_utc,
+        estado=Reserva.Estado.CONFIRMADA,
+    )
+    return _annotate_telefono_normalizado(qs).filter(coincide).order_by('fecha_creacion').first()
+
+
 def mismo_invitado(reserva, email_invitado, telefono_invitado=''):
     """¿La reserva es de este invitado? Mismo criterio que buscar_reserva_duplicada
     (email O teléfono), para validar el reemplazo de un duplicado detectado por
@@ -562,6 +594,11 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
     least-loaded). Lock sobre la fila EventType para serializar concurrentes
     del mismo event_type. Lanza SlotNoDisponibleError si no hay candidato.
 
+    Es idempotente para un mismo hueco: si esa persona ya tiene ese slot de ese
+    tipo, se devuelve la reserva existente en vez de crear otra. La reserva que
+    vuelve lleva `reutilizada` (True si ya existía), para que quien llame no
+    reenvíe los correos de confirmación por una reserva que ya estaba hecha.
+
     `tracking` (dict, opcional): journey_id/event_id/UTMs a guardar como snapshot
     en la reserva (lo pasa el flujo del funnel desde Prellamada.tracking).
     """
@@ -569,6 +606,29 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         et = EventType.objects.select_for_update().get(pk=event_type.pk)
         if not et.activo:
             raise SlotNoDisponibleError("El evento no está disponible.")
+
+        # Idempotencia. Pedir dos veces el mismo hueco es pedirlo una vez: se
+        # devuelve la reserva que ya existe en lugar de crear otra o de sacar el
+        # modal de duplicado. Hace falta porque el POST tarda un par de segundos
+        # (el evento de Google y los correos van dentro del request) y en esa
+        # ventana caben dos envíos —un segundo click, un F5, el reintento de una
+        # red móvil—. El que llegaba tarde encontraba la reserva que la propia
+        # persona acababa de hacer y le decía "ya tienes una reserva", y si
+        # aceptaba el cartel se cancelaba la buena para crear otra con OTRO host,
+        # que es lo que los profesores veían como una cita doble.
+        #
+        # Va antes del check de duplicado y fuera del `if unico_por_invitado`: en
+        # un tipo sin esa casilla no había ninguna barrera y quedaban las dos
+        # reservas vivas de verdad.
+        identica = buscar_reserva_identica(et, inicio_utc, email_invitado, telefono_invitado)
+        if identica:
+            logger.info(
+                "crear_reserva: reenvío del mismo hueco (et=%s inicio=%s email=%s), "
+                "se devuelve la reserva %s en vez de crear otra.",
+                et.pk, inicio_utc, email_invitado, identica.pk,
+            )
+            identica.reutilizada = True
+            return identica
 
         if et.unico_por_invitado:
             existente = buscar_reserva_duplicada(et, email_invitado, telefono_invitado)
@@ -644,6 +704,9 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         # bloquea ni rompe el booking.
         reserva.tags.add('browser_done')
         transaction.on_commit(lambda: _dispatch_schedule_conversions(reserva.pk))
+        # Recién creada: quien llame sabe que le toca mandar los correos. Lo
+        # contrario lo marca la rama de idempotencia de arriba.
+        reserva.reutilizada = False
         return reserva
 
 
