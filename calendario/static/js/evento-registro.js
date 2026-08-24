@@ -5,9 +5,9 @@
  * leads de lanzamiento no pasan por Supabase, CAPI, Respond.io ni NeverBounce.
  *
  * Lo comparten las plantillas de las tres marcas, que solo se diferencian en el
- * diseño: Blocks abre el formulario en un popup y no tiene casilla de
- * privacidad; Languages lo lleva inline y la casilla es obligatoria. El script
- * se adapta a lo que encuentre en el DOM.
+ * diseño: Blocks y Finance abren el formulario en un popup y Languages lo lleva
+ * inline. Ninguna pide marcar una casilla de consentimiento; el aviso legal va
+ * como texto, y el consentimiento se registra igual en `conditions`.
  */
 (function () {
   var form = document.getElementById('formEvento');
@@ -15,7 +15,6 @@
 
   var aviso = document.getElementById('aviso');
   var boton = form.querySelector('button[type=submit]');
-  var privacidad = document.getElementById('privacidad');  // solo en Languages
   var enviado = false;
 
   function decir(texto, clase) {
@@ -141,7 +140,6 @@
     if (!nombre) { decir('Escribe tu nombre.', 'error'); form.fullname.focus(); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { decir('Revisa el correo, no parece válido.', 'error'); form.email.focus(); return; }
     if (!tel) { decir('Escribe tu número de WhatsApp.', 'error'); form.phoneLocal.focus(); return; }
-    if (privacidad && !privacidad.checked) { decir('Acepta la política de privacidad para continuar.', 'error'); privacidad.focus(); return; }
 
     var cuerpo = Object.assign(atribucion(), {
       name: nombre,
