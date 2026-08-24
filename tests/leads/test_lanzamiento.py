@@ -279,3 +279,39 @@ class RedireccionDeGraciasTest(TestCase):
         for campo in ('fullname', 'email', 'lead_phone', 'name'):
             self.assertNotIn(f"'{campo}'", destino,
                              f'{campo} no puede viajar en la query de la redirección')
+
+
+class DeteccionDePaisTest(TestCase):
+    """El prefijo tiene que salir preseleccionado con el país del visitante.
+
+    La cadena es: cabecera de Cloudflare → consulta por IP → España. El punto
+    delicado es el primer eslabón: si la vista rellena España cuando la cabecera
+    no viene, el cliente no puede distinguir «Cloudflare dice España» de
+    «Cloudflare no ha dicho nada» y nunca llega a preguntar por IP. Hoy esa
+    cabecera NO llega en calendar.conquerx.com, así que sin esto todo el mundo
+    se quedaba con +34.
+    """
+
+    def _data_pais(self, **extra):
+        html = self.client.get('/evento/evento-online',
+                               HTTP_HOST='www.conquerblocks.com', **extra).content.decode()
+        return html.split('data-pais="')[1].split('"')[0]
+
+    def test_usa_la_cabecera_de_cloudflare_cuando_viene(self):
+        self.assertEqual(self._data_pais(HTTP_CF_IPCOUNTRY='mx'), 'MX')
+
+    def test_sin_cabecera_lo_deja_vacio_para_que_el_cliente_pregunte(self):
+        self.assertEqual(self._data_pais(), '')
+
+    def test_el_respaldo_por_ip_es_el_mismo_que_usa_el_funnel(self):
+        # ipapi.co, que es lo que usaba el Webflow original, responde 429 con
+        # muy poco tráfico: el respaldo no respaldaba nada.
+        js = (Path(__file__).resolve().parents[2]
+              / 'calendario' / 'static' / 'js' / 'evento-prefijo.js').read_text(encoding='utf-8')
+        hook = (Path(__file__).resolve().parents[2]
+                / 'frontend' / 'src' / 'hooks' / 'useGeoLocation.js').read_text(encoding='utf-8')
+        self.assertIn('get.geojs.io/v1/ip/country.json', js)
+        self.assertIn('get.geojs.io/v1/ip/country.json', hook)
+        # Se comprueba la llamada, no la palabra: ipapi.co se sigue nombrando
+        # en el comentario que explica por qué ya no se usa.
+        self.assertNotIn("fetch('https://ipapi.co", js)

@@ -4,11 +4,16 @@
  * prefijo y un chevron, pegado al campo del número, y un desplegable con
  * buscador.
  *
- * El país se resuelve en dos pasos. Primero el que manda el servidor en
- * `data-pais`, que sale de la cabecera CF-IPCountry: en producción llega
- * siempre y es gratis, sin llamadas externas ni parpadeo. Si no viene —fuera de
- * Cloudflare, o en local— se cae a ipapi.co, que es lo que usaba el original
- * (`setCountryByIP`). Si también falla, se queda España.
+ * El país se resuelve en tres pasos. Primero el que manda el servidor en
+ * `data-pais`, que sale de la cabecera CF-IPCountry: cuando llega es gratis e
+ * instantáneo. Si no viene —hoy no llega en calendar.conquerx.com, y fuera de
+ * Cloudflare tampoco— se pregunta por IP. Si eso también falla, España.
+ *
+ * La consulta por IP va a geojs.io, que es la que usa el funnel
+ * (`useGeoLocation`). El original de Webflow usaba ipapi.co, pero su plan
+ * gratuito responde 429 a poco tráfico que haya, así que el respaldo no
+ * respaldaba nada. Se lanza nada más cargar el fichero, en paralelo con la
+ * lista de países, para que no haya que esperar una detrás de la otra.
  *
  * Las banderas salen de flagcdn.com, como en el original. Si no cargan, el
  * <img> queda vacío y el prefijo se sigue viendo: no se pierde funcionalidad.
@@ -16,6 +21,13 @@
 (function () {
   var raiz = document.querySelector('[data-prefijo]');
   if (!raiz) return;
+
+  // Se dispara ya, sin esperar a la lista de países: cuando esta llegue, lo más
+  // probable es que el país esté resuelto y el prefijo se pinte de una vez.
+  var geo = fetch('https://get.geojs.io/v1/ip/country.json')
+    .then(function (r) { return r.json(); })
+    .then(function (d) { return (d && d.country ? String(d.country) : '').toUpperCase(); })
+    .catch(function () { return ''; });
 
   var boton = raiz.querySelector('.prefijo-boton');
   var bandera = raiz.querySelector('.prefijo-bandera');
@@ -94,20 +106,20 @@
         }
         return iguales[0];
       };
-      var delServidor = raiz.dataset.pais || '';
-      var inicial = porIso(delServidor) || porIso('ES') || paises[0];
-      if (inicial) pintarElegido(inicial);
       pintarLista('');
 
-      // El servidor ya acertó: no hace falta molestar a nadie más.
-      if (porIso(delServidor)) return;
+      // Cloudflare manda `XX` cuando no sabe y `T1` para Tor; ninguno está en la
+      // lista, así que caen solos al siguiente paso.
+      var delServidor = porIso(raiz.dataset.pais || '');
+      if (delServidor) { pintarElegido(delServidor); return; }
 
-      return fetch('https://ipapi.co/json/')
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          var p = porIso(d.country_code);
-          if (p) pintarElegido(p);
-        });
+      // Mientras llega la respuesta por IP se deja España puesta, que es lo que
+      // ya traen los campos ocultos del formulario.
+      pintarElegido(porIso('ES') || paises[0]);
+      return geo.then(function (iso) {
+        var p = porIso(iso);
+        if (p) pintarElegido(p);
+      });
     })
     .catch(function () { /* sin geo se queda el país por defecto */ });
 })();

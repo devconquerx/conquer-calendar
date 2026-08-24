@@ -255,8 +255,13 @@ class EventoView(TemplateView):
         ctx['funnel'] = _funnel_de_la_edicion(self.request, self.evento)
         ctx['titulo_pagina'] = self.evento['titulo_pagina']
         ctx['gracias'] = '/' + GRACIAS[self.escuela]['ruta']
-        # País por defecto del selector: el que detecte Cloudflare, y España si no.
-        ctx['pais_detectado'] = (self.request.headers.get('CF-IPCountry') or 'ES').upper()
+        # País del selector según Cloudflare. Se manda VACÍO si la cabecera no
+        # viene, en vez de caer aquí a 'ES': si el servidor rellena España, el
+        # cliente no puede distinguir «Cloudflare dice España» de «Cloudflare no
+        # ha dicho nada» y se queda con un prefijo equivocado sin llegar a
+        # preguntar. El respaldo por IP y el último recurso de España viven en
+        # el JS, que es quien conoce la lista de países.
+        ctx['pais_detectado'] = (self.request.headers.get('CF-IPCountry') or '').upper()
         return ctx
 
 
