@@ -16,7 +16,7 @@ from django.utils.cache import patch_vary_headers
 from django.views.generic import TemplateView
 
 from .context_processors import get_gtm_config
-from .views import _escuela_por_host
+from .views import _base_path, _escuela_por_host
 
 
 # Contenido por escuela. Lo que cambia entre ediciones es `barra` (fecha y hora)
@@ -270,7 +270,12 @@ class EventoView(TemplateView):
         # query —el dominio canónico no la resuelve por Host—, se arrastra, o la
         # de gracias no sabría de quién es y respondería 404. En los dominios de
         # marca no hace falta y no se añade.
-        ruta = '/' + GRACIAS[self.escuela]['ruta']
+        # `_base_path` antepone el prefijo bajo el que se esté sirviendo la
+        # página (p.ej. /preview). Sin él, registrarse en
+        # www.conquerblocks.com/preview/evento/evento-online dejaba en la barra
+        # www.conquerblocks.com/evento/gracias-comunidad —la de Webflow—, que es
+        # justo de lo que el prefijo sirve para escapar mientras dura la prueba.
+        ruta = _base_path(self.request) + '/' + GRACIAS[self.escuela]['ruta']
         if self.request.GET.get('escuela'):
             ruta += '?escuela=' + self.escuela
         ctx['gracias'] = ruta

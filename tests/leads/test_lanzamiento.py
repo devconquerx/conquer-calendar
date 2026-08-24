@@ -591,3 +591,39 @@ class ElTelefonoSeVeComoUnSoloControlTest(TestCase):
             # La general existe y es la que había que ganar.
             self.assertIn('.campo input[type=text],.campo input[type=email],.campo input[type=tel]',
                           estilos, f'{host}{ruta}')
+
+
+class ElPrefijoDePruebaSeMantieneTest(TestCase):
+    """Bajo /preview el salto tiene que quedarse dentro de /preview.
+
+    Ese prefijo existe para probar en el dominio real sin tocar las páginas de
+    Webflow: Cloudflare enruta solo /preview/* a Django. Si el destino saliera
+    sin prefijo, al registrarse la barra acabaría en la página de Webflow, que
+    es justo de lo que el prefijo sirve para escapar.
+    """
+
+    def _destino(self, ruta, host):
+        html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+        i = html.index('gracias: "') + len('gracias: "')
+        return re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)),
+                      html[i:html.index('"', i)])
+
+    def test_bajo_preview_el_destino_lo_conserva(self):
+        for host, ruta, esperado in (
+            ('www.conquerblocks.com', '/preview/evento/evento-online',
+             '/preview/evento/gracias-comunidad'),
+            ('www.conquerfinance.com', '/preview/evento/evento-online',
+             '/preview/evento/gracias-comunidad'),
+            ('www.conquerlanguages.com', '/preview/cl-evento', '/preview/grupos-comunidad'),
+        ):
+            self.assertEqual(self._destino(ruta, host), esperado, f'{host}{ruta}')
+
+    def test_y_esa_url_responde(self):
+        resp = self.client.get('/preview/evento/gracias-comunidad',
+                               HTTP_HOST='www.conquerblocks.com')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('id="gracias-evento"', resp.content.decode())
+
+    def test_sin_prefijo_sigue_yendo_a_la_raiz(self):
+        self.assertEqual(self._destino('/evento/evento-online', 'www.conquerblocks.com'),
+                         '/evento/gracias-comunidad')
