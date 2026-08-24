@@ -1,0 +1,94 @@
+{% extends 'layout/master.html' %}
+{% block title %}{{ titulo }} — {% endblock %}
+
+{# Pantalla que ve quien llega a un evento «solo alumnos» sin un token válido.
+   Casi siempre se pinta DENTRO del iframe de la academia, así que va sin
+   márgenes de página y explica qué hacer en lugar de dar un código de error:
+   buena parte de quien la va a leer no sabe qué es un token, y un 403 pelado
+   acaba en una llamada a soporte. #}
+
+{% block layout %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+<style>
+:root {
+  --bk-blue: #0069ff;
+  --bk-text: #1a1a2e;
+  --bk-muted: #8a8a8a;
+  --bk-bg: #f0f2f5;
+  --bk-font: 'Funnel Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+html, body { margin: 0 !important; padding: 0 !important; }
+body { background: var(--bk-bg) !important; font-family: var(--bk-font); }
+.den-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+.den-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 12px rgba(0,0,0,.10);
+  padding: 48px 40px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+.den-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--bk-text);
+  margin: 0 0 12px;
+}
+.den-desc {
+  color: var(--bk-muted);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+}
+.den-btn {
+  display: inline-block;
+  margin-top: 24px;
+  background: var(--bk-blue);
+  color: #fff;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 11px 24px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+</style>
+
+<div class="den-wrapper">
+  <div class="den-card">
+    <h1 class="den-title">{{ titulo }}</h1>
+    <p class="den-desc">{{ detalle }}</p>
+    {% if motivo == 'caducado' %}
+      {# Solo aquí: recargar sirve de algo, porque la academia vuelve a emitir
+         el token al repintar la página que contiene el iframe. En los demás
+         motivos el botón daría exactamente el mismo error. #}
+      <button type="button" class="den-btn" onclick="recargarDesdeLaAcademia()">Volver a intentarlo</button>
+      <script>
+        function recargarDesdeLaAcademia() {
+          // Dentro del iframe hay que recargar la página de la academia entera,
+          // no solo el marco: el token nuevo lo emite ella al renderizarse.
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.location.reload();
+              return;
+            }
+          } catch (e) {
+            // Otro origen y sin permiso para tocarlo: se recarga lo que se pueda.
+          }
+          window.location.reload();
+        }
+      </script>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

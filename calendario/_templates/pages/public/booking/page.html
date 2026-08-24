@@ -292,6 +292,12 @@ body {
   font-family: inherit; box-sizing: border-box;
 }
 .bk-input:focus { border-color: var(--bk-blue); }
+/* Identidad que firma la academia: se ve que está puesta y que no se toca. */
+.bk-input[readonly] {
+  background: #f3f4f6; color: #6b7280; cursor: not-allowed;
+}
+.bk-input[readonly]:focus { border-color: var(--bk-border); }
+.bk-identidad-nota { font-size: 12px; color: var(--bk-muted); margin-top: 5px; }
 .bk-submit {
   background: var(--bk-blue); color: #fff; border: none; border-radius: 8px;
   padding: 13px 24px; font-size: 15px; font-weight: 600; cursor: pointer;
@@ -612,12 +618,20 @@ body {
             <div>
               <label class="bk-label" for="nombre_invitado">Nombre y apellido *</label>
               <input type="text" id="nombre_invitado" name="nombre_invitado" class="bk-input"
-                     required minlength="2" value="{{ nombre_invitado|default:'' }}" autocomplete="name">
+                     required minlength="2" value="{{ nombre_invitado|default:'' }}" autocomplete="name"
+                     {% if campos_identidad_bloqueados %}readonly{% endif %}>
             </div>
             <div>
               <label class="bk-label" for="email_invitado">Email *</label>
               <input type="email" id="email_invitado" name="email_invitado" class="bk-input"
-                     required value="{{ email_invitado|default:'' }}" autocomplete="email">
+                     required value="{{ email_invitado|default:'' }}" autocomplete="email"
+                     {% if campos_identidad_bloqueados %}readonly{% endif %}>
+              {% if campos_identidad_bloqueados %}
+              {# La reserva se crea con el nombre y el email del token, se manden
+                 los que se manden en el formulario: el readonly es solo para que
+                 se entienda, no es lo que lo garantiza. #}
+              <div class="bk-identidad-nota">Reservas con tu cuenta de la academia.</div>
+              {% endif %}
             </div>
             <div>
               <label class="bk-label" for="ph-number">Teléfono *</label>
@@ -848,7 +862,8 @@ setTimeout(function () {
 
   function fetchMes(mes, cb) {
     if (cache[mes]) { cb(cache[mes]); return; }
-    fetch(SLOTS_URL + '?mes=' + mes + '&tz=' + encodeURIComponent(TZ))
+    fetch(SLOTS_URL + (SLOTS_URL.indexOf('?') === -1 ? '?' : '&') +
+          'mes=' + mes + '&tz=' + encodeURIComponent(TZ))
       .then(function (r) { return r.json(); })
       .then(function (d) { cache[mes] = d; cb(d); })
       .catch(function () {});
@@ -1434,7 +1449,7 @@ setTimeout(function () {
       ¿Quieres <strong>cancelar esa reserva</strong> y agendar esta nueva
       {% if nuevo_inicio_dia %}para el <strong>{{ nuevo_inicio_dia }} a las {{ nuevo_inicio_hora }} h</strong>{% if tz_ciudad %} <span style="color:#6b7280">(hora de {{ tz_ciudad }})</span>{% endif %}{% endif %}?
     </p>
-    <form method="post" action="{% url 'public_token:reemplazar_publica' token=duplicado_token %}" style="margin:0">
+    <form method="post" action="{% url 'public_token:reemplazar_publica' token=duplicado_token %}{% if embed_token %}?t={{ embed_token|urlencode }}{% endif %}" style="margin:0">
       {% csrf_token %}
       <input type="hidden" name="inicio_utc" value="{{ inicio_utc_str }}">
       <input type="hidden" name="nombre_invitado" value="{{ nombre_invitado }}">

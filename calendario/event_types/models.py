@@ -165,6 +165,35 @@ class EventType(models.Model):
         ),
     )
 
+    # Quién puede llegar a reservar este tipo de evento. Los dos modos son
+    # excluyentes y el defecto es PUBLICO, así que los tipos que ya existen se
+    # comportan exactamente igual que antes de existir este campo.
+    #
+    #   'publico'  -> cualquiera con el enlace, como hasta ahora;
+    #   'academia' -> solo quien llegue con un token firmado por el LMS. Se usa
+    #                 para embeber la página de reserva en la academia por
+    #                 iframe: el LMS firma quién es el alumno y esta app se
+    #                 limita a verificar la firma. Aquí NO hay copia de los
+    #                 alumnos ni sincronización con el LMS; si al alumno se le
+    #                 retira el acceso, el LMS deja de emitirle token y esto se
+    #                 corta solo.
+    ACCESO_PUBLICO = 'publico'
+    ACCESO_ACADEMIA = 'academia'
+    ACCESO_CHOICES = [
+        (ACCESO_PUBLICO, 'Público — cualquiera con el enlace'),
+        (ACCESO_ACADEMIA, 'Solo alumnos — requiere acceso desde la academia'),
+    ]
+    acceso = models.CharField(
+        max_length=20,
+        choices=ACCESO_CHOICES,
+        default=ACCESO_PUBLICO,
+        verbose_name='Quién puede reservar',
+        help_text=(
+            "«Solo alumnos» restringe la reserva a quien entre desde la academia. "
+            "La página deja de ser accesible por su enlace directo."
+        ),
+    )
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
@@ -211,6 +240,11 @@ class EventType(models.Model):
                 errores['rango_fecha_fin'] = 'La fecha final no puede ser anterior a la inicial.'
             if errores:
                 raise ValidationError(errores)
+
+    @property
+    def solo_alumnos(self):
+        """La reserva exige un token firmado por el LMS de la academia."""
+        return self.acceso == self.ACCESO_ACADEMIA
 
     @property
     def usa_rango_de_fechas(self):

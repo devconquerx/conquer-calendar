@@ -13,6 +13,7 @@ from django.urls import reverse
 
 from calendario.event_types.models import EventType, EnlaceUnico
 from calendario.users.models import User
+from . import embed
 from .correos import enviar_confirmacion_host, enviar_confirmacion_invitado
 from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from .forms import BookingForm
@@ -40,6 +41,31 @@ def _enviar_correos_confirmacion(reserva_pk):
         return
     enviar_confirmacion_host(r)
     enviar_confirmacion_invitado(r)
+
+
+def _render_booking(request, ctx, invitado, status=200):
+    """Pinta la página de reserva, ya sea la pública de siempre o la embebida.
+
+    Con `invitado` a None es exactamente el render de antes. Con un alumno
+    detrás, adapta el contexto y deja que la página se pueda pintar dentro del
+    iframe de la academia.
+    """
+    embed.aplicar_embed(ctx, invitado, embed.token_de_request(request))
+    resp = render(request, 'pages/public/booking/page.html', ctx, status=status)
+    return embed.permitir_embebido(resp) if invitado is not None else resp
+
+
+def _identidad(form, invitado):
+    """Nombre y email con los que se crea la reserva.
+
+    Cuando la reserva viene de la academia mandan los del token: son lo que el
+    LMS firmó. Los del formulario se ignoran a propósito —van en readonly, pero
+    eso solo lo respeta un navegador— para que a nadie le sirva de nada
+    compartir el enlace: la reserva queda siempre a nombre del alumno.
+    """
+    if invitado is None:
+        return form.cleaned_data['nombre_invitado'], form.cleaned_data['email_invitado']
+    return invitado['nombre'], invitado['email']
 
 
 def _tz_visitante(request, tz_fallback):
@@ -214,6 +240,10 @@ class SlotsMesJSONView(View):
     def get(self, request, user_slug, event_type_slug):
         host = get_object_or_404(User, slug=user_slug, is_active=True)
         event_type = get_object_or_404(EventType, host=host, slug=event_type_slug, activo=True)
+        try:
+            embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado:
+            return JsonResponse({'error': 'acceso restringido'}, status=403)
         tz_host = ZoneInfo(host.timezone)
         tz_visitante = _tz_visitante(request, tz_host)
         hoy_local = datetime.now(tz_visitante).date()
@@ -229,6 +259,10 @@ class SlotsMesJSONTeamView(View):
 
     def get(self, request, slug_equipo):
         event_type = get_object_or_404(EventType, slug_equipo=slug_equipo, activo=True)
+        try:
+            embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado:
+            return JsonResponse({'error': 'acceso restringido'}, status=403)
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
@@ -245,6 +279,10 @@ class BookingPageView(View):
     def get(self, request, user_slug, event_type_slug):
         host = get_object_or_404(User, slug=user_slug, is_active=True)
         event_type = get_object_or_404(EventType, host=host, slug=event_type_slug, activo=True)
+        try:
+            invitado = embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado as e:
+            return embed.respuesta_denegada(request, e)
 
         tz_host = ZoneInfo(host.timezone)
         tz_visitante = _tz_visitante(request, tz_host)
@@ -291,7 +329,7 @@ class BookingPageView(View):
         auto_avanzar = not request.GET.get('mes') and not fecha
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
                                        auto_avanzar=auto_avanzar, hoy_local=hoy_local))
-        return render(request, 'pages/public/booking/page.html', ctx)
+        return _render_booking(request, ctx, invitado)
 
 
 class BookingFormView(View):
@@ -299,17 +337,22 @@ class BookingFormView(View):
     def post(self, request, user_slug, event_type_slug):
         host = get_object_or_404(User, slug=user_slug, is_active=True)
         event_type = get_object_or_404(EventType, host=host, slug=event_type_slug, activo=True)
+        try:
+            invitado = embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado as e:
+            return embed.respuesta_denegada(request, e)
         form = BookingForm(request.POST)
         if not form.is_valid():
             return self._render_with_errors(request, host, event_type, form)
         tz_host = ZoneInfo(host.timezone)
         tz_visitante = _tz_visitante(request, tz_host)
+        nombre_final, email_final = _identidad(form, invitado)
         try:
             reserva = crear_reserva(
                 event_type=event_type,
                 inicio_utc=form.cleaned_data['inicio_utc'],
-                nombre_invitado=form.cleaned_data['nombre_invitado'],
-                email_invitado=form.cleaned_data['email_invitado'],
+                nombre_invitado=nombre_final,
+                email_invitado=email_final,
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
@@ -324,6 +367,10 @@ class BookingFormView(View):
         return _redirect_confirmacion(event_type, reserva)
 
     def _render_with_errors(self, request, host, event_type, form, duplicado=None):
+        try:
+            invitado = embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado as e:
+            return embed.respuesta_denegada(request, e)
         inicio = form.cleaned_data.get('inicio_utc') if form.is_bound and form.cleaned_data else None
         tz_host = ZoneInfo(host.timezone)
         tz_visitante = _tz_visitante(request, tz_host)
@@ -358,7 +405,7 @@ class BookingFormView(View):
                                        hoy_local=hoy_local))
         if duplicado is not None:
             ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
-        return render(request, 'pages/public/booking/page.html', ctx, status=400 if not duplicado else 200)
+        return _render_booking(request, ctx, invitado, status=400 if not duplicado else 200)
 
 
 def _duplicado_ctx(duplicado, inicio_nuevo_utc, tz_ref):
@@ -382,6 +429,10 @@ class TeamBookingPageView(View):
 
     def get(self, request, slug_equipo):
         event_type = get_object_or_404(EventType, slug_equipo=slug_equipo, activo=True)
+        try:
+            invitado = embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado as e:
+            return embed.respuesta_denegada(request, e)
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()
@@ -434,24 +485,29 @@ class TeamBookingPageView(View):
         auto_avanzar = not request.GET.get('mes') and not fecha
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
                                        auto_avanzar=auto_avanzar, hoy_local=hoy_local))
-        return render(request, 'pages/public/booking/page.html', ctx)
+        return _render_booking(request, ctx, invitado)
 
 
 class TeamBookingFormView(View):
 
     def post(self, request, slug_equipo):
         event_type = get_object_or_404(EventType, slug_equipo=slug_equipo, activo=True)
+        try:
+            invitado = embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado as e:
+            return embed.respuesta_denegada(request, e)
         form = BookingForm(request.POST)
         if not form.is_valid():
             return self._render_with_errors(request, event_type, form)
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
+        nombre_final, email_final = _identidad(form, invitado)
         try:
             reserva = crear_reserva(
                 event_type=event_type,
                 inicio_utc=form.cleaned_data['inicio_utc'],
-                nombre_invitado=form.cleaned_data['nombre_invitado'],
-                email_invitado=form.cleaned_data['email_invitado'],
+                nombre_invitado=nombre_final,
+                email_invitado=email_final,
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
@@ -469,6 +525,10 @@ class TeamBookingFormView(View):
         return _redirect_confirmacion(event_type, reserva)
 
     def _render_with_errors(self, request, event_type, form, duplicado=None):
+        try:
+            invitado = embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado as e:
+            return embed.respuesta_denegada(request, e)
         inicio = form.cleaned_data.get('inicio_utc') if form.is_bound and form.cleaned_data else None
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
@@ -504,7 +564,7 @@ class TeamBookingFormView(View):
                                        hoy_local=hoy_local))
         if duplicado is not None:
             ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
-        return render(request, 'pages/public/booking/page.html', ctx, status=400 if not duplicado else 200)
+        return _render_booking(request, ctx, invitado, status=400 if not duplicado else 200)
 
 
 class ConfirmacionView(View):
@@ -644,13 +704,23 @@ class ReemplazarPublicaView(View):
         # Si el modal lleva un campo tz en el POST se usaría ese; de lo contrario
         # se preserva el de la reserva vieja para no cambiarla sin querer.
         tz_visitante = _tz_visitante(request, ZoneInfo(vieja.timezone_invitado or vieja.host.timezone))
+        # En un evento «solo alumnos» la identidad no se puede cambiar al
+        # reagendar: se conserva la de la reserva original. A esta vista se llega
+        # con el enlace del correo, no con el token del LMS, así que el
+        # formulario sería la única fuente; dejarlo mandar permitiría regalarle
+        # la clase a alguien de fuera de la academia con un POST a mano.
+        if vieja.event_type.solo_alumnos:
+            nombre_final, email_final = vieja.nombre_invitado, vieja.email_invitado
+        else:
+            nombre_final = form.cleaned_data['nombre_invitado']
+            email_final = form.cleaned_data['email_invitado']
         try:
             nueva = reemplazar_reserva(
                 reserva_vieja_pk=vieja.pk,
                 event_type=vieja.event_type,
                 inicio_utc=form.cleaned_data['inicio_utc'],
-                nombre_invitado=form.cleaned_data['nombre_invitado'],
-                email_invitado=form.cleaned_data['email_invitado'],
+                nombre_invitado=nombre_final,
+                email_invitado=email_final,
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
@@ -676,6 +746,10 @@ class EnlaceUnicoPageView(View):
         event_type = enlace.event_type
         if not event_type.activo:
             return render(request, 'pages/public/booking/enlace_expirado.html', status=410)
+        try:
+            invitado = embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado as e:
+            return embed.respuesta_denegada(request, e)
 
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
@@ -722,7 +796,7 @@ class EnlaceUnicoPageView(View):
         auto_avanzar = not request.GET.get('mes') and not fecha
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
                                        auto_avanzar=auto_avanzar, hoy_local=hoy_local))
-        return render(request, 'pages/public/booking/page.html', ctx)
+        return _render_booking(request, ctx, invitado)
 
 
 class EnlaceUnicoFormView(View):
@@ -735,6 +809,10 @@ class EnlaceUnicoFormView(View):
         event_type = enlace.event_type
         if not event_type.activo:
             return render(request, 'pages/public/booking/enlace_expirado.html', status=410)
+        try:
+            invitado = embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado as e:
+            return embed.respuesta_denegada(request, e)
 
         form = BookingForm(request.POST)
         if not form.is_valid():
@@ -742,12 +820,13 @@ class EnlaceUnicoFormView(View):
 
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
+        nombre_final, email_final = _identidad(form, invitado)
         try:
             reserva = crear_reserva(
                 event_type=event_type,
                 inicio_utc=form.cleaned_data['inicio_utc'],
-                nombre_invitado=form.cleaned_data['nombre_invitado'],
-                email_invitado=form.cleaned_data['email_invitado'],
+                nombre_invitado=nombre_final,
+                email_invitado=email_final,
                 telefono_invitado=form.cleaned_data.get('telefono_invitado', ''),
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
@@ -767,6 +846,10 @@ class EnlaceUnicoFormView(View):
         return _redirect_confirmacion(event_type, reserva)
 
     def _render_with_errors(self, request, enlace, event_type, form, duplicado=None):
+        try:
+            invitado = embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado as e:
+            return embed.respuesta_denegada(request, e)
         inicio = form.cleaned_data.get('inicio_utc') if form.is_bound and form.cleaned_data else None
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
@@ -802,7 +885,7 @@ class EnlaceUnicoFormView(View):
                                        hoy_local=hoy_local))
         if duplicado is not None:
             ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
-        return render(request, 'pages/public/booking/page.html', ctx, status=400 if not duplicado else 200)
+        return _render_booking(request, ctx, invitado, status=400 if not duplicado else 200)
 
 
 class EnlaceUnicoSlotsView(View):
@@ -813,6 +896,10 @@ class EnlaceUnicoSlotsView(View):
             return JsonResponse({'error': 'enlace expirado'}, status=410)
 
         event_type = enlace.event_type
+        try:
+            embed.invitado_de_request(request, event_type)
+        except embed.AccesoDenegado:
+            return JsonResponse({'error': 'acceso restringido'}, status=403)
         tz_ref = ZoneInfo(event_type.host.timezone)
         tz_visitante = _tz_visitante(request, tz_ref)
         hoy_local = datetime.now(tz_visitante).date()

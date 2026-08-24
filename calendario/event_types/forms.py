@@ -88,7 +88,7 @@ class EventTypeForm(forms.ModelForm):
             'incremento_inicio_minutos',
             'buffer_antes_minutos', 'buffer_despues_minutos',
             'aviso_minimo_minutos', 'aviso_maximo_dias',
-            'rango_fecha_inicio', 'rango_fecha_fin', 'activo',
+            'rango_fecha_inicio', 'rango_fecha_fin', 'activo', 'acceso',
             'crm_destino', 'unico_por_invitado', 'mostrar_caja_comentarios',
             'confirmacion_tipo', 'confirmacion_url',
             'gcal_palabras_ignorar',
@@ -106,6 +106,10 @@ class EventTypeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['hosts'].queryset = _hosts_queryset()
+        # Igual que los buffers y los avisos: no todas las vistas del panel
+        # reenvían el formulario entero, y un campo obligatorio de más rompe el
+        # guardado desde las que mandan solo un subconjunto.
+        self.fields['acceso'].required = False
         if self.instance.pk and not self.is_bound:
             self.fields['rango_por_fechas'].initial = (
                 self.instance.rango_tipo == EventType.RANGO_FECHAS
@@ -134,6 +138,16 @@ class EventTypeForm(forms.ModelForm):
     def clean_aviso_maximo_dias(self):
         v = self.cleaned_data.get('aviso_maximo_dias')
         return v if v is not None else 60
+
+    def clean_acceso(self):
+        """Si el POST no lo trae, se conserva lo que el evento ya tenía.
+
+        Abrir o cerrar un evento a los alumnos tiene que ser siempre una
+        decisión explícita: un guardado desde otra pantalla no puede cambiarlo
+        de rebote en ningún sentido.
+        """
+        v = self.cleaned_data.get('acceso')
+        return v or self.instance.acceso or EventType.ACCESO_PUBLICO
 
     def clean(self):
         """Traduce el checkbox del formulario al modo que guarda el modelo.

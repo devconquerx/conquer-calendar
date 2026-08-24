@@ -87,6 +87,9 @@ MIDDLEWARE = [
     'calendario.funnels.middleware.AppBasePathMiddleware',
     'calendario.funnels.middleware.FunnelPublicCoopMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    # Antes del CsrfViewMiddleware: marca la petición como exenta cuando trae un
+    # token válido del LMS (el iframe cross-site no manda la cookie csrftoken).
+    'calendario.bookings.middleware.EmbedCsrfMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -486,3 +489,33 @@ CANCELACIONES_EMAILS_AUTORIZADOS = [
     ).split(',')
     if e.strip()
 ]
+
+# ---------------------------------------------------------------------------
+# Embebido del calendario en el LMS de la academia (iframe)
+# ---------------------------------------------------------------------------
+# Los tipos de evento marcados como «solo alumnos» únicamente se pueden reservar
+# desde dentro de la academia. El LMS firma un token con estos mismos parámetros
+# (django.core.signing) y lo pasa en la URL del iframe; aquí solo se verifica la
+# firma. No hay copia de los alumnos ni sincronización entre las dos apps: la
+# decisión de quién puede reservar vive en el LMS, que sencillamente no emite
+# token a quien no tiene el acceso al día.
+#
+# SECRET y SALT tienen que coincidir EXACTAMENTE con los del LMS o la firma no
+# valida. Sin secreto configurado, ningún token se da por bueno: los tipos de
+# evento «solo alumnos» quedan cerrados en vez de abiertos, que es como debe
+# fallar esto si alguien despliega sin la variable.
+EMBED_LMS_SECRET = env.str('CALENDARIO_EMBED_LMS_SECRET', default='')
+EMBED_LMS_SALT = env.str('CALENDARIO_EMBED_LMS_SALT', default='lms-embed')
+
+# Cuánto vale un token desde que el LMS lo emite. Es la ventana entera para
+# elegir hueco y confirmar, no solo para abrir la página: si se queda corta, a
+# quien deje la pestaña abierta un rato le falla el envío del formulario. Una
+# hora es holgada y apenas cuesta nada en seguridad, porque el nombre y el email
+# de la reserva salen del token y no se pueden tocar desde el formulario.
+EMBED_LMS_MAX_AGE = env.int('CALENDARIO_EMBED_LMS_MAX_AGE', default=3600)
+
+# Orígenes desde los que se permite embeber la página de reserva (cabecera
+# `frame-ancestors`). Sin esto Django manda `X-Frame-Options: DENY` y el iframe
+# sale en blanco aunque el token sea perfecto. Van con esquema y sin barra
+# final, p. ej. 'https://academia.conquerx.com'.
+EMBED_LMS_ORIGENES = env.list('CALENDARIO_EMBED_LMS_ORIGENES', default=[])

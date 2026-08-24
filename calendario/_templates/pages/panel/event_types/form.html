@@ -366,6 +366,20 @@
 
                     <div class="row g-4 mt-3">
                         <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="acceso">
+                                Quién puede reservar
+                                <i class="bi bi-info-circle u-info"
+                                   title="«Solo alumnos» exige entrar desde la academia: la página deja de funcionar por su enlace directo."></i>
+                            </label>
+                            <select class="form-select" name="acceso" id="acceso">
+                                <option value="publico" {% if not form.acceso.value or form.acceso.value == 'publico' %}selected{% endif %}>Público — cualquiera con el enlace</option>
+                                <option value="academia" {% if form.acceso.value == 'academia' %}selected{% endif %}>Solo alumnos — requiere acceso desde la academia</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-4 mt-3">
+                        <div class="col-sm-6">
                             <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="confirmacion_tipo">
                                 Redirección post-reserva
                                 <i class="bi bi-info-circle u-info"
