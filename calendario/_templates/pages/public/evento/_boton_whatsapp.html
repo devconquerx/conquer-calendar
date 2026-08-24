@@ -7,11 +7,11 @@ Comunidad VIP de WhatsApp" con el icono en diagonal del sistema de botones, y
 Languages lo lleva en mayúsculas y termina en ">>", sin icono.
 {% endcomment %}
 <div class="cta-fila">
-  <a class="button_wrap" href="{{ whatsapp }}" target="_blank" rel="noopener">
-    <div class="button_content">
-      <span class="button_text">{{ cta }}</span>
-      {% if icono_cta %}
-      <span class="button_icon" aria-hidden="true">
+  <a class="boton" href="{{ gr.whatsapp }}" target="_blank" rel="noopener">
+    <div class="boton-cuerpo">
+      <span class="boton-texto">{{ gr.cta }}</span>
+      {% if gr.icono_cta %}
+      <span class="boton-icono" aria-hidden="true">
         <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
         </svg>

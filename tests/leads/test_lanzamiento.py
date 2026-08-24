@@ -245,7 +245,7 @@ class RedireccionDeGraciasTest(TestCase):
             # El grupo se enlaza tres veces, una por tarjeta, como en el
             # original: `button_wrap` sale además en el CSS, así que se cuentan
             # los enlaces.
-            self.assertEqual(html.count('<a class="button_wrap"'), 3, f'{host}{ruta}')
+            self.assertEqual(html.count('<a class="boton"'), 3, f'{host}{ruta}')
 
     def test_salta_sola_al_grupo_a_los_15_segundos(self):
         html = self.client.get('/evento/gracias-comunidad',
@@ -414,3 +414,69 @@ class LaRedireccionFuncionaEnLosDosSitiosTest(TestCase):
         js = (Path(__file__).resolve().parents[2]
               / 'calendario' / 'static' / 'js' / 'evento-registro.js').read_text(encoding='utf-8')
         self.assertIn("destino.indexOf('?') === -1 ? '?' : '&'", js)
+
+
+class TransicionSinRecargaTest(TestCase):
+    """De la pantalla del evento a la de gracias sin recargar.
+
+    El bloque de gracias viaja embebido y oculto en la propia pantalla, así que
+    al registrarse solo hay que intercambiarlos. La URL se cambia con pushState
+    a la de gracias, que sigue existiendo como página propia para quien entre
+    directo, recargue o comparta el enlace.
+    """
+
+    RUTAS = (('www.conquerblocks.com', '/evento/evento-online'),
+             ('www.conquerfinance.com', '/evento/evento-online'),
+             ('www.conquerlanguages.com', '/cl-evento'))
+
+    def test_la_pantalla_del_evento_ya_trae_la_de_gracias_oculta(self):
+        for host, ruta in self.RUTAS:
+            html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+            self.assertIn('id="evento-contenido"', html, host)
+            self.assertIn('id="gracias-evento"', html, host)
+            self.assertIn('hidden', html.split('id="gracias-evento"')[1][:120], host)
+            # Los tres botones al grupo, ya presentes aunque no se vean.
+            self.assertEqual(html.count('<a class="boton"'), 3, host)
+
+    def test_el_css_de_gracias_va_acotado_para_no_pisar_al_del_evento(self):
+        # Embebidas comparten documento; sin acotar, el CTA del evento y el de
+        # gracias se pisarían.
+        html = self.client.get('/cl-evento', HTTP_HOST='www.conquerlanguages.com').content.decode()
+        estilos = html.split('<div id="gracias-evento"')[0]
+        bloque = estilos[estilos.rindex('<style>'):]
+        for linea in bloque.splitlines():
+            linea = linea.strip()
+            if linea.startswith('.') or linea.startswith('#evento'):
+                self.assertTrue(linea.startswith('#gracias-evento') or linea.startswith('#evento-contenido'),
+                                f'regla sin acotar: {linea[:60]}')
+
+    def test_avisa_al_gtm_con_el_mismo_evento_que_el_funnel(self):
+        js = (Path(__file__).resolve().parents[2]
+              / 'calendario' / 'static' / 'js' / 'evento-registro.js').read_text(encoding='utf-8')
+        pixel = (Path(__file__).resolve().parents[2]
+                 / 'frontend' / 'src' / 'lib' / 'pixelEvents.js').read_text(encoding='utf-8')
+        # Sin recarga no hay page_view del contenedor; lo sustituye el mismo
+        # evento virtual que ya usa el funnel al cambiar de etapa.
+        self.assertIn("event: 'virtual_page_view'", js)
+        self.assertIn("event: 'virtual_page_view'", pixel)
+        for campo in ('page_location', 'page_path'):
+            self.assertIn(campo, js)
+        # Y se empuja DESPUÉS del pushState, o el trigger leería la URL vieja.
+        # Se mira dentro de la función, no en todo el fichero: la palabra sale
+        # antes en el comentario que explica por qué está.
+        cuerpo = js[js.index('function irAGracias'):js.index("window.addEventListener('popstate'")]
+        self.assertLess(cuerpo.index('history.pushState'), cuerpo.index("event: 'virtual_page_view'"))
+
+    def test_al_volver_atras_se_devuelve_el_titulo(self):
+        js = (Path(__file__).resolve().parents[2]
+              / 'calendario' / 'static' / 'js' / 'evento-registro.js').read_text(encoding='utf-8')
+        vuelta = js[js.index("window.addEventListener('popstate'"):]
+        self.assertIn('document.title = tituloEvento', vuelta,
+                      'sin esto queda el título de gracias con el formulario delante')
+
+    def test_si_no_hay_pushstate_navega_de_toda_la_vida(self):
+        js = (Path(__file__).resolve().parents[2]
+              / 'calendario' / 'static' / 'js' / 'evento-registro.js').read_text(encoding='utf-8')
+        salto = js[js.index('function irAGracias'):js.index("window.addEventListener('popstate'")]
+        self.assertIn('window.location.href', salto,
+                      'sin respaldo, un navegador sin pushState dejaría al registrado sin último paso')

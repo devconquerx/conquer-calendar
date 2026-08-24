@@ -129,7 +129,10 @@ body{
   .titulo{font-size:18px;line-height:24px}
   .subtitulo{font-size:16px;line-height:22px}
 }
+#evento-contenido[hidden]{display:none}
 </style>
+
+<div id="evento-contenido">
 </head>
 <body>
   <section class="header_logos">
@@ -204,9 +207,14 @@ body{
       </div>
     </div>
   </section>
+</div>
+
+{% include 'pages/public/evento/_gracias_languages.html' with oculto=True %}
+{% include 'pages/public/evento/_salto_whatsapp.html' %}
 
 <script>
-window.__EVENTO__ = { funnel: "{{ funnel|escapejs }}", gracias: "{{ gracias|escapejs }}" };
+window.__EVENTO__ = { funnel: "{{ funnel|escapejs }}", gracias: "{{ gracias|escapejs }}",
+                      titulo_gracias: "{{ gr.titulo_pagina|escapejs }}" };
 </script>
 <script src="{% static 'js/evento-prefijo.js' %}"></script>
 <script src="{% static 'js/evento-registro.js' %}"></script>

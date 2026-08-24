@@ -180,7 +180,10 @@ body{
   .event-title{font-size:16px}
   .event-subtitle{font-size:16px;font-weight:400;margin:0}
 }
+#evento-contenido[hidden]{display:none}
 </style>
+
+<div id="evento-contenido">
 </head>
 <body>
   <section class="header_logos">
@@ -268,9 +271,14 @@ body{
       </form>
     </div>
   </div>
+</div>
+
+{% include 'pages/public/evento/_gracias_paperboard.html' with oculto=True %}
+{% include 'pages/public/evento/_salto_whatsapp.html' %}
 
 <script>
-window.__EVENTO__ = { funnel: "{{ funnel|escapejs }}", gracias: "{{ gracias|escapejs }}" };
+window.__EVENTO__ = { funnel: "{{ funnel|escapejs }}", gracias: "{{ gracias|escapejs }}",
+                      titulo_gracias: "{{ gr.titulo_pagina|escapejs }}" };
 </script>
 <script>
 /* El popup del original se abre con el CTA y se cierra con Escape o clicando

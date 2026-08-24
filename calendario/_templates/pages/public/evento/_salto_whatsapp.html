@@ -1,17 +1,30 @@
 {% comment %}
 A los 15 segundos la página salta sola al grupo, igual que el original
-(`setTimeout(redirectToNewPage, 15000)`). El botón sigue estando para quien no
-quiera esperar. No se toca el temporizador si el visitante ya se ha ido a la
-pestaña del grupo por su cuenta: `visibilitychange` lo cancela, porque volver y
-que te reenvíe otra vez es justo lo contrario de lo que se espera.
+(`setTimeout(redirectToNewPage, 15000)`).
+
+El arranque se expone como función porque hay dos momentos distintos: en la
+página suelta se arranca al cargar, y en la pantalla del evento —donde este
+bloque llega oculto y se revela sin recargar— lo arranca el JS del registro al
+mostrarlo. Si arrancara al cargar, el visitante que aún está rellenando el
+formulario se iría a WhatsApp a los 15 segundos.
+
+No se toca el temporizador si el visitante ya se ha ido a la pestaña del grupo
+por su cuenta: `visibilitychange` lo cancela, porque volver y que te reenvíe
+otra vez es justo lo contrario de lo que se espera.
 {% endcomment %}
 <script>
-(function () {
-  var destino = "{{ whatsapp|escapejs }}";
-  if (!destino) return;
-  var salto = setTimeout(function () { window.location.href = destino; }, 15000);
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) clearTimeout(salto);
-  });
+window.iniciarSaltoWhatsApp = (function () {
+  var lanzado = false;
+  return function () {
+    if (lanzado) return;
+    var caja = document.getElementById('gracias-evento');
+    var destino = caja && caja.dataset.whatsapp;
+    if (!destino) return;
+    lanzado = true;
+    var salto = setTimeout(function () { window.location.href = destino; }, 15000);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) clearTimeout(salto);
+    });
+  };
 })();
 </script>

@@ -43,20 +43,79 @@
     return datos;
   }
 
-  /* Al registrarse, el original no se queda en la página: manda a la de
-     "gracias", que es donde está el último paso de verdad —entrar al grupo de
-     WhatsApp de los asistentes—. Quedarse aquí con un mensajito dejaba al
-     registrado a medias y, si hay conversiones colgadas de esa página, sin
-     registrar.
+  /* Al registrarse se pasa a la pantalla de "gracias" —donde está el último
+     paso de verdad, entrar al grupo de WhatsApp— SIN recargar: el bloque ya
+     viene en la página, oculto, y aquí solo se intercambia. La URL se cambia
+     con pushState para que sea la de gracias, que además existe como página
+     propia y responde si alguien recarga o la comparte.
 
-     Se replican los mismos parámetros que arrastra el original MENOS el nombre
+     Como no hay carga de página, el contenedor de GTM no dispara su page_view,
+     que es la señal con la que hasta ahora se contaba este paso. Se sustituye
+     por `virtual_page_view`, el mismo evento que ya usa el funnel en sus
+     cambios de etapa (frontend/src/lib/pixelEvents.js), con los mismos campos
+     `page_location` y `page_path`, de modo que el trigger del contenedor sirve
+     para los dos sitios. Se empuja DESPUÉS del pushState, para que la URL que
+     lea el trigger sea la de gracias y no la del evento. */
+  function alDataLayer(datos) {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push(datos);
+  }
+
+  // Título de la pantalla del evento, para devolverlo si el visitante vuelve
+  // atrás; si no, se quedaría el de la de gracias con el formulario delante.
+  var tituloEvento = null;
+
+  function irAGracias() {
+    var destino = window.__EVENTO__ && window.__EVENTO__.gracias;
+    var caja = document.getElementById('gracias-evento');
+    var contenido = document.getElementById('evento-contenido');
+    // Sin el bloque embebido —o sin soporte de pushState— se navega y ya está:
+    // más vale una recarga que dejar al registrado sin su último paso.
+    if (!caja || !contenido || !window.history || !history.pushState) {
+      if (destino) window.location.href = destino + separador(destino) + params();
+      return;
+    }
+    var url = destino ? destino + separador(destino) + params() : location.href;
+    history.pushState({ gracias: true }, '', url);
+    contenido.hidden = true;
+    caja.hidden = false;
+    window.scrollTo(0, 0);
+    if (window.__EVENTO__.titulo_gracias) {
+      tituloEvento = document.title;
+      document.title = window.__EVENTO__.titulo_gracias;
+    }
+    alDataLayer({
+      event: 'virtual_page_view',
+      page_location: window.location.href,
+      page_path: window.location.pathname,
+    });
+    if (window.iniciarSaltoWhatsApp) window.iniciarSaltoWhatsApp();
+  }
+
+  // Volver atrás devuelve al formulario en vez de dejar la pantalla de gracias
+  // con la URL del evento en la barra.
+  window.addEventListener('popstate', function () {
+    var caja = document.getElementById('gracias-evento');
+    var contenido = document.getElementById('evento-contenido');
+    if (!caja || !contenido || caja.hidden) return;
+    caja.hidden = true;
+    contenido.hidden = false;
+    if (tituloEvento) document.title = tituloEvento;
+    window.scrollTo(0, 0);
+  });
+
+  function separador(destino) {
+    // El destino ya puede traer query propia (la escuela, fuera de los dominios
+    // de marca), así que el separador depende de eso.
+    return destino.indexOf('?') === -1 ? '?' : '&';
+  }
+
+  /* Se replican los mismos parámetros que arrastra el original MENOS el nombre
      y el correo, que también viajaban en la URL: esa página no los lee, y los
      datos personales en una query string acaban en los logs del servidor, en
      el historial del navegador y en la cabecera Referer de cada recurso que
      cargue la página de destino. */
-  function irAGracias() {
-    var destino = window.__EVENTO__ && window.__EVENTO__.gracias;
-    if (!destino) return;
+  function params() {
     var q = new URLSearchParams(location.search);
     var p = new URLSearchParams({ v: '20250218' });
     ['utm_source','utm_medium','utm_campaign','utm_term','utm_content',
@@ -64,9 +123,7 @@
       if (q.get(k)) p.append(k, q.get(k));
     });
     if (window.__EVENTO__.funnel) p.append('funnel', window.__EVENTO__.funnel);
-    // El destino ya puede traer query propia (la escuela, fuera de los dominios
-    // de marca), así que el separador depende de eso.
-    window.location.href = destino + (destino.indexOf('?') === -1 ? '?' : '&') + p.toString();
+    return p.toString();
   }
 
   form.addEventListener('submit', function (ev) {

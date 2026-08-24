@@ -1,104 +1,24 @@
+{% comment %}
+Página de "gracias" servida por su propia URL. Es la que ve quien entra directo
+y la que deja el pushState en la barra cuando se llega desde la pantalla del
+evento sin recargar, así que recargar ahí tiene que seguir funcionando.
+
+El contenido vive en el parcial porque la pantalla del evento lo embebe también.
+{% endcomment %}
 {% load static %}
-<title>{{ titulo_pagina }}</title>
+<title>{{ gr.titulo_pagina }}</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-{% include '_includes/_sgtm_head.html' %}
 <meta name="robots" content="noindex,nofollow">
+{% include '_includes/_sgtm_head.html' %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-/* ───────────────────────────────────────────────────────────────────────────
-   Página de "gracias" de Languages. No comparte maqueta con Blocks y Finance:
-   igual que su pantalla de evento, va sobre la foto de Londres, con tarjetas
-   blancas redondeadas, titular en rojo y el CTA en píldora verde de WhatsApp.
-   ─────────────────────────────────────────────────────────────────────────── */
-:root{
-  --rojo:#ff0004;
-  --verde:#15b961;
-  --tinta:#1d1d1d;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;min-height:100vh;display:flex;flex-flow:column;
-  background-image:url("{% static 'img/eventos/cl-fondo.jpg' %}");
-  background-position:0 0;background-size:cover;background-attachment:fixed;
-  font-family:Poppins,Arial,sans-serif;font-size:16px;line-height:1.5;color:var(--tinta);
-  -webkit-font-smoothing:antialiased;
-}
-.header_logos{display:flex;justify-content:center;align-items:center;padding:20px 0}
-.header_logos img{width:259px;max-width:80%;height:auto}
-.pila{display:flex;flex-flow:column;gap:22px;width:100%;padding:0 10px 40px}
-
-/* `.container-block` */
-.tarjeta{
-  display:flex;flex-flow:column;justify-content:center;align-items:center;
-  /* 60%, con el mismo tope que resuelve el original: a 2560px de ventana su
-     tarjeta mide 1013px. Por debajo de ~1690px manda el 60%. */
-  width:60%;max-width:1013px;margin:0 auto;padding:30px;
-  background-color:#fff;border-radius:20px;
-}
-/* `.bold-text-62`: Oswald, mayúsculas y rojo. */
-.titular{
-  margin:0;color:var(--rojo);text-align:center;text-transform:uppercase;
-  font-family:Oswald,Arial,sans-serif;font-size:20px;font-weight:700;
-}
-.texto{color:var(--tinta);text-align:center;max-width:80%;margin:10px auto 0}
-.texto strong{font-weight:700}
-/* `.text-span-161` */
-.subrayado{font-weight:700;text-decoration:underline}
-.destacar{color:var(--tinta);text-align:center;margin:0;font-weight:700}
-.cta-fila{display:flex;justify-content:center;align-items:center;margin-top:20px;width:100%}
-/* `.button-20` */
-.button_wrap{
-  display:inline-block;max-width:90%;
-  background-color:var(--verde);border-radius:50px;text-decoration:none;
-}
-.button_content{padding:15px 50px}
-.button_text{
-  color:#fff;font-family:Poppins,Arial,sans-serif;font-size:18px;font-weight:700;
-}
-.button_wrap:hover{filter:brightness(1.06)}
-
-@media (max-width:991px){ .tarjeta{width:90%} }
-@media (max-width:767px){
-  .tarjeta{width:100%;padding:24px 20px}
-  .texto{max-width:100%}
-  .button_content{padding:15px 24px}
-  .button_text{font-size:16px}
-}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;-webkit-font-smoothing:antialiased}
 </style>
 
-<div class="header_logos">
-  <img src="{% static logo %}" alt="{{ marca }}" width="259">
-</div>
-
-<div class="pila">
-  <div class="tarjeta">
-    <p class="titular">¡OBLIGATORIO! Queda un último paso para reservar tu entrada...</p>
-    <p class="texto">
-      Hemos creado una comunidad VIP en WhatsApp para todos los asistentes a la
-      <strong>{{ clase }}</strong> de {{ marca }}.<br><br>
-      <span class="subrayado">Es de vital importancia que te unas para confirmar tu asistencia.</span>
-    </p>
-    {% include 'pages/public/evento/_boton_whatsapp.html' %}
-  </div>
-
-  <div class="tarjeta">
-    <p class="destacar">⬇️ Dale al botón verde de abajo para unirte totalmente gratis al grupo exclusivo del evento de {{ marca }} ⬇️</p>
-    {% include 'pages/public/evento/_boton_whatsapp.html' %}
-  </div>
-
-  <div class="tarjeta">
-    <p class="destacar">¿Miras más tu Whatsapp que tu e-mail?</p>
-    <p class="texto">
-      Tranquilo, a mucha gente de nuestra comunidad le ocurre.<br>
-      Por eso, hemos creado una comunidad de WhatsApp, donde recibirás todas las
-      comunicaciones de la Clase, mucho valor adicional de {{ marca }}, y
-      algún que otro regalo.
-    </p>
-    {% include 'pages/public/evento/_boton_whatsapp.html' %}
-  </div>
-</div>
-
+{% include 'pages/public/evento/_gracias_languages.html' %}
 {% include 'pages/public/evento/_salto_whatsapp.html' %}
+<script>window.iniciarSaltoWhatsApp();</script>

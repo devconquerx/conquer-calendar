@@ -1,0 +1,95 @@
+{% load static %}
+{% comment %}
+  Contenido de la página de "gracias" de Languages. Mismas dos reglas que la de
+  Blocks y Finance: CSS acotado a `#gracias-evento` porque convive con el de la
+  pantalla del evento, y datos desde `gr.*` para no chocar con las claves del
+  evento.
+
+  El fondo no se pone en el <body> —embebido pisaría el de la pantalla del
+  evento—, sino en el propio contenedor, que ocupa la altura completa.
+{% endcomment %}
+<style>
+#gracias-evento{
+  --rojo:#ff0004;
+  --verde:#15b961;
+  --tinta:#1d1d1d;
+  min-height:100vh;
+  background-image:url("{% static 'img/eventos/cl-fondo.jpg' %}");
+  background-position:0 0;background-size:cover;background-attachment:fixed;
+  font-family:Poppins,Arial,sans-serif;font-size:16px;line-height:1.5;color:var(--tinta);
+}
+#gracias-evento[hidden]{display:none}
+#gracias-evento .cabecera{display:flex;justify-content:center;align-items:center;padding:20px 0}
+#gracias-evento .cabecera img{width:259px;max-width:80%;height:auto}
+#gracias-evento .pila{display:flex;flex-flow:column;gap:22px;width:100%;padding:0 10px 40px}
+/* `.container-block`: 60%, con el mismo tope que resuelve el original —a 2560px
+   de ventana su tarjeta mide 1013px—. Por debajo de ~1690px manda el 60%. */
+#gracias-evento .tarjeta{
+  display:flex;flex-flow:column;justify-content:center;align-items:center;
+  width:60%;max-width:1013px;margin:0 auto;padding:30px;
+  background-color:#fff;border-radius:20px;
+}
+/* `.bold-text-62`: Oswald, mayúsculas y rojo. */
+#gracias-evento .titular{
+  margin:0;color:var(--rojo);text-align:center;text-transform:uppercase;
+  font-family:Oswald,Arial,sans-serif;font-size:20px;font-weight:700;
+}
+#gracias-evento .texto{color:var(--tinta);text-align:center;max-width:80%;margin:10px auto 0}
+#gracias-evento .texto strong{font-weight:700}
+/* `.text-span-161` */
+#gracias-evento .subrayado{font-weight:700;text-decoration:underline}
+#gracias-evento .destacar{color:var(--tinta);text-align:center;margin:0;font-weight:700}
+#gracias-evento .cta-fila{display:flex;justify-content:center;align-items:center;margin-top:20px;width:100%}
+/* `.button-20` */
+#gracias-evento .boton{
+  display:inline-block;max-width:90%;
+  background-color:var(--verde);border-radius:50px;text-decoration:none;
+}
+#gracias-evento .boton-cuerpo{padding:15px 50px}
+#gracias-evento .boton-texto{
+  color:#fff;font-family:Poppins,Arial,sans-serif;font-size:18px;font-weight:700;
+}
+#gracias-evento .boton:hover{filter:brightness(1.06)}
+
+@media (max-width:991px){ #gracias-evento .tarjeta{width:90%} }
+@media (max-width:767px){
+  #gracias-evento .tarjeta{width:100%;padding:24px 20px}
+  #gracias-evento .texto{max-width:100%}
+  #gracias-evento .boton-cuerpo{padding:15px 24px}
+  #gracias-evento .boton-texto{font-size:16px}
+}
+</style>
+
+<div id="gracias-evento" data-whatsapp="{{ gr.whatsapp }}"{% if oculto %} hidden{% endif %}>
+  <div class="cabecera">
+    <img src="{% static gr.logo %}" alt="{{ gr.marca }}" width="259">
+  </div>
+
+  <div class="pila">
+    <div class="tarjeta">
+      <p class="titular">¡OBLIGATORIO! Queda un último paso para reservar tu entrada...</p>
+      <p class="texto">
+        Hemos creado una comunidad VIP en WhatsApp para todos los asistentes a la
+        <strong>{{ gr.clase }}</strong> de {{ gr.marca }}.<br><br>
+        <span class="subrayado">Es de vital importancia que te unas para confirmar tu asistencia.</span>
+      </p>
+      {% include 'pages/public/evento/_boton_whatsapp.html' %}
+    </div>
+
+    <div class="tarjeta">
+      <p class="destacar">⬇️ Dale al botón verde de abajo para unirte totalmente gratis al grupo exclusivo del evento de {{ gr.marca }} ⬇️</p>
+      {% include 'pages/public/evento/_boton_whatsapp.html' %}
+    </div>
+
+    <div class="tarjeta">
+      <p class="destacar">¿Miras más tu Whatsapp que tu e-mail?</p>
+      <p class="texto">
+        Tranquilo, a mucha gente de nuestra comunidad le ocurre.<br>
+        Por eso, hemos creado una comunidad de WhatsApp, donde recibirás todas las
+        comunicaciones de la Clase, mucho valor adicional de {{ gr.marca }}, y
+        algún que otro regalo.
+      </p>
+      {% include 'pages/public/evento/_boton_whatsapp.html' %}
+    </div>
+  </div>
+</div>

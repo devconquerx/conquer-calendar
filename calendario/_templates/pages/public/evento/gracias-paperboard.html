@@ -1,139 +1,24 @@
+{% comment %}
+Página de "gracias" servida por su propia URL. Es la que ve quien entra directo
+y la que deja el pushState en la barra cuando se llega desde la pantalla del
+evento sin recargar, así que recargar ahí tiene que seguir funcionando.
+
+El contenido vive en el parcial porque la pantalla del evento lo embebe también.
+{% endcomment %}
 {% load static %}
-<title>{{ titulo_pagina }}</title>
+<title>{{ gr.titulo_pagina }}</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-{% include '_includes/_sgtm_head.html' %}
 <meta name="robots" content="noindex,nofollow">
+{% include '_includes/_sgtm_head.html' %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ───────────────────────────────────────────────────────────────────────────
-   Página de "gracias" de Blocks y Finance. En Webflow son la misma página con
-   otra marca, igual que la pantalla de evento, así que comparten plantilla y
-   solo cambian el degradado, el logo y la copia.
-
-   Reutiliza el sistema visual de `paperboard.html` —fondo de rejilla, tarjeta
-   de cartón con su textura y CTA de borde pixelado— porque en el original es
-   literalmente el mismo: mismas variables de Webflow y mismos assets.
-   ─────────────────────────────────────────────────────────────────────────── */
-:root{
-  --grad-1:{{ gradiente_1 }};
-  --grad-2:{{ gradiente_2 }};
-  /* `.conquer-gradient`. No es la pareja del CTA ni en el mismo orden: en
-     Blocks va #ff4000→#ff9800 y en Finance #3ac043→#aed916, medido sobre cada
-     página. */
-  --titular-1:{{ titular_1 }};
-  --titular-2:{{ titular_2 }};
-  --neutral-900:#171717;
-  --fuente:'Funnel Display',Arial,sans-serif;
-  --pixel-clip:polygon(97.74% 73.83%,97.74% 82.56%,100% 82.56%,100% 100%,95.47% 100%,95.47% 91.28%,81.5% 91.28%,81.5% 100%,19.87% 100%,19.87% 91.28%,9.06% 91.28%,9.06% 100%,2.26% 100%,2.26% 80.24%,0% 80.24%,0% 26.16%,2.26% 26.16%,2.26% 17.44%,0% 17.44%,0% 0%,4.53% 0%,4.53% 8.72%,12.82% 8.72%,12.82% 0%,72.03% 0%,72.03% 8.72%,88.67% 8.72%,88.67% 0%,97.74% 0%,97.74% 8.72%,100% 8.72%,100% 73.83%);
-}
-*{box-sizing:border-box}
-body{
-  margin:0;min-height:100vh;background-color:#000;
-  background-image:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.15)),url("{% static 'img/eventos/cb-grid-background.avif' %}");
-  font-family:var(--fuente);font-size:16px;font-weight:300;line-height:20px;color:#737373;
-  -webkit-font-smoothing:antialiased;
-}
-.header_logos{display:flex;justify-content:center;align-items:center;padding:20px 0}
-.header_logos img{width:{{ logo_ancho }}px;height:auto}
-/* `.container-74`: la columna que apila las tarjetas, con 22-24px entre ellas. */
-.pila{display:flex;flex-flow:column;gap:24px;width:100%;padding:0 10px 40px}
-
-/* `.pasos__container`: tarjeta de cartón. La primera lleva `.light-mode` y las
-   otras dos `.whatsapp-container`; solo cambian el velo sobre la textura
-   (#fff9 contra #fff6) y el aire lateral. */
-.tarjeta{
-  display:flex;flex-flow:column;justify-content:space-between;align-items:center;gap:12px;
-  /* En Webflow la tarjeta es a la vez `.w-container`, así que además del 60%
-     lleva el tope de 940px de Webflow. Medido en el original: a 2560px de
-     ventana la tarjeta mide 940, no 1536. */
-  width:60%;max-width:940px;margin:0 auto;padding:20px 30px 40px;
-  background-color:#fff;
-  background-image:linear-gradient(to bottom,#fff9,#fff9),url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
-  background-position:0 0,50% 0;background-size:auto,216px;
-  border-radius:20px;
-}
-.titular{
-  margin:0;color:var(--neutral-900);text-align:center;
-  font-size:48px;font-weight:600;line-height:1.1;
-}
-.titular .destacado{
-  background-image:linear-gradient(135deg,var(--titular-1),var(--titular-2));
-  -webkit-text-fill-color:transparent;-webkit-background-clip:text;background-clip:text;
-}
-/* Solo cambia el velo. En Webflow esta clase intenta además meterles 10px de
-   padding lateral, pero la regla lleva una coma de más antes de la llave y el
-   navegador la descarta entera, así que las tres tarjetas acaban con el mismo
-   padding y los tres botones miden lo mismo. Se replica el resultado real. */
-.tarjeta.whatsapp{
-  background-image:linear-gradient(to bottom,#fff6,#fff6),url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
-}
-/* `.paragraph-58.negro`: el párrafo de la primera tarjeta. */
-.texto{color:#333;text-align:center;max-width:80%;margin:0 auto;font-size:19px;line-height:1.25}
-.texto strong{font-weight:700}
-/* `.paragraph-4-copy.negro`: el de las otras dos. Ancho completo —por eso en el
-   original cabe en una línea— y a tamaño h6. */
-.texto-ancho{color:#1d1d1d;text-align:center;max-width:100%;margin:0 0 20px;font-size:20px;line-height:1.25}
-.texto-ancho strong{font-weight:700}
-/* `.paragraph-59.negro` */
-.texto-cierre{color:#1d1d1d;text-align:center;max-width:80%;margin:10px auto 20px;font-size:16px;line-height:1.25}
-.cta-fila{display:flex;flex-flow:column;justify-content:center;align-self:center;width:75%;margin-top:20px}
-
-/* CTA: mismo degradado a 135deg y mismo borde pixelado que el del evento. */
-.button_wrap{display:inline-block;position:relative;width:100%;text-decoration:none}
-.button_content{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  background-image:linear-gradient(135deg,var(--grad-1),var(--grad-2));
-  color:#fff;padding:16px 24px;clip-path:var(--pixel-clip);transition:none;
-}
-.button_text{font-family:var(--fuente);font-size:16px;font-weight:400}
-.button_icon{display:flex;align-items:center;justify-content:center;width:24px;aspect-ratio:1}
-.button_icon svg{width:.5rem;height:.5rem}
-.button_wrap:hover .button_content{filter:brightness(1.06)}
-
-@media (max-width:991px){
-  .tarjeta{width:90%}
-  .titular{font-size:40px}
-}
-@media (max-width:767px){
-  .tarjeta{width:100%;padding:20px}
-  .titular{font-size:32px}
-  .texto{max-width:100%}
-  .cta-fila{width:100%}
-}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background-color:#000;background-image:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.15)),url("{% static 'img/eventos/cb-grid-background.avif' %}");-webkit-font-smoothing:antialiased}
 </style>
 
-<div class="header_logos">
-  <img src="{% static logo %}" alt="{{ marca }}" width="{{ logo_ancho }}">
-</div>
-
-<div class="pila">
-  <div class="tarjeta">
-    <h2 class="titular"><span class="destacado">¡OBLIGATORIO!</span><br>Queda un último paso para reservar tu entrada...</h2>
-    <p class="texto">
-      Hemos creado una comunidad VIP en WhatsApp para todos los asistentes a la
-      <strong>{{ clase }}</strong><br>
-      Es de vital importancia que te unas para confirmar tu asistencia.
-    </p>
-    {% include 'pages/public/evento/_boton_whatsapp.html' %}
-  </div>
-
-  <div class="tarjeta whatsapp">
-    <p class="texto-ancho">Dale al botón de abajo para unirte totalmente gratis al grupo exclusivo del Evento ⬇️</p>
-    {% include 'pages/public/evento/_boton_whatsapp.html' %}
-  </div>
-
-  <div class="tarjeta whatsapp">
-    <p class="texto-ancho"><strong>¿Miras más tu Whatsapp que tu e-mail?</strong></p>
-    <p class="texto-cierre">
-      Tranquilo, a mucha gente de nuestra comunidad le ocurre.<br>
-      Por eso, hemos creado una comunidad de WhatsApp, donde recibirás todas las
-      comunicaciones del Evento, y mucho valor adicional de {{ marca }}.
-    </p>
-    {% include 'pages/public/evento/_boton_whatsapp.html' %}
-  </div>
-</div>
-
+{% include 'pages/public/evento/_gracias_paperboard.html' %}
 {% include 'pages/public/evento/_salto_whatsapp.html' %}
+<script>window.iniciarSaltoWhatsApp();</script>

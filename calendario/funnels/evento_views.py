@@ -274,6 +274,11 @@ class EventoView(TemplateView):
         if self.request.GET.get('escuela'):
             ruta += '?escuela=' + self.escuela
         ctx['gracias'] = ruta
+        # La pantalla de gracias viaja embebida y oculta: al registrarse se
+        # muestra sin recargar. Va bajo `gr` porque `EVENTOS` y `GRACIAS`
+        # comparten claves con valores distintos (`cta`, `marca`, `logo`…) y
+        # volcarlas juntas al contexto se comería la mitad.
+        ctx['gr'] = GRACIAS[self.escuela]
         ctx['gtm'] = _gtm(self.escuela)
         # País del selector según Cloudflare. Se manda VACÍO si la cabecera no
         # viene, en vez de caer aquí a 'ES': si el servidor rellena España, el
@@ -302,6 +307,6 @@ class GraciasView(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx.update(self.gracias)
+        ctx['gr'] = self.gracias
         ctx['gtm'] = _gtm(self.escuela)
         return ctx
