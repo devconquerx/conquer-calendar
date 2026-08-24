@@ -1,0 +1,302 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ titulo_pagina }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&family=Poppins:ital,wght@1,700&display=swap" rel="stylesheet">
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   Maqueta "paperboard" de las pantallas de evento. La comparten Conquer Blocks
+   (/evento/evento-online) y Conquer Finance (/evento/evento-online), que en
+   Webflow son la misma página con otra marca: mismas clases, mismo modal y
+   mismas medidas; solo cambian el degradado, el logo y la foto.
+
+   Los valores salen de la hoja de estilos y del computado de las páginas vivas,
+   no de medir sobre una captura: gradiente 225deg en la barra y 135deg en el
+   CTA, textura paperboard a 216px con velo #fff9, y el mismo clip-path
+   pixelado que ya usa el CTA del funnel (CB_PIXEL_CLIP).
+   ─────────────────────────────────────────────────────────────────────────── */
+:root{
+  --grad-1:{{ evento.gradiente_1 }};
+  --grad-2:{{ evento.gradiente_2 }};
+  /* brand-orange-500: el naranja de los iconos de bullet. Lo comparten las dos
+     marcas, también Finance pese a ser verde. */
+  --icono-bullet:#f70;
+  --foto-borde:{{ evento.foto_borde }};
+  --neutral-900:#171717;
+  --neutral-800:#262626;
+  --tinta-bullet:#1d1d1d;
+  --fuente:'Funnel Display',Arial,sans-serif;
+  --pixel-clip:polygon(97.74% 73.83%,97.74% 82.56%,100% 82.56%,100% 100%,95.47% 100%,95.47% 91.28%,81.5% 91.28%,81.5% 100%,19.87% 100%,19.87% 91.28%,9.06% 91.28%,9.06% 100%,2.26% 100%,2.26% 80.24%,0% 80.24%,0% 26.16%,2.26% 26.16%,2.26% 17.44%,0% 17.44%,0% 0%,4.53% 0%,4.53% 8.72%,12.82% 8.72%,12.82% 0%,72.03% 0%,72.03% 8.72%,88.67% 8.72%,88.67% 0%,97.74% 0%,97.74% 8.72%,100% 8.72%,100% 73.83%);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background-color:#000;
+  background-image:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.15)),url("{% static 'img/eventos/cb-grid-background.avif' %}");
+  font-family:var(--fuente);font-size:16px;font-weight:300;line-height:20px;color:#737373;
+  -webkit-font-smoothing:antialiased;
+}
+.header_logos{display:flex;justify-content:center;align-items:center;gap:32px;padding:20px 0;text-align:center}
+.header_logos img{width:{{ evento.logo_ancho }}px;height:auto}
+.contenedor{max-width:1200px;margin:0 auto}
+
+.event-top-bar{
+  background-image:linear-gradient(225deg,var(--grad-1),var(--grad-2));
+  color:#fff;text-align:center;border-radius:10px 10px 0 0;
+  padding:10px;font-size:18px;font-weight:600;line-height:1.25;
+}
+.event-div{
+  display:flex;flex-flow:column;justify-content:space-between;align-items:center;gap:{{ evento.hueco }};
+  background-color:#fff;
+  background-image:linear-gradient(to bottom,#fff9,#fff9),url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
+  background-position:0 0,50% 0;background-size:auto,216px;
+  border-radius:0 0 10px 10px;padding:2rem 0;
+}
+.event-title{
+  max-width:95%;margin:0 auto;color:var(--neutral-900);text-align:center;
+  font-size:30px;font-weight:600;line-height:1.3em;
+}
+/* `.conquer-gradient` se conserva porque el original la lleva en el marcado,
+   pero NO se le aplica degradado: en la hoja de Webflow esa clase no tiene
+   ninguna regla, así que ese tramo del titular hereda el negro del h1. */
+.event-subtitle{
+  max-width:95%;margin:0 auto;color:var(--neutral-800);text-align:center;
+  font-size:23px;font-weight:300;line-height:1.3em;padding-bottom:60px;
+}
+.div-block-70{max-width:92%;margin:0 auto;width:100%}
+/* Sin `width`: son los márgenes negativos los que ensanchan la fila de 1104
+   a 1124, como el `w-row` de Webflow. Con `width:100%` no se movía. */
+.columns-25{display:flex;align-items:stretch;margin:0 -10px}
+.col{width:50%;padding:0 10px}
+.col img{width:100%;height:auto;display:block;border:var(--foto-borde);border-radius:9px}
+.div-block-73{display:flex;flex-flow:column;justify-content:space-between;height:100%;gap:8px}
+.div-block-71{display:flex;margin-top:6px;padding-bottom:10px}
+/* `margin-top:-8px` y el naranja de marca salen del original. */
+.bullet-icon{flex:0 0 20px;max-width:25px;color:var(--icono-bullet);line-height:0;margin-top:-8px}
+.event-bullet{padding-left:10px;color:var(--tinta-bullet);font-size:1rem;font-weight:400;line-height:1.25}
+.event-bullet strong{font-weight:700}
+
+/* CTA: degradado 135deg y borde pixelado. El original quita la transición y
+   hace un glitch de 3 fases al pasar el ratón; se replica igual. */
+.button_wrap{display:inline-block;position:relative;width:100%;border:0;background:none;padding:0;cursor:pointer}
+.button_content{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  background-image:linear-gradient(135deg,var(--grad-1),var(--grad-2));
+  color:#fff;padding:16px 24px;clip-path:var(--pixel-clip);transition:none;
+}
+.button_text{font-family:var(--fuente);font-size:16px;font-weight:400}
+.button_icon{display:flex;align-items:center;justify-content:center;width:24px;aspect-ratio:1}
+.button_icon svg{width:.5rem;height:.5rem}
+.button_wrap:hover .button_content{animation:pixelGlitchOut .15s steps(1,end) forwards}
+@keyframes pixelGlitchOut{
+  0%{clip-path:polygon(98% 65%,98% 75%,100% 75%,100% 100%,93% 100%,93% 94%,75% 94%,75% 100%,35% 100%,35% 94%,15% 94%,15% 100%,0% 100%,0% 70%,3% 70%,3% 35%,0% 35%,0% 12%,3% 12%,3% 0%,15% 0%,15% 6%,25% 6%,25% 0%,55% 0%,55% 6%,85% 6%,85% 0%,100% 0%,100% 6%,98% 6%,98% 65%)}
+  33.33%{clip-path:polygon(100% 80%,100% 90%,96% 90%,96% 100%,85% 100%,85% 92%,60% 92%,60% 100%,20% 100%,20% 92%,8% 92%,8% 100%,0% 100%,0% 85%,4% 85%,4% 45%,0% 45%,0% 25%,4% 25%,4% 0%,8% 0%,8% 5%,18% 5%,18% 0%,75% 0%,75% 5%,92% 5%,92% 0%,100% 0%,100% 5%,96% 5%,96% 80%)}
+  66.66%,100%{clip-path:polygon(100% 73.83%,100% 82.56%,97.74% 82.56%,97.74% 100%,90% 100%,90% 91.28%,75% 91.28%,75% 100%,25% 100%,25% 91.28%,14% 91.28%,14% 100%,0% 100%,0% 80.24%,2.26% 80.24%,2.26% 26.16%,0% 26.16%,0% 17.44%,2.26% 17.44%,2.26% 0%,10% 0%,10% 8.72%,18% 8.72%,18% 0%,65% 0%,65% 8.72%,82% 8.72%,82% 0%,100% 0%,100% 8.72%,97.74% 8.72%,97.74% 73.83%)}
+}
+@media (prefers-reduced-motion:reduce){.button_wrap:hover .button_content{animation:none}}
+
+/* ─── Modal de registro ─────────────────────────────────────────────────── */
+.modal-popup{
+  position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.65);padding:0 32px;
+}
+.modal-popup[data-abierto="true"]{display:flex}
+.modal-container{
+  background:#fff;color:#000;border-radius:12px;padding:32px;text-align:center;
+  width:100%;max-width:700px;max-height:90vh;overflow-y:auto;
+}
+.modal-title{color:#0a0a0a;font-size:40px;font-weight:500;line-height:44px;margin:0 0 12px}
+.modal-sub{font-size:16px;font-weight:300;line-height:20px;margin:0 0 20px}
+.campo{margin-bottom:12px}
+.campo input[type=text],.campo input[type=email],.campo input[type=tel]{
+  width:100%;background:#fff;color:#333;font-family:var(--fuente);font-size:16px;font-weight:400;
+  line-height:25px;border:1px solid #ccc;border-radius:3px;padding:10px 12px;
+}
+.campo input:focus-visible{outline:2px solid var(--grad-2);outline-offset:1px;border-color:var(--grad-2)}
+/* Prefijo + número: un solo control unido, como el original (bandera, prefijo,
+   chevron y desplegable con buscador). Mismo componente que Languages; solo
+   cambian el radio y los tamaños, que aquí siguen la línea de Blocks. */
+.tel-row{display:flex;align-items:stretch;border:1px solid #ccc;border-radius:3px;background:#fff}
+.tel-row input[type=tel]{flex:1 1 auto;border:0;border-radius:0 3px 3px 0;padding:10px 12px;
+  font-size:16px;font-family:var(--fuente);color:#333;background:transparent;min-width:0}
+.tel-row input[type=tel]:focus-visible{outline:2px solid var(--grad-2);outline-offset:-2px}
+.prefijo{position:relative;flex:0 0 auto}
+.prefijo-boton{display:flex;align-items:center;gap:4px;height:100%;background:none;border:0;
+  border-right:1px solid #ccc;border-radius:3px 0 0 3px;padding:6px 10px;
+  font-family:var(--fuente);font-size:15px;color:#333;cursor:pointer}
+.prefijo-boton img{width:24px;height:auto;display:block}
+.prefijo-boton .chevron{width:12px;height:12px;opacity:.6}
+.prefijo-panel{position:absolute;z-index:20;top:calc(100% + 4px);left:0;width:280px;max-height:260px;
+  overflow-y:auto;background:#fff;border:1px solid #ccc;border-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;text-align:left}
+.prefijo-buscador{width:100%;border:1px solid #ccc;border-radius:6px;padding:6px 10px;
+  font-family:var(--fuente);font-size:14px;margin-bottom:6px}
+.prefijo-opcion{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;
+  padding:6px 8px;border-radius:6px;font-family:var(--fuente);font-size:14px;cursor:pointer;text-align:left}
+.prefijo-opcion:hover,.prefijo-opcion:focus-visible{background:#f5f5f5}
+.prefijo-opcion img{width:24px;height:auto;flex:0 0 auto}
+.prefijo-pais{flex:1 1 auto;color:#333}
+.prefijo-codigo{color:#666}
+.legal{font-size:12px;line-height:16px;color:#333;margin:6px 0 14px}
+.legal a{color:inherit}
+/* Botón del modal: es el estilo por defecto de ActiveCampaign en la página
+   original (azul, Poppins, cursiva). Se replica tal cual, aunque no case con
+   la línea naranja de la marca. */
+.modal-submit{
+  width:100%;background:#0089ff;color:#fff;border:1px solid #000;border-radius:3px;padding:13px;
+  font-family:Poppins,var(--fuente);font-size:18px;font-weight:700;font-style:italic;
+  text-transform:uppercase;letter-spacing:2px;cursor:pointer;
+}
+.modal-submit:hover{filter:brightness(1.06)}
+/* Vacío no ocupa: si no, el modal crece de más. */
+.aviso{margin:12px 0 0;font-size:14px;line-height:18px}
+.aviso:empty{margin:0;display:none}
+.aviso.error{color:#b3261e}
+.aviso.ok{color:#1d7a5f}
+.modal-submit[disabled]{opacity:.6;cursor:progress}
+.modal-cerrar{position:absolute;top:18px;right:24px;background:none;border:0;color:#fff;font-size:32px;line-height:1;cursor:pointer}
+
+@media (max-width:991px){
+  .event-title{font-size:23px}
+  .event-subtitle{font-size:18px;padding-bottom:20px}
+  .columns-25{flex-flow:column}
+  .col{width:100%}
+  .div-block-73{padding-top:20px}
+  .event-div{padding:2rem 10px 0}
+  .contenedor{padding:0 10px}
+  .columns-25{margin:0}
+}
+@media (max-width:767px){
+  .event-top-bar{font-size:14px;font-weight:800}
+  .event-title{font-size:18px;padding:20px 0}
+  .modal-title{font-size:28px;line-height:32px}
+  .modal-container{padding:24px}
+}
+@media (max-width:479px){
+  .event-title{font-size:16px}
+  .event-subtitle{font-size:16px;font-weight:400;margin:0}
+}
+</style>
+</head>
+<body>
+  <section class="header_logos">
+    <img src="{% static evento.logo %}" alt="{{ evento.marca }}" width="{{ evento.logo_ancho }}" height="30">
+  </section>
+
+  <section>
+    <div class="contenedor">
+      <div class="event-top-bar">{{ evento.barra }}</div>
+
+      <div class="event-div">
+        <h1 class="event-title">{{ evento.titulo_pre }}<span class="conquer-gradient">{{ evento.titulo_grad }}</span></h1>
+        <p class="event-subtitle">{{ evento.subtitulo }}</p>
+
+        <div class="div-block-70">
+        <div class="columns-25">
+          <div class="col">
+            <img src="{% static evento.foto %}" alt="" width="542" height="406">
+          </div>
+          <div class="col">
+            <div class="div-block-73">
+              {% for b in evento.bullets %}
+              <div class="div-block-71">
+                <div class="bullet-icon" aria-hidden="true">
+                  <svg width="20" height="20" fill="currentcolor" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M256 8c137 0 248 111 248 248S393 504 256 504 8 393 8 256 119 8 256 8zM140 300h116v70.9c0 10.7 13 16.1 20.5 8.5l114.3-114.9c4.7-4.7 4.7-12.2 0-16.9l-114.3-115c-7.6-7.6-20.5-2.2-20.5 8.5V212H140c-6.6 0-12 5.4-12 12v64c0 6.6 5.4 12 12 12z"></path></svg>
+                </div>
+                <div class="event-bullet">{{ b|safe }}</div>
+              </div>
+              {% endfor %}
+
+              <button type="button" class="button_wrap" data-abrir-modal>
+                <span class="button_content">
+                  <span class="button_text">{{ evento.cta }}</span>
+                  <span class="button_icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.574 7.1 4.285 21.399a1.77 1.77 0 0 1-.893.379c-.336 0-.63-.13-.884-.389a1.77 1.77 0 0 1-.388-.893c0-.336.129-.634.388-.893L16.797 5.315H4.216c-.364 0-.668-.123-.912-.367a1.24 1.24 0 0 1-.366-.912c0-.365.122-.669.366-.913.244-.244.548-.366.912-.366h15.66c.365 0 .669.122.913.366.244.244.366.548.366.913v15.66c0 .364-.122.668-.366.912a1.24 1.24 0 0 1-.913.366c-.364 0-.668-.122-.912-.366a1.24 1.24 0 0 1-.366-.913V7.1Z" fill="currentColor"/></svg>
+                  </span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="modal-popup" id="modal-registro" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <button type="button" class="modal-cerrar" data-cerrar-modal aria-label="Cerrar">&times;</button>
+    <div class="modal-container">
+      <h2 class="modal-title" id="modal-titulo">{{ evento.modal_titulo }}</h2>
+      <p class="modal-sub">{{ evento.modal_subtitulo }}</p>
+
+      <!-- method="post" a propósito: el envío real lo hace el JS de abajo, pero si
+           este falla o aún no ha cargado, el navegador haría el submit nativo. Con
+           el GET por defecto el email y el teléfono acabarían en la barra de
+           direcciones, en el historial y en los logs del servidor. -->
+      <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
+        <div class="campo">
+          <input type="text" name="fullname" id="fullname" placeholder="Introduce tu nombre" required autocomplete="given-name">
+        </div>
+        <div class="campo">
+          <input type="email" name="email" id="email" placeholder="Tu mejor email" required autocomplete="email">
+        </div>
+        <div class="campo">
+          <div class="tel-row" data-prefijo="{% static 'js/paises-evento.json' %}" data-pais="{{ pais_detectado }}">
+            <div class="prefijo">
+              <button type="button" class="prefijo-boton" aria-haspopup="listbox" aria-expanded="false" aria-label="Prefijo del país">
+                <img class="prefijo-bandera" src="" alt="" width="24">
+                <span class="prefijo-valor">+34</span>
+                <svg class="chevron" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="prefijo-panel" hidden>
+                <input type="text" class="prefijo-buscador" placeholder="Buscar país..." aria-label="Buscar país">
+                <div class="prefijo-lista" role="listbox"></div>
+              </div>
+            </div>
+            <input type="tel" name="lead_phone" id="phoneLocal" placeholder="Número de WhatsApp" required autocomplete="tel">
+            <input type="hidden" name="lead_phone_prefix" id="phonePrefix" value="+34">
+            <input type="hidden" name="country_name" id="countryName" value="España">
+          </div>
+        </div>
+        <p class="legal">{{ evento.legal_pre }} <a href="{{ evento.politica_url }}" target="_blank" rel="noopener noreferrer">{{ evento.legal_enlace }}</a></p>
+        <button type="submit" class="modal-submit">{{ evento.modal_cta }}</button>
+        <p class="aviso" id="aviso" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+<script>
+window.__EVENTO__ = { funnel: "{{ funnel|escapejs }}" };
+</script>
+<script>
+/* El popup del original se abre con el CTA y se cierra con Escape o clicando
+   fuera. El foco vuelve al botón al cerrar, que en Webflow se pierde. */
+(function () {
+  var modal = document.getElementById('modal-registro');
+  var ultimoFoco = null;
+  function abrir(e) {
+    ultimoFoco = e.currentTarget;
+    modal.dataset.abierto = 'true';
+    var primero = modal.querySelector('input');
+    if (primero) primero.focus();
+  }
+  function cerrar() {
+    modal.dataset.abierto = 'false';
+    if (ultimoFoco) ultimoFoco.focus();
+  }
+  document.querySelectorAll('[data-abrir-modal]').forEach(function (b) { b.addEventListener('click', abrir); });
+  document.querySelectorAll('[data-cerrar-modal]').forEach(function (b) { b.addEventListener('click', cerrar); });
+  modal.addEventListener('click', function (ev) { if (ev.target === modal) cerrar(); });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && modal.dataset.abierto === 'true') cerrar(); });
+})();
+
+/* El registro vive en static/js/evento-registro.js, compartido con las
+   demás marcas. */
+</script>
+<script src="{% static 'js/evento-prefijo.js' %}"></script>
+<script src="{% static 'js/evento-registro.js' %}"></script>
+</body>
+</html>

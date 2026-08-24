@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.views.generic import RedirectView
 
 from calendario.users.views import MagicLoginView, MagicLoginStopView
+from calendario.funnels.evento_views import EventoView
 from calendario.funnels.views import (
     FunnelAgendaView, FunnelClaseView, FunnelConfirmationView,
     FunnelVideoView, FunnelStatusView,
@@ -49,6 +50,15 @@ urlpatterns = [
     path('u/<uuid:token>/', include('calendario.bookings.urls_public_enlace_unico')),
     path('e/<slug:slug_equipo>/', include('calendario.bookings.urls_public_team')),
     path('f/', include('calendario.funnels.urls')),
+    # Pantalla del evento en directo (lanzamiento). Es informativa: presenta el
+    # directo y registra en un popup, sin StepForm ni reserva detrás, así que no
+    # cuelga de un FunnelForm. La escuela se resuelve por dominio; en local, con
+    # ?escuela=conquer-blocks. Réplica de la página que servía Webflow.
+    re_path(r'^evento/evento-online/?$', EventoView.as_view(), name='evento_online'),
+    # Languages sirve la suya en otra ruta (así está en su Webflow), así que se
+    # registra aparte y lleva la escuela fijada: su dominio no es ambiguo.
+    re_path(r'^cl-evento/?$', EventoView.as_view(), {'escuela': 'conquer-languages'},
+            name='evento_languages'),
     # Panel interno de estado de los funnels (lista escuelas + enlaces).
     path('funnels/', FunnelStatusView.as_view(), name='funnel_status'),
     # URLs públicas canónicas por marca/producto (antes del catch-all de booking).

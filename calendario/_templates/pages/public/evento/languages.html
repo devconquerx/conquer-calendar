@@ -1,0 +1,213 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ titulo_pagina }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,600;0,700;1,900&display=swap" rel="stylesheet">
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   Réplica de www.conquerlanguages.com/cl-evento (Webflow).
+   NO comparte nada con la de Conquer Blocks: es otro sitio de Webflow, otra
+   maqueta y otra tipografía (Poppins en vez de Funnel Display). Diferencias de
+   fondo: aquí el formulario va INLINE en la columna derecha —no en un popup—,
+   lleva casilla de privacidad obligatoria, y el fondo es una foto a `cover`.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root{
+  --rojo-barra:#e34e50;         /* la franja del evento */
+  --teal-cta:#6ca5bc;           /* el botón */
+  --dorado:#e2aa51;             /* el tramo destacado del titular */
+  --tinta:#333;
+  --borde-input:#ccc;
+  --fuente:Poppins,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background-color:#fff;
+  background-image:url("{% static 'img/eventos/cl-fondo.jpg' %}");
+  background-size:cover;background-position:0 0;background-repeat:repeat;
+  font-family:var(--fuente);font-size:14px;font-weight:400;line-height:20px;color:var(--tinta);
+  -webkit-font-smoothing:antialiased;
+}
+.header_logos{display:flex;justify-content:center;align-items:center;gap:8px;padding:20px 0;text-align:center}
+.header_logos img{width:229px;height:auto}
+.contenedor{max-width:1200px;margin:0 auto}
+
+.barra-evento{
+  background-color:var(--rojo-barra);color:#fff;text-align:center;
+  border-radius:10px 10px 0 0;padding:10px 0;font-size:18px;font-weight:600;line-height:20px;
+}
+.tarjeta{background:#fff;border-radius:0 0 20px 20px;padding:20px 0}
+
+.titleblock{display:flex;flex-direction:column;justify-content:center;gap:10px;padding:20px 20px 0;margin:0 10px}
+.titulo{
+  max-width:1140px;margin:0 auto;color:var(--tinta);text-align:center;
+  font-size:28px;font-weight:700;line-height:35px;
+}
+/* El tramo dorado del titular. En el original es un <span class="destacado">
+   con color plano, no un degradado. */
+.destacado{color:var(--dorado);font-weight:700}
+.subtitulo{
+  max-width:900px;margin:0 auto;color:var(--tinta);text-align:center;
+  font-size:25px;font-weight:300;line-height:33px;
+}
+
+.bloque-columnas{max-width:92%;margin:0 auto;padding:10px 0 40px}
+.columnas{display:flex;align-items:center;justify-content:center;gap:40px;margin:20px 0}
+.col-imagen{width:50%}
+.col-imagen img{width:100%;height:auto;display:block}
+.col-form{width:50%;display:flex;flex-direction:column;gap:10px}
+
+.bullets{margin:0}
+.bullet{display:flex;margin-top:6px;padding-bottom:10px}
+/* El icono va sobre la línea base del primer renglón, igual que el original:
+   contenedor en bloque y svg en línea. Con `line-height:0` quedaba pegado
+   arriba y desalineado respecto al texto. */
+.bullet-icono{flex:0 0 20px;width:20px;color:var(--dorado);line-height:0;padding-top:12px}
+.bullet-texto{padding-left:10px;font-size:15px;line-height:19px;color:var(--tinta)}
+.bullet-texto strong{font-weight:700}
+
+.campo{margin-bottom:20px}
+.campo input[type=text],.campo input[type=email],.campo input[type=tel]{
+  width:100%;background:#fff;color:var(--tinta);font-family:var(--fuente);font-size:14px;
+  border:1px solid var(--borde-input);border-radius:20px;padding:8px 12px;line-height:20px;
+}
+.campo input:focus-visible{outline:2px solid var(--teal-cta);outline-offset:1px;border-color:var(--teal-cta)}
+/* Prefijo + número: un solo control unido, como el original. El botón lleva
+   bandera, prefijo y chevron; el desplegable tiene buscador. */
+.tel-row{display:flex;align-items:stretch;border:1px solid var(--borde-input);border-radius:20px;background:#fff}
+.tel-row input{flex:1 1 auto;border:0;border-radius:0 20px 20px 0;padding:8px 12px;font-size:14px;
+  font-family:var(--fuente);color:var(--tinta);background:transparent;min-width:0}
+.tel-row input:focus-visible{outline:2px solid var(--teal-cta);outline-offset:-2px}
+.prefijo{position:relative;flex:0 0 auto}
+.prefijo-boton{display:flex;align-items:center;gap:4px;height:100%;background:none;border:0;
+  border-right:1px solid var(--borde-input);border-radius:20px 0 0 20px;padding:6px 10px;
+  font-family:var(--fuente);font-size:13px;color:var(--tinta);cursor:pointer}
+.prefijo-boton img{width:24px;height:auto;display:block}
+.prefijo-boton .chevron{width:12px;height:12px;opacity:.6}
+.prefijo-panel{position:absolute;z-index:20;top:calc(100% + 4px);left:0;width:280px;max-height:260px;
+  overflow-y:auto;background:#fff;border:1px solid var(--borde-input);border-radius:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px}
+.prefijo-buscador{width:100%;border:1px solid var(--borde-input);border-radius:8px;padding:6px 10px;
+  font-family:var(--fuente);font-size:13px;margin-bottom:6px}
+.prefijo-opcion{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;
+  padding:6px 8px;border-radius:8px;font-family:var(--fuente);font-size:13px;cursor:pointer;text-align:left}
+.prefijo-opcion:hover,.prefijo-opcion:focus-visible{background:#f1f5f7}
+.prefijo-opcion img{width:24px;height:auto;flex:0 0 auto}
+.prefijo-pais{flex:1 1 auto;color:var(--tinta)}
+.prefijo-codigo{color:#666}
+/* La casilla es obligatoria en el original (`required`), a diferencia de la
+   página de Blocks, donde el consentimiento es solo un texto informativo. */
+.consentimiento{display:flex;align-items:flex-start;gap:8px;margin:0 0 20px 5px;font-size:12px;color:#000}
+.consentimiento input{margin-top:2px;accent-color:var(--teal-cta);flex:0 0 auto}
+.consentimiento a{color:inherit}
+.enviar{
+  width:100%;background:var(--teal-cta);color:#fff;border:0;border-radius:20px;padding:15px 12px;
+  font-family:var(--fuente);font-size:17px;font-weight:900;font-style:italic;text-transform:uppercase;
+  letter-spacing:2px;line-height:20px;cursor:pointer;
+}
+.enviar:hover{filter:brightness(1.06)}
+.enviar[disabled]{opacity:.6;cursor:progress}
+/* Vacío no ocupa: si no, la columna crece y desalinea la tarjeta. */
+.aviso{margin:10px 0 0;font-size:13px;line-height:17px}
+.aviso:empty{margin:0;display:none}
+.aviso.error{color:#b3261e}
+.aviso.ok{color:#1d7a5f}
+
+@media (max-width:991px){
+  .contenedor{padding:0 10px}
+  .columnas{flex-flow:column;gap:24px}
+  .col-imagen,.col-form{width:100%}
+  .titulo{font-size:22px;line-height:29px}
+  .subtitulo{font-size:18px;line-height:25px}
+}
+@media (max-width:479px){
+  .barra-evento{font-size:14px}
+  .titulo{font-size:18px;line-height:24px}
+  .subtitulo{font-size:16px;line-height:22px}
+}
+</style>
+</head>
+<body>
+  <section class="header_logos">
+    <img src="{% static 'img/eventos/cl-logo-horizontal.png' %}" alt="Conquer Languages" width="229" height="41">
+  </section>
+
+  <section>
+    <div class="contenedor">
+      <div class="barra-evento">{{ evento.barra }}</div>
+
+      <div class="tarjeta">
+        <div class="titleblock">
+          <h1 class="titulo">{{ evento.titulo_pre }}<span class="destacado">{{ evento.titulo_destacado }}</span>{{ evento.titulo_post }}</h1>
+          <p class="subtitulo">{{ evento.subtitulo }}</p>
+        </div>
+
+        <div class="bloque-columnas">
+          <div class="columnas">
+            <div class="col-imagen">
+              <img src="{% static 'img/eventos/cl-evento-imagen.webp' %}" alt="" width="532" height="299">
+            </div>
+
+            <div class="col-form">
+              <div class="bullets">
+                {% for b in evento.bullets %}
+                <div class="bullet">
+                  <div class="bullet-icono" aria-hidden="true">
+                    <svg width="20" height="20" fill="currentcolor" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M256 8c137 0 248 111 248 248S393 504 256 504 8 393 8 256 119 8 256 8zM140 300h116v70.9c0 10.7 13 16.1 20.5 8.5l114.3-114.9c4.7-4.7 4.7-12.2 0-16.9l-114.3-115c-7.6-7.6-20.5-2.2-20.5 8.5V212H140c-6.6 0-12 5.4-12 12v64c0 6.6 5.4 12 12 12z"></path></svg>
+                  </div>
+                  <div class="bullet-texto">{{ b|safe }}</div>
+                </div>
+                {% endfor %}
+              </div>
+
+              <!-- method="post": el envío lo hace el JS, pero si falla el submit
+                   nativo no debe dejar el email y el teléfono en la URL. -->
+              <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
+                <div class="campo">
+                  <input type="text" name="fullname" id="fullname" placeholder="Introduce tu nombre" required autocomplete="given-name">
+                </div>
+                <div class="campo">
+                  <input type="email" name="email" id="email" placeholder="Tu mejor email" required autocomplete="email">
+                </div>
+                <div class="campo">
+                  <div class="tel-row" data-prefijo="{% static 'js/paises-evento.json' %}" data-pais="{{ pais_detectado }}">
+                    <div class="prefijo">
+                      <button type="button" class="prefijo-boton" aria-haspopup="listbox" aria-expanded="false" aria-label="Prefijo del país">
+                        <img class="prefijo-bandera" src="" alt="" width="24">
+                        <span class="prefijo-valor">+34</span>
+                        <svg class="chevron" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      </button>
+                      <div class="prefijo-panel" hidden>
+                        <input type="text" class="prefijo-buscador" placeholder="Buscar país..." aria-label="Buscar país">
+                        <div class="prefijo-lista" role="listbox"></div>
+                      </div>
+                    </div>
+                    <input type="tel" name="lead_phone" id="phoneLocal" placeholder="Número de WhatsApp" required autocomplete="tel">
+                    <input type="hidden" name="lead_phone_prefix" id="phonePrefix" value="+34">
+                    <input type="hidden" name="country_name" id="countryName" value="España">
+                  </div>
+                </div>
+                <label class="consentimiento">
+                  <input type="checkbox" id="privacidad" required>
+                  <span>{{ evento.consentimiento }} <a href="{{ evento.politica_url }}" target="_blank" rel="noopener noreferrer">{{ evento.politica_texto }}</a></span>
+                </label>
+                <button type="submit" class="enviar">{{ evento.cta }}</button>
+                <p class="aviso" id="aviso" role="status" aria-live="polite"></p>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<script>
+window.__EVENTO__ = { funnel: "{{ funnel|escapejs }}" };
+</script>
+<script src="{% static 'js/evento-prefijo.js' %}"></script>
+<script src="{% static 'js/evento-registro.js' %}"></script>
+</body>
+</html>

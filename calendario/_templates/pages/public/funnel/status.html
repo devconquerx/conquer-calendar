@@ -28,6 +28,7 @@
     a.link { color: #60a5fa; text-decoration: none; margin-right: .1rem; }
     a.link:hover { text-decoration: underline; }
     a.muted { color: #4b5563; pointer-events: none; }
+    td.muted { color: #6b7280; }
     .legend { margin-top: 1.25rem; color: #6b7280; font-size: .8rem; }
     h2 { font-size: 1.05rem; margin: 2.5rem 0 .25rem; }
     .cod { display: inline-block; min-width: 1.6rem; text-align: center; padding: .05rem .4rem; margin-right: .35rem;
@@ -67,6 +68,29 @@
         {% endfor %}
       </tbody>
     </table>
+    <h2>Pantallas de evento</h2>
+    <p class="sub">{{ eventos|length }} pantalla{{ eventos|pluralize:"s" }} de lanzamiento. No son funnels: presentan el directo y recogen el registro ahí mismo, sin StepForm ni reserva detrás, así que no aparecen en la tabla de arriba. Sus leads van solo al CRM.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Escuela</th>
+          <th>Pantalla</th>
+          <th>Cabecera actual</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in eventos %}
+        <tr>
+          <td>{{ e.escuela }}</td>
+          <td><a href="{{ e.url }}">{{ e.titulo }}</a></td>
+          <td class="muted">{{ e.barra }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="muted">Ninguna configurada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
     <h2>Tests A/B activos</h2>
     <p class="sub">{{ tests_ab|length }} tests corriendo. La variante se asigna en el navegador (50/50) y se guarda por visitante; el código viaja al CRM en el campo <code>utm_form_variant</code> de la entidad indicada.</p>
     <table>

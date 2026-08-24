@@ -839,8 +839,33 @@ class FunnelStatusView(View):
                 'stepform_url': _abs(stepform_url(f.escuela, f.region, base=ruta_base)) or '',
                 'confirmation_url': confirmacion,
             })
+        # Pantallas de evento: no son funnels (no tienen StepForm ni reserva), así
+        # que no salen de FunnelForm, pero se listan aquí para tenerlas a mano.
+        # El enlace se arma aparte del bucle de arriba: aquel resuelve el dominio
+        # público por funnel, y aquí hay que hacerlo por escuela del evento.
+        from .evento_views import EVENTOS
+        eventos = []
+        for escuela, datos in sorted(EVENTOS.items()):
+            publico_ev = (publicos.get(escuela) or '').rstrip('/')
+            # Cada marca sirve su evento en una ruta distinta (Blocks en
+            # /evento/evento-online, Languages en /cl-evento), tal como estaban
+            # en Webflow.
+            ruta = datos.get('ruta', 'evento/evento-online')
+            if publico_ev:
+                url = f'{publico_ev}/{ruta}'
+            else:
+                # En local/dev la escuela no se resuelve por dominio: va en la query.
+                url = f'{base}/{ruta}?escuela={escuela}'
+            eventos.append({
+                'escuela': escuela,
+                'titulo': datos['titulo_pagina'],
+                'barra': datos['barra'],
+                'url': url,
+            })
+
         return render(request, 'pages/public/funnel/status.html', {
             'filas': filas,
+            'eventos': eventos,
             'app_base_path': base,
             'tests_ab': tests_para_panel(),
         })
