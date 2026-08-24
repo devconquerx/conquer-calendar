@@ -26,6 +26,10 @@
       border-radius: 14px; overflow: hidden;
   }
   .rd-campo { display: flex; gap: 12px; padding: 18px 20px; background: var(--cx-superficie); }
+  /* El host va en su propia banda: es de quién es la agenda, no un dato más.
+     De paso deja la rejilla en filas exactas — con media celda quedaría un
+     hueco al final, porque las notas ya ocupan dos. */
+  .rd-campo.rd-host { grid-column: 1 / -1; }
   /* Las notas llenan el hueco de la tercera columna en lugar de ir sueltas abajo */
   .rd-campo.rd-notas { grid-column: 3; grid-row: span 2; }
   /* Una nota larga no debe estirar las filas de al lado: scrollea dentro */
@@ -172,6 +176,18 @@
             </div>
         </div>
 
+        {# Host: a quién se le hizo la reserva #}
+        <div class="rd-campo rd-host">
+            <span class="rd-icono"><i class="bi bi-person-badge"></i></span>
+            <div>
+                <div class="rd-label">Host</div>
+                <div class="rd-valor">
+                    <strong>{{ reserva.host.nombre_display }}</strong>
+                    <a href="mailto:{{ reserva.host.email }}" class="ms-2">{{ reserva.host.email }}</a>
+                </div>
+            </div>
+        </div>
+
         {# Fila 3: Hora invitado | Hora host | Sync Google Calendar #}
         <div class="rd-campo">
             <span class="rd-icono"><i class="bi bi-clock"></i></span>
@@ -243,7 +259,8 @@
             <span class="rd-icono"><i class="bi bi-calendar-plus"></i></span>
             <div>
                 <div class="rd-label">Creada</div>
-                <div class="rd-valor">{{ reserva.fecha_creacion|date:"d/m/Y H:i" }}</div>
+                {# Con segundos: sirve para medir la diferencia entre dos reservas seguidas #}
+                <div class="rd-valor">{{ reserva.fecha_creacion|date:"d/m/Y H:i:s" }}</div>
             </div>
         </div>
         {# Notas: ocupa la tercera columna de estas dos filas #}
