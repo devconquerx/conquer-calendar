@@ -64,7 +64,9 @@
       if (q.get(k)) p.append(k, q.get(k));
     });
     if (window.__EVENTO__.funnel) p.append('funnel', window.__EVENTO__.funnel);
-    window.location.href = destino + '?' + p.toString();
+    // El destino ya puede traer query propia (la escuela, fuera de los dominios
+    // de marca), así que el separador depende de eso.
+    window.location.href = destino + (destino.indexOf('?') === -1 ? '?' : '&') + p.toString();
   }
 
   form.addEventListener('submit', function (ev) {

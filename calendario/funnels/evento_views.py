@@ -265,7 +265,15 @@ class EventoView(TemplateView):
         ctx['evento'] = self.evento
         ctx['funnel'] = _funnel_de_la_edicion(self.request, self.evento)
         ctx['titulo_pagina'] = self.evento['titulo_pagina']
-        ctx['gracias'] = '/' + GRACIAS[self.escuela]['ruta']
+        # Ruta relativa: vale para cualquier host sin tener que resolver el
+        # dominio público de cada marca. Si la escuela ha tenido que venir en la
+        # query —el dominio canónico no la resuelve por Host—, se arrastra, o la
+        # de gracias no sabría de quién es y respondería 404. En los dominios de
+        # marca no hace falta y no se añade.
+        ruta = '/' + GRACIAS[self.escuela]['ruta']
+        if self.request.GET.get('escuela'):
+            ruta += '?escuela=' + self.escuela
+        ctx['gracias'] = ruta
         ctx['gtm'] = _gtm(self.escuela)
         # País del selector según Cloudflare. Se manda VACÍO si la cabecera no
         # viene, en vez de caer aquí a 'ES': si el servidor rellena España, el

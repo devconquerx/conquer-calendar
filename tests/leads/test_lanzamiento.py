@@ -371,3 +371,46 @@ class EmailEnMinusculasTest(TestCase):
 
     def test_no_toca_los_que_ya_venian_bien(self):
         self.assertEqual(self._alta('ana@ejemplo.com'), 'ana@ejemplo.com')
+
+
+class LaRedireccionFuncionaEnLosDosSitiosTest(TestCase):
+    """El salto a la página de gracias tiene que funcionar antes y después de
+    que Cloudflare enrute los dominios de marca.
+
+    En los dominios de marca la escuela sale del Host. En el canónico
+    (calendar.conquerx.com) NO, viene en `?escuela=`, y si no se arrastra la
+    página de gracias responde 404 y no hay forma de probar el recorrido entero
+    antes de encender el enrutado.
+    """
+
+    def _destino(self, ruta, host):
+        html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+        marca = 'gracias: "'
+        i = html.index(marca) + len(marca)
+        crudo = html[i:html.index('"', i)]
+        return re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), crudo)
+
+    def test_en_los_dominios_de_marca_va_pelada(self):
+        for host, ruta, esperado in (
+            ('www.conquerblocks.com', '/evento/evento-online', '/evento/gracias-comunidad'),
+            ('www.conquerfinance.com', '/evento/evento-online', '/evento/gracias-comunidad'),
+            ('www.conquerlanguages.com', '/cl-evento', '/grupos-comunidad'),
+        ):
+            self.assertEqual(self._destino(ruta, host), esperado, host)
+
+    def test_en_el_canonico_arrastra_la_escuela(self):
+        for escuela, esperado in (
+            ('conquer-blocks', '/evento/gracias-comunidad?escuela=conquer-blocks'),
+            ('conquer-finance', '/evento/gracias-comunidad?escuela=conquer-finance'),
+        ):
+            destino = self._destino(f'/evento/evento-online?escuela={escuela}', 'calendar.conquerx.com')
+            self.assertEqual(destino, esperado)
+            # Y ese destino tiene que responder de verdad, no 404.
+            ruta, _, query = destino.partition('?')
+            resp = self.client.get(ruta + '?' + query, HTTP_HOST='calendar.conquerx.com')
+            self.assertEqual(resp.status_code, 200, destino)
+
+    def test_el_separador_de_la_query_lo_decide_el_destino(self):
+        js = (Path(__file__).resolve().parents[2]
+              / 'calendario' / 'static' / 'js' / 'evento-registro.js').read_text(encoding='utf-8')
+        self.assertIn("destino.indexOf('?') === -1 ? '?' : '&'", js)
