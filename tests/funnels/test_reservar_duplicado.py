@@ -49,7 +49,7 @@ class ReservarDuplicadoFunnelTest(TestCase):
         }
         return self.client.post(self.url, data=json.dumps(body), content_type='application/json')
 
-    @patch('calendario.funnels.views._enviar_correos_confirmacion')
+    @patch('calendario.funnels.views._avisar_si_es_nueva')
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_segunda_reserva_devuelve_409_con_la_vieja(self, _ev, _conf, _mail):
@@ -67,7 +67,7 @@ class ReservarDuplicadoFunnelTest(TestCase):
         self.assertTrue(data['reserva_existente']['host'])
         self.assertEqual(data['reserva_existente']['event_type_nombre'], self.et.nombre)
 
-    @patch('calendario.funnels.views._enviar_correos_confirmacion')
+    @patch('calendario.funnels.views._avisar_si_es_nueva')
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.cancelar_evento_google')
     @patch('calendario.bookings.services.crear_evento_google')
@@ -89,7 +89,7 @@ class ReservarDuplicadoFunnelTest(TestCase):
         self.assertEqual(activas.count(), 1)
         self.assertEqual(activas.first().inicio_utc, nuevo_inicio)
 
-    @patch('calendario.funnels.views._enviar_correos_confirmacion')
+    @patch('calendario.funnels.views._avisar_si_es_nueva')
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_token_de_otro_email_no_cancela_nada(self, _ev, _conf, _mail):

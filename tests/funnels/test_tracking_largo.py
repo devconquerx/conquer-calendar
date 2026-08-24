@@ -87,7 +87,7 @@ class TrackingLargoTest(TestCase):
             content_type='application/json',
         )
 
-    @patch('calendario.funnels.views._enviar_correos_confirmacion')
+    @patch('calendario.funnels.views._avisar_si_es_nueva')
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_url_de_1700_caracteres_no_tumba_la_reserva(self, _ev, _conf, _mail):
@@ -104,7 +104,7 @@ class TrackingLargoTest(TestCase):
         self.assertIn('utm_campaign=CL_TikTokAds_LATAM', reserva.url)
         self.assertIn('journey_id=jrn_1787251361721_ogdo29', reserva.url)
 
-    @patch('calendario.funnels.views._enviar_correos_confirmacion')
+    @patch('calendario.funnels.views._avisar_si_es_nueva')
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_utm_desmedido_tampoco_la_tumba(self, _ev, _conf, _mail):
@@ -122,7 +122,7 @@ class TrackingLargoTest(TestCase):
         self.assertEqual(len(reserva.utm_term), 255)
         self.assertEqual(len(reserva.utm_form_variant), 500)
 
-    @patch('calendario.funnels.views._enviar_correos_confirmacion')
+    @patch('calendario.funnels.views._avisar_si_es_nueva')
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
     @patch('calendario.bookings.services.crear_evento_google')
     def test_el_tracking_normal_se_guarda_intacto(self, _ev, _conf, _mail):

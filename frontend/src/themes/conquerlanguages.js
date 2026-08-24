@@ -65,6 +65,9 @@ const CL_PIXEL_STYLE = false
 const CL_TEAL = '#70B3C4'
 const CL_TEAL_LIGHT = '#8FD4E3'
 const CL_TEAL_DARK = '#3E7F92'
+// Un paso por debajo de CL_TEAL_DARK, para que el hover se siga notando
+// ahora que el reposo es el oscuro. Solo se usa en los controles.
+const CL_TEAL_DEEP = '#2F6273'
 const CL_GRADIENT = `linear-gradient(90deg, ${CL_TEAL_LIGHT} 0%, ${CL_TEAL} 42%, ${CL_TEAL_DARK} 100%)`
 const CL_TEXT_GRADIENT = `linear-gradient(135deg,${CL_TEAL_DARK},${CL_TEAL_LIGHT})`
 
@@ -335,11 +338,16 @@ export default {
 
   cssVars: {
     '--theme-page-bg': '#F5EDE3',
-    '--theme-accent': CL_TEAL,
-    '--theme-accent-hover': CL_TEAL_DARK,
+    // Los controles van con el teal oscuro, no con el de marca: sobre el blanco
+    // de la tarjeta, CL_TEAL da 2.35:1 de contraste —los días del calendario se
+    // leían lavados aunque ya van en negrita— y CL_TEAL_DARK sube a 4.51:1, a la
+    // par del azul por defecto (4.70:1). La identidad de la marca no se toca: el
+    // hero, los degradados y los bordes siguen usando CL_TEAL directamente.
+    '--theme-accent': CL_TEAL_DARK,
+    '--theme-accent-hover': CL_TEAL_DEEP,
     '--theme-accent-bg': '#EFF8FA',
     '--theme-accent-text': '#ffffff',
-    '--theme-accent-ring': 'rgba(112,179,196,0.3)',
+    '--theme-accent-ring': 'rgba(62,127,146,0.35)',
     '--theme-form-bg': 'rgba(255, 255, 255, 0.6)',
     '--theme-form-border': '#BBB49B',
     '--theme-form-texture': `url(${paperboardTexture})`,

@@ -11,6 +11,7 @@ cita "doble" que reportaban los profesores.
 
 Ahora `crear_reserva` es idempotente para (tipo, hueco, email).
 """
+import json
 from unittest.mock import patch
 
 from django.test import TestCase
@@ -18,6 +19,7 @@ from django.urls import reverse
 
 from calendario.bookings.models import Reserva
 from calendario.bookings.services import crear_reserva
+from calendario.funnels.models import FunnelForm, Prellamada
 from tests.factories import (
     EMAIL_INVITADO, NOMBRE_INVITADO,
     crear_disponibilidad, crear_event_type, crear_host, slot_futuro,
@@ -179,3 +181,50 @@ class DobleEnvioVistaPublicaTest(TestCase):
         html = resp.content.decode()
         self.assertIn('data-texto-enviando="Reservando…"', html)
         self.assertIn("btn.dataset.bloqueado === '1'", html)
+
+
+@patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+@patch('calendario.bookings.services.crear_evento_google')
+class DobleEnvioFunnelTest(TestCase):
+    """El funnel reserva por su cuenta, así que tiene que respetar lo mismo.
+
+    Su endpoint es JSON y lo llama el navegador del visitante, o sea que un
+    reenvío ahí es igual de fácil que en la página pública.
+    """
+
+    EMAIL = 'lead@ejemplo.com'
+
+    def setUp(self):
+        self.host = crear_host()
+        self.et = crear_event_type(self.host)
+        for dia in range(5):
+            crear_disponibilidad(self.host, dia=dia)
+        self.funnel = FunnelForm.objects.create(
+            key='TestFunnel', slug='test-funnel', escuela='conquer-blocks',
+            region='latam', nombre='Funnel de test', config={},
+        )
+        self.prellamada = Prellamada.objects.create(
+            funnel=self.funnel, nombre='Lead', email=self.EMAIL,
+            resultado=Prellamada.Resultado.CALENDARIO, event_type=self.et,
+        )
+        self.url = reverse('funnels:reservar', kwargs={'slug': self.funnel.slug})
+
+    def _post(self, inicio_utc):
+        return self.client.post(self.url, data=json.dumps({
+            'prellamada_token': str(self.prellamada.token),
+            'inicio_utc': inicio_utc.isoformat(),
+            'tz': 'Europe/Madrid',
+            'nombre': 'Lead',
+            'email': self.EMAIL,
+        }), content_type='application/json')
+
+    @patch('calendario.bookings.views_public._enviar_correos_confirmacion')
+    def test_reenviar_el_mismo_hueco_no_crea_otra_reserva_ni_repite_correos(self, mock_correos, *_):
+        inicio = slot_futuro()
+        for _intento in range(2):
+            with self.captureOnCommitCallbacks(execute=True):
+                resp = self._post(inicio)
+                self.assertEqual(resp.status_code, 200)
+
+        self.assertEqual(Reserva.objects.filter(estado=Reserva.Estado.CONFIRMADA).count(), 1)
+        self.assertEqual(mock_correos.call_count, 1)

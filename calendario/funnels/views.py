@@ -18,7 +18,7 @@ from django.utils.decorators import method_decorator
 from calendario.bookings.exceptions import ReservaDuplicadaError, SlotNoDisponibleError
 from calendario.bookings.models import Reserva
 from calendario.bookings.services import crear_reserva, mismo_invitado, reemplazar_reserva
-from calendario.bookings.views_public import _enviar_correos_confirmacion
+from calendario.bookings.views_public import _avisar_si_es_nueva
 from .ab_tests import tests_para_panel
 from .models import FunnelForm, Prellamada
 from .scoring import resolver_outcome
@@ -326,8 +326,10 @@ class ReservarView(View):
                     )
                 prellamada.reserva = reserva
                 prellamada.save(update_fields=['reserva'])
-                r_pk = reserva.pk
-                transaction.on_commit(lambda: _enviar_correos_confirmacion(r_pk))
+                # Igual que en la página pública: si `crear_reserva` devolvió una
+                # reserva que ya existía (mismo hueco reenviado), los correos ya
+                # salieron y repetirlos hace dudar de si se reservó una o dos veces.
+                _avisar_si_es_nueva(reserva)
         except ReservaDuplicadaError as e:
             existing = e.reserva_existente
             return JsonResponse({
