@@ -59,6 +59,33 @@ PRELLAMADA_TRACKING_FIELDS = (
 )
 
 
+# Tope de cada columna, leído del modelo para que no se desfase si alguien
+# cambia un max_length. Mismo mecanismo que `_FIELD_MAX_LENGTHS` en
+# leads/views.py y `_TRACKING_MAX_LENGTHS` en bookings/services.py.
+_PRELLAMADA_MAX_LENGTHS = {
+    f.name: f.max_length
+    for f in Prellamada._meta.get_fields()
+    if getattr(f, 'max_length', None)
+}
+
+
+def _recortar_a_columna(valores):
+    """Recorta cada texto al tope de su columna.
+
+    Ni un dato que el visitante escribe ni uno de marketing pueden tumbar el
+    funnel. Pasaba de verdad (FUNNELS-88): alguien escribió 255 caracteres en la
+    casilla del nombre —una queja, no un nombre— y `Prellamada.nombre` es
+    varchar(160): Postgres rechazaba el INSERT y el resolver devolvía 500. Como
+    el StepForm llama al resolver una vez por pregunta, esa sola persona generó
+    decenas de errores y se quedó sin poder avanzar.
+    """
+    for clave, valor in list(valores.items()):
+        tope = _PRELLAMADA_MAX_LENGTHS.get(clave)
+        if tope and isinstance(valor, str) and len(valor) > tope:
+            valores[clave] = valor[:tope]
+    return valores
+
+
 def _upsert_prellamada(funnel, journey_id, prellamada_uuid, **fields):
     """Crea o actualiza la Prellamada por su `uuid` de cliente (guardado en
     `token`), igual que conquerx-funnels-new: el front genera `uuidv4()` por
@@ -70,7 +97,9 @@ def _upsert_prellamada(funnel, journey_id, prellamada_uuid, **fields):
     # Snapshot del tracking a columnas (además del JSON `tracking`).
     tr = fields.get('tracking') if isinstance(fields.get('tracking'), dict) else {}
     cols = {f: (tr.get(f) or '') for f in PRELLAMADA_TRACKING_FIELDS}
-    defaults = {'funnel': funnel, 'journey_id': journey_id, **fields, **cols}
+    defaults = _recortar_a_columna(
+        {'funnel': funnel, 'journey_id': journey_id, **fields, **cols}
+    )
 
     token = None
     if prellamada_uuid:
