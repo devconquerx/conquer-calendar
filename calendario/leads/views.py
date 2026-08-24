@@ -90,7 +90,13 @@ def register_lead(request):
         return JsonResponse({'error': 'email is required'}, status=400)
     if not EMAIL_RE.match(email):
         return JsonResponse({'error': 'Invalid email format'}, status=400)
-    data['email'] = email
+    # A minúsculas, como hacía Make (`lower(1.email)`) con todo lo que mandaba
+    # al ingest. El CRM compara correos tal cual —dedup de prellamadas, cruce
+    # con ActiveCampaign y Respond.io—, y en Postgres eso distingue mayúsculas,
+    # así que un "Juan@Gmail.com" no casaría con el "juan@gmail.com" que ya
+    # tuviera. De los 81.064 leads que entraron por Webflow no hay ni uno con
+    # mayúsculas, justo porque Make las quitaba.
+    data['email'] = email.lower()
 
     # Mapear nombres del frontend a campos del modelo
     if 'name' in data and 'full_name' not in data:

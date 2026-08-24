@@ -344,3 +344,30 @@ class GtmEnLasPantallasTest(TestCase):
             html = self.client.get(ruta, HTTP_HOST=host).content.decode()
             for otro in {c[2] for c in self.CASOS} - {st}:
                 self.assertNotIn(otro, html, f'{host}{ruta} carga {otro}')
+
+
+class EmailEnMinusculasTest(TestCase):
+    """El correo se guarda en minúsculas, como lo mandaba Make.
+
+    El CRM compara correos tal cual —dedup de prellamadas, cruce con
+    ActiveCampaign y Respond.io— y Postgres distingue mayúsculas, así que un
+    "Juan@Gmail.com" no casaría con el "juan@gmail.com" que ese contacto ya
+    tuviera de otra entrada.
+    """
+
+    def _alta(self, email):
+        with patch(RUTA + 'process_crm_send'), patch(RUTA + 'process_supabase'), \
+             patch(RUTA + 'process_respondio'), patch(RUTA + 'process_activecampaign'), \
+             patch(RUTA + 'process_neverbounce'), patch(RUTA + 'process_funnelchat'):
+            resp = self.client.post(
+                reverse('funnels:register_lead'),
+                data=json.dumps({'name': 'Ana', 'email': email, 'funnel': 'cb-lanzamiento11'}),
+                content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        return Lead.objects.order_by('-pk').first().email
+
+    def test_baja_las_mayusculas(self):
+        self.assertEqual(self._alta('Juan.Perez@Gmail.COM'), 'juan.perez@gmail.com')
+
+    def test_no_toca_los_que_ya_venian_bien(self):
+        self.assertEqual(self._alta('ana@ejemplo.com'), 'ana@ejemplo.com')
