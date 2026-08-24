@@ -480,3 +480,58 @@ class TransicionSinRecargaTest(TestCase):
         salto = js[js.index('function irAGracias'):js.index("window.addEventListener('popstate'")]
         self.assertIn('window.location.href', salto,
                       'sin respaldo, un navegador sin pushState dejaría al registrado sin último paso')
+
+
+class LaUrlQueDejaElPushStateSeAguantaTest(TestCase):
+    """La URL que queda en la barra tras registrarse tiene que responder.
+
+    Con la transición sin recarga esa URL NO se pide al pasar de pantalla, pero
+    sí en cuanto alguien recarga, la comparte o la guarda. Si no responde, el
+    registrado se encuentra un 404 justo después de haberse apuntado.
+
+    Se prueban las dos etapas: los dominios de marca (donde la escuela sale del
+    Host) y el canónico de la migración (donde viaja en la query).
+    """
+
+    CASOS = (
+        ('www.conquerblocks.com', '/evento/evento-online', None),
+        ('www.conquerfinance.com', '/evento/evento-online', None),
+        ('www.conquerlanguages.com', '/cl-evento', None),
+        ('calendar.conquerx.com', '/evento/evento-online', 'conquer-blocks'),
+        ('calendar.conquerx.com', '/evento/evento-online', 'conquer-finance'),
+        ('calendar.conquerx.com', '/cl-evento', 'conquer-languages'),
+    )
+
+    def _url_tras_registrarse(self, host, ruta, escuela):
+        """Reproduce lo que arma el JS: destino + separador + params()."""
+        q = '?escuela=' + escuela if escuela else ''
+        html = self.client.get(ruta + q, HTTP_HOST=host).content.decode()
+        marca = 'gracias: "'
+        i = html.index(marca) + len(marca)
+        destino = re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)),
+                         html[i:html.index('"', i)])
+        sep = '?' if '?' not in destino else '&'
+        return destino + sep + 'v=20250218&utm_source=meta&funnel=cb-lanzamiento11'
+
+    def test_la_url_responde_en_las_dos_etapas(self):
+        for host, ruta, escuela in self.CASOS:
+            url = self._url_tras_registrarse(host, ruta, escuela)
+            resp = self.client.get(url, HTTP_HOST=host)
+            self.assertEqual(resp.status_code, 200, f'{host}{url}')
+            # Y lo que sale es la pantalla de gracias de esa marca, no otra.
+            self.assertIn('id="gracias-evento"', resp.content.decode(), f'{host}{url}')
+
+    def test_los_parametros_de_campana_no_estorban(self):
+        # La página de gracias no los lee, pero llegan igual; que no rompan.
+        url = self._url_tras_registrarse('www.conquerblocks.com', '/evento/evento-online', None)
+        self.assertIn('v=20250218', url)
+        self.assertEqual(
+            self.client.get(url, HTTP_HOST='www.conquerblocks.com').status_code, 200)
+
+    def test_en_el_canonico_la_escuela_sobrevive_a_los_parametros(self):
+        url = self._url_tras_registrarse('calendar.conquerx.com', '/evento/evento-online',
+                                         'conquer-finance')
+        self.assertIn('escuela=conquer-finance', url)
+        html = self.client.get(url, HTTP_HOST='calendar.conquerx.com').content.decode()
+        # La de Finance, no la de Blocks: se distinguen por el contenedor GTM.
+        self.assertIn("st = 'MXTDVVBG'", html)
