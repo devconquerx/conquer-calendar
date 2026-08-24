@@ -12,36 +12,10 @@ Webflow y mandaba los registros a Make.
 """
 from django.conf import settings
 from django.http import Http404
+from django.utils.cache import patch_vary_headers
 from django.views.generic import TemplateView
 
 from .views import _escuela_por_host
-
-
-# Prefijos telefónicos del selector del popup. El original trae la lista
-# completa con buscador; aquí van los países que concentran el tráfico de las
-# campañas, con España primero por ser el mercado principal de la marca.
-PREFIJOS = [
-    {'iso2': 'ES', 'pais': 'España',            'prefijo': '+34',  'bandera': '🇪🇸'},
-    {'iso2': 'MX', 'pais': 'México',            'prefijo': '+52',  'bandera': '🇲🇽'},
-    {'iso2': 'CO', 'pais': 'Colombia',          'prefijo': '+57',  'bandera': '🇨🇴'},
-    {'iso2': 'AR', 'pais': 'Argentina',         'prefijo': '+54',  'bandera': '🇦🇷'},
-    {'iso2': 'PE', 'pais': 'Perú',              'prefijo': '+51',  'bandera': '🇵🇪'},
-    {'iso2': 'CL', 'pais': 'Chile',             'prefijo': '+56',  'bandera': '🇨🇱'},
-    {'iso2': 'VE', 'pais': 'Venezuela',         'prefijo': '+58',  'bandera': '🇻🇪'},
-    {'iso2': 'EC', 'pais': 'Ecuador',           'prefijo': '+593', 'bandera': '🇪🇨'},
-    {'iso2': 'US', 'pais': 'Estados Unidos',    'prefijo': '+1',   'bandera': '🇺🇸'},
-    {'iso2': 'DO', 'pais': 'República Dominicana', 'prefijo': '+1809', 'bandera': '🇩🇴'},
-    {'iso2': 'GT', 'pais': 'Guatemala',         'prefijo': '+502', 'bandera': '🇬🇹'},
-    {'iso2': 'CR', 'pais': 'Costa Rica',        'prefijo': '+506', 'bandera': '🇨🇷'},
-    {'iso2': 'PA', 'pais': 'Panamá',            'prefijo': '+507', 'bandera': '🇵🇦'},
-    {'iso2': 'BO', 'pais': 'Bolivia',           'prefijo': '+591', 'bandera': '🇧🇴'},
-    {'iso2': 'UY', 'pais': 'Uruguay',           'prefijo': '+598', 'bandera': '🇺🇾'},
-    {'iso2': 'PY', 'pais': 'Paraguay',          'prefijo': '+595', 'bandera': '🇵🇾'},
-    {'iso2': 'HN', 'pais': 'Honduras',          'prefijo': '+504', 'bandera': '🇭🇳'},
-    {'iso2': 'SV', 'pais': 'El Salvador',       'prefijo': '+503', 'bandera': '🇸🇻'},
-    {'iso2': 'NI', 'pais': 'Nicaragua',         'prefijo': '+505', 'bandera': '🇳🇮'},
-    {'iso2': 'PR', 'pais': 'Puerto Rico',       'prefijo': '+1787', 'bandera': '🇵🇷'},
-]
 
 
 # Contenido por escuela. Lo que cambia entre ediciones es `barra` (fecha y hora)
@@ -61,6 +35,7 @@ EVENTOS = {
         # el valor de reserva: normalmente lo manda la campaña (ver
         # `_funnel_de_la_edicion`), y este se usa cuando no viene ninguna.
         'funnel': 'cb-lanzamiento11',
+        'gracias': 'https://www.conquerblocks.com/gracias-comunidad',
         'titulo_pagina': 'Evento Online Simple',
         'barra': 'EVENTO EN DIRECTO : Domingo 16 de Agosto a las 19:00 de Madrid '
                  '(14:00 de Buenos Aires, 13:00 de Miami)',
@@ -94,6 +69,10 @@ EVENTOS = {
         'titulo_pagina': 'Evento en Directo: Trading sin Riesgo | Conquer Finance',
         'ruta': 'evento/evento-online',
         'funnel': 'cf-lanzamiento11',
+        # Sí, la de Blocks: es a donde manda el original. No es un descuido al
+        # copiar la página —`conquerfinance.com/grupos-comunidad` existe pero
+        # está a medias, con Lorem Ipsum—, así que Finance no tiene una propia.
+        'gracias': 'https://www.conquerblocks.com/gracias-comunidad',
         'marca': 'Conquer Finance',
         'gradiente_1': '#aed916',
         'gradiente_2': '#3ac043',
@@ -136,6 +115,7 @@ EVENTOS = {
         # Languages sí lo lleva fijo en la página (no lo saca de la campaña),
         # pero se acepta igual la campaña por coherencia. Edición en curso.
         'funnel': 'cl-lanzamiento9',
+        'gracias': 'https://www.conquerlanguages.com/grupos-comunidad',
         'barra': 'De 0 a inglés fluido en 90 días: El 6 de Septiembre a las 19:00 Madrid '
                  '(14:00 de Buenos Aires, 13:00 de Miami)',
         # El titular parte el destacado por el medio, no al final como el de
@@ -180,7 +160,11 @@ def _funnel_de_la_edicion(request, evento):
     """
     campana = (request.GET.get('utm_campaign') or '').strip()
     if 'lanzamiento' in campana.lower():
-        return campana
+        # Se recorta al ancho de `Lead.funnel`, que es donde acaba. Sin esto,
+        # una campaña larguísima se pintaría entera en la página pero se
+        # guardaría cortada, y el código que ve el visitante dejaría de ser el
+        # que llega al CRM.
+        return campana[:255]
     return evento['funnel']
 
 
@@ -194,14 +178,25 @@ class EventoView(TemplateView):
         if not self.evento:
             raise Http404('No hay evento para esta escuela')
         self.template_name = self.evento['plantilla']
-        return super().get(request, *args, **kwargs)
+        respuesta = super().get(request, *args, **kwargs)
+        # Este HTML NO se puede cachear en ningún sitio. Cambia con cada
+        # visitante por dos motivos: el código de la edición sale de
+        # `utm_campaign`, y el prefijo preseleccionado sale de `CF-IPCountry`.
+        # Una copia cacheada le daría a un visitante la campaña de otro —y sus
+        # leads acabarían archivados en la edición equivocada— o el prefijo de
+        # otro país. Ya pasó con el HTML del funnel: los navegadores embebidos
+        # de TikTok e Instagram cachean con avidez y servían la página vieja.
+        respuesta['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        respuesta['Pragma'] = 'no-cache'
+        patch_vary_headers(respuesta, ('CF-IPCountry',))
+        return respuesta
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['evento'] = self.evento
         ctx['funnel'] = _funnel_de_la_edicion(self.request, self.evento)
         ctx['titulo_pagina'] = self.evento['titulo_pagina']
-        ctx['prefijos'] = PREFIJOS
+        ctx['gracias'] = self.evento['gracias']
         # País por defecto del selector: el que detecte Cloudflare, y España si no.
         ctx['pais_detectado'] = (self.request.headers.get('CF-IPCountry') or 'ES').upper()
         return ctx

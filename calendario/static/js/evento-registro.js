@@ -43,6 +43,30 @@
     return datos;
   }
 
+  /* Al registrarse, el original no se queda en la página: manda a la de
+     "gracias", que es donde está el último paso de verdad —entrar al grupo de
+     WhatsApp de los asistentes—. Quedarse aquí con un mensajito dejaba al
+     registrado a medias y, si hay conversiones colgadas de esa página, sin
+     registrar.
+
+     Se replican los mismos parámetros que arrastra el original MENOS el nombre
+     y el correo, que también viajaban en la URL: esa página no los lee, y los
+     datos personales en una query string acaban en los logs del servidor, en
+     el historial del navegador y en la cabecera Referer de cada recurso que
+     cargue la página de destino. */
+  function irAGracias() {
+    var destino = window.__EVENTO__ && window.__EVENTO__.gracias;
+    if (!destino) return;
+    var q = new URLSearchParams(location.search);
+    var p = new URLSearchParams({ v: '20250218' });
+    ['utm_source','utm_medium','utm_campaign','utm_term','utm_content',
+     'utm_idcampaign','utm_adsetid','utm_adid'].forEach(function (k) {
+      if (q.get(k)) p.append(k, q.get(k));
+    });
+    if (window.__EVENTO__.funnel) p.append('funnel', window.__EVENTO__.funnel);
+    window.location.href = destino + '?' + p.toString();
+  }
+
   form.addEventListener('submit', function (ev) {
     ev.preventDefault();
     if (enviado) return;
@@ -83,8 +107,9 @@
     })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function () {
-        decir('¡Listo! Te hemos guardado la plaza. Revisa tu correo.', 'ok');
+        decir('¡Listo! Te llevamos al último paso…', 'ok');
         form.reset();
+        irAGracias();
       })
       .catch(function () {
         enviado = false;

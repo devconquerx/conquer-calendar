@@ -79,8 +79,20 @@
     .then(function (r) { return r.json(); })
     .then(function (datos) {
       paises = datos;
+      // Reino Unido aparece cinco veces (Inglaterra, Escocia, Gales, Irlanda
+      // del Norte y el propio Reino Unido), como en la lista del original, y
+      // por orden alfabético la primera es Escocia. Para la preselección
+      // automática manda el nombre del país, no la nación: en el histórico del
+      // CRM hay 1.785 leads con prefijo +44 como «Reino Unido» y 43 como
+      // «Scotland». En el desplegable se siguen viendo las cinco.
+      var CANONICO = { GB: 'Reino Unido' };
       var porIso = function (iso) {
-        return paises.filter(function (p) { return p.iso2 === iso; })[0];
+        var iguales = paises.filter(function (p) { return p.iso2 === iso; });
+        if (iguales.length > 1 && CANONICO[iso]) {
+          var c = iguales.filter(function (p) { return p.pais === CANONICO[iso]; })[0];
+          if (c) return c;
+        }
+        return iguales[0];
       };
       var delServidor = raiz.dataset.pais || '';
       var inicial = porIso(delServidor) || porIso('ES') || paises[0];

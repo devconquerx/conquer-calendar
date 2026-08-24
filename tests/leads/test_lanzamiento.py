@@ -12,6 +12,7 @@ Tampoco pasan por NeverBounce: Make postea directo al ingest y valida el CRM.
 """
 import json
 import re
+from pathlib import Path
 from unittest.mock import patch
 
 from django.test import TestCase
@@ -177,3 +178,71 @@ class TriggersDeFunnelChatTest(TestCase):
         _, kwargs = req.post.call_args
         self.assertIn('files', kwargs, 'Make lo mandaba como multipart')
         self.assertEqual(kwargs['files']['phone'], (None, '+34600111222'))
+
+
+class LaPantallaNoSeCacheaTest(TestCase):
+    """El HTML cambia por visitante, así que no puede quedarse cacheado.
+
+    El código de la edición sale de `utm_campaign` y el prefijo preseleccionado
+    de `CF-IPCountry`: una copia compartida le daría a un visitante la campaña
+    o el país de otro. Los navegadores embebidos de TikTok e Instagram ya
+    hicieron justo eso con el HTML del funnel.
+    """
+
+    def _get(self, q='', pais='ES'):
+        return self.client.get('/evento/evento-online' + q,
+                               HTTP_HOST='www.conquerblocks.com', HTTP_CF_IPCOUNTRY=pais)
+
+    def test_prohibe_cachear(self):
+        self.assertIn('no-store', self._get().headers.get('Cache-Control', ''))
+
+    def test_varia_por_pais(self):
+        self.assertIn('CF-IPCountry', self._get().headers.get('Vary', ''))
+
+    def test_el_html_de_verdad_cambia_con_el_pais(self):
+        # Si esto dejara de ser cierto, las cabeceras de arriba sobrarían.
+        self.assertNotEqual(self._get(pais='MX').content, self._get(pais='ES').content)
+
+    def test_una_campana_larga_no_se_pinta_mas_ancha_que_el_campo(self):
+        from calendario.leads.models import Lead
+        ancho = Lead._meta.get_field('funnel').max_length
+        r = self._get('?utm_campaign=lanzamiento' + 'x' * 5000)
+        html = r.content.decode()
+        marca = 'window.__EVENTO__ = { funnel: "'
+        i = html.index(marca) + len(marca)
+        self.assertLessEqual(len(html[i:html.index('"', i)]), ancho)
+
+
+class RedireccionDeGraciasTest(TestCase):
+    """Tras registrarse hay que ir a la página de gracias, como en el original.
+
+    Ahí está el último paso real —entrar al grupo de WhatsApp de asistentes—,
+    así que quedarse en la pantalla dejaba al registrado a medias.
+    """
+
+    def _gracias(self, host, ruta='/evento/evento-online'):
+        html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+        marca = 'gracias: "'
+        i = html.index(marca) + len(marca)
+        crudo = html[i:html.index('"', i)]
+        return re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), crudo)
+
+    def test_cada_marca_apunta_a_la_suya(self):
+        self.assertEqual(self._gracias('www.conquerblocks.com'),
+                         'https://www.conquerblocks.com/gracias-comunidad')
+        self.assertEqual(self._gracias('www.conquerlanguages.com', '/cl-evento'),
+                         'https://www.conquerlanguages.com/grupos-comunidad')
+
+    def test_finance_va_a_la_de_blocks_como_el_original(self):
+        # No es un descuido: `conquerfinance.com/grupos-comunidad` está a
+        # medias (Lorem Ipsum), así que Finance no tiene página propia.
+        self.assertEqual(self._gracias('www.conquerfinance.com'),
+                         'https://www.conquerblocks.com/gracias-comunidad')
+
+    def test_no_se_mandan_datos_personales_en_la_url(self):
+        js = (Path(__file__).resolve().parents[2]
+              / 'calendario' / 'static' / 'js' / 'evento-registro.js').read_text(encoding='utf-8')
+        destino = js[js.index('function irAGracias'):js.index('form.addEventListener')]
+        for campo in ('fullname', 'email', 'lead_phone', 'name'):
+            self.assertNotIn(f"'{campo}'", destino,
+                             f'{campo} no puede viajar en la query de la redirección')
