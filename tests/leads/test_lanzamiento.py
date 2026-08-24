@@ -315,3 +315,29 @@ class DeteccionDePaisTest(TestCase):
         # Se comprueba la llamada, no la palabra: ipapi.co se sigue nombrando
         # en el comentario que explica por qué ya no se usa.
         self.assertNotIn("fetch('https://ipapi.co", js)
+
+
+class GtmEnLasPantallasTest(TestCase):
+    """Las pantallas tienen que cargar el mismo contenedor que cargaba Webflow.
+
+    Blocks lleva GTM-5PK5LTG y Languages GTM-MPB7S5C7, en la del evento y en la
+    de gracias. Finance no lleva ninguno: su página de Webflow tampoco, así que
+    enchufarle el suyo dispararía en producción cosas que hoy no se disparan.
+    """
+
+    CASOS = (
+        ('www.conquerblocks.com', '/evento/evento-online', '5PK5LTG'),
+        ('www.conquerblocks.com', '/evento/gracias-comunidad', '5PK5LTG'),
+        ('www.conquerlanguages.com', '/cl-evento', 'MPB7S5C7'),
+        ('www.conquerlanguages.com', '/grupos-comunidad', 'MPB7S5C7'),
+    )
+
+    def test_blocks_y_languages_cargan_su_contenedor(self):
+        for host, ruta, st in self.CASOS:
+            html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+            self.assertIn(f"st = '{st}'", html, f'{host}{ruta}')
+
+    def test_finance_no_carga_ninguno(self):
+        for ruta in ('/evento/evento-online', '/evento/gracias-comunidad'):
+            html = self.client.get(ruta, HTTP_HOST='www.conquerfinance.com').content.decode()
+            self.assertNotIn('gtm.start', html, ruta)

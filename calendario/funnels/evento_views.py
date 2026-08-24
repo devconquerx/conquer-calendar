@@ -15,6 +15,7 @@ from django.http import Http404
 from django.utils.cache import patch_vary_headers
 from django.views.generic import TemplateView
 
+from .context_processors import get_gtm_config
 from .views import _escuela_por_host
 
 
@@ -199,6 +200,16 @@ GRACIAS = {
 }
 
 
+# Marcas con contenedor de GTM en estas pantallas. Finance no aparece porque su
+# página de Webflow no carga ninguno —ni la del evento ni la de gracias—, así
+# que enchufarle el suyo dispararía en producción cosas que hoy no se disparan.
+GTM_EN_EVENTOS = ('conquer-blocks', 'conquer-languages')
+
+
+def _gtm(escuela):
+    return get_gtm_config(escuela) if escuela in GTM_EN_EVENTOS else {}
+
+
 def _funnel_de_la_edicion(request, evento):
     """Código de la edición con el que se etiqueta el lead en el CRM.
 
@@ -255,6 +266,7 @@ class EventoView(TemplateView):
         ctx['funnel'] = _funnel_de_la_edicion(self.request, self.evento)
         ctx['titulo_pagina'] = self.evento['titulo_pagina']
         ctx['gracias'] = '/' + GRACIAS[self.escuela]['ruta']
+        ctx['gtm'] = _gtm(self.escuela)
         # País del selector según Cloudflare. Se manda VACÍO si la cabecera no
         # viene, en vez de caer aquí a 'ES': si el servidor rellena España, el
         # cliente no puede distinguir «Cloudflare dice España» de «Cloudflare no
@@ -283,4 +295,5 @@ class GraciasView(TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx.update(self.gracias)
+        ctx['gtm'] = _gtm(self.escuela)
         return ctx
