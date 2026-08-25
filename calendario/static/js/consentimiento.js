@@ -164,12 +164,33 @@
     pintarIcono();
     return;
   }
-  if (!cfg.aplica) {
-    // Fuera de las regiones con normativa de consentimiento previo no se
-    // pregunta y se da por implícito, que es lo que hace Cookiebot hoy
-    // (`method: "implied"`). No se guarda cookie: no hay decisión que guardar.
+
+  if (!cfg.explicito) {
+    /* Consentimiento implícito: en LATAM y Estados Unidos no hace falta pedir
+       permiso antes, así que se concede desde el principio. */
     comunicar(todas(true));
+    /* El aviso se enseña igualmente, pero no bloquea: se cierra al pulsar
+       «Entendido» o en cuanto el visitante sigue navegando, que es justamente
+       lo que significa «al continuar, aceptas». */
+    if (!cfg.aplica) return;
+    mostrar();
+    var cerrarPorNavegar = function () {
+      quitarEscuchas();
+      // Si abrió el panel a elegir, no se le cierra por debajo.
+      if (panel && !panel.hidden) return;
+      decidir(todas(true));
+    };
+    var quitarEscuchas = function () {
+      w.removeEventListener('scroll', alHacerScroll);
+      d.removeEventListener('click', alPulsarFuera, true);
+    };
+    var alHacerScroll = function () { if (w.scrollY > 120) cerrarPorNavegar(); };
+    var alPulsarFuera = function (ev) { if (!caja.contains(ev.target)) cerrarPorNavegar(); };
+    w.addEventListener('scroll', alHacerScroll, { passive: true });
+    d.addEventListener('click', alPulsarFuera, true);
     return;
   }
+
+  // Consentimiento explícito: no se activa nada hasta que decida.
   mostrar();
 })(window, document);

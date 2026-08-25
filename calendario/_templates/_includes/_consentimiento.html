@@ -7,8 +7,9 @@
   medición se escapa sin permiso.
 
   Contexto que espera (`consentimiento` en el contexto de la vista):
-    .aplica   → si hay que preguntar (lo decide CF-IPCountry en consentimiento.py)
-    .forzado  → `?debug=1`: sácalo aunque no toque y aunque ya se haya decidido
+    .explicito → si hace falta permiso previo (RGPD) o basta con informar
+    .forzado   → `?debug=1`: sácalo aunque ya se haya decidido
+    .modo      → se puede forzar con `?consent=eu` o `?consent=row`
     .version  → sube cuando cambian categorías o textos; invalida lo guardado
     .marca    → acento, tipografía y redondeo de la marca
 {% endcomment %}
@@ -18,14 +19,16 @@
   function gtag() { w.dataLayer.push(arguments); }
 
   var aplica = {{ consentimiento.aplica|yesno:"true,false" }};
+  var explicito = {{ consentimiento.explicito|yesno:"true,false" }};
   var forzar = {{ consentimiento.forzado|yesno:"true,false" }};   // ?debug=1
   var guardado = document.cookie.indexOf('cqx_consent=') !== -1 && !forzar;
 
-  // Denegado por defecto solo donde se pregunta. Donde no, se concede, que es
-  // lo que hace Cookiebot fuera de las regiones con normativa (`implied`).
-  // `wait_for_update` le da a la interfaz medio segundo para responder antes de
-  // que las etiquetas decidan por su cuenta.
-  var inicial = (aplica && !guardado) ? 'denied' : 'granted';
+  // Aquí está la diferencia legal entre las dos regiones. Donde hace falta
+  // permiso previo (RGPD) se deniega hasta que el visitante pulse; donde el
+  // consentimiento es implícito se concede desde el principio y el aviso solo
+  // informa. `wait_for_update` le da a la interfaz medio segundo para responder
+  // antes de que las etiquetas decidan por su cuenta.
+  var inicial = (explicito && !guardado) ? 'denied' : 'granted';
   gtag('consent', 'default', {
     ad_storage: inicial,
     ad_user_data: inicial,
@@ -64,7 +67,8 @@
     return el;
   };
 
-  w.__CONSENTIMIENTO__ = { aplica: aplica, forzar: forzar, version: {{ consentimiento.version }} };
+  w.__CONSENTIMIENTO__ = { aplica: aplica, explicito: explicito, forzar: forzar,
+                           version: {{ consentimiento.version }} };
 })(window);
 </script>
 
@@ -81,17 +85,32 @@
   --tinta-suave:#5a5a5a;
   --borde:#e2e2e2;
   --pixel-clip:polygon(97.74% 73.83%,97.74% 82.56%,100% 82.56%,100% 100%,95.47% 100%,95.47% 91.28%,81.5% 91.28%,81.5% 100%,19.87% 100%,19.87% 91.28%,9.06% 91.28%,9.06% 100%,2.26% 100%,2.26% 80.24%,0% 80.24%,0% 26.16%,2.26% 26.16%,2.26% 17.44%,0% 17.44%,0% 0%,4.53% 0%,4.53% 8.72%,12.82% 8.72%,12.82% 0%,72.03% 0%,72.03% 8.72%,88.67% 8.72%,88.67% 0%,97.74% 0%,97.74% 8.72%,100% 8.72%,100% 73.83%);
-  position:fixed;z-index:2147483000;inset:auto 16px 16px 16px;
-  display:flex;justify-content:center;
-  font-family:{{ consentimiento.marca.fuente }};
+  /* Barra pegada al borde inferior, de lado a lado. Ocupando todo el ancho
+     cabe en una fila —texto a la izquierda, botones a la derecha— y estorba
+     mucho menos que una tarjeta flotante. */
+  position:fixed;z-index:2147483000;inset:auto 0 0 0;
+  /* `safe` porque el valor es CSS, no texto: las familias con espacio van
+     entrecomilladas ('Funnel Display') y el autoescape convierte la comilla en
+     `&#x27;`, que rompe la declaración entera y deja el banner con la fuente
+     por defecto del navegador. El valor no viene del visitante: sale de
+     `MARCAS`, en el código. */
+  font-family:{{ consentimiento.marca.fuente|safe }};
 }
 #cqx-consent[hidden]{display:none}
 #cqx-consent .tarjeta{
-  width:100%;max-width:560px;background:#fff;color:var(--tinta);
-  border:1px solid var(--borde);border-radius:var(--radio);
-  box-shadow:0 12px 40px rgba(0,0,0,.18);padding:20px;
-  max-height:calc(100vh - 32px);overflow-y:auto;
+  width:100%;background:#fff;color:var(--tinta);
+  /* Solo el borde de arriba: los otros tres caen fuera de la pantalla. */
+  border:0;border-top:1px solid var(--borde);border-radius:0;
+  box-shadow:0 -6px 24px rgba(0,0,0,.16);padding:14px 20px;
+  max-height:min(70vh,560px);overflow-y:auto;
 }
+/* La fila principal: el texto manda y los botones se quedan a la derecha sin
+   estirarse. Debajo de 760px se apilan. */
+#cqx-consent .fila-barra{
+  display:flex;align-items:center;gap:28px;flex-wrap:wrap;
+  max-width:1440px;margin:0 auto;
+}
+#cqx-consent .copia{flex:1 1 460px;min-width:0}
 {% if consentimiento.marca.papel %}
 /* Tarjeta de cartón, la misma textura y el mismo velo que el resto de tarjetas
    de la marca (`.event-div`, `.pasos__container`). */
@@ -101,12 +120,13 @@
   border-color:rgba(0,0,0,.08);
 }
 {% endif %}
-#cqx-consent h2{margin:0 0 6px;font-size:16px;font-weight:700;line-height:1.3}
-#cqx-consent p{margin:0;font-size:13px;line-height:1.5;color:var(--tinta-suave)}
+#cqx-consent h2{margin:0 0 2px;font-size:14px;font-weight:700;line-height:1.3}
+#cqx-consent p{margin:0;font-size:12.5px;line-height:1.45;color:var(--tinta-suave)}
 #cqx-consent a{color:var(--tinta);text-underline-offset:2px}
-#cqx-consent .botones{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+#cqx-consent .botones{display:flex;flex-wrap:wrap;gap:8px;flex:0 0 auto}
+#cqx-consent .panel .botones{margin-top:14px}
 #cqx-consent button{
-  flex:1 1 auto;min-width:120px;padding:10px 14px;border-radius:calc(var(--radio) - 2px);
+  flex:0 0 auto;min-width:158px;padding:11px 26px;border-radius:calc(var(--radio) - 2px);
   font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--borde);
   background:#fff;color:var(--tinta);transition:filter .15s ease;
 }
@@ -114,13 +134,15 @@
 #cqx-consent button.principal{background:var(--acento);color:var(--acento-texto);border-color:var(--acento)}
 #cqx-consent button.principal:hover{filter:brightness(1.06)}
 {% if consentimiento.marca.pixel %}
-/* CTA con borde pixelado y degradado a 135deg, el mismo del «Ver vídeo gratis».
+/* CTA con borde pixelado y el degradado de marca, el mismo del «Ver vídeo
+   gratis». Casi todas lo arman con dos paradas a 135deg; la que no encaje ahí
+   —Legal, con tres en horizontal— lo declara entero en `gradiente`.
    El recorte se come las esquinas, así que el borde y el redondeo sobran: se
    quitan o asoman por debajo. Los secundarios van cuadrados para no mezclar
    esquinas pixeladas con esquinas redondas en la misma fila. */
 #cqx-consent button{border-radius:0}
 #cqx-consent button.principal{
-  background-image:linear-gradient(135deg,{{ consentimiento.marca.grad_1 }},{{ consentimiento.marca.grad_2 }});
+  background-image:{% if consentimiento.marca.gradiente %}{{ consentimiento.marca.gradiente }}{% else %}linear-gradient(135deg,{{ consentimiento.marca.grad_1 }},{{ consentimiento.marca.grad_2 }}){% endif %};
   border:0;border-radius:0;clip-path:var(--pixel-clip);padding:12px 18px;
 }
 /* Sin borde no hay dónde pintar el foco, y `outline` se recorta con el resto:
@@ -128,7 +150,9 @@
 #cqx-consent button.principal:focus-visible{outline:none;box-shadow:inset 0 0 0 2px #fff}
 {% endif %}
 #cqx-consent button:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
-#cqx-consent .panel{margin-top:16px;border-top:1px solid var(--borde);padding-top:12px}
+#cqx-consent .panel{
+  max-width:1440px;margin:14px auto 0;border-top:1px solid var(--borde);padding-top:12px;
+}
 #cqx-consent .panel[hidden]{display:none}
 #cqx-consent .fila{display:flex;align-items:flex-start;gap:10px;padding:8px 0}
 #cqx-consent .fila + .fila{border-top:1px solid var(--borde)}
@@ -159,11 +183,20 @@
 #cqx-consent-icono{border-radius:0;border:0;clip-path:var(--pixel-clip);background:#fff}
 {% endif %}
 
-@media (max-width:600px){
-  #cqx-consent-icono{left:8px;bottom:8px}
-  #cqx-consent{inset:auto 8px 8px 8px}
-  #cqx-consent .tarjeta{padding:16px}
-  #cqx-consent button{flex:1 1 100%}
+@media (max-width:760px){
+  /* Apilado: la copia arriba y los botones abajo, repartidos a lo ancho. */
+  #cqx-consent .fila-barra{align-items:stretch}
+  #cqx-consent .botones{width:100%}
+  #cqx-consent button{flex:1 1 0;min-width:0}
+}
+@media (max-width:480px){
+  /* Los tres siguen en una fila: apilados, la barra se comía un tercio de la
+     pantalla, que es justo lo que se quería evitar. */
+  #cqx-consent .tarjeta{padding:12px 14px}
+  #cqx-consent .botones{gap:6px}
+  #cqx-consent button{padding:9px 6px;font-size:12px}
+  #cqx-consent h2{font-size:13px}
+  #cqx-consent p{font-size:11.5px}
 }
 @media (prefers-reduced-motion:reduce){
   #cqx-consent button{transition:none}
@@ -172,18 +205,37 @@
 
 <div id="cqx-consent" role="dialog" aria-modal="false" aria-labelledby="cqx-consent-titulo" hidden>
   <div class="tarjeta">
-    <h2 id="cqx-consent-titulo">Cookies</h2>
-    <p>
-      Usamos cookies propias y de terceros para que la página funcione, para
-      entender cómo se usa y para medir nuestras campañas. Puedes aceptarlas
-      todas, rechazarlas o elegir cuáles. Más detalle en la
-      <a href="{{ consentimiento.politica_url|default:'/politica-de-privacidad' }}" target="_blank" rel="noopener">política de privacidad</a>.
-    </p>
+    <div class="fila-barra">
+      <div class="copia">
+        <h2 id="cqx-consent-titulo">Cookies</h2>
+        {% if consentimiento.explicito %}
+        <p>
+          Usamos cookies propias y de terceros para que la página funcione, para
+          entender cómo se usa y para medir nuestras campañas. Puedes aceptarlas
+          todas, rechazarlas o elegir cuáles. Más detalle en la
+          <a href="{{ consentimiento.politica_url|default:'/politica-de-privacidad' }}" target="_blank" rel="noopener">política de privacidad</a>.
+        </p>
+        {% else %}
+        <p>
+          Usamos cookies propias y de terceros para que la página funcione,
+          entender cómo se usa y medir nuestras campañas.
+          <strong>Al continuar navegando, aceptas su uso.</strong>
+          Puedes cambiarlo cuando quieras. Más detalle en la
+          <a href="{{ consentimiento.politica_url|default:'/politica-de-privacidad' }}" target="_blank" rel="noopener">política de privacidad</a>.
+        </p>
+        {% endif %}
+      </div>
 
-    <div class="botones">
-      <button type="button" id="cqx-rechazar">Rechazar</button>
-      <button type="button" id="cqx-personalizar" aria-expanded="false" aria-controls="cqx-consent-panel">Personalizar</button>
-      <button type="button" id="cqx-aceptar" class="principal">Aceptar todas</button>
+      <div class="botones">
+        {% if consentimiento.explicito %}
+        <button type="button" id="cqx-rechazar">Rechazar</button>
+        <button type="button" id="cqx-personalizar" aria-expanded="false" aria-controls="cqx-consent-panel">Personalizar</button>
+        <button type="button" id="cqx-aceptar" class="principal">Aceptar todas</button>
+        {% else %}
+        <button type="button" id="cqx-personalizar" aria-expanded="false" aria-controls="cqx-consent-panel">Configurar</button>
+        <button type="button" id="cqx-aceptar" class="principal">Entendido</button>
+        {% endif %}
+      </div>
     </div>
 
     <div class="panel" id="cqx-consent-panel" hidden>

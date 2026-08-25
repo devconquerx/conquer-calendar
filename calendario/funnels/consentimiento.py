@@ -10,10 +10,22 @@ Se replica su comportamiento, no solo su aspecto:
 
 - Las mismas cuatro categorías: necesarias (siempre), preferencias,
   estadísticas y marketing.
-- Solo se pregunta donde hay una normativa que lo exige. Fuera de ahí Cookiebot
-  no muestra nada y da el consentimiento por implícito (`method: "implied"`,
-  `gdprApplies: false`), y aquí igual: añadir un banner en LATAM y US, que es de
-  donde viene la mayoría del tráfico, sería fricción nueva que hoy no existe.
+- Dos modos, según desde dónde se entre, porque la ley no es la misma:
+
+  · EXPLÍCITO en el Espacio Económico Europeo, Reino Unido, Suiza y Brasil. El
+    RGPD exige consentimiento previo e inequívoco: hasta que no se pulsa, no se
+    activa nada. Es lo que hace el modo por defecto de Consent Mode.
+
+  · IMPLÍCITO en el resto: LATAM (salvo Brasil) y Estados Unidos. Ahí el aviso
+    también se muestra, pero no bloquea: informa de que «al continuar
+    navegando, aceptas su uso», el consentimiento se concede desde el principio
+    y se cierra solo al seguir navegando. California y los estados con leyes
+    parecidas son de EXCLUSIÓN, así que lo que exigen no es permiso previo sino
+    poder retirarlo, y para eso está el botón de configurar y el icono.
+
+  El aviso sale SIEMPRE; lo que cambia es el modelo. Si se comprueba contra
+  Cookiebot y en alguna región no aparece nada, mirar su configuración antes de
+  tocar esto: tenía los países de LATAM desmarcados, y por eso no salía.
 - Google Consent Mode v2, con los mismos eventos al dataLayer que empuja su
   plantilla de GTM (`cookie_consent_<categoría>` por cada una aceptada y
   `cookie_consent_update` al final), para que los triggers que ya existen en los
@@ -65,7 +77,7 @@ VERSION = 1
 # píldoras verdes, así que ahí el componente va liso y redondeado.
 MARCAS = {
     'conquer-blocks': {
-        'politica_url': 'https://www.conquerblocks.com/politica-de-privacidad',
+        'politica_url': 'https://www.conquerblocks.com/legal/politica-de-privacidad',
         'acento': '#ff4000',
         'acento_texto': '#ffffff',
         'fuente': "'Funnel Display',Arial,sans-serif",
@@ -76,7 +88,7 @@ MARCAS = {
         'grad_2': '#ff9800',
     },
     'conquer-finance': {
-        'politica_url': 'https://www.conquerfinance.com/politica-de-privacidad',
+        'politica_url': 'https://www.conquerfinance.com/legal/politica-de-privacidad',
         'acento': '#3ac043',
         'acento_texto': '#ffffff',
         'fuente': "'Funnel Display',Arial,sans-serif",
@@ -94,11 +106,19 @@ MARCAS = {
         'radio': '20px',
     },
     'conquer-legal': {
-        'politica_url': 'https://www.conquerlegal.com/politica-de-privacidad',
-        'acento': '#1d4ed8',
+        # Legal cuelga sus textos legales de /legal/; sin ese tramo la URL da
+        # 404, no una redirección como en Blocks y Finance.
+        'politica_url': 'https://www.conquerlegal.com/legal/politica-de-privacidad',
+        'acento': '#0040FF',
         'acento_texto': '#ffffff',
-        'fuente': 'Poppins,Arial,sans-serif',
+        'fuente': "'Funnel Display',Arial,sans-serif",
         'radio': '10px',
+        'papel': True,
+        'pixel': True,
+        # El CTA de Legal no es un degradado de dos paradas a 135deg como el de
+        # Blocks: son tres, en horizontal, de periwinkle a navy. Se copia entero
+        # en vez de aproximarlo con `grad_1`/`grad_2`.
+        'gradiente': 'linear-gradient(90deg,#3E76FF 0%,#1845D6 42%,#031464 100%)',
     },
 }
 
@@ -109,6 +129,20 @@ _POR_DEFECTO = {
     'fuente': 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif',
     'radio': '10px',
 }
+
+
+def modo(request):
+    """`explicito` donde hace falta permiso previo; `implicito` en el resto.
+
+    Se puede forzar con `?consent=eu` o `?consent=row` para poder revisar los
+    dos sin fingir una IP, que es la única forma que había de verlos.
+    """
+    forzado_modo = (request.GET.get('consent') or '').lower()
+    if forzado_modo in ('eu', 'explicito'):
+        return 'explicito'
+    if forzado_modo in ('row', 'implicito'):
+        return 'implicito'
+    return 'explicito' if _pide_permiso_previo(request) else 'implicito'
 
 
 def forzado(request):
@@ -122,19 +156,23 @@ def forzado(request):
     return request.GET.get('debug') == '1'
 
 
-def aplica(request):
-    """¿Hay que pedir consentimiento a quien está mirando?
+def _pide_permiso_previo(request):
+    """¿Está mirando desde un sitio donde hay que pedir permiso antes?
 
     Se resuelve con `CF-IPCountry`, la misma cabecera con la que la pantalla de
     evento preselecciona el prefijo. Si no viene —fuera de Cloudflare o en
-    local— se pregunta: ante la duda, pedir permiso es lo correcto y lo barato.
+    local— se asume que sí: ante la duda, pedir permiso es lo correcto y lo
+    barato.
     """
-    if forzado(request):
-        return True
     pais = (request.headers.get('CF-IPCountry') or '').upper()
     if not pais or pais in ('XX', 'T1', 'T2'):
         return True
     return pais in PAISES_CON_CONSENTIMIENTO_PREVIO
+
+
+def aplica(request):
+    """Siempre se enseña algo. Lo que cambia con la región es el modelo."""
+    return True
 
 
 def marca(escuela):
@@ -145,6 +183,8 @@ def contexto(request, escuela=None):
     m = marca(escuela)
     return {
         'aplica': aplica(request),
+        'modo': modo(request),
+        'explicito': modo(request) == 'explicito',
         'forzado': forzado(request),
         'version': VERSION,
         'marca': m,
