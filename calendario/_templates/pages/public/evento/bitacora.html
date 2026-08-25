@@ -1,0 +1,123 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ pagina.titulo_pagina }}</title>
+  {% include '_includes/_consentimiento.html' %}
+  {% include '_includes/_sgtm_head.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   Bitácora de la English Week (Languages). Réplica de
+   conquerlanguages.com/eventos/bitacora.
+
+   Es la más simple de las tres: no recoge datos, no tiene botones, y todo su
+   contenido es un vídeo y tres párrafos.
+
+   Valores del original: «Bienvenidos a La Clase 0» en Poppins 30/500 con 3px
+   de espaciado y en #02bdf8, y el titular en Oswald 700 a 30/37 sobre un fondo
+   #ecf1f3.
+
+   Igual que sus hermanas, arrastra bloques ocultos de la plantilla de Webflow
+   de la que salió —textos sobre trading en una página de inglés—. No se
+   replican.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root{
+  --azul:#02bdf8;
+  --tinta:#1d1d1d;
+  --tinta-suave:#4a4a4a;
+  --titular:Oswald,Arial,sans-serif;
+  --cuerpo:Poppins,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  /* Color plano con la textura de manchas azules encima, repetida a su tamaño
+     natural y centrada, tal cual la sirve el original. */
+  margin:0;min-height:100vh;background:#ecf1f3 50% 50% repeat;
+  background-image:url("{% static 'img/eventos/bitacora/blur-azul.avif' %}");
+  font-family:var(--cuerpo);font-size:16px;line-height:1.6;color:var(--tinta-suave);
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;height:auto;display:block}
+.contenedor{width:100%;max-width:900px;margin:0 auto;padding:0 20px}
+
+.cabecera{
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  max-width:1180px;margin:0 auto;padding:26px 20px 0;
+}
+.cabecera img{width:350px;max-width:52%}
+/* No es una imagen: es texto, en el mismo Oswald del titular pero en el azul
+   apagado de la marca. */
+.cabecera .evento{
+  color:#6ca5bc;font-family:var(--titular);font-size:45px;font-weight:700;
+  line-height:1;text-transform:uppercase;white-space:nowrap;
+}
+
+/* Vídeo alojado en Bunny Stream, en otra biblioteca que la de Blocks. */
+.video{position:relative;width:100%;max-width:860px;margin:30px auto 0;padding-top:0;border-radius:6px;overflow:hidden;background:#000}
+.video .marco{position:relative;width:100%;padding-top:56.25%}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+.antetitulo{
+  margin:26px auto 0;text-align:center;color:var(--azul);
+  font-family:var(--cuerpo);font-size:30px;font-weight:500;letter-spacing:3px;line-height:1.3;
+}
+.titular{
+  margin:26px auto 0;max-width:760px;text-align:center;color:#000;
+  font-family:var(--titular);font-size:30px;font-weight:700;line-height:37px;text-transform:uppercase;
+}
+.cuerpo{margin:26px auto 0;max-width:760px;text-align:center;font-size:15px;line-height:1.6;color:var(--tinta)}
+.cuerpo + .cuerpo{margin-top:20px}
+.cierre-hueco{height:90px}
+
+@media (max-width:760px){
+  .cabecera{flex-direction:column;gap:10px}
+  .cabecera img{width:230px;max-width:80%}
+  .cabecera .evento{font-size:28px}
+  .antetitulo{font-size:22px;letter-spacing:2px}
+  .titular{font-size:24px;line-height:1.25}
+  .cuerpo{font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<header class="cabecera">
+  <img src="{% static 'img/eventos/bitacora/logo.svg' %}" alt="Conquer Languages" width="350">
+  <div class="evento">English Week</div>
+</header>
+
+<main class="contenedor">
+  <div class="video">
+    <div class="marco">
+      <iframe src="https://iframe.mediadelivery.net/embed/{{ pagina.biblioteca }}/{{ pagina.video_principal }}?autoplay=false&preload=false"
+              title="Bitácora — La Clase 0" loading="lazy" allowfullscreen
+              allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
+    </div>
+  </div>
+
+  <p class="antetitulo">Bienvenidos a La Clase 0</p>
+  <h1 class="titular">Prepárate para transforar tu inglés antes de la English Week</h1>
+
+  <p class="cuerpo">
+    Prepárate para la English Week, el evento donde descubrirás por qué cientos de
+    personas están logrando un inglés fluido en tiempo récord, sin memorizar y sin
+    horas interminables.
+  </p>
+  <p class="cuerpo">
+    Esta clase previa es clave: te mostrará la mentalidad adecuada, los errores que
+    frenan tu aprendizaje y el sistema que realmente acelera tu fluidez.
+  </p>
+  <p class="cuerpo">
+    Entenderás por qué sí puedes aprender inglés aunque nada te haya funcionado antes…<br>
+    y llegarás al evento listo para transformar tu inglés para siempre.
+  </p>
+
+  <div class="cierre-hueco"></div>
+</main>
+
+</body>
+</html>

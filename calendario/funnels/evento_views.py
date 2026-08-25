@@ -24,6 +24,11 @@ from .views import _base_path, _escuela_por_host
 # y, si acaso, el titular; el resto se mantiene.
 EVENTOS = {
     'conquer-blocks': {
+        # `orden` es el turno en que se migró desde Webflow. Solo lo usa el
+        # panel de /funnels/, que lista todas las páginas de evento juntas en
+        # ese orden: es el hilo por el que se han ido revisando, y ordenarlas
+        # por escuela o alfabéticamente lo rompía.
+        'orden': 1,
         'plantilla': 'pages/public/evento/paperboard.html',
         'marca': 'Conquer Blocks',
         'gradiente_1': '#ffbf00',
@@ -64,6 +69,7 @@ EVENTOS = {
         'politica_url': 'https://www.conquerblocks.com/politica-de-privacidad',
     },
     'conquer-finance': {
+        'orden': 2,
         # Misma maqueta que Blocks: en Webflow son la misma página con otra
         # marca. Cambian el degradado (verde), el logo, la foto y la copia.
         'plantilla': 'pages/public/evento/paperboard.html',
@@ -111,6 +117,7 @@ EVENTOS = {
         'politica_url': 'https://www.conquerfinance.com/politica-de-privacidad',
     },
     'conquer-languages': {
+        'orden': 3,
         'plantilla': 'pages/public/evento/languages.html',
         'titulo_pagina': 'English Event',
         'ruta': 'cl-evento',
@@ -209,6 +216,64 @@ def _gtm(escuela):
     sus lanzamientos estaban sin medir y ahora miden como los demás.
     """
     return get_gtm_config(escuela)
+
+
+# Páginas de evento de campaña. A diferencia de `EVENTOS` —una por marca, la del
+# evento online recurrente— estas son de una campaña concreta, con su propio
+# diseño y su propio código de funnel, y conviven varias por marca.
+#
+# El `funnel` va fijo, no sale de `utm_campaign`: así lo lleva el formulario del
+# original.
+PAGINAS_DE_CAMPANA = {
+    'evento-coding-week-eu': {
+        'orden': 4,
+        'escuela': 'conquer-blocks',
+        'plantilla': 'pages/public/evento/codingweek.html',
+        'titulo_pagina': 'Evento Coding Week - Conquer Blocks EU',
+        'funnel': 'cb-codingweek5-eu',
+        'politica_url': 'https://www.conquerblocks.com/politica-de-privacidad',
+    },
+    'evento-testimonios': {
+        'orden': 5,
+        'escuela': 'conquer-blocks',
+        'plantilla': 'pages/public/evento/testimonios.html',
+        'titulo_pagina': 'Evento - testimonios',
+        # Sin `funnel`: esta no recoge datos. Su único botón lleva a agendar,
+        # así que no hay lead, ni pantalla de gracias, ni salto a WhatsApp.
+        'funnel': None,
+        'cta_texto': 'Agendar mi llamada gratuita',
+        'cta_url': ('https://agendar.conquerblocks.com/?utm_source=landing'
+                    '&utm_medium=testimonios&utm_campaign=codingweek1'),
+        'video_principal': 'db9ea002-b58a-44ea-8221-31e8d3685c31',
+        # Ocho en apaisado y cinco en vertical, en el mismo orden que el
+        # original: las dos últimas filas quedan incompletas, no centradas.
+        'videos_apaisados': (
+            '50a929a1-d5b0-4c98-b918-cc14fc4579e0', '79714730-c00b-47a7-9a20-c3208bb0e243',
+            'eb05034a-b9ce-4e12-a08d-ebc3d275cca8', 'f3cbf0aa-d0d4-4eee-a5d7-ecb40e8772ca',
+            'af10d2a6-f036-48c0-8ec4-c44e0dcd7318', 'f3d26235-4bdb-4740-9647-9adfc45bc66a',
+            'd5f26790-0a3e-4e07-8871-bcf33baa97c9', '6a4875f8-054f-427d-92db-8896363d6e38',
+        ),
+        'videos_verticales': (
+            'a757defb-6c1b-463a-be0b-1cc482fbbe95', '56c0c271-5747-4b8b-8ce6-72a2d9088481',
+            'fcd4dbe9-2559-4026-b17d-1d80794305e0', 'a1a2b40d-3fcc-443a-b326-bd180a334286',
+            '51b1f995-521e-4f05-97a0-d27d2b65c074',
+        ),
+        'resenas': tuple(f'img/eventos/testimonios/resena-{n}.avif' for n in range(1, 10)),
+        'politica_url': 'https://www.conquerblocks.com/politica-de-privacidad',
+    },
+    'bitacora': {
+        'orden': 6,
+        'escuela': 'conquer-languages',
+        'plantilla': 'pages/public/evento/bitacora.html',
+        'titulo_pagina': 'bitacora',
+        'ruta': 'eventos/bitacora',
+        # Tampoco recoge datos: es un vídeo y tres párrafos.
+        'funnel': None,
+        'biblioteca': '348662',
+        'video_principal': '879ce1c6-e0d5-422f-9893-b663a8341f5d',
+        'politica_url': 'https://www.conquerlanguages.com/politica-de-privacidad',
+    },
+}
 
 
 def _funnel_de_la_edicion(request, evento):
@@ -315,6 +380,42 @@ class GraciasView(TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['gr'] = self.gracias
+        ctx['gtm'] = _gtm(self.escuela)
+        ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
+        return ctx
+
+
+class PaginaDeCampanaView(TemplateView):
+    """Página de evento de una campaña concreta (p.ej. la Coding Week).
+
+    Se resuelve por la ruta, no por el dominio: cada una es de una marca y de
+    una campaña, y varias pueden convivir en la misma marca. Por lo demás se
+    comporta igual que la pantalla de evento: el registro pasa a la de gracias
+    sin recargar y el HTML no se cachea, porque el prefijo depende de quien
+    mire."""
+
+    def get(self, request, *args, **kwargs):
+        self.pagina = PAGINAS_DE_CAMPANA.get(kwargs.get('pagina'))
+        if not self.pagina:
+            raise Http404('No hay página de campaña con ese nombre')
+        self.escuela = self.pagina['escuela']
+        self.template_name = self.pagina['plantilla']
+        respuesta = super().get(request, *args, **kwargs)
+        respuesta['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        respuesta['Pragma'] = 'no-cache'
+        patch_vary_headers(respuesta, ('CF-IPCountry',))
+        return respuesta
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['pagina'] = self.pagina
+        ctx['pais_detectado'] = (self.request.headers.get('CF-IPCountry') or '').upper()
+        # Las que no recogen datos —testimonios— no tienen lead que registrar,
+        # así que tampoco pantalla de gracias a la que pasar.
+        if self.pagina.get('funnel'):
+            ctx['funnel'] = self.pagina['funnel']
+            ctx['gracias'] = _base_path(self.request) + '/' + GRACIAS[self.escuela]['ruta']
+            ctx['gr'] = GRACIAS[self.escuela]
         ctx['gtm'] = _gtm(self.escuela)
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         return ctx

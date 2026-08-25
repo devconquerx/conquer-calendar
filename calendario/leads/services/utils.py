@@ -198,10 +198,26 @@ def is_from_google(lead):
 
 
 def es_lead_de_lanzamiento(lead):
-    """¿Es un lead de una pantalla de evento (lanzamiento) y no del funnel?
+    """¿Es un lead de una pantalla de evento y no del funnel?
 
     Se mira el `funnel` porque es el discriminador que usaba el escenario viejo
-    de Make (`cb-lanzamiento11`, `cl-lanzamiento8`, `cf-lanzamiento9`…) y con el
-    que el CRM los indexa.
+    de Make y con el que el CRM los indexa.
+
+    Dos formas de serlo. La mayoría lleva "lanzamiento" en el código
+    (`cb-lanzamiento11`, `cl-lanzamiento9`, `cf-lanzamiento11`…). Las páginas de
+    campaña no: la Coding Week manda `cb-codingweek5-eu`, y sin embargo en Make
+    consume las mismas dos operaciones —webhook e ingest— que un lanzamiento,
+    porque sus ramas de correo y Respond.io están apagadas igual. Por eso sus
+    códigos se leen de la propia configuración de esas páginas, que es la única
+    fuente que sabe cuáles son.
     """
-    return 'lanzamiento' in (getattr(lead, 'funnel', '') or '').lower()
+    funnel = (getattr(lead, 'funnel', '') or '').lower()
+    if not funnel:
+        return False
+    if 'lanzamiento' in funnel:
+        return True
+    # Import perezoso: `funnels` importa servicios de leads y al revés.
+    from calendario.funnels.evento_views import PAGINAS_DE_CAMPANA
+    # Hay páginas de campaña que no recogen datos y no declaran funnel.
+    codigos = {p['funnel'].lower() for p in PAGINAS_DE_CAMPANA.values() if p.get('funnel')}
+    return funnel in codigos

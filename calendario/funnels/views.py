@@ -874,13 +874,17 @@ class FunnelStatusView(View):
                 'stepform_url': _abs(stepform_url(f.escuela, f.region, base=ruta_base)) or '',
                 'confirmation_url': confirmacion,
             })
-        # Pantallas de evento: no son funnels (no tienen StepForm ni reserva), así
-        # que no salen de FunnelForm, pero se listan aquí para tenerlas a mano.
-        # El enlace se arma aparte del bucle de arriba: aquel resuelve el dominio
-        # público por funnel, y aquí hay que hacerlo por escuela del evento.
-        from .evento_views import EVENTOS
-        eventos = []
-        for escuela, datos in sorted(EVENTOS.items()):
+        # Páginas de evento. Ninguna es un funnel —no tienen StepForm ni reserva
+        # detrás— así que no salen de FunnelForm y se listan aparte. Van todas
+        # en la misma tabla y ordenadas por `orden`, el turno en que se
+        # migraron: es el hilo por el que se han ido revisando, y agruparlas por
+        # tipo dejaba dos tablas que se leían como si fueran cosas distintas.
+        #
+        # Los enlaces se arman aparte del bucle de arriba: aquel resuelve el
+        # dominio público por funnel, y aquí hay que hacerlo por escuela.
+        from .evento_views import EVENTOS, PAGINAS_DE_CAMPANA
+        paginas = []
+        for escuela, datos in EVENTOS.items():
             publico_ev = (publicos.get(escuela) or '').rstrip('/')
             # Cada marca sirve su evento en una ruta distinta (Blocks en
             # /evento/evento-online, Languages en /cl-evento), tal como estaban
@@ -891,16 +895,38 @@ class FunnelStatusView(View):
             else:
                 # En local/dev la escuela no se resuelve por dominio: va en la query.
                 url = f'{base}/{ruta}?escuela={escuela}'
-            eventos.append({
+            paginas.append({
+                'orden': datos['orden'],
                 'escuela': escuela,
                 'titulo': datos['titulo_pagina'],
+                'tipo': 'pantalla de lanzamiento',
+                'funnel': datos.get('funnel'),
                 'barra': datos['barra'],
                 'url': url,
             })
 
+        # Las de campaña (Coding Week…) no cuelgan de una marca como las de
+        # arriba —conviven varias por marca— así que se resuelven por su ruta, y
+        # el dominio público sale de la escuela que declaran.
+        for ruta, datos in PAGINAS_DE_CAMPANA.items():
+            publico_c = (publicos.get(datos['escuela']) or '').rstrip('/')
+            # Casi todas cuelgan de /evento/; Languages sirve la suya en
+            # /eventos/ (plural), así que puede declarar su ruta.
+            destino = datos.get('ruta', f'evento/{ruta}')
+            paginas.append({
+                'orden': datos['orden'],
+                'escuela': datos['escuela'],
+                'titulo': datos['titulo_pagina'],
+                'tipo': 'página de campaña',
+                'funnel': datos.get('funnel'),
+                'barra': '',
+                'url': f'{publico_c}/{destino}' if publico_c else f'{base}/{destino}',
+            })
+        paginas.sort(key=lambda p: p['orden'])
+
         return render(request, 'pages/public/funnel/status.html', {
             'filas': filas,
-            'eventos': eventos,
+            'paginas': paginas,
             'app_base_path': base,
             'tests_ab': tests_para_panel(),
         })

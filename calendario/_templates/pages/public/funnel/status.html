@@ -68,25 +68,29 @@
         {% endfor %}
       </tbody>
     </table>
-    <h2>Pantallas de evento</h2>
-    <p class="sub">{{ eventos|length }} pantalla{{ eventos|pluralize:"s" }} de lanzamiento. No son funnels: presentan el directo y recogen el registro ahí mismo, sin StepForm ni reserva detrás, así que no aparecen en la tabla de arriba. Sus leads van solo al CRM.</p>
+    <h2>Páginas de evento</h2>
+    <p class="sub">{{ paginas|length }} página{{ paginas|pluralize:"s" }}, en el orden en que se migraron desde Webflow. Ninguna es un funnel: no tienen StepForm ni reserva detrás, así que no aparecen en la tabla de arriba. Las <em>pantallas de lanzamiento</em> presentan el directo de la marca y recogen el registro ahí mismo; las <em>páginas de campaña</em> son de una campaña concreta y conviven varias por marca, así que se resuelven por su ruta y no por el dominio. Las que recogen datos mandan sus leads solo al CRM; el resto son informativas.</p>
     <table>
       <thead>
         <tr>
+          <th>#</th>
           <th>Escuela</th>
-          <th>Pantalla</th>
+          <th>Página</th>
+          <th>Funnel</th>
           <th>Cabecera actual</th>
         </tr>
       </thead>
       <tbody>
-        {% for e in eventos %}
+        {% for p in paginas %}
         <tr>
-          <td>{{ e.escuela }}</td>
-          <td><a href="{{ e.url }}">{{ e.titulo }}</a></td>
-          <td class="muted">{{ e.barra }}</td>
+          <td><span class="cod">{{ p.orden }}</span></td>
+          <td>{{ p.escuela }}</td>
+          <td><a href="{{ p.url }}">{{ p.titulo }}</a><br><span class="reg">{{ p.tipo }}</span></td>
+          <td class="muted">{% if p.funnel %}<code>{{ p.funnel }}</code>{% else %}no recoge datos{% endif %}</td>
+          <td class="muted">{{ p.barra }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="3" class="muted">Ninguna configurada.</td></tr>
+        <tr><td colspan="5" class="muted">Ninguna configurada.</td></tr>
         {% endfor %}
       </tbody>
     </table>

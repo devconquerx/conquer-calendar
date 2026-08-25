@@ -1,0 +1,227 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ pagina.titulo_pagina }}</title>
+  {% include '_includes/_consentimiento.html' %}
+  {% include '_includes/_sgtm_head.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   Testimonios de Blocks. Réplica de
+   conquerblocksold.webflow.io/evento/evento-testimonios.
+
+   No es una página de registro: no tiene formulario —el único `<form>` del
+   original es un residuo de la plantilla de Webflow, sin destino ni código de
+   funnel— y todos sus botones llevan a agendar. Así que aquí no hay lead, ni
+   pantalla de gracias, ni salto a WhatsApp.
+
+   Valores tomados de lo que resuelve el navegador en la original: titulares en
+   Oswald 800 a 32/53, cuerpo en Inter, y el CTA en píldora de 60px con borde
+   verde sobre negro al 90%.
+
+   Como la de Coding Week, arrastra bloques ocultos de la plantilla de la que
+   salió («Beneficio 1/2/3», Félix Fuertes, textos de trading). No se replican.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root{
+  --verde:#bae0a3;
+  --tinta:#f4f7fe;
+  --tinta-suave:#a9adb5;
+  --titular:Oswald,Arial,sans-serif;
+  --cuerpo:Inter,system-ui,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:#000;color:var(--tinta-suave);
+  font-family:var(--cuerpo);font-size:16px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+/* El resplandor azul que recorre la página. En el original son varios blobs
+   difuminados; aquí van como gradientes fijos, que pesan cero. */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(38% 26% at 18% 22%,rgba(24,86,150,.30),transparent 70%),
+    radial-gradient(34% 24% at 84% 46%,rgba(24,86,150,.24),transparent 70%),
+    radial-gradient(40% 26% at 22% 76%,rgba(24,86,150,.22),transparent 70%);
+}
+body > *{position:relative;z-index:1}
+img{max-width:100%;height:auto;display:block}
+.contenedor{width:100%;max-width:1040px;margin:0 auto;padding:0 20px}
+
+.cabecera{display:flex;justify-content:center;padding:26px 20px 10px}
+.cabecera img{width:227px}
+
+.titular{
+  margin:0 auto;max-width:900px;color:var(--tinta);text-align:center;
+  font-family:var(--titular);font-size:32px;font-weight:800;line-height:53px;text-transform:uppercase;
+}
+.titular .verde{color:var(--verde)}
+.subtitular{margin:6px auto 0;max-width:760px;text-align:center;font-size:14px;line-height:1.6}
+
+/* ── vídeos (Bunny Stream) ───────────────────────────────────────────────── */
+.video{position:relative;width:100%;border-radius:8px;overflow:hidden;background:#0a0a0a}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video.apaisado{padding-top:56.25%}     /* 16:9, como el original */
+.video.vertical{padding-top:227%}        /* 304x690 en el original */
+.video-principal{max-width:600px;margin:26px auto 0}
+
+.rejilla{display:grid;gap:16px;margin-top:26px}
+.rejilla.tres{grid-template-columns:repeat(3,1fr)}
+/* Las dos últimas filas del original no se completan: quedan 2 y 2 elementos
+   alineados a la izquierda, no centrados. Se replica igual. */
+
+.seccion-titulo{
+  margin:70px auto 0;max-width:900px;color:var(--tinta);text-align:center;
+  font-family:var(--titular);font-size:30px;font-weight:400;text-transform:uppercase;line-height:1.3;
+}
+
+/* ── CTA ─────────────────────────────────────────────────────────────────── */
+.cta-fila{display:flex;justify-content:center;margin-top:30px}
+.cta{
+  display:inline-flex;align-items:center;gap:10px;
+  background:rgba(0,0,0,.9);color:var(--tinta);border:1px solid var(--verde);border-radius:60px;
+  padding:13px 26px;font-family:var(--cuerpo);font-size:16px;font-weight:600;
+  text-decoration:none;text-transform:uppercase;letter-spacing:.02em;
+  transition:background .15s ease,transform .15s ease;
+}
+.cta:hover{background:rgba(186,224,163,.12);transform:translateY(-1px)}
+.cta:focus-visible{outline:2px solid var(--verde);outline-offset:3px}
+.cta svg{width:18px;height:18px;flex:0 0 auto}
+
+/* ── reseñas ─────────────────────────────────────────────────────────────── */
+.resenas{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:34px}
+.resenas img{width:100%;border-radius:8px}
+
+/* ── el sistema que garantiza resultados ─────────────────────────────────── */
+.sistema{margin-top:80px}
+.sistema-cols{display:flex;gap:40px;align-items:center;margin-top:30px}
+.sistema-foto{flex:0 0 40%;max-width:340px}
+.sistema-foto img{border-radius:10px}
+.puntos{flex:1 1 auto;display:flex;flex-direction:column;gap:22px}
+.punto{display:flex;align-items:flex-start;gap:14px}
+.punto .icono{flex:0 0 auto;color:var(--verde);line-height:0}
+.punto p{margin:0;font-size:14px;line-height:1.5;color:var(--tinta-suave)}
+
+/* ── cierre ──────────────────────────────────────────────────────────────── */
+.cierre{
+  margin-top:90px;padding:80px 0;background:#333 center/cover no-repeat;
+  background-image:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)),url("{% static 'img/eventos/codingweek/fondo-cierre.avif' %}");
+}
+.cierre .caja{
+  max-width:640px;margin:0 auto;padding:40px 30px;border-radius:14px;text-align:center;
+  background-image:linear-gradient(230deg,rgba(119,180,216,.85),rgba(186,224,163,.85));
+}
+.cierre h2{
+  display:inline-block;margin:0;padding:0 10px;background:rgba(0,0,0,.9);color:#fff;
+  font-family:var(--titular);font-size:40px;font-weight:700;line-height:1.2;text-transform:uppercase;
+}
+.cierre p{margin:18px auto 0;max-width:520px;color:#062015;font-size:14px;line-height:1.6}
+.cierre .cta{background:rgba(0,0,0,.9)}
+
+@media (max-width:900px){
+  .titular{font-size:26px;line-height:1.3}
+  .rejilla.tres,.resenas{grid-template-columns:repeat(2,1fr)}
+  .sistema-cols{flex-direction:column}
+  .sistema-foto{flex:1 1 auto;max-width:100%}
+  .cierre h2{font-size:28px}
+  .seccion-titulo{font-size:22px}
+}
+@media (max-width:560px){
+  .rejilla.tres,.resenas{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){.cta{transition:none}}
+</style>
+</head>
+<body>
+
+<header class="cabecera">
+  <img src="{% static 'img/eventos/codingweek/logo-blanco.png' %}" alt="Conquer Blocks" width="227">
+</header>
+
+<section class="contenedor">
+  <h1 class="titular">
+    Historias reales de personas que transformaron
+    <span class="verde">su futuro</span> en el sector tech
+  </h1>
+  <p class="subtitular">Descubre cómo nuestros alumnos consiguieron trabajos bien pagados en tiempo récord gracias a nuestra metodología probada</p>
+
+  <div class="video apaisado video-principal">
+    <iframe src="https://iframe.mediadelivery.net/embed/135359/{{ pagina.video_principal }}?autoplay=false&preload=false"
+            title="Coding Week" loading="lazy" allowfullscreen
+            allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
+  </div>
+
+  {% include 'pages/public/evento/_cta_agendar.html' %}
+</section>
+
+<section class="contenedor">
+  <p class="seccion-titulo">Conoce la experiencia de nuestros alumnos dentro de Conquer Blocks</p>
+
+  <div class="rejilla tres">
+    {% for v in pagina.videos_apaisados %}
+    <div class="video apaisado">
+      <iframe src="https://iframe.mediadelivery.net/embed/135359/{{ v }}?autoplay=false&preload=false"
+              title="Testimonio de alumno" loading="lazy" allowfullscreen
+              allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="rejilla tres">
+    {% for v in pagina.videos_verticales %}
+    <div class="video vertical">
+      <iframe src="https://iframe.mediadelivery.net/embed/135359/{{ v }}?autoplay=false&preload=false"
+              title="Testimonio de alumno" loading="lazy" allowfullscreen
+              allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% include 'pages/public/evento/_cta_agendar.html' %}
+
+  <div class="resenas">
+    {% for i in pagina.resenas %}
+    <img src="{% static i %}" alt="Reseña de un alumno en Trustpilot" loading="lazy" width="370">
+    {% endfor %}
+  </div>
+</section>
+
+<section class="contenedor sistema">
+  <p class="seccion-titulo" style="margin-top:0">El sistema que garantiza resultados</p>
+  <div class="sistema-cols">
+    <div class="sistema-foto">
+      <img src="{% static 'img/eventos/testimonios/holografia.avif' %}" alt="" width="340" height="227" loading="lazy">
+    </div>
+    <div class="puntos">
+      <div class="punto">
+        <span class="icono"><svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" aria-hidden="true" fill="currentColor" viewBox="0 0 16 16"><path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4m9.886-3.54c.18-.613 1.048-.613 1.229 0l.043.148a.64.64 0 0 0 .921.382l.136-.074c.561-.306 1.175.308.87.869l-.075.136a.64.64 0 0 0 .382.92l.149.045c.612.18.612 1.048 0 1.229l-.15.043a.64.64 0 0 0-.38.921l.074.136c.305.561-.309 1.175-.87.87l-.136-.075a.64.64 0 0 0-.92.382l-.045.149c-.18.612-1.048.612-1.229 0l-.043-.15a.64.64 0 0 0-.921-.38l-.136.074c-.561.305-1.175-.309-.87-.87l.075-.136a.64.64 0 0 0-.382-.92l-.148-.045c-.613-.18-.613-1.048 0-1.229l.148-.043a.64.64 0 0 0 .382-.921l-.074-.136c-.306-.561.308-1.175.869-.87l.136.075a.64.64 0 0 0 .92-.382zM14 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"/></svg></span>
+        <p>Método basado en aprender haciendo.</p>
+      </div>
+      <div class="punto">
+        <span class="icono"><svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M21 3H3C1.9 3 1 3.9 1 5V8H3V5H21V19H14V21H21C22.1 21 23 20.1 23 19V5C23 3.9 22.1 3 21 3ZM1 18V21H4C4 19.34 2.66 18 1 18ZM1 14V16C3.76 16 6 18.24 6 21H8C8 17.13 4.87 14 1 14ZM1 10V12C5.97 12 10 16.03 10 21H12C12 14.92 7.07 10 1 10ZM11 11.09V13.09L14.5 15L18 13.09V11.09L14.5 13L11 11.09ZM14.5 6L9 9L14.5 12L20 9L14.5 6Z" fill="currentColor"/></svg></span>
+        <p>Apoyo de mentores y comunidad activa.</p>
+      </div>
+      <div class="punto">
+        <span class="icono"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" d="M10.586 2.1a2 2 0 0 1 2.7-.116l.128.117L15.314 4H18a2 2 0 0 1 1.994 1.85L20 6v2.686l1.9 1.9a2 2 0 0 1 .116 2.701l-.117.127-1.9 1.9V18a2 2 0 0 1-1.85 1.995L18 20h-2.685l-1.9 1.9a2 2 0 0 1-2.701.116l-.127-.116-1.9-1.9H6a2 2 0 0 1-1.995-1.85L4 18v-2.686l-1.9-1.9a2 2 0 0 1-.116-2.701l.116-.127 1.9-1.9V6a2 2 0 0 1 1.85-1.994L6 4h2.686l1.9-1.9Zm4.493 6.883-4.244 4.244-1.768-1.768a1 1 0 0 0-1.414 1.415l2.404 2.404a1.1 1.1 0 0 0 1.556 0l4.88-4.881a1 1 0 0 0-1.414-1.414Z"/></svg></span>
+        <p>Garantía de empleo al finalizar la formación.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cierre">
+  <div class="contenedor">
+    <div class="caja">
+      <h2>Tú podrías ser el próximo caso de éxito</h2>
+      <p>· Reserva una llamada con nuestro equipo y descubre cómo puedes lograrlo ·</p>
+      {% include 'pages/public/evento/_cta_agendar.html' %}
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
