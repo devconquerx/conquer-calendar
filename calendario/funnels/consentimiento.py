@@ -156,18 +156,43 @@ def forzado(request):
     return request.GET.get('debug') == '1'
 
 
+# Cabecera por la que llega el país del visitante.
+#
+# NO es `CF-IPCountry`. Cloudflare la reserva: el Worker que enruta los dominios
+# de marca hacia Django corre en su red, y ahí los nombres que empiezan por
+# `CF-` los gestiona Cloudflare —si el Worker intenta fijarla en la subpetición,
+# se descarta—. Tampoco la pone Cloudflare por su cuenta, porque el origen
+# (`calendar.conquerx.com`) no está detrás de Cloudflare: la añade al proxear
+# hacia orígenes de sus propias zonas, y esta no lo es.
+#
+# Así que el Worker la reenvía con un nombre propio:
+#
+#     headers.set("X-Visitor-Country", request.cf?.country || "XX");
+#
+# Se sigue aceptando `CF-IPCountry` por si algún día el origen pasa a estar
+# detrás de Cloudflare y la pone él.
+CABECERA_PAIS = 'X-Visitor-Country'
+
+
+def pais(request):
+    """Código ISO del país del visitante, o cadena vacía si no se sabe."""
+    return (request.headers.get(CABECERA_PAIS)
+            or request.headers.get('CF-IPCountry')
+            or '').upper()
+
+
 def _pide_permiso_previo(request):
     """¿Está mirando desde un sitio donde hay que pedir permiso antes?
 
-    Se resuelve con `CF-IPCountry`, la misma cabecera con la que la pantalla de
-    evento preselecciona el prefijo. Si no viene —fuera de Cloudflare o en
-    local— se asume que sí: ante la duda, pedir permiso es lo correcto y lo
-    barato.
+    Si no llega el país —fuera de Cloudflare, en local, o con la cabecera
+    perdida por el camino— se asume que sí: ante la duda, pedir permiso es lo
+    correcto y lo barato. El precio de equivocarse es enseñar el aviso
+    bloqueante a quien no le tocaba; al revés sería medir sin permiso.
     """
-    pais = (request.headers.get('CF-IPCountry') or '').upper()
-    if not pais or pais in ('XX', 'T1', 'T2'):
+    codigo = pais(request)
+    if not codigo or codigo in ('XX', 'T1', 'T2'):
         return True
-    return pais in PAISES_CON_CONSENTIMIENTO_PREVIO
+    return codigo in PAISES_CON_CONSENTIMIENTO_PREVIO
 
 
 def aplica(request):

@@ -5,9 +5,10 @@
  * buscador.
  *
  * El país se resuelve en tres pasos. Primero el que manda el servidor en
- * `data-pais`, que sale de la cabecera CF-IPCountry: cuando llega es gratis e
- * instantáneo. Si no viene —hoy no llega en calendar.conquerx.com, y fuera de
- * Cloudflare tampoco— se pregunta por IP. Si eso también falla, España.
+ * `data-pais`, que sale de la cabecera de país que reenvía el Worker: cuando
+ * llega es gratis e instantáneo. Si no viene —entrando directo por
+ * calendar.conquerx.com, o en local— se pregunta por IP. Si eso también falla,
+ * España.
  *
  * La consulta por IP va a geojs.io, que es la que usa el funnel
  * (`useGeoLocation`). El original de Webflow usaba ipapi.co, pero su plan

@@ -24,6 +24,54 @@ PAGINAS = (
 )
 
 
+class ElPaisLlegaPorSuCabeceraTest(TestCase):
+    """El país NO viaja en `CF-IPCountry`, y confundirse cuesta caro.
+
+    Los dominios de marca entran por un Worker de Cloudflare que reenvía a
+    `calendar.conquerx.com`, que está fuera de Cloudflare. Ahí `CF-IPCountry` no
+    existe: Cloudflare solo la añade proxeando a orígenes de sus zonas, y un
+    Worker no puede fijarla a mano porque los nombres `CF-` los gestiona ella.
+    Se perdía por el camino y a TODO el mundo —LATAM incluido— le salía el aviso
+    bloqueante de Europa, porque sin país se pide permiso por defecto.
+    """
+
+    def _modo(self, **cabeceras):
+        html = self.client.get('/evento/evento-online', HTTP_HOST='www.conquerblocks.com',
+                               **cabeceras).content.decode()
+        return 'Al continuar navegando' in html and 'implicito' or 'explicito'
+
+    def test_es_la_que_reenvia_el_worker(self):
+        self.assertEqual(consentimiento.CABECERA_PAIS, 'X-Visitor-Country')
+
+    def test_con_ella_latam_recibe_el_implicito(self):
+        self.assertEqual(self._modo(HTTP_X_VISITOR_COUNTRY='VE'), 'implicito')
+
+    def test_y_europa_el_explicito(self):
+        self.assertEqual(self._modo(HTTP_X_VISITOR_COUNTRY='ES'), 'explicito')
+
+    def test_se_sigue_aceptando_la_de_cloudflare(self):
+        # Por si el origen acaba detrás de Cloudflare y la pone ella.
+        self.assertEqual(self._modo(HTTP_CF_IPCOUNTRY='VE'), 'implicito')
+
+    def test_la_suya_manda_sobre_la_de_cloudflare(self):
+        self.assertEqual(self._modo(HTTP_X_VISITOR_COUNTRY='VE', HTTP_CF_IPCOUNTRY='ES'),
+                         'implicito')
+
+    def test_el_prefijo_del_telefono_sale_del_mismo_sitio(self):
+        # Se preselecciona en servidor con el país; sin él, el JS acaba
+        # preguntando por IP a un tercero.
+        html = self.client.get('/evento/evento-online', HTTP_HOST='www.conquerblocks.com',
+                               HTTP_X_VISITOR_COUNTRY='VE').content.decode()
+        self.assertIn('data-pais="VE"', html)
+
+    def test_la_respuesta_varia_con_ella(self):
+        # Sin `Vary` una caché intermedia serviría a un venezolano la página
+        # cacheada para un español.
+        vary = self.client.get('/evento/evento-online',
+                               HTTP_HOST='www.conquerblocks.com')['Vary']
+        self.assertIn('X-Visitor-Country', vary)
+
+
 class AQuienSeLePreguntaTest(TestCase):
     """Dos regímenes distintos, porque la ley no es la misma.
 

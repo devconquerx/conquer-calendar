@@ -48,6 +48,13 @@ export default {
       headers.set("X-Forwarded-Host", incoming.host);
     }
     headers.set("X-Forwarded-Proto", "https");
+    // País del visitante. NO se puede mandar como `CF-IPCountry`: los nombres
+    // que empiezan por `CF-` los gestiona Cloudflare y descarta el que fije el
+    // Worker, y ella tampoco la añade por su cuenta porque el origen está fuera
+    // de sus zonas. Con `CF-IPCountry` llegaba vacío y Django, sin país, daba
+    // por hecho que hacía falta permiso previo: a todo el mundo —LATAM y US
+    // incluidos— le salía el aviso bloqueante de Europa.
+    headers.set("X-Visitor-Country", request.cf?.country || "XX");
 
     const init = {
       method: request.method,

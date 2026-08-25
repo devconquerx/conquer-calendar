@@ -316,14 +316,15 @@ class EventoView(TemplateView):
         respuesta = super().get(request, *args, **kwargs)
         # Este HTML NO se puede cachear en ningún sitio. Cambia con cada
         # visitante por dos motivos: el código de la edición sale de
-        # `utm_campaign`, y el prefijo preseleccionado sale de `CF-IPCountry`.
+        # `utm_campaign`, y el prefijo preseleccionado sale del país del
+        # visitante (ver `consentimiento.CABECERA_PAIS`).
         # Una copia cacheada le daría a un visitante la campaña de otro —y sus
         # leads acabarían archivados en la edición equivocada— o el prefijo de
         # otro país. Ya pasó con el HTML del funnel: los navegadores embebidos
         # de TikTok e Instagram cachean con avidez y servían la página vieja.
         respuesta['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         respuesta['Pragma'] = 'no-cache'
-        patch_vary_headers(respuesta, ('CF-IPCountry',))
+        patch_vary_headers(respuesta, (consent.CABECERA_PAIS, 'CF-IPCountry'))
         return respuesta
 
     def get_context_data(self, **kwargs):
@@ -358,7 +359,7 @@ class EventoView(TemplateView):
         # ha dicho nada» y se queda con un prefijo equivocado sin llegar a
         # preguntar. El respaldo por IP y el último recurso de España viven en
         # el JS, que es quien conoce la lista de países.
-        ctx['pais_detectado'] = (self.request.headers.get('CF-IPCountry') or '').upper()
+        ctx['pais_detectado'] = consent.pais(self.request)
         return ctx
 
 
@@ -403,13 +404,13 @@ class PaginaDeCampanaView(TemplateView):
         respuesta = super().get(request, *args, **kwargs)
         respuesta['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         respuesta['Pragma'] = 'no-cache'
-        patch_vary_headers(respuesta, ('CF-IPCountry',))
+        patch_vary_headers(respuesta, (consent.CABECERA_PAIS, 'CF-IPCountry'))
         return respuesta
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['pagina'] = self.pagina
-        ctx['pais_detectado'] = (self.request.headers.get('CF-IPCountry') or '').upper()
+        ctx['pais_detectado'] = consent.pais(self.request)
         # Las que no recogen datos —testimonios— no tienen lead que registrar,
         # así que tampoco pantalla de gracias a la que pasar.
         if self.pagina.get('funnel'):
