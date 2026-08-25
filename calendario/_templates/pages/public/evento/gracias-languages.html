@@ -1,3 +1,9 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ gr.titulo_pagina }}</title>
 {% comment %}
 Página de "gracias" servida por su propia URL. Es la que ve quien entra directo
 y la que deja el pushState en la barra cuando se llega desde la pantalla del
@@ -5,10 +11,7 @@ evento sin recargar, así que recargar ahí tiene que seguir funcionando.
 
 El contenido vive en el parcial porque la pantalla del evento lo embebe también.
 {% endcomment %}
-{% load static %}
 <title>{{ gr.titulo_pagina }}</title>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 {% include '_includes/_consentimiento.html' %}
 {% include '_includes/_sgtm_head.html' %}
@@ -19,7 +22,10 @@ El contenido vive en el parcial porque la pantalla del evento lo embebe también
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;-webkit-font-smoothing:antialiased}
 </style>
-
+</head>
+<body>
 {% include 'pages/public/evento/_gracias_languages.html' %}
 {% include 'pages/public/evento/_salto_whatsapp.html' %}
 <script>window.iniciarSaltoWhatsApp();</script>
+</body>
+</html>
