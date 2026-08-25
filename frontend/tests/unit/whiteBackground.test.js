@@ -17,6 +17,24 @@ describe('tema con fondo blanco', () => {
         expect(blanco.whiteBackground).toBe(true)
       })
 
+      it('blanquea también el resto de etapas, no solo la landing', () => {
+        // StepForm y calendario: wrapper y tarjeta.
+        expect(tema.page.backgroundImage).toContain('url(')
+        expect(blanco.page.backgroundImage).toBeUndefined()
+        expect(blanco.page.backgroundColor).toBe('#FFFFFF')
+        expect(blanco.cssVars['--theme-page-bg']).toBe('#FFFFFF')
+        expect(blanco.cssVars['--theme-form-bg']).toBe('#FFFFFF')
+        expect(blanco.cssVars['--theme-form-texture']).toBe('none')
+      })
+
+      it('anula la textura propia de la confirmación', () => {
+        // Blocks trae una textura aparte en `confirmation`, así que no basta
+        // con anular la del tema.
+        if (!tema.confirmation) return
+        expect(blanco.confirmation.texture).toBeNull()
+        expect(blanco.confirmation.paso1Badge).toEqual(tema.confirmation.paso1Badge)
+      })
+
       it('conserva el acento de marca, el logo y el resto de assets', () => {
         expect(blanco.accent).toEqual(tema.accent)
         expect(blanco.assets.logo).toBe(tema.assets.logo)
@@ -28,6 +46,8 @@ describe('tema con fondo blanco', () => {
         expect(tema.assets.paperboardTexture).toBeTruthy()
         expect(tema.whiteBackground).toBeUndefined()
         expect(tema.landing.bg).not.toBe('bg-white')
+        expect(tema.cssVars['--theme-form-texture']).toContain('url(')
+        expect(tema.confirmation?.texture ?? null).not.toBeNull()
       })
     })
   }

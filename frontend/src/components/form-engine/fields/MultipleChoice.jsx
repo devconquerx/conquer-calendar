@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react'
 
-import paperboardTexture from '../../../assets/img/cb/paperboard-texture.avif'
+import paperboardTextureAsset from '../../../assets/img/cb/paperboard-texture.avif'
 import { useTheme } from '../../../themes'
 
 const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
@@ -10,6 +10,19 @@ const cbShadow = '0px 2px 5px rgba(0,0,0,0.1), 0px 9px 9px rgba(0,0,0,0.09), 0px
 export default function MultipleChoice({ field, value, onChange, onNext }) {
   const choices = field.choices || []
   const theme = useTheme()
+  // La textura sale del tema para que la variante A/B de fondo blanco (que la
+  // pone a null) también alcance a estas tarjetas; el asset importado es el
+  // fallback de los temas que no declaran la suya.
+  const paperboardTexture = 'paperboardTexture' in (theme.assets || {})
+    ? theme.assets.paperboardTexture
+    : paperboardTextureAsset
+  const choiceBg = paperboardTexture
+    ? {
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${paperboardTexture})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+    : { backgroundColor: '#FFFFFF' }
 
   const handleSelect = useCallback((choiceValue) => {
     onChange(choiceValue)
@@ -80,9 +93,7 @@ export default function MultipleChoice({ field, value, onChange, onNext }) {
                 : 'border-[#BBB49B] hover:border-[color:var(--theme-accent,#F97316)]'
             }`}
             style={{
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${paperboardTexture})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
+              ...choiceBg,
               // Acento de marca por CSS var (naranja Blocks / azul Legal). El aro
               // translúcido va por box-shadow para poder usar el color del tema.
               borderColor: isSelected ? 'var(--theme-accent, #F97316)' : undefined,

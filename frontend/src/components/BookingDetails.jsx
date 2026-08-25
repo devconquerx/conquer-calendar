@@ -136,7 +136,7 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
   const fechaVieja = formatearEnTz(duplicado?.inicio_utc, slot.tz)
 
   return (
-    <div className={`bk-wrapper ${theme?.hexboard ? 'bk-wrapper--plain' : ''}`}>
+    <div className={`bk-wrapper ${theme?.hexboard || theme?.whiteBackground ? 'bk-wrapper--plain' : ''}`}>
       <div className="bk-card">
         <LeftPanel eventoInfo={eventoInfo} />
 

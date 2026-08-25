@@ -41,9 +41,10 @@ export function getTheme(...hints) {
 
 /* Aplica al tema ya resuelto (incluido el rediseño por página: `landingPaper`,
    `stepformPaper`…) la variante A/B de diseño que le toque a este visitante.
-   Hoy solo existe una: el fondo blanco de la LANDING de Conquer Blocks LATAM,
-   así que solo la llaman la landing y su formulario; las demás etapas siguen
-   con el tema de marca tal cual. */
+   Hoy solo existe una: el fondo blanco, que cubre el funnel ENTERO (landing,
+   vídeo, stepform, calendario y confirmación), así que la llama cada etapa al
+   resolver su tema. La variante se decide una sola vez, en el root, y viaja por
+   contexto: todas las etapas ven la misma. */
 export function useVariantTheme(theme) {
   const { whiteBackground } = useFormVariant()
   return useMemo(

@@ -75,6 +75,59 @@ test.describe('A/B de fondo blanco (landing)', () => {
     await expect(page).toHaveURL(/utm_source=meta/)
     await expect(fondo(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)')
   })
+
+  /* El fondo blanco cubre el funnel ENTERO, así que hay que comprobarlo etapa
+     por etapa: cada una resuelve su propio tema y la que se olvide de aplicar
+     la variante deja al visitante viendo papel en mitad del recorrido. Corren
+     en escritorio y en móvil, que es donde se vería un escalón de color. */
+  test('la página de vídeo también va en blanco, sin escalón en el rasgado', async ({ page }) => {
+    await forzarVariante(page, 'form_variant_cb_latam', '58')
+    await page.goto(urlEtapa({ stage: 'video' }))
+    const cabecera = page.locator('header').first()
+    await expect(cabecera).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    await expect(cabecera).toHaveCSS('background-image', 'none')
+    // El rasgado es papel crema: sin aclararlo se ve el corte contra el blanco.
+    const rasgado = page.locator('img[src*="torn"]').first()
+    await expect(rasgado).toHaveCSS('filter', 'brightness(1.25)')
+  })
+
+  test('la página de vídeo de control conserva su papel', async ({ page }) => {
+    await forzarVariante(page, 'form_variant_cb_latam', '57')
+    await page.goto(urlEtapa({ stage: 'video' }))
+    const cabecera = page.locator('header').first()
+    await expect(cabecera).not.toHaveCSS('background-image', 'none')
+    await expect(page.locator('img[src*="torn"]').first()).toHaveCSS('filter', 'none')
+  })
+
+  test('el stepform va en blanco y sin textura de papel', async ({ page }) => {
+    await forzarVariante(page, 'form_variant_cb_latam', '58')
+    await page.goto(urlEtapa({ stage: 'stepform' }))
+    const wrap = page.locator('.funnel-wrap')
+    await expect(wrap).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    await expect(wrap).toHaveCSS('background-image', 'none')
+  })
+
+  test('el stepform de control conserva el papel', async ({ page }) => {
+    await forzarVariante(page, 'form_variant_cb_latam', '57')
+    await page.goto(urlEtapa({ stage: 'stepform' }))
+    await expect(page.locator('.funnel-wrap')).not.toHaveCSS('background-image', 'none')
+  })
+
+  test('la confirmación va en blanco', async ({ page }) => {
+    await forzarVariante(page, 'form_variant_cb_latam', '58')
+    await page.goto(urlEtapa({ stage: 'confirmation' }))
+    const seccion = page.locator('section').first()
+    await expect(seccion).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    await expect(seccion).toHaveCSS('background-image', 'none')
+  })
+
+  test('la confirmación de control conserva su papel', async ({ page }) => {
+    // Blocks pinta el color por estilo (#FAFAFA tileado), no con la clase
+    // crema, así que lo que distingue a la rama de control es la textura.
+    await forzarVariante(page, 'form_variant_cb_latam', '57')
+    await page.goto(urlEtapa({ stage: 'confirmation' }))
+    await expect(page.locator('section').first()).not.toHaveCSS('background-image', 'none')
+  })
 })
 
 test.describe('A/B del footer (página de vídeo)', () => {

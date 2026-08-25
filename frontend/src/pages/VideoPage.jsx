@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import VideoPlayer from '../components/vsl/VideoPlayer'
 import AgendarButton from '../components/vsl/AgendarButton'
-import { getTheme } from '../themes'
+import { getTheme, useVariantTheme } from '../themes'
 import { useVideoVariant } from '../lib/formVariantContext'
 import { CB_CARD_SHADOW } from '../themes/conquerblocks'
 import { sendVideoProgressToBackend } from '../api'
@@ -24,9 +24,14 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   // Rediseño por página: un tema puede pedir que SOLO su página de vídeo use el
   // sistema paperboard (hoy: Finance, que toma prestados los tokens de Legal
   // vía `videoPaper`) sin cambiar de sistema en el resto de etapas del funnel.
-  const theme = !baseTheme.paperboard && baseTheme.videoVariant === 'paperboard'
-    ? { ...baseTheme, ...baseTheme.videoPaper, paperboard: true, hexboard: false }
-    : baseTheme
+  // Encima va la variante A/B de diseño (el fondo blanco), que sí cubre el
+  // funnel entero.
+  const theme = useVariantTheme(useMemo(
+    () => (!baseTheme.paperboard && baseTheme.videoVariant === 'paperboard'
+      ? { ...baseTheme, ...baseTheme.videoPaper, paperboard: true, hexboard: false }
+      : baseTheme),
+    [baseTheme]
+  ))
   const isPaper = !!theme.paperboard
   const assets = theme.assets
 
@@ -235,17 +240,27 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
   const footerLogo = assets.footerLogo || assets.logo
 
   // Fondo claro de cabecera/footer: #FAFAFA + velo blanco 40% sobre paperboard.
-  const paperStyle = {
-    backgroundColor: '#FAFAFA',
-    backgroundImage: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.4)), url(${assets.paperboardTexture})`,
-    backgroundSize: 'auto, 50%',
-  }
+  // En la variante de fondo blanco del A/B no hay textura: blanco liso.
+  const paperTexture = assets.paperboardTexture
+  // El PNG del rasgado es papel crema macizo, así que sobre fondo blanco se
+  // marcaba un escalón de color. Subirle el brillo lo satura a blanco puro y
+  // conserva intacto el alfa del borde rasgado (probado en el navegador).
+  const tornFilter = paperTexture ? '' : ' brightness-125'
+  const paperStyle = paperTexture
+    ? {
+        backgroundColor: '#FAFAFA',
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.4)), url(${paperTexture})`,
+        backgroundSize: 'auto, 50%',
+      }
+    : { backgroundColor: '#FFFFFF' }
   // Badge pill: textura paperboard con velo blanco 60% + sombra en capas.
-  const tagStyle = {
-    backgroundImage: `linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url(${assets.paperboardTexture})`,
-    backgroundSize: 'cover',
-    boxShadow: CB_CARD_SHADOW,
-  }
+  const tagStyle = paperTexture
+    ? {
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url(${paperTexture})`,
+        backgroundSize: 'cover',
+        boxShadow: CB_CARD_SHADOW,
+      }
+    : { backgroundColor: '#FFFFFF', boxShadow: CB_CARD_SHADOW }
   // Zona oscura: negro + velo negro 15% sobre la retícula. `fixed` hace que la
   // retícula sea UN único fondo anclado al viewport, así las transiciones rasgadas
   // (transparentes) muestran exactamente la misma retícula que el resto de la zona
@@ -312,7 +327,7 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
               src={assets.tornTransition}
               alt=""
               aria-hidden="true"
-              className="block w-full rotate-180"
+              className={`block w-full rotate-180${tornFilter}`}
             />
           </div>
         )}
@@ -354,7 +369,7 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
                 src={assets.tornTransition}
                 alt=""
                 aria-hidden="true"
-                className="block w-full"
+                className={`block w-full${tornFilter}`}
               />
             </div>
           )}

@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { leer } from '../lib/safeStorage'
-import { getTheme } from '../themes'
+import { getTheme, useVariantTheme } from '../themes'
 import useTracking from '../hooks/useTracking'
 import { fireAllSchedule } from '../lib/pixelEvents'
 import { safeHtml } from '../lib/sanitize'
@@ -19,9 +19,14 @@ export default function Confirmation({ escuela = '', slug = '' }) {
   // Rediseño por página: un tema puede pedir que SOLO su confirmación use el
   // sistema paperboard (hoy: Finance, que toma el diseño de Legal y conserva su
   // contenido vía `confirmationPaper`) sin cambiar el resto de etapas.
-  const theme = !baseTheme.paperboard && baseTheme.confirmationVariant === 'paperboard'
-    ? { ...baseTheme, ...baseTheme.confirmationPaper, paperboard: true, hexboard: false }
-    : baseTheme
+  // Encima va la variante A/B de diseño (el fondo blanco), que cubre el funnel
+  // entero y por tanto también esta pantalla.
+  const theme = useVariantTheme(useMemo(
+    () => (!baseTheme.paperboard && baseTheme.confirmationVariant === 'paperboard'
+      ? { ...baseTheme, ...baseTheme.confirmationPaper, paperboard: true, hexboard: false }
+      : baseTheme),
+    [baseTheme]
+  ))
   /* El renderer paperboard necesita los tokens de contenido de ESE sistema
      (los 3 pasos: badges, copy, imágenes). No basta con que el tema tenga un
      bloque `confirmation`: Conquer Languages hereda el del tema por defecto vía
@@ -326,6 +331,15 @@ function VideoFrame({ frame, accent, borderColor, glow, children }) {
 
 function PaperboardConfirmation({ theme, assets }) {
   const c = theme.confirmation
+  // Variante A/B de fondo blanco: sin textura y con las secciones crema en
+  // blanco. `toWhiteBackground` ya anula las dos texturas, así que aquí solo
+  // quedan los colores escritos literales.
+  const isWhite = !!theme.whiteBackground
+  const sectionBg = isWhite ? 'bg-white' : 'bg-[#F5EDE3]'
+  // El PNG del rasgado es papel crema macizo: sobre fondo blanco marcaba un
+  // escalón de color, y subirle el brillo lo satura a blanco puro sin tocar el
+  // alfa del borde (mismo apaño que en la página de vídeo).
+  const tornFilter = isWhite ? ' brightness-125' : ''
   // La confirmación puede traer su propia textura paperboard (Blocks usa una más
   // clara y fina que la del StepForm); si no, cae a la del tema.
   const texture = c.texture || assets?.paperboardTexture
@@ -400,7 +414,7 @@ function PaperboardConfirmation({ theme, assets }) {
     <div className="min-h-screen overflow-x-hidden relative flex flex-col font-['Funnel_Display',sans-serif] bg-black">
 
       {/* ═══ SECTION 1: Hero ═══ */}
-      <section className={`relative bg-[#F5EDE3] px-4 lg:px-16 ${c.heroSectionPad || 'pt-12 pb-12'}`} style={paperboardBg}>
+      <section className={`relative ${sectionBg} px-4 lg:px-16 ${c.heroSectionPad || 'pt-12 pb-12'}`} style={paperboardBg}>
         {(c.heroDecoImg || px.deco2) &&
           (c.heroDecos || ['top-8 left-6 w-24 opacity-40', 'top-16 right-6 w-28 opacity-20']).map((cls, i) => (
             <img key={i} src={c.heroDecoImg || px.deco2} alt="" className={`absolute ${cls} pointer-events-none hidden lg:block`} />
@@ -468,7 +482,7 @@ function PaperboardConfirmation({ theme, assets }) {
       {/* ═══ TORN: cream → black ═══ */}
       {torn && (
         <div className="relative z-10 bg-black -mt-[2px]">
-          <img src={torn} alt="" className="w-full block scale-y-[-1] -mt-[3px]" />
+          <img src={torn} alt="" className={`w-full block scale-y-[-1] -mt-[3px]${tornFilter}`} />
         </div>
       )}
 
@@ -506,12 +520,12 @@ function PaperboardConfirmation({ theme, assets }) {
       {/* ═══ TORN: black → cream (vídeo → Paso 2) ═══ */}
       {torn && (
         <div className="relative z-10 bg-black -mb-[2px]">
-          <img src={torn} alt="" className="w-full block -mb-[3px]" />
+          <img src={torn} alt="" className={`w-full block -mb-[3px]${tornFilter}`} />
         </div>
       )}
 
       {/* ═══ SECTION 3: Paso 2 — confirma tu cita ═══ */}
-      <section className={`relative px-4 lg:px-16 ${c.paso2SectionPad || 'py-20'} bg-[#F5EDE3]`} style={paperboardBg}>
+      <section className={`relative px-4 lg:px-16 ${c.paso2SectionPad || 'py-20'} ${sectionBg}`} style={paperboardBg}>
         {px.deco && (
           <img src={px.deco} alt="" className="absolute top-8 left-8 w-28 opacity-20 pointer-events-none hidden lg:block" />
         )}
@@ -572,7 +586,7 @@ function PaperboardConfirmation({ theme, assets }) {
       {/* ═══ TORN: cream → black ═══ */}
       {torn && (
         <div className="relative z-10 bg-black -mt-[2px]">
-          <img src={torn} alt="" className="w-full block scale-y-[-1] -mt-[3px]" />
+          <img src={torn} alt="" className={`w-full block scale-y-[-1] -mt-[3px]${tornFilter}`} />
         </div>
       )}
 
@@ -633,12 +647,12 @@ function PaperboardConfirmation({ theme, assets }) {
       {/* ═══ TORN: black → footer ═══ */}
       {torn && (
         <div className="relative z-10 bg-black -mb-[2px]">
-          <img src={torn} alt="" className="w-full block -mt-[3px]" />
+          <img src={torn} alt="" className={`w-full block -mt-[3px]${tornFilter}`} />
         </div>
       )}
 
       {/* ═══ FOOTER ═══ */}
-      <footer className="relative flex-shrink-0 z-10 overflow-hidden bg-[#F5EDE3]" style={paperboardBg}>
+      <footer className={`relative flex-shrink-0 z-10 overflow-hidden ${sectionBg}`} style={paperboardBg}>
         {c.footerMode === 'minimal' ? (
           <>
             {/* Blocks: píxeles decorativos relativos al footer completo (uno a

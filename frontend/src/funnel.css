@@ -315,8 +315,9 @@ body { background: #fff; }
   background-image: url('./assets/img/cb/paperboard-academia.avif');
   background-repeat: repeat;
 }
-/* Variante "plana" (Finance/hexboard): la página del calendario va en blanco,
-   sin la textura paperboard de Blocks/Legal. */
+/* Variante "plana": la página del calendario va en blanco, sin la textura
+   paperboard de Blocks/Legal. La usan Finance (hexboard) y la rama de fondo
+   blanco del A/B de diseño. */
 .bk-wrapper.bk-wrapper--plain {
   --bk-page-bg: #ffffff;
   background-image: none;

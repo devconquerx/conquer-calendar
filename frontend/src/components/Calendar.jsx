@@ -172,7 +172,7 @@ export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSe
   const canNext = mesData?.mes_siguiente != null
 
   return (
-    <div className={`bk-wrapper ${theme?.hexboard ? 'bk-wrapper--plain' : ''}`}>
+    <div className={`bk-wrapper ${theme?.hexboard || theme?.whiteBackground ? 'bk-wrapper--plain' : ''}`}>
       <div className={`bk-card${selectedDate ? ' has-slots' : ''}`}>
 
         <LeftPanel eventoInfo={eventoInfo} />

@@ -17,7 +17,7 @@ import WelcomeScreen from './components/form-engine/fields/WelcomeScreen'
 import { getPrefillRespuestas } from './lib/prefillParams'
 import { countryFromPhone } from './lib/phoneCountry'
 import { validateBlock } from './lib/validateBlock'
-import { getTheme, ThemeContext } from './themes'
+import { getTheme, ThemeContext, useVariantTheme } from './themes'
 import { getVideoVariantExperiment, readFormVariant } from './lib/formVariant'
 import { useRouter } from './lib/router'
 import './funnel.css'
@@ -173,12 +173,15 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
   // paperboard (hoy: Finance con los tokens de Legal vía `stepformPaper`).
   // Memoizado porque el efecto que publica cssVars en :root y varios callbacks
   // dependen de la identidad de `theme` (getTheme devuelve referencias estables).
-  const theme = useMemo(() => {
+  // `useVariantTheme` aplica encima la variante A/B de diseño (hoy el fondo
+  // blanco): al ir aquí, la heredan por ThemeContext el StepForm, el
+  // calendario, la reserva, el rechazo y la pantalla de precios.
+  const theme = useVariantTheme(useMemo(() => {
     const base = getTheme(escuela, slug)
     return !base.paperboard && base.stepformVariant === 'paperboard'
       ? { ...base, ...base.stepformPaper, paperboard: true, hexboard: false }
       : base
-  }, [escuela, slug])
+  }, [escuela, slug]))
 
   const goToConfirmation = useCallback(() => {
     const params = new URLSearchParams(window.location.search)
