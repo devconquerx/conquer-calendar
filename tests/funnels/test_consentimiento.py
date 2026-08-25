@@ -214,3 +214,42 @@ class SacarloAManoParaVerloTest(TestCase):
     def test_otro_valor_no_lo_saca(self):
         for q in ('?debug=0', '?debug=true', '?debug='):
             self.assertIn('var aplica = false', self._html(q), q)
+
+
+class CadaMarcaHablaSuIdiomaVisualTest(TestCase):
+    """Blocks y Finance van en cartón y con el CTA pixelado; Languages no.
+
+    Es lo que fallaba en Cookiebot: el mismo recuadro blanco genérico sobre tres
+    marcas que no se parecen en nada.
+    """
+
+    def _html(self, host, ruta):
+        return self.client.get(ruta, HTTP_HOST=host, HTTP_CF_IPCOUNTRY='ES').content.decode()
+
+    def test_blocks_y_finance_van_en_carton(self):
+        for host, ruta in (('www.conquerblocks.com', '/evento/evento-online'),
+                           ('www.conquerfinance.com', '/evento/evento-online')):
+            bloque = self._html(host, ruta).split('#cqx-consent .tarjeta{')[2]
+            self.assertIn('paperboard-texture', bloque, f'{host}{ruta}')
+            self.assertIn('background-size:auto,216px', bloque, f'{host}{ruta}')
+
+    def test_y_su_cta_lleva_el_borde_pixelado_y_su_degradado(self):
+        for host, ruta, g1, g2 in (
+            ('www.conquerblocks.com', '/evento/evento-online', '#ff4000', '#ff9800'),
+            ('www.conquerfinance.com', '/evento/evento-online', '#aed916', '#3ac043'),
+        ):
+            html = self._html(host, ruta)
+            self.assertIn('clip-path:var(--pixel-clip)', html, f'{host}{ruta}')
+            self.assertIn(f'linear-gradient(135deg,{g1},{g2})', html, f'{host}{ruta}')
+
+    def test_languages_se_queda_liso_y_redondeado(self):
+        html = self._html('www.conquerlanguages.com', '/cl-evento')
+        # Su fondo es una foto y sus botones píldoras: ni cartón ni píxeles.
+        self.assertNotIn('paperboard-texture', html.split('id="cqx-consent"')[0].split('<style>')[-1])
+        self.assertNotIn('clip-path:var(--pixel-clip)', html)
+        self.assertIn('--radio:20px', html)
+
+    def test_el_pixelado_no_deja_el_foco_sin_marcar(self):
+        # `outline` se recorta junto con el botón, así que se marca por dentro.
+        html = self._html('www.conquerblocks.com', '/evento/evento-online')
+        self.assertIn('button.principal:focus-visible{outline:none;box-shadow:inset', html)

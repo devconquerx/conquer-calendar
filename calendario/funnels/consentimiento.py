@@ -52,23 +52,39 @@ PAISES_CON_CONSENTIMIENTO_PREVIO = frozenset({
 # con una versión anterior se vuelve a pedir, porque ya no se dio sobre lo mismo.
 VERSION = 1
 
-# Paleta por marca. El banner es el mismo componente en las tres; lo único que
-# cambia es el acento, la tipografía y el redondeo, para que no parezca —como el
-# de Cookiebot— una pieza pegada de otro sitio.
+# Paleta por marca. El banner es el mismo componente en las tres, pero cada una
+# tiene su propio lenguaje visual y hay que hablarlo, o vuelve a parecer —como
+# el de Cookiebot— una pieza pegada de otro sitio:
+#
+#   papel → tarjeta de cartón con su textura, como el resto de tarjetas de
+#           Blocks y Finance
+#   pixel → CTA con el borde pixelado y el degradado de marca, el mismo del
+#           «Ver vídeo gratis» del funnel
+#
+# Languages no usa ninguna de las dos: sus tarjetas son blancas y sus botones
+# píldoras verdes, así que ahí el componente va liso y redondeado.
 MARCAS = {
     'conquer-blocks': {
         'politica_url': 'https://www.conquerblocks.com/politica-de-privacidad',
         'acento': '#ff4000',
         'acento_texto': '#ffffff',
         'fuente': "'Funnel Display',Arial,sans-serif",
-        'radio': '8px',
+        'radio': '10px',
+        'papel': True,
+        'pixel': True,
+        'grad_1': '#ff4000',
+        'grad_2': '#ff9800',
     },
     'conquer-finance': {
         'politica_url': 'https://www.conquerfinance.com/politica-de-privacidad',
         'acento': '#3ac043',
         'acento_texto': '#ffffff',
         'fuente': "'Funnel Display',Arial,sans-serif",
-        'radio': '8px',
+        'radio': '10px',
+        'papel': True,
+        'pixel': True,
+        'grad_1': '#aed916',
+        'grad_2': '#3ac043',
     },
     'conquer-languages': {
         'politica_url': 'https://www.conquerlanguages.com/politica-de-privacidad',
