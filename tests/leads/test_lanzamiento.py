@@ -586,11 +586,10 @@ class ElTelefonoSeVeComoUnSoloControlTest(TestCase):
         for ruta, host in (('/cl-evento', 'www.conquerlanguages.com'),
                            ('/evento/evento-online', 'www.conquerblocks.com')):
             html = self.client.get(ruta, HTTP_HOST=host).content.decode()
-            estilos = html[:html.index('</style>')]
-            self.assertIn('.tel-row input[type=tel]{', estilos, f'{host}{ruta}')
+            self.assertIn('.tel-row input[type=tel]{', html, f'{host}{ruta}')
             # La general existe y es la que había que ganar.
             self.assertIn('.campo input[type=text],.campo input[type=email],.campo input[type=tel]',
-                          estilos, f'{host}{ruta}')
+                          html, f'{host}{ruta}')
 
 
 class ElPrefijoDePruebaSeMantieneTest(TestCase):

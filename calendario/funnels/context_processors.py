@@ -108,9 +108,13 @@ def pixel_ids(request):
     un prefijo (p.ej. /preview); por defecto '' (servido en la raíz).
     """
     from django.conf import settings
+    from . import consentimiento as consent
     return {
         'pixel_ids': {},
         'gtm': {},
+        # Por defecto sin marca; las vistas que saben de qué escuela es lo
+        # sobrescriben con su paleta.
+        'consentimiento': consent.contexto(request),
         'app_base_path': getattr(request, 'app_base_path', ''),
         'calendar_public_origin': getattr(settings, 'CALENDAR_PUBLIC_ORIGIN', ''),
     }

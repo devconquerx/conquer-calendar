@@ -1,0 +1,173 @@
+{% load static %}{% comment %}
+  Consentimiento de cookies propio, en sustitución de Cookiebot.
+
+  Va ANTES del include de GTM en las plantillas, y el bloque de abajo es
+  síncrono a propósito: los valores por defecto de Consent Mode tienen que estar
+  puestos antes de que exista cualquier etiqueta de Google, o esa primera
+  medición se escapa sin permiso.
+
+  Contexto que espera (`consentimiento` en el contexto de la vista):
+    .aplica   → si hay que preguntar (lo decide CF-IPCountry en consentimiento.py)
+    .version  → sube cuando cambian categorías o textos; invalida lo guardado
+    .marca    → acento, tipografía y redondeo de la marca
+{% endcomment %}
+<script>
+(function (w) {
+  w.dataLayer = w.dataLayer || [];
+  function gtag() { w.dataLayer.push(arguments); }
+
+  var aplica = {{ consentimiento.aplica|yesno:"true,false" }};
+  var guardado = document.cookie.indexOf('cqx_consent=') !== -1;
+
+  // Denegado por defecto solo donde se pregunta. Donde no, se concede, que es
+  // lo que hace Cookiebot fuera de las regiones con normativa (`implied`).
+  // `wait_for_update` le da a la interfaz medio segundo para responder antes de
+  // que las etiquetas decidan por su cuenta.
+  var inicial = (aplica && !guardado) ? 'denied' : 'granted';
+  gtag('consent', 'default', {
+    ad_storage: inicial,
+    ad_user_data: inicial,
+    ad_personalization: inicial,
+    analytics_storage: inicial,
+    personalization_storage: inicial,
+    functionality_storage: 'granted',
+    security_storage: 'granted',
+    wait_for_update: 500,
+  });
+
+  /* Cookiebot no se carga en estas páginas. No está en nuestro código: lo
+     inyecta el contenedor de GTM, que también sirve las páginas de Webflow, así
+     que quitarlo del contenedor lo quitaría de todas partes. Como de momento
+     solo lo sustituimos aquí, se le impide cargar interceptando la asignación
+     del `src`.
+
+     Es un apaño y se nota: lo limpio es añadirle al tag de Cookiebot una
+     excepción de trigger en cada contenedor para estas rutas, y entonces este
+     bloque sobra. */
+  var crear = document.createElement.bind(document);
+  document.createElement = function (etiqueta) {
+    var el = crear.apply(null, arguments);
+    if (String(etiqueta).toLowerCase() !== 'script') return el;
+    try {
+      var desc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+      Object.defineProperty(el, 'src', {
+        configurable: true,
+        get: function () { return desc.get.call(el); },
+        set: function (valor) {
+          if (/(^|\.)cookiebot\.(com|eu)\//i.test(String(valor))) return;
+          desc.set.call(el, valor);
+        },
+      });
+    } catch (e) { /* si el navegador no deja, que cargue: peor es quedarse sin consentimiento */ }
+    return el;
+  };
+
+  w.__CONSENTIMIENTO__ = { aplica: aplica, version: {{ consentimiento.version }} };
+})(window);
+</script>
+
+<style>
+#cqx-consent{
+  --acento:{{ consentimiento.marca.acento }};
+  --acento-texto:{{ consentimiento.marca.acento_texto }};
+  --radio:{{ consentimiento.marca.radio }};
+  --tinta:#1d1d1d;
+  --tinta-suave:#5a5a5a;
+  --borde:#e2e2e2;
+  position:fixed;z-index:2147483000;inset:auto 16px 16px 16px;
+  display:flex;justify-content:center;
+  font-family:{{ consentimiento.marca.fuente }};
+}
+#cqx-consent[hidden]{display:none}
+#cqx-consent .tarjeta{
+  width:100%;max-width:560px;background:#fff;color:var(--tinta);
+  border:1px solid var(--borde);border-radius:var(--radio);
+  box-shadow:0 12px 40px rgba(0,0,0,.18);padding:20px;
+  max-height:calc(100vh - 32px);overflow-y:auto;
+}
+#cqx-consent h2{margin:0 0 6px;font-size:16px;font-weight:700;line-height:1.3}
+#cqx-consent p{margin:0;font-size:13px;line-height:1.5;color:var(--tinta-suave)}
+#cqx-consent a{color:var(--tinta);text-underline-offset:2px}
+#cqx-consent .botones{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+#cqx-consent button{
+  flex:1 1 auto;min-width:120px;padding:10px 14px;border-radius:calc(var(--radio) - 2px);
+  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--borde);
+  background:#fff;color:var(--tinta);transition:filter .15s ease;
+}
+#cqx-consent button:hover{filter:brightness(.97)}
+#cqx-consent button.principal{background:var(--acento);color:var(--acento-texto);border-color:var(--acento)}
+#cqx-consent button.principal:hover{filter:brightness(1.06)}
+#cqx-consent button:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+#cqx-consent .panel{margin-top:16px;border-top:1px solid var(--borde);padding-top:12px}
+#cqx-consent .panel[hidden]{display:none}
+#cqx-consent .fila{display:flex;align-items:flex-start;gap:10px;padding:8px 0}
+#cqx-consent .fila + .fila{border-top:1px solid var(--borde)}
+#cqx-consent .fila input{margin-top:3px;accent-color:var(--acento);flex:0 0 auto;width:16px;height:16px}
+#cqx-consent .fila .txt{flex:1 1 auto}
+#cqx-consent .fila strong{display:block;font-size:13px;font-weight:600}
+#cqx-consent .fila span{display:block;font-size:12px;line-height:1.45;color:var(--tinta-suave)}
+#cqx-consent .fila .fija{font-size:12px;color:var(--tinta-suave);white-space:nowrap;margin-top:3px}
+
+@media (max-width:600px){
+  #cqx-consent{inset:auto 8px 8px 8px}
+  #cqx-consent .tarjeta{padding:16px}
+  #cqx-consent button{flex:1 1 100%}
+}
+@media (prefers-reduced-motion:reduce){
+  #cqx-consent button{transition:none}
+}
+</style>
+
+<div id="cqx-consent" role="dialog" aria-modal="false" aria-labelledby="cqx-consent-titulo" hidden>
+  <div class="tarjeta">
+    <h2 id="cqx-consent-titulo">Cookies</h2>
+    <p>
+      Usamos cookies propias y de terceros para que la página funcione, para
+      entender cómo se usa y para medir nuestras campañas. Puedes aceptarlas
+      todas, rechazarlas o elegir cuáles. Más detalle en la
+      <a href="{{ consentimiento.politica_url|default:'/politica-de-privacidad' }}" target="_blank" rel="noopener">política de privacidad</a>.
+    </p>
+
+    <div class="botones">
+      <button type="button" id="cqx-rechazar">Rechazar</button>
+      <button type="button" id="cqx-personalizar" aria-expanded="false" aria-controls="cqx-consent-panel">Personalizar</button>
+      <button type="button" id="cqx-aceptar" class="principal">Aceptar todas</button>
+    </div>
+
+    <div class="panel" id="cqx-consent-panel" hidden>
+      <div class="fila">
+        <div class="txt">
+          <strong>Necesarias</strong>
+          <span>Hacen que la página funcione: seguridad, el formulario y recordar tu elección de cookies. Sin ellas no se puede navegar.</span>
+        </div>
+        <div class="fija">Siempre activas</div>
+      </div>
+      <label class="fila">
+        <input type="checkbox" id="cqx-c-preferences">
+        <div class="txt">
+          <strong>Preferencias</strong>
+          <span>Recuerdan cosas como tu país o tu idioma para no volver a preguntártelas.</span>
+        </div>
+      </label>
+      <label class="fila">
+        <input type="checkbox" id="cqx-c-statistics">
+        <div class="txt">
+          <strong>Estadísticas</strong>
+          <span>Nos dicen qué páginas se ven y dónde se atasca la gente, siempre de forma agregada.</span>
+        </div>
+      </label>
+      <label class="fila">
+        <input type="checkbox" id="cqx-c-marketing">
+        <div class="txt">
+          <strong>Marketing</strong>
+          <span>Permiten medir qué anuncio te trajo hasta aquí y no enseñarte los mismos una y otra vez.</span>
+        </div>
+      </label>
+      <div class="botones">
+        <button type="button" id="cqx-guardar" class="principal">Guardar mi elección</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/consentimiento.js' %}" defer></script>

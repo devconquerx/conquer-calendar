@@ -15,6 +15,7 @@ from django.http import Http404
 from django.utils.cache import patch_vary_headers
 from django.views.generic import TemplateView
 
+from . import consentimiento as consent
 from .context_processors import get_gtm_config
 from .views import _base_path, _escuela_por_host
 
@@ -285,6 +286,7 @@ class EventoView(TemplateView):
         # volcarlas juntas al contexto se comería la mitad.
         ctx['gr'] = GRACIAS[self.escuela]
         ctx['gtm'] = _gtm(self.escuela)
+        ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         # País del selector según Cloudflare. Se manda VACÍO si la cabecera no
         # viene, en vez de caer aquí a 'ES': si el servidor rellena España, el
         # cliente no puede distinguir «Cloudflare dice España» de «Cloudflare no
@@ -314,4 +316,5 @@ class GraciasView(TemplateView):
         ctx = super().get_context_data(**kwargs)
         ctx['gr'] = self.gracias
         ctx['gtm'] = _gtm(self.escuela)
+        ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         return ctx
