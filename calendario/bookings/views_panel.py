@@ -277,7 +277,8 @@ class CancelacionesListView(LoginRequiredMixin, ListView):
     respuesta no puede ser "lo hizo el sistema".
 
     Restringida por email en `CANCELACIONES_EMAILS_AUTORIZADOS`, no por el
-    sistema de permisos, porque de momento la ve una sola persona.
+    sistema de permisos, porque la ve un puñado de personas contadas y la lista
+    se toca de tarde en tarde.
     """
     model = CancelacionReserva
     template_name = 'pages/panel/reservas/cancelaciones.html'

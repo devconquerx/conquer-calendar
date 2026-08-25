@@ -485,7 +485,7 @@ CANCELACIONES_EMAILS_AUTORIZADOS = [
     e.strip().lower()
     for e in env.str(
         'CANCELACIONES_EMAILS_AUTORIZADOS',
-        default='santiago.tovar@conquerx.com',
+        default='santiago.tovar@conquerx.com,bienvenido.saez@conquerx.com',
     ).split(',')
     if e.strip()
 ]
