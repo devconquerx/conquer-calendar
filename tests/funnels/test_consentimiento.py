@@ -178,3 +178,39 @@ class LaDecisionSeGuardaTest(TestCase):
         js = JS.read_text(encoding='utf-8')
         self.assertIn('SameSite=Lax', js)
         self.assertIn('365 * 24 * 60 * 60 * 1000', js)
+
+
+class SacarloAManoParaVerloTest(TestCase):
+    """`?debug=1` lo saca aunque no toque.
+
+    Desde LATAM o US no se muestra —y ahí trabajamos casi siempre—, así que sin
+    esto no hay forma de repasar cómo queda en cada marca sin fingir una IP
+    europea.
+    """
+
+    def _html(self, query='', pais='VE'):
+        return self.client.get('/evento/evento-online' + query,
+                               HTTP_HOST='www.conquerblocks.com',
+                               HTTP_CF_IPCOUNTRY=pais).content.decode()
+
+    def test_sin_el_no_sale_fuera_de_la_ue(self):
+        self.assertIn('var aplica = false', self._html())
+
+    def test_con_el_sale(self):
+        self.assertIn('var aplica = true', self._html('?debug=1'))
+        self.assertIn('var forzar = true', self._html('?debug=1'))
+
+    def test_ignora_lo_ya_decidido(self):
+        # Si no, aceptaría una vez y no volvería a salir en ese navegador.
+        js = JS.read_text(encoding='utf-8')
+        self.assertIn('cfg.forzar ? null : leer()', js)
+        self.assertIn("&& !forzar", self._html('?debug=1'))
+
+    def test_y_deniega_mientras_no_conteste(self):
+        # Forzado no puede significar "sácalo pero mide igual".
+        html = self._html('?debug=1')
+        self.assertIn('var inicial = (aplica && !guardado)', html)
+
+    def test_otro_valor_no_lo_saca(self):
+        for q in ('?debug=0', '?debug=true', '?debug='):
+            self.assertIn('var aplica = false', self._html(q), q)

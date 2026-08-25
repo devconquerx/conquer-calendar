@@ -8,6 +8,7 @@
 
   Contexto que espera (`consentimiento` en el contexto de la vista):
     .aplica   → si hay que preguntar (lo decide CF-IPCountry en consentimiento.py)
+    .forzado  → `?debug=1`: sácalo aunque no toque y aunque ya se haya decidido
     .version  → sube cuando cambian categorías o textos; invalida lo guardado
     .marca    → acento, tipografía y redondeo de la marca
 {% endcomment %}
@@ -17,7 +18,8 @@
   function gtag() { w.dataLayer.push(arguments); }
 
   var aplica = {{ consentimiento.aplica|yesno:"true,false" }};
-  var guardado = document.cookie.indexOf('cqx_consent=') !== -1;
+  var forzar = {{ consentimiento.forzado|yesno:"true,false" }};   // ?debug=1
+  var guardado = document.cookie.indexOf('cqx_consent=') !== -1 && !forzar;
 
   // Denegado por defecto solo donde se pregunta. Donde no, se concede, que es
   // lo que hace Cookiebot fuera de las regiones con normativa (`implied`).
@@ -62,7 +64,7 @@
     return el;
   };
 
-  w.__CONSENTIMIENTO__ = { aplica: aplica, version: {{ consentimiento.version }} };
+  w.__CONSENTIMIENTO__ = { aplica: aplica, forzar: forzar, version: {{ consentimiento.version }} };
 })(window);
 </script>
 

@@ -141,7 +141,7 @@
 
   // ---------------------------------------------------------------- arranque
 
-  var guardado = leer();
+  var guardado = cfg.forzar ? null : leer();   // con ?debug=1 se ignora lo guardado
   if (guardado) {
     comunicar({ preferences: !!guardado.p, statistics: !!guardado.s, marketing: !!guardado.m });
     return;

@@ -95,6 +95,17 @@ _POR_DEFECTO = {
 }
 
 
+def forzado(request):
+    """`?debug=1` saca el banner aunque no toque.
+
+    Desde LATAM o US no se muestra —y ahí trabajamos casi siempre—, así que sin
+    esto no hay forma de verlo ni de repasar cómo queda en cada marca sin
+    fingir una IP europea. Además ignora la decisión ya guardada: si no,
+    aceptaría una vez y no volvería a salir.
+    """
+    return request.GET.get('debug') == '1'
+
+
 def aplica(request):
     """¿Hay que pedir consentimiento a quien está mirando?
 
@@ -102,6 +113,8 @@ def aplica(request):
     evento preselecciona el prefijo. Si no viene —fuera de Cloudflare o en
     local— se pregunta: ante la duda, pedir permiso es lo correcto y lo barato.
     """
+    if forzado(request):
+        return True
     pais = (request.headers.get('CF-IPCountry') or '').upper()
     if not pais or pais in ('XX', 'T1', 'T2'):
         return True
@@ -116,6 +129,7 @@ def contexto(request, escuela=None):
     m = marca(escuela)
     return {
         'aplica': aplica(request),
+        'forzado': forzado(request),
         'version': VERSION,
         'marca': m,
         'politica_url': m['politica_url'],
