@@ -88,6 +88,7 @@ const FORM_VARIANT_EXPERIMENTS = [
   {
     match: ({ funnelSlug }) => funnelSlug === 'finance-latam',
     storageKey: 'form_variant_cf_latam',
+    themeId: 'conquerfinance',
     variants: ['61', '62'],
     whiteBackgroundVariant: '62',
   },
@@ -117,6 +118,7 @@ const FORM_VARIANT_EXPERIMENTS = [
   {
     match: ({ funnelSlug }) => funnelSlug === 'blocks-latam',
     storageKey: 'form_variant_cb_latam',
+    themeId: 'conquerblocks',
     variants: ['57', '58'],
     whiteBackgroundVariant: '58',
   },
@@ -124,6 +126,7 @@ const FORM_VARIANT_EXPERIMENTS = [
   {
     match: ({ funnelSlug }) => funnelSlug === 'blocks-us',
     storageKey: 'form_variant_cb_us',
+    themeId: 'conquerblocks',
     variants: ['59', '60'],
     whiteBackgroundVariant: '60',
   },
@@ -132,18 +135,21 @@ const FORM_VARIANT_EXPERIMENTS = [
   {
     match: ({ funnelSlug }) => funnelSlug === 'languages-latam',
     storageKey: 'form_variant_cl_latam',
+    themeId: 'conquerlanguages',
     variants: ['63', '64'],
     whiteBackgroundVariant: '64',
   },
   {
     match: ({ funnelSlug }) => funnelSlug === 'languages-eu',
     storageKey: 'form_variant_cl_eu',
+    themeId: 'conquerlanguages',
     variants: ['65', '66'],
     whiteBackgroundVariant: '66',
   },
   {
     match: ({ funnelSlug }) => funnelSlug === 'languages-us',
     storageKey: 'form_variant_cl_us',
+    themeId: 'conquerlanguages',
     variants: ['67', '68'],
     whiteBackgroundVariant: '68',
   },
@@ -179,6 +185,27 @@ const VIDEO_VARIANT_EXPERIMENTS = [
   // Segundo código del par = variante de test (sin footer); el primero es control.
   hideFooterVariant: exp.variants[1],
 }))
+
+/* ¿Este visitante ya tiene asignada la rama de FONDO BLANCO en algún funnel de
+   esta marca? Solo LEE, nunca asigna: no mete a nadie en el experimento.
+
+   Existe porque la confirmación es la única etapa cuyo slug no es de fiar: su
+   URL puede venir sin región (conquerfinance.com/confirmacion-llamada), y
+   entonces el backend resuelve «cualquier funnel activo de la escuela», que hoy
+   devuelve finance-eu. Un visitante de Finance LATAM en la rama blanca llegaba
+   ahí y veía la confirmación en papel con el resto del funnel en blanco.
+
+   El fondo lo decide la LANDING una sola vez; las etapas siguientes solo tienen
+   que leer esa decisión. Se acota a la misma marca porque cada una vive en su
+   dominio y no comparte localStorage con las demás. */
+export function hasWhiteBackgroundAssigned(themeId) {
+  if (!themeId) return false
+  return FORM_VARIANT_EXPERIMENTS.some((exp) => (
+    exp.whiteBackgroundVariant
+    && exp.themeId === themeId
+    && readFormVariant(exp) === exp.whiteBackgroundVariant
+  ))
+}
 
 /** Experimento de la página de vídeo para este funnel, o null si no tiene. */
 export function getVideoVariantExperiment(funnelSlug) {

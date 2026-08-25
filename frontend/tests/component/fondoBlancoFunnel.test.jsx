@@ -162,6 +162,43 @@ describe('A/B de fondo blanco en todo el funnel', () => {
     })
   })
 
+  describe('confirmación servida con el slug de otra región', () => {
+    /* La URL de confirmación de Finance no lleva región
+       (conquerfinance.com/confirmacion-llamada), así que el backend cae a
+       «cualquier funnel activo de la escuela» y sirve finance-eu. El visitante
+       de Finance LATAM en la rama blanca veía aquí el papel: el fondo tiene que
+       salir de la decisión ya guardada, no del slug de esta página. */
+    const montarFinance = (variante) => renderConFunnel(
+      <Confirmation escuela="conquer-finance" slug="finance-eu" />,
+      {
+        variante,
+        storageKey: 'form_variant_cf_latam',
+        escuela: 'conquer-finance',
+        slug: 'finance-eu',
+        region: 'eu',
+      }
+    )
+
+    it('hereda el fondo blanco de la rama ya asignada en LATAM', () => {
+      const { container } = montarFinance('62')
+      expect(container.innerHTML).not.toContain('bg-[#F5EDE3]')
+      expect(estilosDe(container)).not.toContain('paperboard')
+    })
+
+    it('la rama de papel sigue viendo su papel', () => {
+      const { container } = montarFinance('61')
+      expect(estilosDe(container)).toContain('paperboard')
+    })
+
+    it('quien nunca entró en el test conserva el papel', () => {
+      const { container } = renderConFunnel(
+        <Confirmation escuela="conquer-finance" slug="finance-eu" />,
+        { escuela: 'conquer-finance', slug: 'finance-eu', region: 'eu' }
+      )
+      expect(estilosDe(container)).toContain('paperboard')
+    })
+  })
+
   describe('funnels sin el experimento', () => {
     it('la página de vídeo de un funnel fuera del test se queda con su papel', () => {
       // languages-ge no corre el A/B: aunque la clave esté en localStorage no

@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from 'react'
 import { leer } from '../lib/safeStorage'
-import { getTheme, useVariantTheme } from '../themes'
+import { getTheme } from '../themes'
+import { useWhiteBackgroundConfirmacion } from '../lib/formVariantContext'
+import { toWhiteBackground } from '../themes/whiteBackground'
 import useTracking from '../hooks/useTracking'
 import { fireAllSchedule } from '../lib/pixelEvents'
 import { safeHtml } from '../lib/sanitize'
@@ -19,14 +21,20 @@ export default function Confirmation({ escuela = '', slug = '' }) {
   // Rediseño por página: un tema puede pedir que SOLO su confirmación use el
   // sistema paperboard (hoy: Finance, que toma el diseño de Legal y conserva su
   // contenido vía `confirmationPaper`) sin cambiar el resto de etapas.
-  // Encima va la variante A/B de diseño (el fondo blanco), que cubre el funnel
-  // entero y por tanto también esta pantalla.
-  const theme = useVariantTheme(useMemo(
+  const temaMarca = useMemo(
     () => (!baseTheme.paperboard && baseTheme.confirmationVariant === 'paperboard'
       ? { ...baseTheme, ...baseTheme.confirmationPaper, paperboard: true, hexboard: false }
       : baseTheme),
     [baseTheme]
-  ))
+  )
+  // Encima va la variante A/B de diseño (el fondo blanco), que cubre el funnel
+  // entero. Aquí NO se resuelve por slug como en las demás etapas: el de esta
+  // página puede no ser el del visitante (ver `useWhiteBackgroundConfirmacion`).
+  const fondoBlanco = useWhiteBackgroundConfirmacion(baseTheme.id)
+  const theme = useMemo(
+    () => (fondoBlanco ? toWhiteBackground(temaMarca) : temaMarca),
+    [temaMarca, fondoBlanco]
+  )
   /* El renderer paperboard necesita los tokens de contenido de ESE sistema
      (los 3 pasos: badges, copy, imágenes). No basta con que el tema tenga un
      bloque `confirmation`: Conquer Languages hereda el del tema por defecto vía

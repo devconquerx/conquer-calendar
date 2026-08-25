@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useStat
 import {
   getFormVariantExperiment,
   getVideoVariantExperiment,
+  hasWhiteBackgroundAssigned,
   resolveFormVariant,
 } from './formVariant'
 
@@ -72,4 +73,24 @@ export function useVideoVariant(funnelSlug) {
     variant,
     hideFooter: !!experiment && variant === experiment.hideFooterVariant,
   }
+}
+
+/* Fondo blanco para la CONFIRMACIÓN, la única etapa cuyo slug no es de fiar:
+   su URL puede venir sin región y el backend cae a «cualquier funnel activo de
+   la escuela» (hoy el de EU). Si el experimento de ese slug no habla de fondo,
+   se mira si el visitante ya tiene la rama blanca asignada en esta marca.
+
+   Solo LEE localStorage —nunca asigna—, así que no mete a nadie nuevo en el
+   experimento. Se resuelve tras montar, igual que el resto: en SSR y en el
+   primer render manda lo que diga el contexto. */
+export function useWhiteBackgroundConfirmacion(themeId) {
+  const { whiteBackground, experiment } = useFormVariant()
+  const [heredado, setHeredado] = useState(false)
+
+  useVariantEffect(() => {
+    if (whiteBackground || experiment?.whiteBackgroundVariant) return
+    setHeredado(hasWhiteBackgroundAssigned(themeId))
+  }, [whiteBackground, experiment, themeId])
+
+  return whiteBackground || heredado
 }
