@@ -253,3 +253,50 @@ class CadaMarcaHablaSuIdiomaVisualTest(TestCase):
         # `outline` se recorta junto con el botón, así que se marca por dentro.
         html = self._html('www.conquerblocks.com', '/evento/evento-online')
         self.assertIn('button.principal:focus-visible{outline:none;box-shadow:inset', html)
+
+
+class ElIconoQueQuedaDespuesTest(TestCase):
+    """Tras decidir queda un icono flotante, como el de Cookiebot.
+
+    No es decoración: retirar el consentimiento tiene que ser tan fácil como
+    darlo, y sin una forma visible de volver a abrirlo no lo es.
+    """
+
+    def _html(self, host='www.conquerblocks.com', ruta='/evento/evento-online', pais='ES'):
+        return self.client.get(ruta, HTTP_HOST=host, HTTP_CF_IPCOUNTRY=pais).content.decode()
+
+    def test_esta_en_la_pagina_y_empieza_oculto(self):
+        html = self._html()
+        self.assertIn('id="cqx-consent-icono"', html)
+        marca = html[html.index('id="cqx-consent-icono"'):]
+        self.assertIn('hidden', marca[:marca.index('>')])
+
+    def test_solo_aparece_cuando_el_modal_esta_cerrado(self):
+        js = JS.read_text(encoding='utf-8')
+        self.assertIn('icono.hidden = !(cfg.aplica && caja.hidden)', js)
+
+    def test_no_aparece_donde_no_se_pregunta(self):
+        # Donde no se pregunta no hay nada que reconsiderar; el propio guard de
+        # `cfg.aplica` lo cubre, y aquí se fija que la página lo declare así.
+        self.assertIn('var aplica = false', self._html(pais='VE'))
+
+    def test_al_pulsarlo_se_reabre(self):
+        js = JS.read_text(encoding='utf-8')
+        self.assertIn("pulsar('cqx-consent-icono', function () { w.cqxConsent.abrir(); });", js)
+
+    def test_el_foco_va_al_icono_al_cerrar(self):
+        # Devolverlo al fondo de la página dejaría a quien navega con teclado
+        # sin saber dónde ha quedado.
+        js = JS.read_text(encoding='utf-8')
+        self.assertIn('if (icono && !icono.hidden) icono.focus();', js)
+
+    def test_tiene_nombre_accesible(self):
+        html = self._html()
+        marca = html[html.index('id="cqx-consent-icono"'):]
+        self.assertIn('aria-label="Configurar cookies"', marca[:marca.index('>')])
+
+    def test_en_las_marcas_pixeladas_no_es_un_circulo(self):
+        # Un círculo desentonaría al lado de un CTA de esquina pixelada.
+        self.assertIn('#cqx-consent-icono{border-radius:0', self._html())
+        self.assertNotIn('#cqx-consent-icono{border-radius:0',
+                         self._html('www.conquerlanguages.com', '/cl-evento'))

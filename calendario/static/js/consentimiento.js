@@ -76,17 +76,33 @@
     marketing: d.getElementById('cqx-c-marketing'),
   };
   var ultimoFoco = null;
+  var icono = d.getElementById('cqx-consent-icono');
+
+  /* El icono queda flotando en cuanto se cierra el modal, como el de Cookiebot.
+     No es decorativo: es la única forma de volver a abrirlo y de retirar el
+     permiso, y retirarlo tiene que ser tan fácil como darlo. Solo aparece donde
+     se ha preguntado; donde no se pregunta no hay nada que reconsiderar. */
+  function pintarIcono() {
+    if (!icono) return;
+    icono.hidden = !(cfg.aplica && caja.hidden);
+  }
 
   function mostrar() {
     ultimoFoco = d.activeElement;
     caja.hidden = false;
+    pintarIcono();
     var primero = caja.querySelector('button');
     if (primero) primero.focus();
   }
 
   function ocultar() {
     caja.hidden = true;
-    if (ultimoFoco && ultimoFoco.focus) ultimoFoco.focus();
+    pintarIcono();
+    // Al cerrar, el foco va al icono: es donde acaba de quedar la acción, y
+    // devolverlo al fondo de la página dejaría a quien navega con teclado sin
+    // saber dónde está.
+    if (icono && !icono.hidden) icono.focus();
+    else if (ultimoFoco && ultimoFoco.focus) ultimoFoco.focus();
   }
 
   function decidir(c) {
@@ -120,6 +136,7 @@
     d.getElementById('cqx-personalizar').setAttribute('aria-expanded', String(!abierto));
   });
   pulsar('cqx-guardar', function () { decidir(delPanel()); });
+  pulsar('cqx-consent-icono', function () { w.cqxConsent.abrir(); });
 
   // Sin botón de cerrar: cerrarlo sin elegir equivaldría a un consentimiento
   // que nadie ha dado. Escape tampoco lo cierra, por lo mismo.
@@ -144,6 +161,7 @@
   var guardado = cfg.forzar ? null : leer();   // con ?debug=1 se ignora lo guardado
   if (guardado) {
     comunicar({ preferences: !!guardado.p, statistics: !!guardado.s, marketing: !!guardado.m });
+    pintarIcono();
     return;
   }
   if (!cfg.aplica) {

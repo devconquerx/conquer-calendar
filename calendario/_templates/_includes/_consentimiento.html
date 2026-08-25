@@ -69,6 +69,10 @@
 </script>
 
 <style>
+:root{
+  --cqx-acento:{{ consentimiento.marca.acento }};
+  --pixel-clip:polygon(97.74% 73.83%,97.74% 82.56%,100% 82.56%,100% 100%,95.47% 100%,95.47% 91.28%,81.5% 91.28%,81.5% 100%,19.87% 100%,19.87% 91.28%,9.06% 91.28%,9.06% 100%,2.26% 100%,2.26% 80.24%,0% 80.24%,0% 26.16%,2.26% 26.16%,2.26% 17.44%,0% 17.44%,0% 0%,4.53% 0%,4.53% 8.72%,12.82% 8.72%,12.82% 0%,72.03% 0%,72.03% 8.72%,88.67% 8.72%,88.67% 0%,97.74% 0%,97.74% 8.72%,100% 8.72%,100% 73.83%);
+}
 #cqx-consent{
   --acento:{{ consentimiento.marca.acento }};
   --acento-texto:{{ consentimiento.marca.acento_texto }};
@@ -134,7 +138,29 @@
 #cqx-consent .fila span{display:block;font-size:12px;line-height:1.45;color:var(--tinta-suave)}
 #cqx-consent .fila .fija{font-size:12px;color:var(--tinta-suave);white-space:nowrap;margin-top:3px}
 
+/* Icono flotante que queda tras decidir, como el de Cookiebot: es la forma de
+   volver a abrirlo y de retirar el permiso, que es un derecho, no un extra.
+   Abajo a la izquierda, porque abajo a la derecha suelen vivir los chats. */
+#cqx-consent-icono{
+  position:fixed;z-index:2147482999;left:16px;bottom:16px;
+  width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;
+  background:#fff;color:var(--cqx-acento);border:1px solid rgba(0,0,0,.12);border-radius:50%;
+  box-shadow:0 4px 16px rgba(0,0,0,.18);cursor:pointer;
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+#cqx-consent-icono[hidden]{display:none}
+#cqx-consent-icono:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.22)}
+#cqx-consent-icono:focus-visible{outline:2px solid var(--cqx-acento);outline-offset:2px}
+#cqx-consent-icono svg{width:22px;height:22px;display:block}
+@media (prefers-reduced-motion:reduce){#cqx-consent-icono{transition:none}}
+{% if consentimiento.marca.pixel %}
+/* En las marcas de esquina pixelada, un círculo desentona: cuadrado y con el
+   mismo recorte que el CTA. */
+#cqx-consent-icono{border-radius:0;border:0;clip-path:var(--pixel-clip);background:#fff}
+{% endif %}
+
 @media (max-width:600px){
+  #cqx-consent-icono{left:8px;bottom:8px}
   #cqx-consent{inset:auto 8px 8px 8px}
   #cqx-consent .tarjeta{padding:16px}
   #cqx-consent button{flex:1 1 100%}
@@ -195,5 +221,15 @@
     </div>
   </div>
 </div>
+
+<button type="button" id="cqx-consent-icono" aria-label="Configurar cookies" title="Configurar cookies" hidden>
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M21.5 12a9.5 9.5 0 1 1-9.9-9.49 4 4 0 0 0 4.2 4.02 3.6 3.6 0 0 0 3.4 3.4c.8 0 1.5-.2 2.1-.6.1.54.2 1.1.2 1.67Z"
+          stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="9" cy="14" r="1.15" fill="currentColor"/>
+    <circle cx="14" cy="16" r="1" fill="currentColor"/>
+    <circle cx="8.5" cy="9.5" r="1" fill="currentColor"/>
+  </svg>
+</button>
 
 <script src="{% static 'js/consentimiento.js' %}" defer></script>
