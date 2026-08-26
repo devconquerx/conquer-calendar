@@ -586,16 +586,46 @@ class ElPanelApuntaAlDominioDeCadaMarcaTest(TestCase):
         tabla = html[html.index('Páginas de evento</h2>'):]
         return re.findall(r'href="([^"]+)"', tabla[:tabla.index('</table>')])
 
-    def test_ninguna_pagina_de_evento_lleva_el_prefijo_del_funnel(self):
+    def test_las_publicadas_no_arrastran_el_prefijo_del_funnel(self):
+        # Languages lleva `/preview` en `FUNNEL_PUBLIC_BASE` porque sus etapas
+        # de funnel siguen ahí; sus páginas de evento publicadas, no.
         for url in self._enlaces():
+            if '/preview' in url:
+                continue  # esas aún no tienen ruta propia; se comprueba aparte
             self.assertNotIn('/preview', url, url)
+        self.assertIn('https://www.conquerlanguages.com/cl-evento', self._enlaces())
 
     def test_cada_una_cuelga_del_dominio_de_su_marca(self):
+        # Con su prefijo o sin él según tengan ruta propia, pero siempre en el
+        # dominio de su escuela.
         enlaces = self._enlaces()
         for esperado in ('https://www.conquerlanguages.com/cl-evento',
-                         'https://www.conquerlanguages.com/eventos/bitacora',
-                         'https://www.conquerfinance.com/trading-week-2025',
-                         'https://www.conquerblocks.com/evento/evento-coding-week-eu'):
+                         'https://www.conquerlanguages.com/preview/eventos/bitacora',
+                         'https://www.conquerfinance.com/preview/trading-week-2025',
+                         'https://www.conquerblocks.com/preview/evento/evento-coding-week-eu'):
+            self.assertIn(esperado, enlaces, esperado)
+
+    def test_las_que_aun_no_tienen_ruta_van_por_preview(self):
+        # De las de evento solo están dadas de alta en Cloudflare las tres
+        # pantallas de lanzamiento y sus pantallas de gracias. Al resto se llega
+        # únicamente por el prefijo del Worker: enlazar a su ruta buena antes de
+        # tiempo lleva a la página vieja de Webflow o a un 404.
+        enlaces = self._enlaces()
+        for esperado in ('https://www.conquerblocks.com/preview/evento/evento-coding-week-eu',
+                         'https://www.conquerblocks.com/preview/evento/evento-testimonios',
+                         'https://www.conquerlanguages.com/preview/eventos/bitacora',
+                         'https://www.conquerfinance.com/preview/evento/pildoras-evento-1',
+                         'https://www.conquerfinance.com/preview/trading-week-2025',
+                         'https://www.conquerfinance.com/preview/grupos-comunidad'):
+            self.assertIn(esperado, enlaces, esperado)
+
+    def test_y_las_que_ya_la_tienen_van_a_la_de_verdad(self):
+        enlaces = self._enlaces()
+        for esperado in ('https://www.conquerblocks.com/evento/evento-online',
+                         'https://www.conquerfinance.com/evento/evento-online',
+                         'https://www.conquerlanguages.com/cl-evento',
+                         'https://www.conquerblocks.com/evento/gracias-comunidad',
+                         'https://www.conquerlanguages.com/grupos-comunidad'):
             self.assertIn(esperado, enlaces, esperado)
 
     def test_y_la_tabla_de_funnels_si_lo_conserva(self):
@@ -708,7 +738,7 @@ class LaSegundaVersionTest(TestCase):
                      '/evento/pildoras-evento-1?v=2', '/trading-week-2025?v=2'):
             self.assertIn(ruta, panel, ruta)
         # Y la pantalla de gracias de la Trading Week, que también tiene dos.
-        self.assertIn('/grupos-comunidad?escuela=conquer-finance&amp;v=2', panel)
+        self.assertIn('grupos-comunidad?escuela=conquer-finance&amp;v=2', panel)
 
     def test_pero_no_lo_enseña_donde_no_hay_segunda(self):
         # La bitácora es de Languages y no tiene: ofrecer un `v2` que sirve la

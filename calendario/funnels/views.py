@@ -902,6 +902,26 @@ class FunnelStatusView(View):
             partes = urlsplit(base_marca)
             return f'{partes.scheme}://{partes.netloc}' if partes.netloc else base_marca
 
+        def _publica(escuela, ruta, publicada, por_dominio=True):
+            """URL pública de una página de evento, a donde de verdad responde.
+
+            Las rutas reales de las pantallas de lanzamiento ya están dadas de
+            alta en Cloudflare; las de campaña todavía no, así que en producción
+            solo se llega a ellas por el prefijo `/preview` del Worker. Enlazar
+            a su ruta buena antes de tiempo lleva a la página vieja de Webflow o
+            a un 404, que es justo lo contrario de lo que sirve el panel.
+            """
+            publico = _dominio(escuela)
+            prefijo = '' if publicada else '/preview'
+            if publico:
+                return f'{publico}{prefijo}/{ruta}'
+            # En local no hay Worker ni dominio de marca, así que el prefijo no
+            # pinta nada. La escuela solo hace falta en las que se resuelven por
+            # dominio; las de campaña salen de su propia ruta.
+            if por_dominio:
+                return f'{base}/{ruta}?escuela={escuela}'
+            return f'{base}/{ruta}'
+
         def _gracias(escuela, propia=None):
             """Enlace a la pantalla de gracias que usa esta página.
 
@@ -913,30 +933,18 @@ class FunnelStatusView(View):
             gr = propia or GRACIAS.get(escuela)
             if not gr:
                 return None
-            publico = _dominio(escuela)
-            ruta = gr['ruta']
-            if publico:
-                url = f'{publico}/{ruta}'
-                sep = '?'
-            else:
-                # En local la escuela no se resuelve por dominio: va en la query.
-                url = f'{base}/{ruta}?escuela={escuela}'
-                sep = '&'
+            url = _publica(escuela, gr['ruta'], gr.get('publicada'))
+            sep = '&' if '?' in url else '?'
             return {'url': url, 'titulo': gr['titulo_pagina'],
                     'url_v2': f'{url}{sep}v=2' if gr.get('plantilla_v2') else None}
 
         paginas = []
         for escuela, datos in EVENTOS.items():
-            publico_ev = _dominio(escuela)
             # Cada marca sirve su evento en una ruta distinta (Blocks en
             # /evento/evento-online, Languages en /cl-evento), tal como estaban
             # en Webflow.
             ruta = datos.get('ruta', 'evento/evento-online')
-            if publico_ev:
-                url = f'{publico_ev}/{ruta}'
-            else:
-                # En local/dev la escuela no se resuelve por dominio: va en la query.
-                url = f'{base}/{ruta}?escuela={escuela}'
+            url = _publica(escuela, ruta, datos.get('publicada'))
             paginas.append({
                 'orden': datos['orden'],
                 'escuela': escuela,
@@ -955,11 +963,11 @@ class FunnelStatusView(View):
         # arriba —conviven varias por marca— así que se resuelven por su ruta, y
         # el dominio público sale de la escuela que declaran.
         for ruta, datos in PAGINAS_DE_CAMPANA.items():
-            publico_c = _dominio(datos['escuela'])
             # Casi todas cuelgan de /evento/; Languages sirve la suya en
             # /eventos/ (plural), así que puede declarar su ruta.
             destino = datos.get('ruta', f'evento/{ruta}')
-            url_campana = f'{publico_c}/{destino}' if publico_c else f'{base}/{destino}'
+            url_campana = _publica(datos['escuela'], destino, datos.get('publicada'),
+                                   por_dominio=False)
             paginas.append({
                 'orden': datos['orden'],
                 'escuela': datos['escuela'],

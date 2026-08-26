@@ -24,6 +24,11 @@ from .views import _base_path, _escuela_por_host
 
 # Contenido por escuela. Lo que cambia entre ediciones es `barra` (fecha y hora)
 # y, si acaso, el titular; el resto se mantiene.
+# `publicada` dice si la ruta real de la página ya existe en Cloudflare. Las
+# tres pantallas de lanzamiento y sus pantallas de gracias sí; las de campaña
+# todavía no, así que en producción solo se llega a ellas por el prefijo
+# `/preview` del Worker. Lo usa el panel de /funnels/ para enlazar a donde de
+# verdad responden. Al dar de alta la ruta buena, se pone a True aquí.
 EVENTOS = {
     'conquer-blocks': {
         # `orden` es el turno en que se migró desde Webflow. Solo lo usa el
@@ -31,6 +36,7 @@ EVENTOS = {
         # ese orden: es el hilo por el que se han ido revisando, y ordenarlas
         # por escuela o alfabéticamente lo rompía.
         'orden': 1,
+        'publicada': True,
         'plantilla': 'pages/public/evento/paperboard.html',
         'marca': 'Conquer Blocks',
         'gradiente_1': '#ffbf00',
@@ -72,6 +78,7 @@ EVENTOS = {
     },
     'conquer-finance': {
         'orden': 2,
+        'publicada': True,
         # Misma maqueta que Blocks: en Webflow son la misma página con otra
         # marca. Cambian el degradado (verde), el logo, la foto y la copia.
         'plantilla': 'pages/public/evento/paperboard.html',
@@ -120,6 +127,7 @@ EVENTOS = {
     },
     'conquer-languages': {
         'orden': 3,
+        'publicada': True,
         'plantilla': 'pages/public/evento/languages.html',
         'titulo_pagina': 'English Event',
         'ruta': 'cl-evento',
@@ -161,6 +169,7 @@ EVENTOS = {
 GRACIAS = {
     'conquer-blocks': {
         'plantilla': 'pages/public/evento/gracias-paperboard.html',
+        'publicada': True,
         'ruta': 'evento/gracias-comunidad',
         'titulo_pagina': 'Gracias Comunidad',
         'whatsapp': 'https://cb.conquerx.com/1Qt1ef/',
@@ -179,6 +188,7 @@ GRACIAS = {
     },
     'conquer-finance': {
         'plantilla': 'pages/public/evento/gracias-paperboard.html',
+        'publicada': True,
         'ruta': 'evento/gracias-comunidad',
         'titulo_pagina': '¡Registro Confirmado! - Trading Week | Conquer Finance',
         # OJO: es el grupo de Blocks, tal como está hoy en Webflow.
@@ -196,6 +206,7 @@ GRACIAS = {
     },
     'conquer-languages': {
         'plantilla': 'pages/public/evento/gracias-languages.html',
+        'publicada': True,
         'ruta': 'grupos-comunidad',
         'titulo_pagina': 'Gracias-Comunidad',
         'fondo': 'img/eventos/cl-fondo.jpg',
