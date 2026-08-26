@@ -4,9 +4,10 @@
 Se diferencian de las pantallas de evento en que son de una campaña concreta y
 conviven varias por marca, así que se resuelven por la ruta y no por el dominio.
 """
+import re
 from pathlib import Path
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from calendario.funnels.evento_views import EVENTOS, PAGINAS_DE_CAMPANA
 from calendario.leads.models import Lead
@@ -457,9 +458,21 @@ class LaTradingWeekTest(TestCase):
         self.assertIn('id="cqx-consent"', html)
         self.assertTrue(html.lstrip().lower().startswith('<!doctype html>'))
 
-    def test_sale_en_el_panel(self):
-        self.assertIn('Registro Trading Week 2025',
-                      self.client.get('/funnels/').content.decode())
+    def test_sale_en_el_panel_con_su_gracias_y_sus_variantes(self):
+        # El panel es donde se mira qué hay publicado. Las pantallas de gracias
+        # no salían, y desde que hay dos distintas en `/grupos-comunidad` no
+        # había forma de saber cuál mira cada página.
+        panel = self.client.get('/funnels/').content.decode()
+        self.assertIn('Registro Trading Week 2025', panel)
+        self.assertIn('/grupos-comunidad?escuela=conquer-finance', panel)
+        self.assertIn('/grupos-comunidad?escuela=conquer-languages', panel)
+        # Y que el código lleva variante, que es lo que llega al CRM.
+        self.assertIn('+ variante', panel)
+
+    def test_el_panel_enseña_la_gracias_de_cada_pantalla_de_lanzamiento(self):
+        panel = self.client.get('/funnels/').content.decode()
+        self.assertIn('/evento/gracias-comunidad?escuela=conquer-blocks', panel)
+        self.assertIn('/evento/gracias-comunidad?escuela=conquer-finance', panel)
 
 
 class LaGraciasDeLaTradingWeekTest(TestCase):
@@ -530,3 +543,43 @@ class LaGraciasDeLaTradingWeekTest(TestCase):
         self.assertIn("st = 'MXTDVVBG'", html)
         self.assertIn('id="cqx-consent"', html)
         self.assertTrue(html.lstrip().lower().startswith('<!doctype html>'))
+
+
+@override_settings(FUNNEL_PUBLIC_BASE={
+    'conquer-blocks': 'https://www.conquerblocks.com',
+    'conquer-finance': 'https://www.conquerfinance.com',
+    # Languages sigue detrás de /preview para las etapas del funnel.
+    'conquer-languages': 'https://www.conquerlanguages.com/preview',
+})
+class ElPanelApuntaAlDominioDeCadaMarcaTest(TestCase):
+    """Las páginas de evento van en la raíz del dominio, no bajo /preview.
+
+    `FUNNEL_PUBLIC_BASE` lleva a Languages a `.../preview` porque sus etapas de
+    funnel siguen ahí en Cloudflare. Sus páginas de evento no: se sirven en la
+    raíz. El panel las listaba con el prefijo, así que llevaba a revisar una URL
+    distinta de la que recibe el tráfico —y desde ahí la de gracias salía
+    también con `/preview`, porque el prefijo se propaga solo.
+    """
+
+    def _enlaces(self):
+        html = self.client.get('/funnels/').content.decode()
+        tabla = html[html.index('Páginas de evento</h2>'):]
+        return re.findall(r'href="([^"]+)"', tabla[:tabla.index('</table>')])
+
+    def test_ninguna_pagina_de_evento_lleva_el_prefijo_del_funnel(self):
+        for url in self._enlaces():
+            self.assertNotIn('/preview', url, url)
+
+    def test_cada_una_cuelga_del_dominio_de_su_marca(self):
+        enlaces = self._enlaces()
+        for esperado in ('https://www.conquerlanguages.com/cl-evento',
+                         'https://www.conquerlanguages.com/eventos/bitacora',
+                         'https://www.conquerfinance.com/trading-week-2025',
+                         'https://www.conquerblocks.com/evento/evento-coding-week-eu'):
+            self.assertIn(esperado, enlaces, esperado)
+
+    def test_y_la_tabla_de_funnels_si_lo_conserva(self):
+        # Ahí el prefijo es real: esas rutas SÍ están detrás de /preview.
+        html = self.client.get('/funnels/').content.decode()
+        funnels = html[:html.index('Páginas de evento</h2>')]
+        self.assertIn('https://www.conquerlanguages.com/preview/', funnels)

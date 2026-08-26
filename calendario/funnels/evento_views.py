@@ -584,10 +584,11 @@ class GraciasView(TemplateView):
     def get(self, request, *args, **kwargs):
         # `/grupos-comunidad` lo comparten dos marcas: en conquerfinance.com es
         # la de la Trading Week y en el resto la de Languages. La ruta lo marca
-        # con `compartida`, y entonces el dominio solo decide entre esas dos: si
-        # no resuelve —entrando por calendar.conquerx.com, que es como se
-        # previsualiza— se queda la de Languages, que es lo que servía esta URL
-        # antes de que Finance tuviera la suya.
+        # con `compartida`, y entonces solo se decide entre esas dos. Fuera de
+        # los dominios de marca —calendar.conquerx.com, que es como se
+        # previsualiza— `_escuela_por_host` cae al `?escuela=` de la query, y
+        # sin él se queda la de Languages, que es lo que servía esta URL antes
+        # de que Finance tuviera la suya.
         if kwargs.pop('compartida', False):
             escuela = _escuela_por_host(request)
             if escuela == 'conquer-finance':

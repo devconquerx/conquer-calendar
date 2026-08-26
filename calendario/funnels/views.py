@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+from urllib.parse import urlsplit
 from datetime import datetime, timezone as dt_timezone
 
 import requests
@@ -882,10 +883,46 @@ class FunnelStatusView(View):
         #
         # Los enlaces se arman aparte del bucle de arriba: aquel resuelve el
         # dominio público por funnel, y aquí hay que hacerlo por escuela.
-        from .evento_views import EVENTOS, PAGINAS_DE_CAMPANA
+        from .evento_views import EVENTOS, GRACIAS, PAGINAS_DE_CAMPANA
+
+        def _dominio(escuela):
+            """Dominio público de la marca, sin el prefijo del funnel.
+
+            `FUNNEL_PUBLIC_BASE` lleva a Languages a `.../preview` porque sus
+            etapas de funnel siguen ahí en Cloudflare. Sus páginas de evento no:
+            se sirven en la raíz del dominio, que es la URL que ve el visitante
+            y a la que apuntan los enlaces que emiten las propias páginas. Sin
+            recortarlo, el panel llevaba a revisar una URL distinta de la que
+            recibe el tráfico —y desde ahí la de gracias también salía con
+            `/preview`, porque el prefijo se propaga.
+            """
+            base_marca = (publicos.get(escuela) or '').rstrip('/')
+            if not base_marca:
+                return ''
+            partes = urlsplit(base_marca)
+            return f'{partes.scheme}://{partes.netloc}' if partes.netloc else base_marca
+
+        def _gracias(escuela, propia=None):
+            """Enlace a la pantalla de gracias que usa esta página.
+
+            Se lista porque es una página más —tiene su URL y responde sola— y
+            porque desde que la Trading Week trajo la suya hay dos distintas en
+            `/grupos-comunidad`, una por dominio: sin verlas aquí no hay forma
+            de saber cuál mira cada una.
+            """
+            gr = propia or GRACIAS.get(escuela)
+            if not gr:
+                return None
+            publico = _dominio(escuela)
+            ruta = gr['ruta']
+            if publico:
+                return {'url': f'{publico}/{ruta}', 'titulo': gr['titulo_pagina']}
+            # En local la escuela no se resuelve por dominio: va en la query.
+            return {'url': f'{base}/{ruta}?escuela={escuela}', 'titulo': gr['titulo_pagina']}
+
         paginas = []
         for escuela, datos in EVENTOS.items():
-            publico_ev = (publicos.get(escuela) or '').rstrip('/')
+            publico_ev = _dominio(escuela)
             # Cada marca sirve su evento en una ruta distinta (Blocks en
             # /evento/evento-online, Languages en /cl-evento), tal como estaban
             # en Webflow.
@@ -901,6 +938,7 @@ class FunnelStatusView(View):
                 'titulo': datos['titulo_pagina'],
                 'tipo': 'pantalla de lanzamiento',
                 'funnel': datos.get('funnel'),
+                'gracias': _gracias(escuela),
                 'barra': datos['barra'],
                 'url': url,
             })
@@ -909,7 +947,7 @@ class FunnelStatusView(View):
         # arriba —conviven varias por marca— así que se resuelven por su ruta, y
         # el dominio público sale de la escuela que declaran.
         for ruta, datos in PAGINAS_DE_CAMPANA.items():
-            publico_c = (publicos.get(datos['escuela']) or '').rstrip('/')
+            publico_c = _dominio(datos['escuela'])
             # Casi todas cuelgan de /evento/; Languages sirve la suya en
             # /eventos/ (plural), así que puede declarar su ruta.
             destino = datos.get('ruta', f'evento/{ruta}')
@@ -919,6 +957,12 @@ class FunnelStatusView(View):
                 'titulo': datos['titulo_pagina'],
                 'tipo': 'página de campaña',
                 'funnel': datos.get('funnel'),
+                # Las que no recogen datos no tienen a dónde ir después.
+                'gracias': (_gracias(datos['escuela'], datos.get('gracias'))
+                            if datos.get('funnel') else None),
+                # A las que tienen test A/B se les pega la letra de la variante
+                # al código, y es esa la que llega al CRM.
+                'variantes': [v['codigo'] for v in datos.get('variantes') or ()],
                 'barra': '',
                 'url': f'{publico_c}/{destino}' if publico_c else f'{base}/{destino}',
             })
