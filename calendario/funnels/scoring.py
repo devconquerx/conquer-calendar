@@ -38,14 +38,21 @@ def _valor(respuestas, name):
 
 
 def _coincide_regla(respuestas, regla):
-    """True si la respuesta del campo de `regla` iguala su valor.
+    """True si TODOS los campos de `regla` igualan su valor.
 
-    `regla` es un dict de una sola clave, ej. ``{'age': 'Soy menor de 18 años.'}``.
+    Casi todas las reglas tienen una sola clave —``{'age': 'Soy menor de 18
+    años.'}``— y ahí da igual cómo se combinen. Con varias, la lectura natural
+    es Y: ``{'employment_situation': 'Me encuentro desempleado.',
+    'legal_status': 'Todavía estoy en trámites'}`` cancela al desempleado que
+    además está en trámites, no a cualquiera de los dos por separado. Entre
+    reglas distintas sigue siendo O, que es lo que hace `any()` en quien llama.
+
+    Antes bastaba con que coincidiera una: una regla así habría cancelado a
+    todo el que estuviera en trámites aunque tuviera empleo. Ninguna config
+    tenía reglas de más de una clave, así que el cambio no altera nada de lo
+    que ya estaba configurado.
     """
-    for campo, valor in regla.items():
-        if _valor(respuestas, campo) == valor:
-            return True
-    return False
+    return all(_valor(respuestas, campo) == valor for campo, valor in regla.items())
 
 
 def calcular_score(respuestas, scoring_config, campos=None):
