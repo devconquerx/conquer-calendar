@@ -97,9 +97,19 @@ class ElTelefonoYaNoSePierdeTest(TestCase):
         self.assertIn('name="lead_phone_prefix"', html)
         js = (Path(__file__).resolve().parents[2]
               / 'calendario' / 'static' / 'js' / 'evento-registro.js').read_text(encoding='utf-8')
-        self.assertIn('lead_phone: tel', js)
+        self.assertIn('cuerpo.lead_phone = tel;', js)
         # Y el aviso de error se busca por id, no por clase.
         self.assertIn('id="aviso"', html)
+
+    def test_y_sigue_mandandose_donde_si_se_pide(self):
+        # El campo pasó a ser opcional para la Trading Week, que solo recoge
+        # nombre y correo. La comprobación es que el teléfono siga viajando
+        # donde sí se pide, que es lo que se rompería al hacerlo opcional.
+        js = (Path(__file__).resolve().parents[2]
+              / 'calendario' / 'static' / 'js' / 'evento-registro.js').read_text(encoding='utf-8')
+        self.assertIn('if (campoTel) {', js)
+        self.assertIn('cuerpo.lead_phone_prefix = prefijo;', js)
+        self.assertIn('cuerpo.lead_country = pais;', js)
 
 
 class NingunaPaginaEnQuirksModeTest(TestCase):
@@ -221,6 +231,9 @@ class LasPaginasSinFormularioTest(TestCase):
     PAGINAS = (
         ('www.conquerblocks.com', '/evento/evento-testimonios'),
         ('www.conquerlanguages.com', '/eventos/bitacora'),
+        ('www.conquerfinance.com', '/evento/pildoras-evento-1'),
+        ('www.conquerfinance.com', '/evento/pildoras-evento-2'),
+        ('www.conquerfinance.com', '/evento/pildoras-evento-3'),
     )
 
     def test_responden(self):
@@ -238,13 +251,15 @@ class LasPaginasSinFormularioTest(TestCase):
             self.assertNotIn('iniciarSaltoWhatsApp', html, f'{host}{ruta}')
 
     def test_no_declaran_funnel(self):
-        for clave in ('evento-testimonios', 'bitacora'):
+        for clave in ('evento-testimonios', 'bitacora',
+                      'pildoras-evento-1', 'pildoras-evento-2', 'pildoras-evento-3'):
             self.assertIsNone(PAGINAS_DE_CAMPANA[clave]['funnel'], clave)
 
     def test_llevan_su_gtm_y_su_consentimiento(self):
         # Que no recojan datos no las exime de medir ni de pedir permiso.
         for host, ruta, st in (('www.conquerblocks.com', '/evento/evento-testimonios', '5PK5LTG'),
-                               ('www.conquerlanguages.com', '/eventos/bitacora', 'MPB7S5C7')):
+                               ('www.conquerlanguages.com', '/eventos/bitacora', 'MPB7S5C7'),
+                               ('www.conquerfinance.com', '/evento/pildoras-evento-2', 'MXTDVVBG')):
             html = self.client.get(ruta, HTTP_HOST=host, HTTP_CF_IPCOUNTRY='ES').content.decode()
             self.assertIn(f"st = '{st}'", html, f'{host}{ruta}')
             self.assertIn('id="cqx-consent"', html, f'{host}{ruta}')
@@ -300,3 +315,218 @@ class BitacoraTest(TestCase):
         self.assertEqual(self.client.get('/evento/bitacora',
                                          HTTP_HOST='www.conquerlanguages.com',
                                          follow=True).status_code, 404)
+
+
+class LasTresPildorasTest(TestCase):
+    """Las píldoras que precalientan la Trading Week de Finance.
+
+    Se recuperaron de web.archive.org: el dominio devuelve 404 desde hace
+    meses, así que el archivo es la única fuente. Estos tests fijan lo que se
+    leyó de él, porque no hay original vivo contra el que volver a comparar.
+    """
+
+    RUTAS = ('/evento/pildoras-evento-1', '/evento/pildoras-evento-2',
+             '/evento/pildoras-evento-3')
+
+    def _html(self, n):
+        return self.client.get(f'/evento/pildoras-evento-{n}',
+                               HTTP_HOST='www.conquerfinance.com').content.decode()
+
+    def test_cada_una_lleva_su_video(self):
+        guids = ('1806c327-dbfa-4ac4-9c81-bcc8d6240572',
+                 'd9f08fbc-1782-44e2-bbb8-5194b05db850',
+                 'b4bb5c13-b44d-4cfe-8c45-efb329b15149')
+        for n, guid in enumerate(guids, start=1):
+            html = self._html(n)
+            # Biblioteca 185796: la de Finance, distinta de las de Blocks (135359)
+            # y Languages (348662).
+            self.assertIn(f'iframe.mediadelivery.net/embed/185796/{guid}', html, n)
+            self.assertEqual(html.count('iframe.mediadelivery.net/embed/'), 1, n)
+
+    def test_van_numeradas_y_con_su_titular(self):
+        for n, titular in ((1, 'DESCUBRE LA SITUACIÓN ECONÓMICA ACTUAL'),
+                           (2, 'QUÉ ES EL TRADING'),
+                           (3, 'LOS 3 PERFILES DE PERSONAS')):
+            html = self._html(n)
+            self.assertIn(f'Píldora Nº{n}', html, n)
+            self.assertIn(titular, html, n)
+
+    def test_cada_una_enlaza_a_las_otras_dos(self):
+        for n in (2, 3):
+            html = self._html(n)
+            otras = [o for o in (1, 2, 3) if o != n]
+            for o in otras:
+                self.assertIn(f'href="/evento/pildoras-evento-{o}"', html, (n, o))
+            # Dos tarjetas: la imagen enlazada y el botón, por cada una.
+            self.assertEqual(html.count('YA DISPONIBLE'), 2, n)
+
+    def test_la_primera_no_enseña_ninguna(self):
+        # En el original su contenedor llevaba `display: none`, ya en el volcado
+        # de abril. Se replica en vez de "arreglarlo": no sabemos si fue a
+        # propósito, y añadir enlaces que nadie vio es inventar.
+        html = self._html(1)
+        self.assertNotIn('YA DISPONIBLE', html)
+        self.assertEqual(PAGINAS_DE_CAMPANA['pildoras-evento-1']['tarjetas'], ())
+
+    def test_los_parrafos_conservan_sus_negritas(self):
+        # Van con `|safe` porque el texto trae `<strong>`; si se escapara, el
+        # visitante leería las etiquetas.
+        self.assertIn('<strong>Trading Week</strong>', self._html(1))
+        self.assertNotIn('&lt;strong&gt;', self._html(1))
+
+    def test_las_tarjetas_se_ven_aunque_no_haya_javascript(self):
+        # La animación las oculta desde JS. Si se ocultaran en el HTML, un fallo
+        # del script las dejaría invisibles para siempre.
+        html = self._html(2)
+        self.assertIn('<div class="tarjeta">', html)
+        self.assertNotIn('<div class="tarjeta oculta">', html)
+
+    def test_salen_en_el_panel(self):
+        panel = self.client.get('/funnels/').content.decode()
+        for n in (1, 2, 3):
+            self.assertIn(f'Pildoras-evento-{n}', panel, n)
+
+
+class LaTradingWeekTest(TestCase):
+    """La landing de registro de la Trading Week de Finance.
+
+    Recuperada de web.archive.org (volcado de junio de 2025); el dominio
+    devuelve 404. Es la segunda de campaña que recoge datos, y la única con
+    test A/B.
+    """
+
+    def _html(self, **extra):
+        return self.client.get('/trading-week-2025', HTTP_HOST='www.conquerfinance.com',
+                               **extra).content.decode()
+
+    def test_responde_en_la_raiz_del_dominio(self):
+        # No cuelga de /evento/ como las de Blocks: su URL era la de la raíz.
+        r = self.client.get('/trading-week-2025', HTTP_HOST='www.conquerfinance.com')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(PAGINAS_DE_CAMPANA['trading-week-2025']['ruta'], 'trading-week-2025')
+
+    def test_recoge_nombre_y_correo_pero_no_telefono(self):
+        html = self._html()
+        self.assertIn('id="formEvento"', html)
+        self.assertIn('name="fullname"', html)
+        self.assertIn('name="email"', html)
+        # El original no lo pedía, y el script de registro tiene que aguantarlo.
+        self.assertNotIn('id="phoneLocal"', html)
+
+    def test_lleva_embebida_su_pantalla_de_gracias(self):
+        # Se cambia sin recargar, así que el bloque viaja en la propia página.
+        # A cuál va, en `LaGraciasDeLaTradingWeekTest`.
+        self.assertIn('id="gracias-evento"', self._html())
+
+    def test_el_titular_y_el_codigo_de_funnel_van_a_la_par(self):
+        # El código lleva la letra de la variante pegada. Si se sortearan por
+        # separado —el titular en servidor y la letra en cliente, como hacía el
+        # original— el CRM podría acabar con un lead atribuido al titular que no
+        # se enseñó.
+        titulares = {'a': 'Convierte el trading en tu fuente de ingresos extra',
+                     'b': 'Descubre el método de trading respaldado'}
+        vistas = set()
+        for _ in range(40):
+            html = self._html()
+            for letra, titular in titulares.items():
+                if f'funnel: "cf\\u002DTradingWeek4\\u002D{letra}"' in html:
+                    self.assertIn(titular, html, letra)
+                    vistas.add(letra)
+        # 40 tiradas a cara o cruz: que salgan las dos es prácticamente seguro.
+        self.assertEqual(vistas, {'a', 'b'})
+
+    def test_sus_leads_son_de_lanzamiento_con_variante_y_sin_ella(self):
+        # Sin esto se irían por el pipeline completo del funnel: Supabase,
+        # conversiones y todo lo que estas páginas no deben disparar.
+        for codigo in ('cf-TradingWeek4', 'cf-TradingWeek4-a', 'cf-TradingWeek4-b'):
+            self.assertTrue(es_lead_de_lanzamiento(Lead(funnel=codigo)), codigo)
+
+    def test_no_arrastra_los_bloques_que_el_original_tenia_ocultos(self):
+        # Dos secciones de la plantilla de Webflow iban con `display: none`: una
+        # de beneficios con el Lorem Ipsum en inglés y otra de «Nos has visto
+        # en…» con logos de ejemplo. La segunda, además, presumiría de
+        # apariciones en medios que no existen.
+        html = self._html()
+        self.assertNotIn('This is some text inside of a div block', html)
+        self.assertNotIn('Nos has visto en', html)
+        self.assertNotIn('twitch-logo', html)
+
+    def test_lleva_su_gtm_su_consentimiento_y_su_doctype(self):
+        html = self._html(HTTP_CF_IPCOUNTRY='ES')
+        self.assertIn("st = 'MXTDVVBG'", html)
+        self.assertIn('id="cqx-consent"', html)
+        self.assertTrue(html.lstrip().lower().startswith('<!doctype html>'))
+
+    def test_sale_en_el_panel(self):
+        self.assertIn('Registro Trading Week 2025',
+                      self.client.get('/funnels/').content.decode())
+
+
+class LaGraciasDeLaTradingWeekTest(TestCase):
+    """La Trading Week NO acaba en la pantalla de gracias de Finance.
+
+    El original mandaba a `conquerfinance.com/grupos-comunidad`, que era una
+    página propia con el grupo de WhatsApp de esa edición —`chat.wapp.ly/eEZ90a`,
+    no el de Blocks que reutilizan las pantallas de lanzamiento—. Hoy esa URL
+    redirige a la home, así que se recuperó del archivo.
+    """
+
+    def _tw(self):
+        return self.client.get('/trading-week-2025',
+                               HTTP_HOST='www.conquerfinance.com').content.decode()
+
+    def _gracias(self, host):
+        return self.client.get('/grupos-comunidad', HTTP_HOST=host).content.decode()
+
+    def test_la_landing_manda_a_grupos_comunidad(self):
+        html = self._tw()
+        self.assertIn(r'gracias: "/grupos\u002Dcomunidad"', html)
+        # Y no a la de las pantallas de lanzamiento de Finance.
+        self.assertNotIn(r'gracias: "/evento/gracias\u002Dcomunidad"', html)
+
+    def test_con_el_grupo_de_esa_edicion(self):
+        for html in (self._tw(), self._gracias('www.conquerfinance.com')):
+            self.assertIn('chat.wapp.ly/eEZ90a', html)
+            self.assertNotIn('cb.conquerx.com/1Qt1ef', html)
+
+    def test_la_url_responde_por_su_cuenta(self):
+        r = self.client.get('/grupos-comunidad', HTTP_HOST='www.conquerfinance.com')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('<title>Grupos Comunidad</title>', r.content.decode())
+
+    def test_el_mismo_path_sigue_sirviendo_la_de_languages(self):
+        # `/grupos-comunidad` lo comparten las dos marcas; se resuelve por
+        # dominio. Si esto se rompe, Languages pierde su pantalla de gracias.
+        html = self._gracias('www.conquerlanguages.com')
+        self.assertIn('cl.conquerx.com/5P9e7L', html)
+        self.assertNotIn('chat.wapp.ly/eEZ90a', html)
+
+    def test_fuera_de_los_dominios_de_marca_sigue_saliendo_la_de_languages(self):
+        # Es como se previsualiza (calendar.conquerx.com) y como estaba antes de
+        # que Finance tuviera la suya: la ruta llevaba la escuela clavada. Si
+        # esto pasa a 404, la pantalla de gracias de Languages deja de poder
+        # verse fuera de su dominio.
+        for host in ('calendar.conquerx.com', 'www.conquerblocks.com'):
+            r = self.client.get('/grupos-comunidad', HTTP_HOST=host)
+            self.assertEqual(r.status_code, 200, host)
+            self.assertIn('cl.conquerx.com/5P9e7L', r.content.decode(), host)
+
+    def test_salta_sola_al_grupo_a_los_quince_segundos(self):
+        html = self._gracias('www.conquerfinance.com')
+        self.assertIn('iniciarSaltoWhatsApp', html)
+        self.assertIn('15000', html)
+
+    def test_va_sobre_negro_para_que_se_vea_el_logo(self):
+        # Su fondo es una textura de manchas azules pensada para ir sobre negro.
+        # Sin el color de debajo queda casi blanca y el logo, que es blanco,
+        # desaparece.
+        html = self._gracias('www.conquerfinance.com')
+        self.assertIn('background-color:#000', html)
+        self.assertIn('fondo-blur.avif', html)
+
+    def test_lleva_gtm_consentimiento_y_doctype(self):
+        html = self.client.get('/grupos-comunidad', HTTP_HOST='www.conquerfinance.com',
+                               HTTP_CF_IPCOUNTRY='ES').content.decode()
+        self.assertIn("st = 'MXTDVVBG'", html)
+        self.assertIn('id="cqx-consent"', html)
+        self.assertTrue(html.lstrip().lower().startswith('<!doctype html>'))

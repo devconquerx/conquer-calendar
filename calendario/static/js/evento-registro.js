@@ -131,27 +131,33 @@
 
     var nombre = form.fullname.value.trim();
     var email = form.email.value.trim();
-    var tel = form.phoneLocal.value.replace(/\D/g, '');
-    var prefijo = form.phonePrefix.value;
+    // El teléfono es opcional: no todas las pantallas lo piden —la Trading Week
+    // solo recoge nombre y correo—, así que si no está el campo no se valida ni
+    // se manda, en vez de reventar al leerlo.
+    var campoTel = form.phoneLocal || null;
+    var tel = campoTel ? campoTel.value.replace(/\D/g, '') : '';
+    var prefijo = form.phonePrefix ? form.phonePrefix.value : '';
     // El país lo deja el selector de prefijo en un campo oculto.
     var campoPais = document.getElementById('countryName');
     var pais = campoPais ? campoPais.value : '';
 
     if (!nombre) { decir('Escribe tu nombre.', 'error'); form.fullname.focus(); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { decir('Revisa el correo, no parece válido.', 'error'); form.email.focus(); return; }
-    if (!tel) { decir('Escribe tu número de WhatsApp.', 'error'); form.phoneLocal.focus(); return; }
+    if (campoTel && !tel) { decir('Escribe tu número de WhatsApp.', 'error'); campoTel.focus(); return; }
 
     var cuerpo = Object.assign(atribucion(), {
       name: nombre,
       email: email,
-      lead_phone: tel,
-      lead_phone_prefix: prefijo,
-      lead_country: pais,
       funnel: window.__EVENTO__.funnel,
       url: location.href,
       user_agent: navigator.userAgent,
       conditions: 'Acepta las políticas: ' + new Date().toISOString()
     });
+    if (campoTel) {
+      cuerpo.lead_phone = tel;
+      cuerpo.lead_phone_prefix = prefijo;
+      cuerpo.lead_country = pais;
+    }
 
     enviado = true;
     if (boton) boton.disabled = true;

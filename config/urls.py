@@ -63,15 +63,21 @@ urlpatterns = [
     # sola a los 15 s. Blocks y Finance la sirven bajo /evento/; Languages en la
     # raíz, con otro nombre, tal como en Webflow.
     re_path(r'^evento/gracias-comunidad/?$', GraciasView.as_view(), name='evento_gracias'),
-    re_path(r'^grupos-comunidad/?$', GraciasView.as_view(), {'escuela': 'conquer-languages'},
+    # `/grupos-comunidad` la sirven dos marcas: es la de Languages y, en
+    # conquerfinance.com, la de la Trading Week. La vista lo resuelve por
+    # dominio; en local se fuerza con ?escuela=.
+    re_path(r'^grupos-comunidad/?$', GraciasView.as_view(), {'compartida': True},
             name='evento_gracias_languages'),
     # Páginas de evento de campaña (Coding Week…): una ruta por campaña, bajo
     # /evento/, tal como las servía Webflow.
-    re_path(r'^evento/(?P<pagina>evento-coding-week-eu|evento-testimonios)/?$', PaginaDeCampanaView.as_view(),
+    re_path(r'^evento/(?P<pagina>evento-coding-week-eu|evento-testimonios|pildoras-evento-1|pildoras-evento-2|pildoras-evento-3)/?$', PaginaDeCampanaView.as_view(),
             name='evento_campana'),
     # Languages sirve la suya bajo /eventos/ (en plural), como en su Webflow.
     re_path(r'^eventos/(?P<pagina>bitacora)/?$', PaginaDeCampanaView.as_view(),
             name='evento_campana_languages'),
+    # La Trading Week de Finance cuelga de la raíz, no de /evento/.
+    re_path(r'^(?P<pagina>trading-week-2025)/?$', PaginaDeCampanaView.as_view(),
+            name='evento_campana_trading_week'),
     # Panel interno de estado de los funnels (lista escuelas + enlaces).
     path('funnels/', FunnelStatusView.as_view(), name='funnel_status'),
     # URLs públicas canónicas por marca/producto (antes del catch-all de booking).

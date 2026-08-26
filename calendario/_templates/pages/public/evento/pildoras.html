@@ -1,0 +1,203 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ pagina.titulo_pagina }}</title>
+  {% include '_includes/_consentimiento.html' %}
+  {% include '_includes/_sgtm_head.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;600;700&family=Poppins:wght@200;300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   Píldoras de la Trading Week (Finance). Réplica de
+   conquerfinance.com/evento/pildoras-evento-{1,2,3}, recuperadas del archivo
+   (web.archive.org) porque las páginas ya no responden en el dominio.
+
+   Las tres son la misma maqueta: cabecera, vídeo, texto y —salvo la primera—
+   tarjetas a las otras píldoras. Lo único que cambia es el contenido, así que
+   viven en una sola plantilla y el resto sale de `PAGINAS_DE_CAMPANA`.
+
+   Colores de marca del Webflow de Finance: azul oscuro #2827d6, azul claro
+   #02bdf8 y el blanco azulado #f4f7fe de las tarjetas.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root{
+  --azul-oscuro:#2827d6;
+  --azul-claro:#02bdf8;
+  --tarjeta:#f4f7fe;
+  --titular:Oswald,Arial,sans-serif;
+  --cuerpo:Poppins,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  /* Negro con la textura de manchas azules encima, repetida a su tamaño
+     natural y centrada, tal cual la sirve el original. */
+  margin:0;min-height:100vh;background:#000 50% repeat;
+  background-image:url("{% static 'img/eventos/pildoras/fondo-blur.avif' %}");
+  font-family:var(--cuerpo);color:#fff;-webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;height:auto;display:block}
+.main{display:flex;flex-direction:column;align-items:center;gap:50px}
+
+.cabecera-barra{width:100%;display:flex;justify-content:center;align-items:center;padding-top:40px}
+.cabecera{
+  display:flex;flex-flow:row;justify-content:space-between;align-items:center;
+  width:100%;max-width:1140px;padding:20px;
+}
+.cabecera img{width:227px;margin-bottom:20px}
+/* No es una imagen: es texto, en el Oswald de la marca y en su azul oscuro. */
+.evento{
+  color:var(--azul-oscuro);font-family:var(--titular);font-size:45px;font-weight:700;
+  text-transform:uppercase;line-height:1;
+}
+
+.video{width:100%;max-width:940px;padding:0 40px}
+/* Caja de proporción 16:9 con el iframe encima: el original la calcula con un
+   padding-top de 56.2766%, que es lo que ocupa el vídeo de Bunny. */
+.video .marco{position:relative;width:100%;padding-top:56.2766%}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+.texto{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:25px;
+  width:100%;max-width:940px;padding:0 40px 60px;
+}
+.titulo-pildora{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;width:100%;text-align:center}
+.numero{color:var(--azul-claro);font-family:var(--cuerpo);font-size:30px;font-weight:200;letter-spacing:3px}
+.titular{margin:0;color:#fff;font-size:29px;font-weight:300;line-height:39px}
+.titular strong{
+  display:block;padding-top:10px;color:#fff;text-align:center;
+  font-family:var(--titular);font-size:28px;font-weight:600;line-height:37px;
+}
+.cuerpo{margin:0;color:#fff;text-align:center;font-family:var(--cuerpo);font-size:16px}
+
+/* Franja en degradado con las otras píldoras. */
+.otras{
+  width:100%;overflow:hidden;
+  background-image:linear-gradient(190deg,var(--azul-oscuro),var(--azul-claro));
+}
+.otras-fila{
+  display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:11px;
+  margin:40px 0;padding:0 40px;
+}
+.tarjeta{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  width:250px;padding:10px;border-radius:19px;background:var(--tarjeta);
+  box-shadow:2px 2px 5px #0003;
+  /* Aparecen al entrar en pantalla, como la interacción del original. Sin JS
+     se quedan visibles: más vale sin animación que sin tarjetas. */
+  opacity:1;transition:opacity .5s ease;
+}
+.tarjeta.oculta{opacity:0}
+.tarjeta a{text-decoration:none}
+.tarjeta img{border-radius:10px;width:100%}
+.tarjeta h3{margin:10px 0 0;color:#313131}
+.tarjeta h3 strong{
+  display:block;text-align:center;font-family:var(--cuerpo);
+  font-size:16px;font-style:italic;font-weight:900;line-height:20px;
+}
+.tarjeta .boton{
+  display:block;width:100%;margin-top:10px;padding:9px 15px;
+  background:var(--azul-oscuro);color:#fff;border-radius:20px;text-align:center;
+  font-family:var(--titular);font-size:21px;font-weight:600;
+}
+
+@media (min-width:1920px){
+  .titular strong{font-size:30px;font-weight:700}
+  .tarjeta h3 strong{font-weight:700}
+}
+@media (max-width:991px){
+  .cabecera-barra{padding-top:0}
+  .cabecera{flex-direction:column;gap:21px;padding:20px}
+  .titular strong{padding-left:10px;padding-right:10px}
+  .tarjeta h3 strong{padding-left:10px;padding-right:10px}
+}
+@media (max-width:767px){
+  .cabecera{flex-direction:column;justify-content:center;gap:21px;padding:0 10px 20px}
+  .titular strong{padding-left:0;padding-right:0;line-height:37px}
+  .tarjeta h3 strong{padding-left:0;padding-right:0}
+}
+@media (max-width:479px){
+  .main{gap:29px}
+  .cabecera{gap:23px;padding:0 10px}
+  .cabecera img{padding-top:20px}
+  .evento{font-size:28px}
+  .video{padding:0 15px}
+  .texto{align-items:flex-start;padding:0 15px 10px}
+  .numero{font-size:25px}
+  .titular{font-size:26px;line-height:40px}
+  .titular strong{text-align:center;font-size:21px;line-height:28px}
+  .cuerpo{margin-bottom:20px;padding-bottom:20px;font-size:13px;letter-spacing:0}
+  .otras-fila{flex-direction:column;gap:15px;padding:0 20px}
+  .tarjeta{width:100%}
+  .tarjeta h3 strong{font-size:16px;line-height:22px}
+}
+</style>
+</head>
+<body>
+
+<div class="main">
+  <header class="cabecera-barra">
+    <div class="cabecera">
+      <img src="{% static 'img/eventos/pildoras/logo.svg' %}" alt="Conquer Finance" width="227">
+      <div class="evento">Trading Week</div>
+    </div>
+  </header>
+
+  <section class="video">
+    <div class="marco">
+      <iframe src="https://iframe.mediadelivery.net/embed/{{ pagina.biblioteca }}/{{ pagina.video_principal }}?autoplay=false&preload=false"
+              title="{{ pagina.numero }}" loading="lazy" allowfullscreen
+              allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
+    </div>
+  </section>
+
+  <section class="texto">
+    <div class="titulo-pildora">
+      <div class="numero">{{ pagina.numero }}</div>
+      <h2 class="titular"><strong>{{ pagina.titular }}</strong></h2>
+    </div>
+    <p class="cuerpo">{{ pagina.cuerpo|safe }}</p>
+  </section>
+
+  {# La primera no enseña ninguna: en el original su contenedor iba oculto. #}
+  {% if pagina.tarjetas %}
+  <section class="otras">
+    <div class="otras-fila">
+      {% for t in pagina.tarjetas %}
+      <div class="tarjeta">
+        <a href="{{ app_base_path }}/{{ t.ruta }}">
+          <img src="{% static t.imagen %}" alt="" loading="lazy">
+          <h3><strong>{{ t.texto }}</strong></h3>
+        </a>
+        <a class="boton" href="{{ app_base_path }}/{{ t.ruta }}">YA DISPONIBLE</a>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+<script>
+/* Las tarjetas aparecen al llegar a ellas, como la interacción de Webflow.
+   Van visibles en el HTML y aquí se ocultan antes de pintar, para que quien
+   no ejecute JS las vea igual. */
+(function () {
+  var tarjetas = document.querySelectorAll('.tarjeta');
+  if (!tarjetas.length || !('IntersectionObserver' in window)) return;
+  // Se ocultan aquí, no en el HTML: si este script no llega a ejecutarse, las
+  // tarjetas se ven igual en vez de quedarse invisibles para siempre.
+  [].forEach.call(tarjetas, function (t) { t.classList.add('oculta'); });
+  var mirador = new IntersectionObserver(function (entradas) {
+    entradas.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.classList.remove('oculta');
+      mirador.unobserve(e.target);
+    });
+  }, { threshold: 0.2 });
+  [].forEach.call(tarjetas, function (t) { mirador.observe(t); });
+})();
+</script>
+
+</body>
+</html>

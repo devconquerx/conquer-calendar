@@ -218,6 +218,17 @@ def es_lead_de_lanzamiento(lead):
         return True
     # Import perezoso: `funnels` importa servicios de leads y al revés.
     from calendario.funnels.evento_views import PAGINAS_DE_CAMPANA
-    # Hay páginas de campaña que no recogen datos y no declaran funnel.
-    codigos = {p['funnel'].lower() for p in PAGINAS_DE_CAMPANA.values() if p.get('funnel')}
+    codigos = set()
+    for pagina in PAGINAS_DE_CAMPANA.values():
+        # Hay páginas de campaña que no recogen datos y no declaran funnel.
+        codigo = (pagina.get('funnel') or '').lower()
+        if not codigo:
+            continue
+        codigos.add(codigo)
+        # A las que tienen test A/B se les pega la letra de la variante al
+        # código (`cf-tradingweek4-a`), y es esa la que llega al CRM: sin
+        # incluirlas, el lead no se reconocería como de lanzamiento y se iría
+        # por el pipeline completo del funnel.
+        for variante in pagina.get('variantes') or ():
+            codigos.add(f"{codigo}-{variante['codigo']}".lower())
     return funnel in codigos

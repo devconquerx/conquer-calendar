@@ -11,16 +11,24 @@
 <style>
 #gracias-evento{
   --rojo:#ff0004;
-  --verde:#15b961;
+  /* El verde del botón y el fondo los pone cada pantalla: Languages usa su foto
+     y el verde de su marca; la de la Trading Week, el fondo azul de Finance y
+     un verde más vivo. */
+  --verde:{{ gr.verde|default:'#15b961' }};
   --tinta:#1d1d1d;
   min-height:100vh;
-  background-image:url("{% static 'img/eventos/cl-fondo.jpg' %}");
+  /* El color de debajo importa cuando el fondo no tapa: el de Languages es una
+     foto a `cover` y da igual, pero el de la Trading Week es una textura de
+     manchas azules pensada para ir sobre negro; sin el color quedaba casi
+     blanca y el logo, que es blanco, desaparecía. */
+  background-color:{{ gr.fondo_color|default:'transparent' }};
+  background-image:url("{% static gr.fondo %}");
   background-position:0 0;background-size:cover;background-attachment:fixed;
   font-family:Poppins,Arial,sans-serif;font-size:16px;line-height:1.5;color:var(--tinta);
 }
 #gracias-evento[hidden]{display:none}
 #gracias-evento .cabecera{display:flex;justify-content:center;align-items:center;padding:20px 0}
-#gracias-evento .cabecera img{width:259px;max-width:80%;height:auto}
+#gracias-evento .cabecera img{width:{{ gr.logo_ancho|default:259 }}px;max-width:80%;height:auto}
 #gracias-evento .pila{display:flex;flex-flow:column;gap:22px;width:100%;padding:0 10px 40px}
 /* `.container-block`: 60%, con el mismo tope que resuelve el original —a 2560px
    de ventana su tarjeta mide 1013px—. Por debajo de ~1690px manda el 60%. */
@@ -62,7 +70,7 @@
 
 <div id="gracias-evento" data-whatsapp="{{ gr.whatsapp }}"{% if oculto %} hidden{% endif %}>
   <div class="cabecera">
-    <img src="{% static gr.logo %}" alt="{{ gr.marca }}" width="259">
+    <img src="{% static gr.logo %}" alt="{{ gr.marca }}" width="{{ gr.logo_ancho|default:259 }}">
   </div>
 
   <div class="pila">

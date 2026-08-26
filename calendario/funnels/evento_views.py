@@ -10,6 +10,8 @@ bullets).
 Réplica de www.conquerblocks.com/evento/evento-online, que hasta ahora servía
 Webflow y mandaba los registros a Make.
 """
+import random
+
 from django.conf import settings
 from django.http import Http404
 from django.utils.cache import patch_vary_headers
@@ -149,7 +151,6 @@ EVENTOS = {
 }
 
 
-
 # Página de "gracias": el último paso real del registro. Presenta el grupo de
 # WhatsApp de asistentes, y a los 15 segundos salta sola a él.
 #
@@ -197,6 +198,8 @@ GRACIAS = {
         'plantilla': 'pages/public/evento/gracias-languages.html',
         'ruta': 'grupos-comunidad',
         'titulo_pagina': 'Gracias-Comunidad',
+        'fondo': 'img/eventos/cl-fondo.jpg',
+        'verde': '#15b961',
         'whatsapp': 'https://cl.conquerx.com/5P9e7L/',
         'clase': 'Clase de 0 a Inglés fluido',
         'cta': 'UNIRME A LA COMUNIDAD VIP DE WHATSAPP >>',
@@ -205,6 +208,28 @@ GRACIAS = {
         'logo': 'img/eventos/cl-logo-horizontal.png',
         'logo_ancho': 259,
     },
+}
+
+
+# La Trading Week tiene su propia pantalla de gracias, distinta de la que usan
+# las pantallas de lanzamiento de Finance: misma maqueta que la de Languages
+# —tres tarjetas blancas y el botón verde—, con el fondo azul de Finance y el
+# grupo de WhatsApp de esa edición. Cuelga de `/grupos-comunidad`, la URL a la
+# que mandaba el original.
+GRACIAS_TRADING_WEEK = {
+    'plantilla': 'pages/public/evento/gracias-languages.html',
+    'ruta': 'grupos-comunidad',
+    'titulo_pagina': 'Grupos Comunidad',
+    'fondo': 'img/eventos/pildoras/fondo-blur.avif',
+    'fondo_color': '#000',
+    'verde': '#00d663',
+    'whatsapp': 'https://chat.wapp.ly/eEZ90a',
+    'clase': 'Trading Week 2025',
+    'cta': 'UNIRME A LA COMUNIDAD VIP DE WHATSAPP >>',
+    'icono_cta': False,
+    'marca': 'Conquer Finance',
+    'logo': 'img/eventos/pildoras/logo.svg',
+    'logo_ancho': 200,
 }
 
 
@@ -224,6 +249,19 @@ def _gtm(escuela):
 #
 # El `funnel` va fijo, no sale de `utm_campaign`: así lo lleva el formulario del
 # original.
+# Las tres píldoras de la Trading Week, por si otra se enlaza a ellas. Cada
+# página enseña tarjetas a las demás, así que la ficha de cada una se declara
+# una vez aquí y las otras dos la referencian.
+_PILDORAS = {
+    1: {'ruta': 'evento/pildoras-evento-1', 'imagen': 'img/eventos/pildoras/pildora-1.avif',
+        'texto': 'DESCUBRE LA SITUACIÓN ECONÓMICA ACTUAL Y POR QUÉ DEBES ACTUAR YA'},
+    2: {'ruta': 'evento/pildoras-evento-2', 'imagen': 'img/eventos/pildoras/pildora-2.avif',
+        'texto': 'QUÉ ES EL TRADING: LA FORMA MÁS INTELIGENTE DE GENERAR DINERO'},
+    3: {'ruta': 'evento/pildoras-evento-3', 'imagen': 'img/eventos/pildoras/pildora-3.avif',
+        'texto': 'LOS 3 PERFILES DE PERSONAS QUE TENDRÁN ÉXITO EN EL TRADING INSTITUCIONAL'},
+}
+
+
 PAGINAS_DE_CAMPANA = {
     'evento-coding-week-eu': {
         'orden': 4,
@@ -272,6 +310,180 @@ PAGINAS_DE_CAMPANA = {
         'biblioteca': '348662',
         'video_principal': '879ce1c6-e0d5-422f-9893-b663a8341f5d',
         'politica_url': 'https://www.conquerlanguages.com/politica-de-privacidad',
+    },
+    # Las tres píldoras que precalientan la Trading Week de Finance. No
+    # recogen datos: vídeo, texto y enlaces entre ellas. Se recuperaron de
+    # web.archive.org —el dominio ya devuelve 404— del último volcado, el de
+    # octubre de 2025.
+    'pildoras-evento-1': {
+        'orden': 7,
+        'escuela': 'conquer-finance',
+        'plantilla': 'pages/public/evento/pildoras.html',
+        'titulo_pagina': 'Pildoras-evento-1',
+        'funnel': None,
+        'biblioteca': '185796',
+        'video_principal': '1806c327-dbfa-4ac4-9c81-bcc8d6240572',
+        'numero': 'Píldora Nº1',
+        'titular': 'DESCUBRE LA SITUACIÓN ECONÓMICA ACTUAL Y POR QUÉ DEBES ACTUAR YA',
+        'cuerpo': (
+            'Prepárate para la <strong>Trading Week</strong>, el evento online en el que '
+            'aprenderás cómo generar ingresos con el <strong>Trading</strong>, de manera '
+            'rentable y sin riesgos innecesarios.<br><br>'
+            'Esta es la primera de 3 píldoras de valor que te ayudarán a entender cómo '
+            'aprovechar el evento al máximo. Y no solo eso, sino que entenderás el porqué '
+            'debes empezar cuanto antes a aprender esta habilidad este 2025.<br><br>'
+            'Ver todas las píldoras es crucial, ya que te permitirán entender las claves '
+            'para implementar el <strong>Paso a Paso</strong> que veremos. No te pierdas '
+            'ninguna y prepárate para transformar tu situación actual.'
+        ),
+        # Sin tarjetas: en el original su contenedor llevaba `display: none`, y
+        # así estaba desde el primer volcado, así que no es un descuido del
+        # último. Se replica.
+        'tarjetas': (),
+        'politica_url': 'https://www.conquerfinance.com/legal/politica-de-privacidad',
+    },
+    'pildoras-evento-2': {
+        'orden': 8,
+        'escuela': 'conquer-finance',
+        'plantilla': 'pages/public/evento/pildoras.html',
+        'titulo_pagina': 'Pildoras-evento-2',
+        'funnel': None,
+        'biblioteca': '185796',
+        'video_principal': 'd9f08fbc-1782-44e2-bbb8-5194b05db850',
+        'numero': 'Píldora Nº2',
+        'titular': 'QUÉ ES EL TRADING: LA FORMA MÁS INTELIGENTE DE GENERAR DINERO',
+        'cuerpo': (
+            'Esta es la segunda de 3 píldoras de valor que te llevarán a entender el '
+            'concepto del Trading Institucional y por qué es mucho más <strong>seguro y '
+            'efectivo</strong> que el Trading tradicional, y cómo puedes utilizar el '
+            'capital de empresas fondeadoras para <strong>minimizar los riesgos</strong> '
+            'y maximizar tus ganancias.<br><br>'
+            'Ver todas las píldoras es esencial, ya que te mostrarán paso a paso cómo los '
+            'profesionales logran rentabilidades con porcentajes pequeños, pero con '
+            'grandes cuentas. No te pierdas ninguna, porque cada una es clave para que '
+            'puedas <strong>aprovechar al máximo</strong> LA TRADING WEEK y aprender a '
+            'generar entre 2.000 y 5.000 dólares mensuales, gracias a lo que te vamos a '
+            'enseñar.'
+        ),
+        'tarjetas': (_PILDORAS[1], _PILDORAS[3]),
+        'politica_url': 'https://www.conquerfinance.com/legal/politica-de-privacidad',
+    },
+    'pildoras-evento-3': {
+        'orden': 9,
+        'escuela': 'conquer-finance',
+        'plantilla': 'pages/public/evento/pildoras.html',
+        'titulo_pagina': 'Pildoras-evento-3',
+        'funnel': None,
+        'biblioteca': '185796',
+        'video_principal': 'b4bb5c13-b44d-4cfe-8c45-efb329b15149',
+        'numero': 'Píldora Nº3',
+        'titular': 'LOS 3 PERFILES DE PERSONAS QUE TENDRÁN ÉXITO EN EL TRADING INSTITUCIONAL',
+        'cuerpo': (
+            'Ahora que ya hemos visto tanto la situación económica actual y el porqué el '
+            'trading institucional se está convirtiendo en la manera más inteligente para '
+            'generar un ingreso extra mensual este 2025.<br><br>'
+            'No importa de dónde vengas o a qué te dediques, hay <strong>tres '
+            'perfiles</strong> que están alcanzando el éxito con el <strong>Trading '
+            'Institucional</strong>. En esta tercera píldora, te mostramos quiénes son y '
+            'cómo saber si eres uno de ellos.<br><br>'
+            'Conoce como personas como <strong>José</strong>, <strong>Sara</strong> y '
+            '<strong>Miguel</strong> han logrado generar entre <strong>2.000 y 5.000 '
+            'dólares mensuales</strong>, con poco riesgo y mayor libertad, siguiendo una '
+            'metodología probada.'
+        ),
+        'tarjetas': (_PILDORAS[1], _PILDORAS[2]),
+        'politica_url': 'https://www.conquerfinance.com/legal/politica-de-privacidad',
+    },
+    # La landing de registro de la Trading Week. Es la única de campaña que
+    # recoge datos además de la Coding Week, y la única con test A/B.
+    #
+    # Del original se dejan fuera dos bloques que ya iban ocultos por CSS: una
+    # sección de beneficios con el Lorem Ipsum en inglés de la plantilla de
+    # Webflow, y una franja de «Nos has visto en…» con los logos de ejemplo de
+    # esa misma plantilla (Twitch, Webflow, Pinterest). Ver la plantilla.
+    'trading-week-2025': {
+        'orden': 10,
+        'escuela': 'conquer-finance',
+        'plantilla': 'pages/public/evento/tradingweek.html',
+        'titulo_pagina': 'Registro Trading Week 2025',
+        # Va en la raíz del dominio, no bajo /evento/.
+        'ruta': 'trading-week-2025',
+        # Al código se le pega la letra de la variante: `cf-TradingWeek4-a` o
+        # `-b`, tal cual lo hacía el script del original.
+        'funnel': 'cf-TradingWeek4',
+        'gracias': GRACIAS_TRADING_WEEK,
+        'variantes': (
+            {'codigo': 'a',
+             'titular': ('Convierte el trading en tu fuente de ingresos extra, generando de '
+                         '<em>2.000 a 5.000 euros mensuales</em> utilizando cuentas fondeadas'),
+             'subtitular': ('Aprende el Paso a Paso de la metodología de un fondo de inversión '
+                            'probada y con la que cientos de alumnos <em>están obteniendo '
+                            'resultados</em>')},
+            {'codigo': 'b',
+             'titular': ('Descubre el método de trading respaldado por un fondo de inversión de '
+                         '$100M en EE.UU y <em>genera resultados</em>'),
+             'subtitular': ('Permite a traders sin experiencia <em>generar hasta 5000\u20ac '
+                            'mensuales</em> sin arriesgar su capital')},
+        ),
+        'aviso': 'Evento gratuito y en directo de 2 Días',
+        'fecha': 'Los días 7 y 8 de Abril a las 19:00h de Madrid',
+        'cta': 'Regístrate gratis ahora',
+        'cta_secundario': 'QUIERO ASISTIR',
+        'curso_titulo': '¡Multiplica tus ingresos este 2025 con trading sin arriesgar tu capital!',
+        'curso_bajada': ('Un evento donde mostraremos el paso a paso que ya han implementado más '
+                         'de 2.000 alumnos para <strong>empezar a generar ingresos extra</strong>'),
+        'columnas': (
+            {'imagen': 'img/eventos/tradingweek/curso-1.avif',
+             'titulo': '¿Por qué el 2025 Puede Ser tu Mejor Año Financiero?',
+             'texto': ('Entenderás qué es el Trading Institucional y el porqué se ha convertido '
+                       'en una de las mejores maneras para conseguir un ingreso extra mensual '
+                       'este 2025.<br><br>Te enseñaré cómo invierten realmente los profesionales '
+                       'y verás como tú también puedes generar un ingreso extra mensual '
+                       'utilizando las firmas propietarias, sin necesidad de arriesgar tus '
+                       'ahorros y sin tener conocimientos previos sobre el mundo financiero.')},
+            {'imagen': 'img/eventos/tradingweek/curso-2.avif',
+             'titulo': 'Los Pilares de una Estrategia Rentable en Trading',
+             'texto': ('Una vez entendamos qué es el Trading Institucional y la manera en la que '
+                       'operan los profesionales, veremos los pilares sobre los que se sustentará '
+                       'la metodología que te ayudará a <strong>generar entre 2.000 y 5.000 euros '
+                       'mensuales.</strong><br><br>Y las razones por las que algunos Traders no '
+                       'son rentables, para no caer en los mismos errores que cometen el 95% de '
+                       'las personas que lo intentan.')},
+            {'imagen': 'img/eventos/tradingweek/curso-3.avif',
+             'titulo': 'El Paso a Paso para generar de 2.000 a 5.000 mensuales con Trading',
+             'texto': ('<strong>Descubrirás el Paso a Paso para ser Rentable,</strong> para '
+                       'generar un ingreso extra mensual consistente, con una metodología '
+                       'probada, y que tan solo tienes que replicar.<br><br>Te mostraré cómo yo y '
+                       'mis alumnos lo hacemos, y cómo tú deberías hacerlo si quieres conseguir '
+                       'ese ingreso extra en menos de 7 semanas y sin arriesgar tu propio '
+                       'capital.')},
+        ),
+        'taller_titulo': 'ConseguirÁs El mini taller previo a la TRADING WEEK',
+        'taller_bajada': ('para que puedas llegar preparado, y entiendas la metodología de '
+                          'Trading que te hará generar ese ingreso extra mensual'),
+        # Son los titulares de las tres píldoras, que también viven aquí como
+        # páginas propias.
+        'pildoras': (
+            'Descubre la Situación económica Actual y por qué debes actuar YA',
+            'Qué es el Trading y por qué se ha convertido en la mejor manera para generar dinero este 2025',
+            'Los 3 perfiles de personas que tendrán éxito en el trading (Testimonios y cifras)',
+        ),
+        'perfil': (
+            'Inversor profesional y CEO de Conquer Finance. Después de más de 10 años '
+            'dedicándome a los mercados financieros tanto por mi cuenta, como en grandes fondos '
+            'de Capital Riesgo. Fundé Conquer Finance, donde enseño una metodología con una '
+            'ventaja competitiva, con la que podrás generar un ingreso extra mensual y con la '
+            'que he ayudado a más de <strong>2000 personas a vivir del trading sin poner su '
+            'capital en riesgo</strong> gracias al método <em>«Trading sin Riesgo»</em>.<br><br>'
+            '<em>Metodología que te presentaré en <strong>La Trading week</strong> y que ayuda a '
+            'personas a poder vivir mejor, ya sea consiguiendo un extra mensual o dejando su '
+            'empleo para dedicar el 100% de su tiempo a operar. Sin tener que buscarse un '
+            'segundo empleo y generando entre 2.000 y 5.000 euros mensuales.</em>'
+        ),
+        'cierre': ('Prepárate para descubrir cómo los traders profesionales generan dinero y '
+                   'cómo puedes generar entre <strong>2000 y 5000 euros</strong> gracias a la '
+                   'Inversión institucional.'),
+        'politica_url': 'https://www.conquerfinance.com/legal/politica-de-privacidad',
     },
 }
 
@@ -370,6 +582,22 @@ class GraciasView(TemplateView):
     caché como allí: aquí no hay nada que cambie de un visitante a otro."""
 
     def get(self, request, *args, **kwargs):
+        # `/grupos-comunidad` lo comparten dos marcas: en conquerfinance.com es
+        # la de la Trading Week y en el resto la de Languages. La ruta lo marca
+        # con `compartida`, y entonces el dominio solo decide entre esas dos: si
+        # no resuelve —entrando por calendar.conquerx.com, que es como se
+        # previsualiza— se queda la de Languages, que es lo que servía esta URL
+        # antes de que Finance tuviera la suya.
+        if kwargs.pop('compartida', False):
+            escuela = _escuela_por_host(request)
+            if escuela == 'conquer-finance':
+                self.escuela, self.gracias = escuela, GRACIAS_TRADING_WEEK
+            else:
+                self.escuela = 'conquer-languages'
+                self.gracias = GRACIAS['conquer-languages']
+            self.template_name = self.gracias['plantilla']
+            return super().get(request, *args, **kwargs)
+
         escuela = kwargs.get('escuela') or _escuela_por_host(request)
         self.escuela = escuela
         self.gracias = GRACIAS.get(escuela)
@@ -414,9 +642,24 @@ class PaginaDeCampanaView(TemplateView):
         # Las que no recogen datos —testimonios— no tienen lead que registrar,
         # así que tampoco pantalla de gracias a la que pasar.
         if self.pagina.get('funnel'):
+            # La Trading Week tiene pantalla de gracias propia; el resto usa la
+            # de su marca.
+            gr = self.pagina.get('gracias') or GRACIAS[self.escuela]
             ctx['funnel'] = self.pagina['funnel']
-            ctx['gracias'] = _base_path(self.request) + '/' + GRACIAS[self.escuela]['ruta']
-            ctx['gr'] = GRACIAS[self.escuela]
+            ctx['gracias'] = _base_path(self.request) + '/' + gr['ruta']
+            ctx['gr'] = gr
+        # Test A/B del titular. En el original lo sorteaba el navegador en cada
+        # carga y le pegaba su letra al código de funnel; se hace aquí, en el
+        # servidor, para que el titular que se pinta y el código que viaja al
+        # CRM sean el mismo por construcción y no dependan de que un script
+        # llegue a ejecutarse. La página va con `no-store`, así que no hay
+        # caché que fije una variante para todos.
+        variantes = self.pagina.get('variantes')
+        if variantes:
+            variante = random.choice(variantes)
+            ctx['variante'] = variante
+            if ctx.get('funnel'):
+                ctx['funnel'] = f"{ctx['funnel']}-{variante['codigo']}"
         ctx['gtm'] = _gtm(self.escuela)
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         return ctx
