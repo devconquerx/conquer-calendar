@@ -700,6 +700,23 @@ class LaSegundaVersionTest(TestCase):
         self.assertIn('/evento/pildoras-evento-1?v=2', html)
         self.assertIn('/evento/pildoras-evento-3?v=2', html)
 
+    def test_el_panel_enseña_el_par_de_versiones(self):
+        # El panel es donde se comparan: sin el par no hay forma de abrir la
+        # nueva salvo escribiendo `?v=2` a mano.
+        panel = self.client.get('/funnels/').content.decode()
+        for ruta in ('/evento/evento-coding-week-eu?v=2', '/evento/evento-testimonios?v=2',
+                     '/evento/pildoras-evento-1?v=2', '/trading-week-2025?v=2'):
+            self.assertIn(ruta, panel, ruta)
+        # Y la pantalla de gracias de la Trading Week, que también tiene dos.
+        self.assertIn('/grupos-comunidad?escuela=conquer-finance&amp;v=2', panel)
+
+    def test_pero_no_lo_enseña_donde_no_hay_segunda(self):
+        # La bitácora es de Languages y no tiene: ofrecer un `v2` que sirve la
+        # misma página engañaría a quien lo pulse.
+        panel = self.client.get('/funnels/').content.decode()
+        fila = panel[panel.index('/eventos/bitacora'):]
+        self.assertNotIn('v=2', fila[:fila.index('</tr>')])
+
     def test_un_valor_raro_no_cuenta_como_segunda(self):
         for valor in ('3', 'dos', '', 'true'):
             html = self.client.get(f'/evento/evento-testimonios?v={valor}',
