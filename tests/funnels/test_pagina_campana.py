@@ -9,7 +9,9 @@ from pathlib import Path
 
 from django.test import TestCase, override_settings
 
-from calendario.funnels.evento_views import EVENTOS, PAGINAS_DE_CAMPANA
+from calendario.funnels.evento_views import (
+    EVENTOS, GRACIAS_TRADING_WEEK, MARCAS_V2, PAGINAS_DE_CAMPANA,
+)
 from calendario.leads.models import Lead
 from calendario.leads.services.utils import es_lead_de_lanzamiento
 
@@ -497,10 +499,28 @@ class LaGraciasDeLaTradingWeekTest(TestCase):
         # Y no a la de las pantallas de lanzamiento de Finance.
         self.assertNotIn(r'gracias: "/evento/gracias\u002Dcomunidad"', html)
 
-    def test_con_el_grupo_de_esa_edicion(self):
+    def test_no_manda_al_enlace_muerto_de_esa_edicion(self):
+        # El grupo del volcado, `chat.wapp.ly/eEZ90a`, hoy redirige a winna.com,
+        # un casino online: el acortador se reutilizó desde 2025. Mandar ahí a
+        # quien acaba de registrarse en una escuela de finanzas es peor que no
+        # mandarlo a ningún sitio.
         for html in (self._tw(), self._gracias('www.conquerfinance.com')):
-            self.assertIn('chat.wapp.ly/eEZ90a', html)
+            self.assertNotIn('wapp.ly', html)
+            self.assertNotIn('winna.com', html)
+            # Tampoco se le encasqueta el grupo de otra marca.
             self.assertNotIn('cb.conquerx.com/1Qt1ef', html)
+
+    def test_sin_grupo_no_hay_boton_ni_salto_automatico(self):
+        html = self._gracias('www.conquerfinance.com')
+        self.assertNotIn('class="boton"', html)
+        # El temporizador se arranca igual, pero se corta solo al no haber
+        # destino; lo que no puede haber es un botón a ninguna parte.
+        self.assertIn('if (!destino) return;', html)
+
+    def test_pero_la_pantalla_se_sigue_sirviendo(self):
+        r = self.client.get('/grupos-comunidad', HTTP_HOST='www.conquerfinance.com')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('Trading Week 2025', r.content.decode())
 
     def test_la_url_responde_por_su_cuenta(self):
         r = self.client.get('/grupos-comunidad', HTTP_HOST='www.conquerfinance.com')
@@ -584,6 +604,109 @@ class ElPanelApuntaAlDominioDeCadaMarcaTest(TestCase):
         funnels = html[:html.index('Páginas de evento</h2>')]
         self.assertIn('https://www.conquerlanguages.com/preview/', funnels)
 
+
+class LaSegundaVersionTest(TestCase):
+    """Las páginas de evento con el diseño de la web actual, en `?v=2`.
+
+    Blocks y Finance rehicieron sus webs con el sistema "paperboard" —papel
+    crema, rasgado a negro, CTA de canto pixelado—; estas páginas se migraron
+    con la identidad anterior y desentonaban al lado del sitio. La primera
+    versión NO se borra: se sigue sirviendo por defecto y `?v=2` enseña la
+    nueva, para poder compararlas sin desplegar nada.
+
+    Languages queda fuera a propósito: su web sigue con el diseño anterior, así
+    que dársela la descolgaría de su propio sitio.
+    """
+
+    CON_SEGUNDA = (
+        ('www.conquerblocks.com', '/evento/evento-coding-week-eu'),
+        ('www.conquerblocks.com', '/evento/evento-testimonios'),
+        ('www.conquerfinance.com', '/evento/pildoras-evento-1'),
+        ('www.conquerfinance.com', '/evento/pildoras-evento-2'),
+        ('www.conquerfinance.com', '/evento/pildoras-evento-3'),
+        ('www.conquerfinance.com', '/trading-week-2025'),
+        ('www.conquerfinance.com', '/grupos-comunidad'),
+    )
+
+    def test_sin_el_parametro_se_sirve_la_de_siempre(self):
+        for host, ruta in self.CON_SEGUNDA:
+            html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+            self.assertNotIn('--papel:#fafafa', html, f'{host}{ruta}')
+
+    def test_con_v2_se_sirve_la_nueva(self):
+        for host, ruta in self.CON_SEGUNDA:
+            html = self.client.get(ruta + '?v=2', HTTP_HOST=host).content.decode()
+            self.assertIn('--papel:#fafafa', html, f'{host}{ruta}')
+
+    def test_la_nueva_no_arrastra_la_paleta_vieja(self):
+        # Negro con verde lima en Blocks, negro con azul en Finance: es lo que
+        # chocaba con la web nueva.
+        for host, ruta, viejo in (
+                ('www.conquerblocks.com', '/evento/evento-testimonios', '#c8f169'),
+                ('www.conquerfinance.com', '/evento/pildoras-evento-2', '#02bdf8'),
+                ('www.conquerfinance.com', '/trading-week-2025', '#2827d6')):
+            html = self.client.get(ruta + '?v=2', HTTP_HOST=host).content.decode()
+            self.assertNotIn(viejo, html, f'{host}{ruta}')
+
+    def test_las_que_no_tienen_segunda_ignoran_el_parametro(self):
+        # La bitácora es de Languages, y la pantalla de evento de Blocks ya va
+        # en paperboard: ninguna declara `plantilla_v2`.
+        for host, ruta in (('www.conquerlanguages.com', '/eventos/bitacora'),
+                           ('www.conquerblocks.com', '/evento/evento-online')):
+            con = self.client.get(ruta + '?v=2', HTTP_HOST=host)
+            sin = self.client.get(ruta, HTTP_HOST=host)
+            self.assertEqual(con.status_code, 200, f'{host}{ruta}')
+            self.assertEqual(con.content, sin.content, f'{host}{ruta}')
+
+    def test_languages_no_tiene_marca_nueva(self):
+        self.assertEqual(set(MARCAS_V2), {'conquer-blocks', 'conquer-finance'})
+
+    def test_la_nueva_conserva_el_formulario_y_su_codigo(self):
+        # Lo que cambia es el envoltorio; el lead tiene que salir igual.
+        html = self.client.get('/evento/evento-coding-week-eu?v=2',
+                               HTTP_HOST='www.conquerblocks.com').content.decode()
+        self.assertIn('id="formEvento"', html)
+        self.assertIn('id="phoneLocal"', html)
+        self.assertIn(r'funnel: "cb\u002Dcodingweek5\u002Deu"', html)
+        self.assertIn('id="gracias-evento"', html)
+
+    def test_y_en_la_trading_week_tambien_su_variante_y_su_gracias(self):
+        html = self.client.get('/trading-week-2025?v=2',
+                               HTTP_HOST='www.conquerfinance.com').content.decode()
+        self.assertIn('id="formEvento"', html)
+        self.assertRegex(html, r'funnel: "cf\\u002DTradingWeek4\\u002D[ab]"')
+        self.assertIn(r'gracias: "/grupos\u002Dcomunidad"', html)
+
+    def test_la_gracias_embebida_es_la_misma_que_la_de_su_url(self):
+        # Se veían distintas: la página embebía la maqueta de Blocks y su URL
+        # servía la de tres tarjetas. Cada versión tiene que casar consigo misma.
+        # Se compara por el titular, que no depende de que haya grupo puesto.
+        # En minúsculas porque cada versión escribe el «¡obligatorio!» distinto.
+        marca = 'queda un último paso para reservar tu entrada'
+        for sufijo in ('', '?v=2'):
+            registro = self.client.get('/trading-week-2025' + sufijo,
+                                       HTTP_HOST='www.conquerfinance.com').content.decode()
+            suelta = self.client.get('/grupos-comunidad' + sufijo,
+                                     HTTP_HOST='www.conquerfinance.com').content.decode()
+            self.assertIn(marca, registro.lower(), sufijo)
+            self.assertIn(marca, suelta.lower(), sufijo)
+        self.assertEqual(GRACIAS_TRADING_WEEK['plantilla_v2'],
+                         'pages/public/evento/gracias-v2.html')
+
+    def test_las_pildoras_se_enlazan_entre_ellas_sin_salirse_de_la_version(self):
+        # Si el enlace no llevara `?v=2`, pulsarlo devolvía a la versión vieja.
+        html = self.client.get('/evento/pildoras-evento-2?v=2',
+                               HTTP_HOST='www.conquerfinance.com').content.decode()
+        self.assertIn('/evento/pildoras-evento-1?v=2', html)
+        self.assertIn('/evento/pildoras-evento-3?v=2', html)
+
+    def test_un_valor_raro_no_cuenta_como_segunda(self):
+        for valor in ('3', 'dos', '', 'true'):
+            html = self.client.get(f'/evento/evento-testimonios?v={valor}',
+                                   HTTP_HOST='www.conquerblocks.com').content.decode()
+            self.assertNotIn('--papel:#fafafa', html, valor)
+
+
 class LaListaDePrefijosTest(TestCase):
     """El selector de prefijo del formulario se alimenta de un JSON.
 
@@ -617,3 +740,20 @@ class LaListaDePrefijosTest(TestCase):
         self.assertNotIn('AN', codigos)
         self.assertIn('CW', codigos)
 
+
+class NingunGrupoDeWhatsappRoto(TestCase):
+    """Los enlaces de grupo que se sirven tienen que ser de WhatsApp.
+
+    El de la Trading Week dejó de serlo —el acortador acabó apuntando a un
+    casino— y estuvo a punto de irse a producción. Esta comprobación es de
+    formato, no de red: fija que solo se sirven los acortadores propios, que son
+    los que sí controlamos.
+    """
+
+    def test_solo_se_sirven_acortadores_propios(self):
+        from calendario.funnels.evento_views import GRACIAS, GRACIAS_TRADING_WEEK
+        for nombre, ficha in list(GRACIAS.items()) + [('trading-week', GRACIAS_TRADING_WEEK)]:
+            url = ficha.get('whatsapp') or ''
+            if not url:
+                continue  # sin grupo configurado: la pantalla ya lo aguanta
+            self.assertRegex(url, r'^https://(cb|cl|cf|cg)\.conquerx\.com/', nombre)

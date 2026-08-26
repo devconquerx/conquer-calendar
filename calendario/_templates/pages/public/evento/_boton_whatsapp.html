@@ -5,7 +5,11 @@ original. Va aparte para que las tres sean literalmente el mismo botón.
 El texto y la flechita cambian por marca: Blocks y Finance llevan "Unirme a la
 Comunidad VIP de WhatsApp" con el icono en diagonal del sistema de botones, y
 Languages lo lleva en mayúsculas y termina en ">>", sin icono.
+Si la ficha no trae grupo —porque el enlace de esa edición ya no
+apunta a WhatsApp— no se pinta nada: mejor sin botón que con uno que
+lleve a otra parte.
 {% endcomment %}
+{% if gr.whatsapp %}
 <div class="cta-fila">
   <a class="boton" href="{{ gr.whatsapp }}" target="_blank" rel="noopener">
     <div class="boton-cuerpo">
@@ -20,3 +24,4 @@ Languages lo lleva en mayúsculas y termina en ">>", sin icono.
     </div>
   </a>
 </div>
+{% endif %}

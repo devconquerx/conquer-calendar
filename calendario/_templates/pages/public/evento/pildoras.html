@@ -80,7 +80,7 @@ img{max-width:100%;height:auto;display:block}
   display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:11px;
   margin:40px 0;padding:0 40px;
 }
-.tarjeta{
+.pildora-enlace{
   display:flex;flex-direction:column;justify-content:center;align-items:center;
   width:250px;padding:10px;border-radius:19px;background:var(--tarjeta);
   box-shadow:2px 2px 5px #0003;
@@ -88,15 +88,15 @@ img{max-width:100%;height:auto;display:block}
      se quedan visibles: más vale sin animación que sin tarjetas. */
   opacity:1;transition:opacity .5s ease;
 }
-.tarjeta.oculta{opacity:0}
-.tarjeta a{text-decoration:none}
-.tarjeta img{border-radius:10px;width:100%}
-.tarjeta h3{margin:10px 0 0;color:#313131}
-.tarjeta h3 strong{
+.pildora-enlace.oculta{opacity:0}
+.pildora-enlace a{text-decoration:none}
+.pildora-enlace img{border-radius:10px;width:100%}
+.pildora-enlace h3{margin:10px 0 0;color:#313131}
+.pildora-enlace h3 strong{
   display:block;text-align:center;font-family:var(--cuerpo);
   font-size:16px;font-style:italic;font-weight:900;line-height:20px;
 }
-.tarjeta .boton{
+.pildora-enlace .boton{
   display:block;width:100%;margin-top:10px;padding:9px 15px;
   background:var(--azul-oscuro);color:#fff;border-radius:20px;text-align:center;
   font-family:var(--titular);font-size:21px;font-weight:600;
@@ -104,18 +104,18 @@ img{max-width:100%;height:auto;display:block}
 
 @media (min-width:1920px){
   .titular strong{font-size:30px;font-weight:700}
-  .tarjeta h3 strong{font-weight:700}
+  .pildora-enlace h3 strong{font-weight:700}
 }
 @media (max-width:991px){
   .cabecera-barra{padding-top:0}
   .cabecera{flex-direction:column;gap:21px;padding:20px}
   .titular strong{padding-left:10px;padding-right:10px}
-  .tarjeta h3 strong{padding-left:10px;padding-right:10px}
+  .pildora-enlace h3 strong{padding-left:10px;padding-right:10px}
 }
 @media (max-width:767px){
   .cabecera{flex-direction:column;justify-content:center;gap:21px;padding:0 10px 20px}
   .titular strong{padding-left:0;padding-right:0;line-height:37px}
-  .tarjeta h3 strong{padding-left:0;padding-right:0}
+  .pildora-enlace h3 strong{padding-left:0;padding-right:0}
 }
 @media (max-width:479px){
   .main{gap:29px}
@@ -129,8 +129,8 @@ img{max-width:100%;height:auto;display:block}
   .titular strong{text-align:center;font-size:21px;line-height:28px}
   .cuerpo{margin-bottom:20px;padding-bottom:20px;font-size:13px;letter-spacing:0}
   .otras-fila{flex-direction:column;gap:15px;padding:0 20px}
-  .tarjeta{width:100%}
-  .tarjeta h3 strong{font-size:16px;line-height:22px}
+  .pildora-enlace{width:100%}
+  .pildora-enlace h3 strong{font-size:16px;line-height:22px}
 }
 </style>
 </head>
@@ -165,7 +165,7 @@ img{max-width:100%;height:auto;display:block}
   <section class="otras">
     <div class="otras-fila">
       {% for t in pagina.tarjetas %}
-      <div class="tarjeta">
+      <div class="pildora-enlace">
         <a href="{{ app_base_path }}/{{ t.ruta }}">
           <img src="{% static t.imagen %}" alt="" loading="lazy">
           <h3><strong>{{ t.texto }}</strong></h3>
@@ -183,7 +183,9 @@ img{max-width:100%;height:auto;display:block}
    Van visibles en el HTML y aquí se ocultan antes de pintar, para que quien
    no ejecute JS las vea igual. */
 (function () {
-  var tarjetas = document.querySelectorAll('.tarjeta');
+  // Se acota a la sección: `.tarjeta` a secas cogía también la del banner
+  // de cookies, que es fija y quedaba desvaneciéndose al cargar.
+  var tarjetas = document.querySelectorAll('.otras .pildora-enlace');
   if (!tarjetas.length || !('IntersectionObserver' in window)) return;
   // Se ocultan aquí, no en el HTML: si este script no llega a ejecutarse, las
   // tarjetas se ven igual en vez de quedarse invisibles para siempre.

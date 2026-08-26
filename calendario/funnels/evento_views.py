@@ -218,12 +218,19 @@ GRACIAS = {
 # que mandaba el original.
 GRACIAS_TRADING_WEEK = {
     'plantilla': 'pages/public/evento/gracias-languages.html',
+    'plantilla_v2': 'pages/public/evento/gracias-v2.html',
     'ruta': 'grupos-comunidad',
     'titulo_pagina': 'Grupos Comunidad',
     'fondo': 'img/eventos/pildoras/fondo-blur.avif',
     'fondo_color': '#000',
     'verde': '#00d663',
-    'whatsapp': 'https://chat.wapp.ly/eEZ90a',
+    # SIN GRUPO. El del volcado, `chat.wapp.ly/eEZ90a`, ya no lleva a WhatsApp:
+    # hoy redirige a winna.com, un casino online. El acortador se reutilizó o
+    # cambió de manos desde 2025. Mandar ahí a quien acaba de registrarse en una
+    # escuela de finanzas es peor que no mandarlo a ningún sitio, así que se
+    # queda vacío: la pantalla se sirve igual, sin botón y sin salto
+    # automático, hasta que alguien ponga el enlace bueno.
+    'whatsapp': '',
     'clase': 'Trading Week 2025',
     'cta': 'UNIRME A LA COMUNIDAD VIP DE WHATSAPP >>',
     'icono_cta': False,
@@ -231,6 +238,52 @@ GRACIAS_TRADING_WEEK = {
     'logo': 'img/eventos/pildoras/logo.svg',
     'logo_ancho': 200,
 }
+
+
+# Marca de las segundas versiones (?v=2), las que van con el sistema
+# "paperboard" de la web actual de cada escuela. Los degradados son los mismos
+# que usan sus CTA en las landings de funnel: Blocks dos paradas de ámbar a
+# naranja, Finance tres de lima a esmeralda.
+#
+# Languages no está: su web sigue con el diseño anterior, así que rehacerle las
+# páginas de evento la dejaría descolgada de su propio sitio.
+MARCAS_V2 = {
+    'conquer-blocks': {
+        'degradado': 'linear-gradient(90deg,#FFBF00,#FF4000)',
+        'acento': '#FF4000',
+        'logo': 'img/eventos/v2/logo-cb.png',
+        'px_lg': 'img/eventos/v2/px-lg-cb.svg',
+        'px_sm': 'img/eventos/v2/px-sm-cb.svg',
+    },
+    'conquer-finance': {
+        'degradado': 'linear-gradient(90deg,#AED916 0%,#74CD2D 50%,#3AC043 100%)',
+        'acento': '#74CD2D',
+        'logo': 'img/eventos/v2/logo-fi.png',
+        'px_lg': 'img/eventos/v2/px-lg-fi.svg',
+        'px_sm': 'img/eventos/v2/px-sm-fi.svg',
+    },
+}
+
+
+def version(request):
+    """Qué versión de la página se pide: 1 (la de siempre) o 2.
+
+    Se elige con `?v=2` y nada más: la vieja sigue siendo la que se sirve por
+    defecto, y ninguna se borra. Cuando se decida cuál queda, basta con darle la
+    vuelta al valor por defecto aquí.
+    """
+    return 2 if request.GET.get('v') == '2' else 1
+
+
+def plantilla_de(ficha, request):
+    """Plantilla de la ficha para la versión pedida.
+
+    Solo las páginas que declaran `plantilla_v2` tienen segunda versión; el
+    resto ignora el parámetro y sirve la suya.
+    """
+    if version(request) == 2 and ficha.get('plantilla_v2'):
+        return ficha['plantilla_v2']
+    return ficha['plantilla']
 
 
 def _gtm(escuela):
@@ -267,6 +320,7 @@ PAGINAS_DE_CAMPANA = {
         'orden': 4,
         'escuela': 'conquer-blocks',
         'plantilla': 'pages/public/evento/codingweek.html',
+        'plantilla_v2': 'pages/public/evento/codingweek-v2.html',
         'titulo_pagina': 'Evento Coding Week - Conquer Blocks EU',
         'funnel': 'cb-codingweek5-eu',
         'politica_url': 'https://www.conquerblocks.com/politica-de-privacidad',
@@ -275,6 +329,7 @@ PAGINAS_DE_CAMPANA = {
         'orden': 5,
         'escuela': 'conquer-blocks',
         'plantilla': 'pages/public/evento/testimonios.html',
+        'plantilla_v2': 'pages/public/evento/testimonios-v2.html',
         'titulo_pagina': 'Evento - testimonios',
         # Sin `funnel`: esta no recoge datos. Su único botón lleva a agendar,
         # así que no hay lead, ni pantalla de gracias, ni salto a WhatsApp.
@@ -319,6 +374,7 @@ PAGINAS_DE_CAMPANA = {
         'orden': 7,
         'escuela': 'conquer-finance',
         'plantilla': 'pages/public/evento/pildoras.html',
+        'plantilla_v2': 'pages/public/evento/pildoras-v2.html',
         'titulo_pagina': 'Pildoras-evento-1',
         'funnel': None,
         'biblioteca': '185796',
@@ -346,6 +402,7 @@ PAGINAS_DE_CAMPANA = {
         'orden': 8,
         'escuela': 'conquer-finance',
         'plantilla': 'pages/public/evento/pildoras.html',
+        'plantilla_v2': 'pages/public/evento/pildoras-v2.html',
         'titulo_pagina': 'Pildoras-evento-2',
         'funnel': None,
         'biblioteca': '185796',
@@ -372,6 +429,7 @@ PAGINAS_DE_CAMPANA = {
         'orden': 9,
         'escuela': 'conquer-finance',
         'plantilla': 'pages/public/evento/pildoras.html',
+        'plantilla_v2': 'pages/public/evento/pildoras-v2.html',
         'titulo_pagina': 'Pildoras-evento-3',
         'funnel': None,
         'biblioteca': '185796',
@@ -405,6 +463,7 @@ PAGINAS_DE_CAMPANA = {
         'orden': 10,
         'escuela': 'conquer-finance',
         'plantilla': 'pages/public/evento/tradingweek.html',
+        'plantilla_v2': 'pages/public/evento/tradingweek-v2.html',
         'titulo_pagina': 'Registro Trading Week 2025',
         # Va en la raíz del dominio, no bajo /evento/.
         'ruta': 'trading-week-2025',
@@ -596,7 +655,7 @@ class GraciasView(TemplateView):
             else:
                 self.escuela = 'conquer-languages'
                 self.gracias = GRACIAS['conquer-languages']
-            self.template_name = self.gracias['plantilla']
+            self.template_name = plantilla_de(self.gracias, request)
             return super().get(request, *args, **kwargs)
 
         escuela = kwargs.get('escuela') or _escuela_por_host(request)
@@ -604,7 +663,7 @@ class GraciasView(TemplateView):
         self.gracias = GRACIAS.get(escuela)
         if not self.gracias:
             raise Http404('No hay página de gracias para esta escuela')
-        self.template_name = self.gracias['plantilla']
+        self.template_name = plantilla_de(self.gracias, request)
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -612,6 +671,8 @@ class GraciasView(TemplateView):
         ctx['gr'] = self.gracias
         ctx['gtm'] = _gtm(self.escuela)
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
+        ctx['version'] = version(self.request)
+        ctx['marca_v2'] = MARCAS_V2.get(self.escuela)
         return ctx
 
 
@@ -629,7 +690,7 @@ class PaginaDeCampanaView(TemplateView):
         if not self.pagina:
             raise Http404('No hay página de campaña con ese nombre')
         self.escuela = self.pagina['escuela']
-        self.template_name = self.pagina['plantilla']
+        self.template_name = plantilla_de(self.pagina, request)
         respuesta = super().get(request, *args, **kwargs)
         respuesta['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         respuesta['Pragma'] = 'no-cache'
@@ -663,4 +724,6 @@ class PaginaDeCampanaView(TemplateView):
                 ctx['funnel'] = f"{ctx['funnel']}-{variante['codigo']}"
         ctx['gtm'] = _gtm(self.escuela)
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
+        ctx['version'] = version(self.request)
+        ctx['marca_v2'] = MARCAS_V2.get(self.escuela)
         return ctx

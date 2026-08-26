@@ -1,0 +1,156 @@
+{% load static %}
+{% comment %}
+  Sistema visual "paperboard": el diseño con el que se rehicieron las webs de
+  Conquer Blocks y Conquer Finance, y el que ya usan nuestras landings de
+  funnel. Lo comparten las segundas versiones (?v=2) de las páginas de evento,
+  que en su primera versión arrastran la identidad vieja —negro con verde lima
+  en Blocks, negro con azul en Finance— y desentonan al lado de la web actual.
+
+  Los valores no salen de mirar una captura: son los computados de la landing
+  viva de Blocks (papel #fafafa con el velo blanco al 55%, tarjeta #f6f6f6 con
+  borde #bbb49b y radio 16, tinta #0a0a0a, CTA en degradado con el mismo
+  clip-path pixelado del funnel).
+
+  Quien lo incluya define antes `marca_v2` con:
+    degradado       → degradado de marca, entero. Va en el CTA y, recortado al
+                      texto, en los destacados del titular. Finance lo tiene de
+                      tres paradas, así que no vale con dos colores sueltos.
+    acento          → color plano de apoyo (subrayados, iconos)
+    logo            → logo negro sobre papel
+    px_lg, px_sm    → racimos de píxeles decorativos de la marca
+{% endcomment %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --papel:#fafafa;
+  --tarjeta:#f6f6f6;
+  --linea:#bbb49b;
+  --tinta:#0a0a0a;
+  --tinta-suave:#404040;
+  --degradado:{{ marca_v2.degradado }};
+  --acento:{{ marca_v2.acento }};
+  --fuente:'Funnel Display',Arial,sans-serif;
+  --cuerpo:Poppins,Arial,sans-serif;
+  /* El mismo canto pixelado del CTA del funnel (CB_PIXEL_CLIP). */
+  --pixel-clip:polygon(97.74% 73.83%,97.74% 82.56%,100% 82.56%,100% 100%,95.47% 100%,95.47% 91.28%,81.5% 91.28%,81.5% 100%,19.87% 100%,19.87% 91.28%,9.06% 91.28%,9.06% 100%,2.26% 100%,2.26% 80.24%,0% 80.24%,0% 26.16%,2.26% 26.16%,2.26% 17.44%,0% 17.44%,0% 0%,4.53% 0%,4.53% 8.72%,12.82% 8.72%,12.82% 0%,72.03% 0%,72.03% 8.72%,88.67% 8.72%,88.67% 0%,97.74% 0%,97.74% 8.72%,100% 8.72%,100% 73.83%);
+  /* Sombra en siete paradas de la landing: la que hace que la tarjeta parezca
+     un recorte de cartón apoyado, no un rectángulo con `box-shadow`. */
+  --sombra:0 1px .4px rgba(0,0,0,.03),0 2px .8px rgba(0,0,0,.04),0 3.4px 1.6px rgba(0,0,0,.043),
+           0 5.4px 2.9px rgba(0,0,0,.047),0 8.9px 5.3px rgba(0,0,0,.047),0 15.4px 10.4px rgba(0,0,0,.05),
+           0 30.6px 22.8px rgba(0,0,0,.055);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;color:var(--tinta);
+  background-color:var(--papel);
+  background-image:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.55)),
+                   url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
+  background-size:cover;background-position:center;background-attachment:fixed;
+  font-family:var(--cuerpo);font-size:16px;line-height:1.4;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;height:auto;display:block}
+a{text-decoration:none;color:inherit}
+
+.pb-envoltorio{position:relative;overflow-x:hidden}
+.pb-ancho{width:100%;max-width:1064px;margin:0 auto;padding:0 20px}
+
+/* Cabecera: solo el logo, centrado, como en la web nueva. */
+.pb-cabecera{display:flex;justify-content:center;align-items:center;padding:18px 20px}
+.pb-cabecera img{width:auto;height:34px}
+
+/* Píldora de aviso: borde fino, redonda del todo, con el triangulito de play. */
+.pb-pildora{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:5px 16px;border:1px solid var(--linea);border-radius:999px;
+  background:rgba(255,255,255,.5);
+  font-size:14px;font-weight:300;color:var(--tinta);
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+/* Solo el triangulito de play se rellena. Los iconos de trazo (el calendario)
+   traen su propio `fill="none"`, y forzarles el relleno los convierte en un
+   cuadrado negro. */
+.pb-pildora svg{width:11px;height:11px;flex:0 0 auto}
+.pb-pildora svg[data-relleno]{fill:currentColor}
+
+/* Titulares. El destacado va con el degradado de marca recortado al texto,
+   que es como resalta la web nueva; nunca con un color plano. */
+.pb-titular{
+  max-width:900px;margin:0 auto;text-align:center;color:var(--tinta);
+  font-family:var(--fuente);font-weight:400;font-size:clamp(22px,3vw,38px);line-height:1.12;
+  text-wrap:balance;
+}
+.pb-titular strong{
+  font-weight:700;background-image:var(--degradado);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.pb-bajada{
+  max-width:760px;margin:0 auto;text-align:center;color:var(--tinta);
+  font-size:clamp(14px,1.4vw,17px);font-weight:300;line-height:1.35;
+}
+.pb-seccion-titulo{
+  margin:0;text-align:center;color:var(--tinta);
+  font-family:var(--fuente);font-weight:600;font-size:clamp(20px,2.4vw,30px);line-height:1.15;
+}
+.pb-seccion-titulo strong{
+  font-weight:700;background-image:var(--degradado);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+
+/* Tarjeta de cartón. */
+.pb-tarjeta{
+  position:relative;
+  background-color:var(--tarjeta);
+  background-image:linear-gradient(rgba(255,255,255,.6),rgba(255,255,255,.6)),
+                   url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
+  background-size:cover;background-position:center;
+  border:1px solid var(--linea);border-radius:16px;box-shadow:var(--sombra);
+  overflow:hidden;
+}
+.pb-tarjeta.pb-relleno{padding:22px}
+
+/* CTA pixelado con el degradado de la marca. */
+.pb-cta{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 28px;border:0;cursor:pointer;
+  background-image:var(--degradado);
+  clip-path:var(--pixel-clip);
+  color:#fafafa;font-family:var(--fuente);font-size:16px;font-weight:600;
+  text-transform:none;transition:filter .15s ease;
+}
+.pb-cta:hover{filter:brightness(1.06)}
+.pb-cta[disabled]{opacity:.6;cursor:default}
+.pb-cta svg{width:11px;height:11px;flex:0 0 auto}
+.pb-cta-ancho{width:100%}
+
+/* Racimos de píxeles: decoración, nunca contenido. */
+.pb-px{position:absolute;width:150px;opacity:.2;pointer-events:none;user-select:none;z-index:0}
+@media (max-width:991px){.pb-px{display:none}}
+
+/* Rasgado de papel a la sección negra, como en la web nueva. */
+.pb-oscuro{position:relative;background:#0a0a0a;color:#fafafa;margin-top:80px}
+.pb-oscuro::before{
+  content:"";position:absolute;left:0;right:0;top:-1px;height:60px;
+  transform:translateY(-100%);
+  background:url("{% static 'img/eventos/v2/torn.png' %}") repeat-x center bottom/auto 100%;
+}
+.pb-oscuro .pb-seccion-titulo,.pb-oscuro .pb-titular,.pb-oscuro .pb-bajada{color:#fafafa}
+
+/* Foto con máscara pixelada: a la derecha en escritorio, abajo en móvil. */
+.pb-foto{
+  --mask:var(--mask-right);
+  background:#000 center/cover no-repeat;
+  -webkit-mask:var(--mask) center/100% 100% no-repeat;mask:var(--mask) center/100% 100% no-repeat;
+}
+.pb-foto{--mask-right:url("{% static 'img/eventos/v2/mask-right.svg' %}");
+         --mask-bottom:url("{% static 'img/eventos/v2/mask-bottom.svg' %}")}
+@media (max-width:767px){.pb-foto{--mask:var(--mask-bottom)}}
+
+.pb-pie{
+  padding:28px 20px 34px;text-align:center;
+  color:var(--tinta-suave);font-size:12px;font-weight:300;line-height:1.35;
+}
+.pb-oscuro .pb-pie{color:#a3a3a3}
+</style>

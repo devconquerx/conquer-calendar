@@ -1,0 +1,243 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ pagina.titulo_pagina }}</title>
+  {% include '_includes/_consentimiento.html' %}
+  {% include '_includes/_sgtm_head.html' %}
+  {% include '_includes/_paperboard.html' %}
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   Registro de la Trading Week (Finance), segunda versión sobre el sistema
+   paperboard. Mismo contenido y mismo funcionamiento que la primera: el test
+   A/B del titular sigue decidiéndose en el servidor y el formulario sigue
+   creando el lead con su `cf-TradingWeek4-a`/`-b` y pasando a la pantalla de
+   gracias sin recargar.
+   ─────────────────────────────────────────────────────────────────────────── */
+.cabeza{display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px 20px 0;text-align:center}
+.chapa{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.chapa svg{width:13px;height:13px;flex:0 0 auto}
+.subtitular{margin:4px auto 0;max-width:780px;text-align:center;color:var(--tinta-suave);font-size:clamp(14px,1.5vw,18px);font-weight:300;line-height:1.35}
+/* Las dos variantes del titular marcan su tramo destacado con <em>. Aquí no se
+   pone en cursiva —eso es de la primera versión, que lo teñía de azul claro—
+   sino con el degradado recortado al texto, como resalta la web nueva. */
+.pb-titular em,.subtitular em{
+  font-style:normal;font-weight:700;
+  background-image:var(--degradado);-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.subtitular strong,.pb-titular strong{font-weight:700}
+
+.hero{margin-top:26px}
+.hero-cols{display:flex;align-items:stretch;gap:22px}
+.hero-foto{flex:1 1 52%;min-width:0}
+.hero-foto img{width:100%;height:100%;object-fit:cover;border-radius:16px}
+.hero-form{flex:1 1 48%;min-width:0;display:flex;flex-direction:column;justify-content:center;padding:24px}
+.campo{margin-bottom:12px}
+.campo input[type=text],.campo input[type=email]{
+  width:100%;padding:11px 13px;border:1px solid var(--linea);border-radius:8px;background:#fff;
+  color:var(--tinta-suave);font-family:var(--cuerpo);font-size:15px;line-height:1.3;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.06);
+}
+.campo input::placeholder{color:rgba(64,64,64,.6);font-size:14px;font-weight:300}
+.campo input:focus-visible{outline:2px solid var(--acento);outline-offset:1px;border-color:var(--acento)}
+.legal{display:flex;align-items:flex-start;gap:8px;margin:2px 0 14px;color:var(--tinta-suave);font-size:12px;font-weight:300;line-height:1.4}
+.legal input{margin-top:1px;accent-color:var(--acento);width:16px;height:16px;flex:0 0 auto}
+.legal a{text-decoration:underline}
+.aviso{margin:10px 0 0;min-height:1.2em;font-size:13px;text-align:center;color:var(--tinta-suave)}
+.aviso.error{color:#b91c1c}
+.aviso.ok{color:#15803d}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.bloque{margin-top:56px}
+.bajada-seccion{margin:14px auto 0;max-width:760px;text-align:center;color:var(--tinta-suave);font-size:15px;font-weight:300;line-height:1.5}
+.bajada-seccion strong{font-weight:600;color:var(--tinta)}
+
+.columnas{display:flex;gap:20px;margin-top:32px}
+.columnas .pb-tarjeta{flex:1 1 33%;padding:0;display:flex;flex-direction:column}
+.columnas img{width:100%}
+.columnas .cuerpo{padding:20px}
+.columnas h3{margin:0 0 10px;color:var(--tinta);font-family:var(--fuente);font-size:19px;font-weight:600;line-height:1.2}
+.columnas p{margin:0;color:var(--tinta-suave);font-size:14px;font-weight:300;line-height:1.5}
+.columnas p strong{font-weight:600;color:var(--tinta)}
+
+.fila-cta{display:flex;justify-content:center;margin-top:28px}
+
+/* Mini taller: las tres píldoras, en la franja oscura. */
+.taller{padding:64px 0 70px}
+.pildoras{display:flex;justify-content:center;gap:16px;margin-top:28px}
+.pildora{
+  flex:1 1 0;min-width:0;padding:26px 20px;min-height:190px;
+  display:flex;align-items:center;justify-content:center;
+  background:#141414;border:1px solid #262626;border-radius:14px;
+}
+.pildora p{
+  margin:0;color:#fafafa;text-align:center;text-transform:uppercase;
+  font-family:var(--fuente);font-size:16px;font-weight:600;line-height:1.3;
+}
+
+.perfil{margin-top:56px}
+.perfil-cols{display:flex;align-items:center;gap:0}
+.perfil-foto{flex:0 0 38%;min-width:0}
+.perfil-foto .pb-foto{width:100%;aspect-ratio:1/1}
+.perfil-texto{flex:1 1 auto;padding:30px}
+.perfil-texto h2{margin:0 0 14px;color:var(--tinta);font-family:var(--fuente);font-size:clamp(24px,3vw,34px);font-weight:400}
+.perfil-texto h2 strong{font-weight:700}
+.perfil-texto div{color:var(--tinta-suave);font-size:14px;font-weight:300;line-height:1.55}
+.perfil-texto strong{font-weight:600;color:var(--tinta)}
+
+.cierre{padding:70px 0 80px}
+.cierre .caja{max-width:660px;margin:0 auto;text-align:center}
+.cierre .antetitulo{margin:0;color:#a3a3a3;font-family:var(--fuente);font-size:15px;font-weight:300;text-transform:uppercase;letter-spacing:1px}
+.cierre h2{margin:10px 0 0;color:#fafafa;font-family:var(--fuente);font-size:clamp(30px,4.4vw,52px);font-weight:700;line-height:1.1;text-transform:uppercase}
+.cierre .texto{margin:16px auto 0;max-width:540px;color:#d4d4d4;font-size:15px;line-height:1.55}
+.cierre .texto strong{color:#fafafa;font-weight:600}
+
+@media (max-width:900px){
+  .hero-cols,.columnas,.pildoras,.perfil-cols{flex-direction:column}
+  .perfil-foto{flex:1 1 auto;width:100%}
+  .perfil-foto .pb-foto{aspect-ratio:4/3}
+  .pildora{min-height:0}
+}
+</style>
+</head>
+<body>
+
+<div class="pb-envoltorio" id="evento-contenido">
+  <header class="pb-cabecera">
+    <img src="{% static marca_v2.logo %}" alt="Conquer Finance" height="34">
+  </header>
+
+  <img class="pb-px" src="{% static marca_v2.px_lg %}" alt="" aria-hidden="true" style="top:70px;left:1.5%">
+  <img class="pb-px" src="{% static marca_v2.px_sm %}" alt="" aria-hidden="true" style="top:520px;right:2%;width:110px">
+
+  <section class="pb-ancho cabeza">
+    <div class="chapa">
+      <span class="pb-pildora">
+        <svg viewBox="0 0 24 24" data-relleno aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        {{ pagina.aviso }}
+      </span>
+      <span class="pb-pildora">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
+          <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        {{ pagina.fecha }}
+      </span>
+    </div>
+    <h1 class="pb-titular">{{ variante.titular|safe }}</h1>
+    <p class="subtitular">{{ variante.subtitular|safe }}</p>
+  </section>
+
+  <section class="pb-ancho hero" id="hero">
+    <div class="hero-cols">
+      <div class="hero-foto">
+        <img src="{% static 'img/eventos/tradingweek/hero.avif' %}" alt="Félix Fuertes" width="940" height="529">
+      </div>
+      <div class="pb-tarjeta hero-form">
+        <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
+          <div class="campo">
+            <label class="sr-only" for="fullname">Nombre</label>
+            <input type="text" id="fullname" name="fullname" placeholder="Introduce tu nombre" autocomplete="name" required>
+          </div>
+          <div class="campo">
+            <label class="sr-only" for="email">Correo</label>
+            <input type="email" id="email" name="email" placeholder="Tu mejor email" autocomplete="email" required>
+          </div>
+          <label class="legal" for="privacidad">
+            <input type="checkbox" id="privacidad" name="privacidad" required>
+            <span>He leído y acepto la
+              <a href="{{ pagina.politica_url }}" target="_blank" rel="noopener">política de privacidad</a>*</span>
+          </label>
+          <button type="submit" class="pb-cta pb-cta-ancho">{{ pagina.cta }}</button>
+          <p class="aviso" id="aviso" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="pb-ancho bloque">
+    <p class="pb-seccion-titulo">¡Multiplica tus ingresos este 2025 con <strong>trading sin arriesgar tu capital</strong>!</p>
+    <p class="bajada-seccion">{{ pagina.curso_bajada|safe }}</p>
+    <div class="columnas">
+      {% for c in pagina.columnas %}
+      <div class="pb-tarjeta">
+        <img src="{% static c.imagen %}" alt="" loading="lazy">
+        <div class="cuerpo">
+          <h3>{{ c.titulo }}</h3>
+          <p>{{ c.texto|safe }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="fila-cta">
+      <a href="#hero" class="pb-cta">
+        {{ pagina.cta_secundario }}
+        <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
+        </svg>
+      </a>
+    </div>
+  </section>
+
+  <section class="pb-oscuro taller">
+    <div class="pb-ancho">
+      <p class="pb-seccion-titulo">Conseguirás <strong>el mini taller previo</strong> a la Trading Week</p>
+      <p class="bajada-seccion" style="color:#d4d4d4">{{ pagina.taller_bajada }}</p>
+      <div class="pildoras">
+        {% for p in pagina.pildoras %}
+        <div class="pildora"><p>{{ p }}</p></div>
+        {% endfor %}
+      </div>
+      <div class="fila-cta">
+        <a href="#hero" class="pb-cta">
+          {{ pagina.cta_secundario }}
+          <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="pb-ancho perfil">
+    <div class="pb-tarjeta perfil-cols">
+      <div class="perfil-foto">
+        <div class="pb-foto" style="background-image:url('{% static 'img/eventos/tradingweek/felix.avif' %}')" role="img" aria-label="Félix Fuertes"></div>
+      </div>
+      <div class="perfil-texto">
+        <h2>Soy <strong>Félix Fuertes</strong></h2>
+        <div>{{ pagina.perfil|safe }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pb-oscuro cierre">
+    <div class="pb-ancho">
+      <div class="caja">
+        <p class="antetitulo">- No la dejes pasar -</p>
+        <h2>La Trading Week</h2>
+        <p class="texto">{{ pagina.cierre|safe }}</p>
+        <div class="fila-cta">
+          <a href="#hero" class="pb-cta">
+            {{ pagina.cta_secundario }}
+            <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+window.__EVENTO__ = { funnel: "{{ funnel|escapejs }}", gracias: "{{ gracias|escapejs }}",
+                      titulo_gracias: "{{ gr.titulo_pagina|escapejs }}" };
+</script>
+{% include 'pages/public/evento/_gracias_v2.html' with oculto=True %}
+{% include 'pages/public/evento/_salto_whatsapp.html' %}
+<script src="{% static 'js/evento-registro.js' %}"></script>
+
+</body>
+</html>

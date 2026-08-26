@@ -1,0 +1,132 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ pagina.titulo_pagina }}</title>
+  {% include '_includes/_consentimiento.html' %}
+  {% include '_includes/_sgtm_head.html' %}
+  {% include '_includes/_paperboard.html' %}
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   Píldoras de la Trading Week (Finance), segunda versión sobre el sistema
+   paperboard. Mismo contenido que la primera —mismo vídeo, mismo texto, mismos
+   enlaces entre ellas—; lo que cambia es que la primera va en negro con azul,
+   la identidad de Finance de entonces, y hoy desentona al lado de
+   conquerfinance.com.
+   ─────────────────────────────────────────────────────────────────────────── */
+.cabeza{display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px 20px 0;text-align:center}
+.numero{
+  margin:0;color:var(--acento);font-family:var(--cuerpo);
+  font-size:clamp(18px,2vw,24px);font-weight:300;letter-spacing:2px;
+}
+
+.video{margin-top:26px}
+.video .pb-tarjeta{padding:0}
+.video .marco{position:relative;width:100%;padding-top:56.2766%;background:#000}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+.cuerpo{margin:30px auto 0;max-width:780px;text-align:center;color:var(--tinta-suave);font-size:15px;font-weight:300;line-height:1.6}
+.cuerpo strong{font-weight:600;color:var(--tinta)}
+
+/* Las otras píldoras, sobre la franja oscura para que corten la página igual
+   que el degradado de la primera versión. */
+.otras{padding:60px 0 70px}
+.otras-fila{display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-top:26px}
+.pildora-enlace{
+  display:flex;flex-direction:column;width:270px;padding:12px;
+  background:#141414;border:1px solid #262626;border-radius:16px;
+  opacity:1;transition:opacity .5s ease;
+}
+.pildora-enlace.oculta{opacity:0}
+.pildora-enlace img{width:100%;border-radius:10px}
+.pildora-enlace h3{
+  margin:12px 0 0;flex:1 1 auto;color:#fafafa;text-align:center;
+  font-family:var(--cuerpo);font-size:15px;font-weight:600;line-height:1.3;
+}
+.pildora-enlace .pb-cta{margin-top:14px;width:100%;font-size:14px;padding:10px 18px}
+
+@media (max-width:560px){
+  .otras-fila{flex-direction:column;align-items:center}
+  .pildora-enlace{width:100%;max-width:340px}
+}
+</style>
+</head>
+<body>
+
+<div class="pb-envoltorio">
+  <header class="pb-cabecera">
+    <img src="{% static marca_v2.logo %}" alt="Conquer Finance" height="34">
+  </header>
+
+  <img class="pb-px" src="{% static marca_v2.px_lg %}" alt="" aria-hidden="true" style="top:70px;left:2%">
+  <img class="pb-px" src="{% static marca_v2.px_sm %}" alt="" aria-hidden="true" style="top:430px;right:3%;width:110px">
+
+  <section class="pb-ancho cabeza">
+    <span class="pb-pildora">
+      <svg viewBox="0 0 24 24" data-relleno aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+      Trading Week
+    </span>
+    <p class="numero">{{ pagina.numero }}</p>
+    <h1 class="pb-titular">{{ pagina.titular }}</h1>
+  </section>
+
+  <section class="pb-ancho video">
+    <div class="pb-tarjeta">
+      <div class="marco">
+        <iframe src="https://iframe.mediadelivery.net/embed/{{ pagina.biblioteca }}/{{ pagina.video_principal }}?autoplay=false&preload=false"
+                title="{{ pagina.numero }}" loading="lazy" allowfullscreen
+                allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
+      </div>
+    </div>
+    <p class="cuerpo">{{ pagina.cuerpo|safe }}</p>
+  </section>
+
+  {# La primera no enseña ninguna: en el original su contenedor iba oculto. #}
+  {% if pagina.tarjetas %}
+  <section class="pb-oscuro otras">
+    <div class="pb-ancho">
+      <p class="pb-seccion-titulo">Sigue con las <strong>demás píldoras</strong></p>
+      <div class="otras-fila">
+        {% for t in pagina.tarjetas %}
+        <div class="pildora-enlace">
+          <a href="{{ app_base_path }}/{{ t.ruta }}{% if version == 2 %}?v=2{% endif %}">
+            <img src="{% static t.imagen %}" alt="" loading="lazy">
+            <h3>{{ t.texto }}</h3>
+          </a>
+          <a class="pb-cta" href="{{ app_base_path }}/{{ t.ruta }}{% if version == 2 %}?v=2{% endif %}">
+            Ya disponible
+            <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
+            </svg>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+<script>
+/* Las tarjetas aparecen al llegar a ellas, como en la primera versión. Se
+   ocultan desde aquí para que, si el script no llega a ejecutarse, se vean. */
+(function () {
+  // Se acota a la sección: `.tarjeta` a secas cogía también la del banner
+  // de cookies, que es fija y quedaba desvaneciéndose al cargar.
+  var tarjetas = document.querySelectorAll('.otras .pildora-enlace');
+  if (!tarjetas.length || !('IntersectionObserver' in window)) return;
+  [].forEach.call(tarjetas, function (t) { t.classList.add('oculta'); });
+  var mirador = new IntersectionObserver(function (entradas) {
+    entradas.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.classList.remove('oculta');
+      mirador.unobserve(e.target);
+    });
+  }, { threshold: 0.2 });
+  [].forEach.call(tarjetas, function (t) { mirador.observe(t); });
+})();
+</script>
+
+</body>
+</html>

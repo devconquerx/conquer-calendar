@@ -422,7 +422,10 @@ a{text-decoration:none}
 window.__EVENTO__ = { funnel: "{{ funnel|escapejs }}", gracias: "{{ gracias|escapejs }}",
                       titulo_gracias: "{{ gr.titulo_pagina|escapejs }}" };
 </script>
-{% include 'pages/public/evento/_gracias_paperboard.html' with oculto=True %}
+{# La suya es la maqueta de tres tarjetas, la misma que sirve
+   `/grupos-comunidad`; con la de Blocks y Finance no cuadraban ni el texto
+   del botón ni los degradados, que esta ficha no declara. #}
+{% include 'pages/public/evento/_gracias_languages.html' with oculto=True %}
 {% include 'pages/public/evento/_salto_whatsapp.html' %}
 <script src="{% static 'js/evento-registro.js' %}"></script>
 

@@ -1,0 +1,93 @@
+{% load static %}
+{% comment %}
+  Contenido de la pantalla de gracias en su versión paperboard. Mismas tres
+  tarjetas y mismo botón que la primera —mismo grupo de WhatsApp, mismo salto a
+  los 15 segundos—, sobre el papel crema de la web actual.
+
+  Igual que las otras: el CSS va acotado a `#gracias-evento` porque el bloque se
+  embebe en la página de registro, y los datos salen de `gr.*` para no chocar
+  con las claves de esa página.
+{% endcomment %}
+<style>
+#gracias-evento{
+  min-height:100vh;
+  background-color:var(--papel);
+  background-image:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.55)),
+                   url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
+  background-size:cover;background-position:center;background-attachment:fixed;
+  font-family:var(--cuerpo);color:var(--tinta);
+}
+#gracias-evento[hidden]{display:none}
+#gracias-evento .cabecera{display:flex;justify-content:center;align-items:center;padding:22px 20px}
+#gracias-evento .cabecera img{width:auto;height:34px}
+#gracias-evento .pila{display:flex;flex-direction:column;gap:20px;width:100%;max-width:820px;margin:0 auto;padding:0 20px 60px}
+#gracias-evento .tarjeta{
+  display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px 26px;text-align:center;
+  background-color:var(--tarjeta);
+  background-image:linear-gradient(rgba(255,255,255,.6),rgba(255,255,255,.6)),
+                   url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
+  background-size:cover;background-position:center;
+  border:1px solid var(--linea);border-radius:16px;box-shadow:var(--sombra);
+}
+/* El titular del primer paso va en el degradado de la marca, no en el rojo de
+   la primera versión: aquí el aviso lo da el peso, no el color de alarma. */
+#gracias-evento .titular{
+  margin:0;font-family:var(--fuente);font-size:clamp(19px,2.2vw,26px);font-weight:700;
+  line-height:1.2;text-transform:uppercase;
+  background-image:var(--degradado);-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+#gracias-evento .destacar{margin:0;font-family:var(--fuente);font-size:clamp(17px,2vw,22px);font-weight:600;line-height:1.25;color:var(--tinta)}
+#gracias-evento .texto{margin:0;max-width:560px;color:var(--tinta-suave);font-size:15px;font-weight:300;line-height:1.55}
+#gracias-evento .texto strong{font-weight:600;color:var(--tinta)}
+#gracias-evento .subrayado{font-weight:600;text-decoration:underline;color:var(--tinta)}
+#gracias-evento .cta-fila{display:flex;justify-content:center;width:100%}
+/* El CTA es verde de WhatsApp, no el degradado de la marca: es el color por el
+   que se reconoce el botón, y en esta pantalla es lo único que hay que pulsar. */
+#gracias-evento .boton{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  max-width:100%;padding:14px 30px;background:#00d663;color:#0a0a0a;
+  clip-path:var(--pixel-clip);
+  font-family:var(--fuente);font-size:16px;font-weight:700;line-height:1.2;
+  transition:filter .15s ease;
+}
+#gracias-evento .boton:hover{filter:brightness(1.05)}
+#gracias-evento .boton svg{width:18px;height:18px;flex:0 0 auto;fill:currentColor}
+@media (max-width:560px){
+  #gracias-evento .tarjeta{padding:24px 18px}
+  #gracias-evento .boton{padding:13px 20px;font-size:15px}
+}
+</style>
+
+<div id="gracias-evento" data-whatsapp="{{ gr.whatsapp }}"{% if oculto %} hidden{% endif %}>
+  <div class="cabecera">
+    <img src="{% static marca_v2.logo %}" alt="{{ gr.marca }}" height="34">
+  </div>
+
+  <div class="pila">
+    <div class="tarjeta">
+      <p class="titular">¡Obligatorio! Queda un último paso para reservar tu entrada…</p>
+      <p class="texto">
+        Hemos creado una comunidad VIP en WhatsApp para todos los asistentes a la
+        <strong>{{ gr.clase }}</strong> de {{ gr.marca }}.<br><br>
+        <span class="subrayado">Es de vital importancia que te unas para confirmar tu asistencia.</span>
+      </p>
+      {% include 'pages/public/evento/_boton_whatsapp_v2.html' %}
+    </div>
+
+    <div class="tarjeta">
+      <p class="destacar">⬇️ Dale al botón verde de abajo para unirte totalmente gratis al grupo exclusivo del evento de {{ gr.marca }} ⬇️</p>
+      {% include 'pages/public/evento/_boton_whatsapp_v2.html' %}
+    </div>
+
+    <div class="tarjeta">
+      <p class="destacar">¿Miras más tu WhatsApp que tu e-mail?</p>
+      <p class="texto">
+        Tranquilo, a mucha gente de nuestra comunidad le ocurre.<br>
+        Por eso, hemos creado una comunidad de WhatsApp, donde recibirás todas las
+        comunicaciones de la Clase, mucho valor adicional de {{ gr.marca }}, y
+        algún que otro regalo.
+      </p>
+      {% include 'pages/public/evento/_boton_whatsapp_v2.html' %}
+    </div>
+  </div>
+</div>

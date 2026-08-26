@@ -1,0 +1,14 @@
+{% comment %}
+El botón de agendar en su versión paperboard: mismo destino y mismos UTM que el
+de la primera versión, con el canto pixelado y el degradado de la marca. El
+icono de teléfono se cambia por la flecha en diagonal, que es la que usa la web
+nueva en todos sus CTA.
+{% endcomment %}
+<div class="cta-fila">
+  <a class="pb-cta" href="{{ pagina.cta_url }}">
+    {{ pagina.cta_texto }}
+    <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
+    </svg>
+  </a>
+</div>
