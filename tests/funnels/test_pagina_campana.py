@@ -583,3 +583,37 @@ class ElPanelApuntaAlDominioDeCadaMarcaTest(TestCase):
         html = self.client.get('/funnels/').content.decode()
         funnels = html[:html.index('Páginas de evento</h2>')]
         self.assertIn('https://www.conquerlanguages.com/preview/', funnels)
+
+class LaListaDePrefijosTest(TestCase):
+    """El selector de prefijo del formulario se alimenta de un JSON.
+
+    Traía tres errores que llegaban al visitante: dos banderas que no existen
+    —y salían rotas en la lista— y dos prefijos con el `+` duplicado, que es lo
+    que se guarda en `lead_phone_prefix` y viaja al CRM.
+    """
+
+    def _paises(self):
+        import json
+        ruta = (Path(__file__).resolve().parents[2] / 'calendario' / 'static' / 'js'
+                / 'paises-evento.json')
+        return json.loads(ruta.read_text(encoding='utf-8'))
+
+    def test_ningun_prefijo_lleva_el_mas_repetido(self):
+        malos = [p for p in self._paises() if p['prefijo'].count('+') != 1
+                 or not p['prefijo'].startswith('+')]
+        self.assertEqual(malos, [])
+
+    def test_todos_los_codigos_son_iso_de_dos_letras(self):
+        # La bandera se pide a flagcdn con este código: si no es de dos letras
+        # —`SXM` en vez de `SX`— la imagen sale rota.
+        malos = [p for p in self._paises()
+                 if len(p['iso2']) != 2 or not p['iso2'].isalpha() or not p['iso2'].isupper()]
+        self.assertEqual(malos, [])
+
+    def test_no_quedan_paises_que_ya_no_existen(self):
+        # Las Antillas Neerlandesas se disolvieron en 2010 y su +599 lo tiene
+        # Curazao, que sigue en la lista.
+        codigos = {p['iso2'] for p in self._paises()}
+        self.assertNotIn('AN', codigos)
+        self.assertIn('CW', codigos)
+
