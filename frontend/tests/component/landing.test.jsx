@@ -69,8 +69,30 @@ describe('landing — A/B de fondo blanco', () => {
     })
   }
 
-  it('un funnel sin experimento de fondo (Blocks EU) conserva el papel', () => {
-    const { container } = montar({ slug: 'blocks-eu', escuela: 'conquer-blocks', region: 'eu' })
+  it('un experimento que no habla de fondo (Finance EU) no blanquea la landing', () => {
+    // Finance EU corre el A/B de teléfono/WhatsApp (55/56), no el de fondo: el
+    // hecho de tener experimento no debe pintar de blanco. Antes este caso
+    // usaba Blocks EU, que desde el 27/08/2026 sí corre el de fondo (69/70).
+    const { container } = montar({
+      slug: 'finance-eu', escuela: 'conquer-finance', region: 'eu',
+      storageKey: 'form_variant_cf', variante: '56',
+    })
+    expect(fondoDe(container).clases).not.toContain('bg-white')
+  })
+
+  it('Blocks EU entra en el test de fondo con sus códigos nuevos', () => {
+    const { container } = montar({
+      slug: 'blocks-eu', escuela: 'conquer-blocks', region: 'eu',
+      storageKey: 'form_variant_cb_eu_fondo', variante: '70',
+    })
+    expect(fondoDe(container).clases).toContain('bg-white')
+  })
+
+  it('Blocks EU en control conserva el papel', () => {
+    const { container } = montar({
+      slug: 'blocks-eu', escuela: 'conquer-blocks', region: 'eu',
+      storageKey: 'form_variant_cb_eu_fondo', variante: '69',
+    })
     expect(fondoDe(container).clases).toContain('bg-cb-bg')
   })
 

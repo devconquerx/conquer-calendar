@@ -39,8 +39,8 @@ describe('registro de experimentos', () => {
     )
     expect(mapa).toEqual({
       'blocks-latam': 'form_variant_cb_latam',
-      'blocks-eu': 'form_variant_cb_eu',
-      'blocks-eu-2': 'form_variant_cb_eu_2',
+      'blocks-eu': 'form_variant_cb_eu_fondo',
+      'blocks-eu-2': 'form_variant_cb_eu_2_fondo',
       'blocks-us': 'form_variant_cb_us',
       'finance-latam': 'form_variant_cf_latam',
       'finance-eu': 'form_variant_cf',

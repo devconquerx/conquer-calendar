@@ -22,9 +22,12 @@ TESTS_AB = [
     ('cl-latam', LEAD, 'Fondo de la landing', ('papel', '63'), ('blanco', '64')),
     ('cl-eu', LEAD, 'Fondo de la landing', ('papel', '65'), ('blanco', '66')),
     ('cl-us', LEAD, 'Fondo de la landing', ('papel', '67'), ('blanco', '68')),
-    ('cb-eu', LEAD, 'Captura de teléfono', ('sin checkbox', '51'), ('checkbox de WhatsApp', '52')),
-    ('cb-eu-2', LEAD, 'Captura de teléfono', ('sin checkbox', '53'), ('checkbox de WhatsApp', '54')),
+    ('cb-eu', LEAD, 'Fondo de la landing', ('papel', '69'), ('blanco', '70')),
+    ('cb-eu-2', LEAD, 'Fondo de la landing', ('papel', '71'), ('blanco', '72')),
     ('fi-eu', LEAD, 'Captura de teléfono', ('checkbox de WhatsApp', '55'), ('campo obligatorio', '56')),
+    # El A/B del checkbox de WhatsApp de Blocks EU (51/52 y 53/54) se apagó el
+    # 27/08/2026: ganó la rama CON checkbox, que queda fija por config
+    # (`landing.whatsappOptin`) en los dos funnels. Sus códigos NO se reciclan.
 
     # ── Página de vídeo: la variante viaja en la Prellamada
     #    (Prellamada.utm_form_variant → PreSchedule.utm_form_variant del CRM)

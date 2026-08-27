@@ -19,8 +19,13 @@ function temaDePagina(escuela) {
 
 function montar(opts = {}) {
   const escuela = opts.escuela || 'conquer-blocks'
+  // `landing` permite simular las banderas que en producción vienen de la
+  // config del funnel en BD (hoy: `whatsappOptin` en las dos landings de EU).
+  const config = opts.landing
+    ? { ...CONFIG, landing: { ...CONFIG.landing, ...opts.landing } }
+    : CONFIG
   return renderConFunnel(
-    <LandingForm program="fullstack" region={opts.region || 'latam'} formConfig={CONFIG}
+    <LandingForm program="fullstack" region={opts.region || 'latam'} formConfig={config}
                  school={{ slug: escuela }} funnelSlug={opts.slug || 'blocks-latam'}
                  themeOverride={temaDePagina(escuela)} />,
     { escuela, ...opts }
@@ -109,15 +114,25 @@ describe('A/B de teléfono/WhatsApp (EU)', () => {
      menciona WhatsApp en las DOS variantes y haría ambigua la búsqueda. */
   const hayCheckbox = (container) => !!container.querySelector('input[type="checkbox"]')
 
-  it('Blocks EU 51 (control): sin checkbox', () => {
-    const { container } = montar({ slug: 'blocks-eu', region: 'eu', storageKey: 'form_variant_cb_eu', variante: '51' })
-    expect(hayCheckbox(container)).toBe(false)
-  })
+  /* Blocks EU ya NO prueba el checkbox: ganó la rama que lo lleva y quedó fija
+     por config (`landing.whatsappOptin`, migración 0027), así que sale en las
+     DOS ramas del test de fondo que corre ahora en su lugar. */
+  for (const [rama, variante] of [['control', '69'], ['fondo blanco', '70']])
+    it(`Blocks EU (${rama}): el checkbox sale igual, ya no depende de la variante`, () => {
+      const { container } = montar({
+        slug: 'blocks-eu', region: 'eu',
+        storageKey: 'form_variant_cb_eu_fondo', variante,
+        landing: { whatsappOptin: true },
+      })
+      expect(hayCheckbox(container)).toBe(true)
+      expect(screen.getByText(/repetición por WhatsApp/i)).toBeInTheDocument()
+    })
 
-  it('Blocks EU 52 (test): con checkbox de WhatsApp', () => {
-    const { container } = montar({ slug: 'blocks-eu', region: 'eu', storageKey: 'form_variant_cb_eu', variante: '52' })
-    expect(hayCheckbox(container)).toBe(true)
-    expect(screen.getByText(/repetición por WhatsApp/i)).toBeInTheDocument()
+  it('Blocks EU sin la bandera de config se queda sin checkbox', () => {
+    // Fija que el checkbox depende SOLO de la config: si la migración no llega
+    // a una fila, la landing pierde el check y hay que enterarse.
+    const { container } = montar({ slug: 'blocks-eu', region: 'eu', storageKey: 'form_variant_cb_eu_fondo', variante: '70' })
+    expect(hayCheckbox(container)).toBe(false)
   })
 
   it('Finance EU 55: checkbox; 56: teléfono siempre visible y obligatorio', async () => {

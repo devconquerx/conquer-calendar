@@ -92,21 +92,36 @@ const FORM_VARIANT_EXPERIMENTS = [
     variants: ['61', '62'],
     whiteBackgroundVariant: '62',
   },
-  // Blocks EU, segunda landing (cb-eu-2, slug `blocks-eu-2`): mismo mecanismo
-  // que la principal pero con experimento independiente, para no mezclar splits.
+  // Blocks EU, segunda landing (cb-eu-2, slug `blocks-eu-2`): 71 (control) / 72
+  // (fondo blanco). Experimento independiente del de la landing principal para
+  // no mezclar splits.
   {
     match: ({ funnelSlug }) => funnelSlug === 'blocks-eu-2',
-    storageKey: 'form_variant_cb_eu_2',
-    variants: ['53', '54'],
-    whatsappOptinVariant: '54',
+    storageKey: 'form_variant_cb_eu_2_fondo',
+    themeId: 'conquerblocks',
+    variants: ['71', '72'],
+    whiteBackgroundVariant: '72',
   },
-  // Blocks EU, landing principal (cb-eu, slug `blocks-eu`): 51 (control: sin
-  // checkbox, solo honeypot, igual que LATAM/US) / 52 (test: checkbox WhatsApp).
+  // Blocks EU, landing principal (cb-eu, slug `blocks-eu`): 69 (control) / 70
+  // (fondo blanco).
+  //
+  // Antes corría aquí el A/B del checkbox de WhatsApp (51/52 en esta landing y
+  // 53/54 en la segunda). Se apagó el 27/08/2026 dejando GANADORA la rama CON
+  // checkbox, que pasa a ser fija para todo el mundo vía `landing.whatsappOptin`
+  // en la config de los dos funnels — no por experimento, así que el campo
+  // `utm_form_variant` queda libre para este test de fondo.
+  //
+  // Los códigos son nuevos (69-72) en vez de reutilizar los viejos: 51-54 ya
+  // significan «con/sin checkbox» en los leads históricos y en la pantalla de
+  // distribución A/B del CRM, y reciclarlos mezclaría los dos experimentos en
+  // la misma serie. Por el mismo motivo cambia la `storageKey`: quien tenga
+  // guardado un 51-54 no arrastra rama al test nuevo.
   {
     match: ({ funnelSlug }) => funnelSlug === 'blocks-eu',
-    storageKey: 'form_variant_cb_eu',
-    variants: ['51', '52'],
-    whatsappOptinVariant: '52',
+    storageKey: 'form_variant_cb_eu_fondo',
+    themeId: 'conquerblocks',
+    variants: ['69', '70'],
+    whiteBackgroundVariant: '70',
   },
   // Blocks LATAM (cb-latam, slug `blocks-latam`): 57 (control: la landing tal
   // cual, con su fondo de papel) / 58 (test: la MISMA landing con el fondo en
