@@ -7,7 +7,7 @@ from datetime import datetime, timezone as dt_timezone
 import requests
 
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone as django_timezone
@@ -222,6 +222,35 @@ class ResolverView(View):
         })
 
 
+def _enlazar_prellamada(prellamada, reserva):
+    """Ata la Prellamada a su Reserva, sin reventar si ya tiene otra dueña.
+
+    `Prellamada.reserva` es OneToOne y `crear_reserva` es idempotente: reenviar
+    el mismo hueco devuelve la reserva que ya existía. Si ese reenvío llega
+    desde OTRA Prellamada —recargar el formulario crea una fila nueva, con otro
+    token— la reserva ya tiene dueña, y reasignarla petaba con IntegrityError:
+    el visitante veía un error DESPUÉS de haber reservado bien (FUNNELS-96, 112
+    veces en dos días). El vínculo se queda con la primera Prellamada, que es la
+    que de verdad generó la reserva; para el visitante el reenvío es un éxito.
+    """
+    if prellamada.reserva_id == reserva.pk:
+        return
+    try:
+        # Savepoint propio: un IntegrityError aquí no puede dejar inservible la
+        # transacción de la reserva, que ya está creada y es lo que importa.
+        with transaction.atomic():
+            prellamada.reserva = reserva
+            prellamada.save(update_fields=['reserva'])
+    except IntegrityError:
+        # Carrera: otra Prellamada se la quedó. Se recupera el valor real de
+        # la fila para no quedarnos en memoria con un vínculo que no existe.
+        prellamada.refresh_from_db(fields=['reserva'])
+        logger.info(
+            "reservar: la reserva %s ya estaba enlazada a otra prellamada; "
+            "se deja el vínculo original (prellamada %s)", reserva.pk, prellamada.pk,
+        )
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class ReservarView(View):
     """POST /f/api/<slug>/reservar/ → crea Reserva, vincula Prellamada, envía correos."""
@@ -325,8 +354,7 @@ class ReservarView(View):
                         timezone_invitado=tz,
                         tracking=tracking_reserva,
                     )
-                prellamada.reserva = reserva
-                prellamada.save(update_fields=['reserva'])
+                _enlazar_prellamada(prellamada, reserva)
                 # Igual que en la página pública: si `crear_reserva` devolvió una
                 # reserva que ya existía (mismo hueco reenviado), los correos ya
                 # salieron y repetirlos hace dudar de si se reservó una o dos veces.
