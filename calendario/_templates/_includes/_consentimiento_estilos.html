@@ -1,0 +1,137 @@
+{% load static %}{% comment %}
+  Estilos del banner de consentimiento, SIN las etiquetas <style>.
+
+  Van aparte porque los consumen dos sitios: las páginas de Django, que los
+  meten en un <style> del <head>, y el bundle de /f/conquerx-cookies.js, que
+  los inyecta como texto desde JavaScript en las páginas de Webflow. Una sola
+  fuente para los dos, o el banner acaba con dos aspectos distintos según
+  quién sirva la página.
+{% endcomment %}
+:root{
+  --cqx-acento:{{ consentimiento.marca.acento }};
+  --pixel-clip:polygon(97.74% 73.83%,97.74% 82.56%,100% 82.56%,100% 100%,95.47% 100%,95.47% 91.28%,81.5% 91.28%,81.5% 100%,19.87% 100%,19.87% 91.28%,9.06% 91.28%,9.06% 100%,2.26% 100%,2.26% 80.24%,0% 80.24%,0% 26.16%,2.26% 26.16%,2.26% 17.44%,0% 17.44%,0% 0%,4.53% 0%,4.53% 8.72%,12.82% 8.72%,12.82% 0%,72.03% 0%,72.03% 8.72%,88.67% 8.72%,88.67% 0%,97.74% 0%,97.74% 8.72%,100% 8.72%,100% 73.83%);
+}
+#cqx-consent{
+  --acento:{{ consentimiento.marca.acento }};
+  --acento-texto:{{ consentimiento.marca.acento_texto }};
+  --radio:{{ consentimiento.marca.radio }};
+  --tinta:#1d1d1d;
+  --tinta-suave:#5a5a5a;
+  --borde:#e2e2e2;
+  --pixel-clip:polygon(97.74% 73.83%,97.74% 82.56%,100% 82.56%,100% 100%,95.47% 100%,95.47% 91.28%,81.5% 91.28%,81.5% 100%,19.87% 100%,19.87% 91.28%,9.06% 91.28%,9.06% 100%,2.26% 100%,2.26% 80.24%,0% 80.24%,0% 26.16%,2.26% 26.16%,2.26% 17.44%,0% 17.44%,0% 0%,4.53% 0%,4.53% 8.72%,12.82% 8.72%,12.82% 0%,72.03% 0%,72.03% 8.72%,88.67% 8.72%,88.67% 0%,97.74% 0%,97.74% 8.72%,100% 8.72%,100% 73.83%);
+  /* Barra pegada al borde inferior, de lado a lado. Ocupando todo el ancho
+     cabe en una fila —texto a la izquierda, botones a la derecha— y estorba
+     mucho menos que una tarjeta flotante. */
+  position:fixed;z-index:2147483000;inset:auto 0 0 0;
+  /* `safe` porque el valor es CSS, no texto: las familias con espacio van
+     entrecomilladas ('Funnel Display') y el autoescape convierte la comilla en
+     `&#x27;`, que rompe la declaración entera y deja el banner con la fuente
+     por defecto del navegador. El valor no viene del visitante: sale de
+     `MARCAS`, en el código. */
+  font-family:{{ consentimiento.marca.fuente|safe }};
+}
+#cqx-consent[hidden]{display:none}
+#cqx-consent .tarjeta{
+  width:100%;background:#fff;color:var(--tinta);
+  /* Solo el borde de arriba: los otros tres caen fuera de la pantalla. */
+  border:0;border-top:1px solid var(--borde);border-radius:0;
+  box-shadow:0 -6px 24px rgba(0,0,0,.16);padding:14px 20px;
+  max-height:min(70vh,560px);overflow-y:auto;
+}
+/* La fila principal: el texto manda y los botones se quedan a la derecha sin
+   estirarse. Debajo de 760px se apilan. */
+#cqx-consent .fila-barra{
+  display:flex;align-items:center;gap:28px;flex-wrap:wrap;
+  max-width:1440px;margin:0 auto;
+}
+#cqx-consent .copia{flex:1 1 460px;min-width:0}
+{% if consentimiento.marca.papel %}
+/* Tarjeta de cartón, la misma textura y el mismo velo que el resto de tarjetas
+   de la marca (`.event-div`, `.pasos__container`). */
+#cqx-consent .tarjeta{
+  background-image:linear-gradient(to bottom,#fff9,#fff9),url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
+  background-position:0 0,50% 0;background-size:auto,216px;
+  border-color:rgba(0,0,0,.08);
+}
+{% endif %}
+#cqx-consent h2{margin:0 0 2px;font-size:14px;font-weight:700;line-height:1.3}
+#cqx-consent p{margin:0;font-size:12.5px;line-height:1.45;color:var(--tinta-suave)}
+#cqx-consent a{color:var(--tinta);text-underline-offset:2px}
+#cqx-consent .botones{display:flex;flex-wrap:wrap;gap:8px;flex:0 0 auto}
+#cqx-consent .panel .botones{margin-top:14px}
+#cqx-consent button{
+  flex:0 0 auto;min-width:158px;padding:11px 26px;border-radius:calc(var(--radio) - 2px);
+  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--borde);
+  background:#fff;color:var(--tinta);transition:filter .15s ease;
+}
+#cqx-consent button:hover{filter:brightness(.97)}
+#cqx-consent button.principal{background:var(--acento);color:var(--acento-texto);border-color:var(--acento)}
+#cqx-consent button.principal:hover{filter:brightness(1.06)}
+{% if consentimiento.marca.pixel %}
+/* CTA con borde pixelado y el degradado de marca, el mismo del «Ver vídeo
+   gratis». Casi todas lo arman con dos paradas a 135deg; la que no encaje ahí
+   —Legal, con tres en horizontal— lo declara entero en `gradiente`.
+   El recorte se come las esquinas, así que el borde y el redondeo sobran: se
+   quitan o asoman por debajo. Los secundarios van cuadrados para no mezclar
+   esquinas pixeladas con esquinas redondas en la misma fila. */
+#cqx-consent button{border-radius:0}
+#cqx-consent button.principal{
+  background-image:{% if consentimiento.marca.gradiente %}{{ consentimiento.marca.gradiente }}{% else %}linear-gradient(135deg,{{ consentimiento.marca.grad_1 }},{{ consentimiento.marca.grad_2 }}){% endif %};
+  border:0;border-radius:0;clip-path:var(--pixel-clip);padding:12px 18px;
+}
+/* Sin borde no hay dónde pintar el foco, y `outline` se recorta con el resto:
+   se marca por dentro. */
+#cqx-consent button.principal:focus-visible{outline:none;box-shadow:inset 0 0 0 2px #fff}
+{% endif %}
+#cqx-consent button:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+#cqx-consent .panel{
+  max-width:1440px;margin:14px auto 0;border-top:1px solid var(--borde);padding-top:12px;
+}
+#cqx-consent .panel[hidden]{display:none}
+#cqx-consent .fila{display:flex;align-items:flex-start;gap:10px;padding:8px 0}
+#cqx-consent .fila + .fila{border-top:1px solid var(--borde)}
+#cqx-consent .fila input{margin-top:3px;accent-color:var(--acento);flex:0 0 auto;width:16px;height:16px}
+#cqx-consent .fila .txt{flex:1 1 auto}
+#cqx-consent .fila strong{display:block;font-size:13px;font-weight:600}
+#cqx-consent .fila span{display:block;font-size:12px;line-height:1.45;color:var(--tinta-suave)}
+#cqx-consent .fila .fija{font-size:12px;color:var(--tinta-suave);white-space:nowrap;margin-top:3px}
+
+/* Icono flotante que queda tras decidir, como el de Cookiebot: es la forma de
+   volver a abrirlo y de retirar el permiso, que es un derecho, no un extra.
+   Abajo a la izquierda, porque abajo a la derecha suelen vivir los chats. */
+#cqx-consent-icono{
+  position:fixed;z-index:2147482999;left:16px;bottom:16px;
+  width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;
+  background:#fff;color:var(--cqx-acento);border:1px solid rgba(0,0,0,.12);border-radius:50%;
+  box-shadow:0 4px 16px rgba(0,0,0,.18);cursor:pointer;
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+#cqx-consent-icono[hidden]{display:none}
+#cqx-consent-icono:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.22)}
+#cqx-consent-icono:focus-visible{outline:2px solid var(--cqx-acento);outline-offset:2px}
+#cqx-consent-icono svg{width:22px;height:22px;display:block}
+@media (prefers-reduced-motion:reduce){#cqx-consent-icono{transition:none}}
+{% if consentimiento.marca.pixel %}
+/* En las marcas de esquina pixelada, un círculo desentona: cuadrado y con el
+   mismo recorte que el CTA. */
+#cqx-consent-icono{border-radius:0;border:0;clip-path:var(--pixel-clip);background:#fff}
+{% endif %}
+
+@media (max-width:760px){
+  /* Apilado: la copia arriba y los botones abajo, repartidos a lo ancho. */
+  #cqx-consent .fila-barra{align-items:stretch}
+  #cqx-consent .botones{width:100%}
+  #cqx-consent button{flex:1 1 0;min-width:0}
+}
+@media (max-width:480px){
+  /* Los tres siguen en una fila: apilados, la barra se comía un tercio de la
+     pantalla, que es justo lo que se quería evitar. */
+  #cqx-consent .tarjeta{padding:12px 14px}
+  #cqx-consent .botones{gap:6px}
+  #cqx-consent button{padding:9px 6px;font-size:12px}
+  #cqx-consent h2{font-size:13px}
+  #cqx-consent p{font-size:11.5px}
+}
+@media (prefers-reduced-motion:reduce){
+  #cqx-consent button{transition:none}
+}
