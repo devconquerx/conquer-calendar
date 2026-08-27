@@ -34,13 +34,20 @@ const CLICK_ID_KEYS = [
   'gclsrc',
 ]
 
+// Nombres alternativos con los que puede llegar una clave en la URL. El CRM
+// llama `setter_pre_email` al pre_email del setter en los links que genera;
+// aqui dentro (y hasta Reserva.setter) la clave es `setter`.
+const QUERY_KEY_ALIASES = {
+  setter: ['setter_pre_email'],
+}
+
 /** Read UTM params from current URL */
 export function getUtmParams() {
   if (typeof window === 'undefined') return {}
   const params = new URLSearchParams(window.location.search)
   const result = {}
   for (const key of TRACKING_QUERY_KEYS) {
-    const val = params.get(key)
+    const val = params.get(key) || (QUERY_KEY_ALIASES[key] || []).map((a) => params.get(a)).find(Boolean)
     if (val) result[key] = val
   }
   return result

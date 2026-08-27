@@ -493,7 +493,11 @@ class TeamBookingPageView(View):
             'nombre_invitado': (request.GET.get('name') or '').strip(),
             'email_invitado': (request.GET.get('email') or '').strip(),
             'telefono_invitado': (request.GET.get('phone') or '').strip(),
-            'setter': (request.GET.get('setter') or '').strip(),
+            # El CRM nombra este parámetro `setter_pre_email` en los links que
+            # genera (p.ej. lead_register_without_preschedule); el funnel lo
+            # llama `setter`. Aceptamos los dos: acaba igual en Reserva.setter
+            # y de ahí sale como `setter_pre_email` en el ingest del CRM.
+            'setter': (request.GET.get('setter') or request.GET.get('setter_pre_email') or '').strip(),
         }
         auto_avanzar = not request.GET.get('mes') and not fecha
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
