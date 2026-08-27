@@ -10,7 +10,7 @@ from calendario.bookings.services import calcular_slots
 from calendario.google_calendar.models import (
     GoogleCalendarEvento, GoogleCalendarSyncEstado,
 )
-from tests.factories import crear_disponibilidad, crear_event_type, crear_host
+from tests.factories import crear_disponibilidad, crear_event_type, crear_host, horario_default
 
 TZ = 'America/Bogota'
 PATCH_BUSY = 'calendario.bookings.services.obtener_busy_intervalos'
@@ -25,7 +25,7 @@ class CalcularSlotsTest(TestCase):
         # onboarding, para que un host recién creado no aparezca con la agenda
         # en blanco. Aquí estorba: estos tests miden el cálculo sobre la
         # disponibilidad que define cada uno, así que se parte de cero.
-        BloqueHorarioSemanal.objects.filter(host=self.host).delete()
+        BloqueHorarioSemanal.objects.filter(horario__host=self.host).delete()
 
     def test_sin_disponibilidad_no_hay_slots(self):
         et = crear_event_type(self.host)
@@ -116,7 +116,7 @@ class GridAlignmentTest(TestCase):
         self.host = crear_host(email='host.grid@test.com')
         self.host.timezone = TZ
         self.host.save(update_fields=['timezone'])
-        BloqueHorarioSemanal.objects.filter(host=self.host).delete()
+        BloqueHorarioSemanal.objects.filter(horario__host=self.host).delete()
         # Lunes próximo como ancla (siempre ordenado)
         hoy = date.today()
         dias = (7 - hoy.weekday()) % 7 or 7
@@ -177,7 +177,7 @@ class BufferDelSlotCandidatoTest(TestCase):
 
     def setUp(self):
         self.host = crear_host()
-        BloqueHorarioSemanal.objects.filter(host=self.host).delete()
+        BloqueHorarioSemanal.objects.filter(horario__host=self.host).delete()
 
     def _slots_con_evento_externo(self, buffer_despues):
         et = crear_event_type(self.host, duracion=30)
@@ -215,7 +215,7 @@ class CopiaLocalTransparenteTest(TestCase):
 
     def setUp(self):
         self.host = crear_host()
-        BloqueHorarioSemanal.objects.filter(host=self.host).delete()
+        BloqueHorarioSemanal.objects.filter(horario__host=self.host).delete()
         crear_disponibilidad(self.host, dia=0, inicio=time(9, 0), fin=time(11, 0))
         self.et = crear_event_type(self.host, duracion=30)
         self.lunes = CalcularSlotsTest._proximo_dia(0)

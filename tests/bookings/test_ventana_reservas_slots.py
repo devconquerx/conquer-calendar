@@ -22,7 +22,7 @@ from django.test import TestCase
 from calendario.availability.models import BloqueHorarioSemanal
 from calendario.bookings.services import calcular_slots
 from calendario.event_types.models import EventType
-from tests.factories import crear_disponibilidad, crear_event_type, crear_host
+from tests.factories import crear_disponibilidad, crear_event_type, crear_host, horario_default
 
 PATCH_BUSY = 'calendario.bookings.services.obtener_busy_intervalos'
 TZ = ZoneInfo('Europe/Madrid')
@@ -40,7 +40,7 @@ class VentanaDeSlotsTest(TestCase):
         self.host = crear_host(email='ventana.slots@test.com')
         # El host nace con los días abiertos de 00:00 a 23:59; aquí se comprueban
         # horas concretas, así que se deja un único horario L-V de 09:00 a 18:00.
-        BloqueHorarioSemanal.objects.filter(host=self.host).delete()
+        BloqueHorarioSemanal.objects.filter(horario__host=self.host).delete()
         for dia in range(5):
             crear_disponibilidad(self.host, dia=dia)
         self.et = crear_event_type(self.host, nombre='Ventana test', duracion=30)

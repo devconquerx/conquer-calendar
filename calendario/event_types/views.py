@@ -16,7 +16,7 @@ from django.contrib.auth.decorators import login_required
 
 from calendario.permisos.mixins import RequierePermisoMixin
 from .forms import EventTypeForm, _hosts_queryset, _generar_slug_equipo
-from .models import EventType, EventTypeXHost, EnlaceUnico, DisponibilidadEtxh, DisponibilidadFechaEtxh
+from .models import EventType, EventTypeXHost, EnlaceUnico
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -284,6 +284,17 @@ class EventTypeUpdateView(RequierePermisoMixin, UpdateView):
             .values_list('host_id', 'prioridad')
         )
         ctx['puede_prioridad'] = _puede_configurar_prioridad(self.request.user, self.object)
+        # Informativo: qué horario con nombre usa cada organizador en este
+        # evento. Se asignan desde la pantalla de Disponibilidad, no aquí.
+        ctx['horarios_en_uso'] = [
+            {'host': f.host.nombre_display(), 'horario': f.horario.nombre}
+            for f in (
+                EventTypeXHost.objects
+                .filter(event_type=self.object, horario__isnull=False)
+                .select_related('host', 'horario')
+                .order_by('host__username')
+            )
+        ]
         return ctx
 
     def form_valid(self, form):
@@ -388,75 +399,6 @@ def generar_enlace_unico(request, pk):
     enlace = EnlaceUnico.objects.create(event_type=event_type, creado_por=request.user)
     url = request.build_absolute_uri(f'/u/{enlace.token}/')
     return JsonResponse({'url': url})
-
-
-import json as _json
-
-@login_required
-def disponibilidad_etxh_view(request, pk, host_pk):
-    if not request.user.es_admin:
-        return JsonResponse({'error': 'No autorizado'}, status=403)
-    et = get_object_or_404(EventType, pk=pk)
-    if request.method == 'GET':
-        etxh = EventTypeXHost.objects.filter(event_type=et, host_id=host_pk).first()
-        franjas, fechas = [], []
-        if etxh:
-            franjas = [
-                {
-                    'dia_semana': d.dia_semana,
-                    'hora_inicio': d.hora_inicio.strftime('%H:%M'),
-                    'hora_fin': d.hora_fin.strftime('%H:%M'),
-                }
-                for d in etxh.disponibilidad.all()
-            ]
-            fechas = [
-                {
-                    'fecha': f.fecha.isoformat(),
-                    'hora_inicio': f.hora_inicio.strftime('%H:%M') if f.hora_inicio else None,
-                    'hora_fin': f.hora_fin.strftime('%H:%M') if f.hora_fin else None,
-                }
-                for f in etxh.disponibilidad_fechas.all()
-            ]
-        return JsonResponse({'franjas': franjas, 'fechas': fechas})
-
-    if request.method == 'POST':
-        etxh = get_object_or_404(EventTypeXHost, event_type=et, host_id=host_pk)
-        try:
-            data = _json.loads(request.body)
-            franjas_raw = data.get('franjas', [])
-            fechas_raw = data.get('fechas', [])
-        except (_json.JSONDecodeError, AttributeError):
-            return JsonResponse({'error': 'JSON inválido'}, status=400)
-
-        nuevas_franjas = []
-        for f in franjas_raw:
-            try:
-                dia = int(f['dia_semana'])
-                assert 0 <= dia <= 6
-            except (KeyError, ValueError, AssertionError):
-                return JsonResponse({'error': 'Día inválido'}, status=400)
-            nuevas_franjas.append(DisponibilidadEtxh(
-                etxh=etxh, dia_semana=dia,
-                hora_inicio=f['hora_inicio'], hora_fin=f['hora_fin'],
-            ))
-
-        nuevas_fechas = []
-        for f in fechas_raw:
-            nuevas_fechas.append(DisponibilidadFechaEtxh(
-                etxh=etxh,
-                fecha=f['fecha'],
-                hora_inicio=f.get('hora_inicio') or None,
-                hora_fin=f.get('hora_fin') or None,
-            ))
-
-        with transaction.atomic():
-            etxh.disponibilidad.all().delete()
-            etxh.disponibilidad_fechas.all().delete()
-            DisponibilidadEtxh.objects.bulk_create(nuevas_franjas)
-            DisponibilidadFechaEtxh.objects.bulk_create(nuevas_fechas)
-        return JsonResponse({'ok': True})
-
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
 class EventTypeToggleActivoView(RequierePermisoMixin, View):

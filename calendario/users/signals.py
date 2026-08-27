@@ -21,10 +21,18 @@ DISPONIBILIDAD_DEFAULT = [
 def crear_disponibilidad_default(sender, instance, created, **kwargs):
     if not created:
         return
-    from calendario.availability.models import BloqueHorarioSemanal
+    from calendario.availability.models import BloqueHorarioSemanal, Horario
+
+    # Todo el mundo nace con un horario "Default": es al que caen los tipos de
+    # evento que no tienen uno asignado, así que sin él no habría huecos.
+    horario, _ = Horario.objects.get_or_create(
+        host=instance,
+        nombre=Horario.NOMBRE_DEFAULT,
+        defaults={'es_default': True},
+    )
     BloqueHorarioSemanal.objects.bulk_create([
         BloqueHorarioSemanal(
-            host=instance,
+            horario=horario,
             dia_semana=dia,
             hora_inicio=inicio,
             hora_fin=fin,

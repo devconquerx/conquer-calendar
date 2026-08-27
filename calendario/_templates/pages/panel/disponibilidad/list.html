@@ -1275,6 +1275,84 @@
   border-radius: 2px;
   background: var(--cx-acento);
 }
+
+/* ---- Selector de horario ---- */
+.horario-picker { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.horario-picker-label { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#6b7280; font-weight:500; }
+.horario-combo { position:relative; }
+.horario-trigger {
+  display:inline-flex; align-items:center; gap:7px; padding:6px 11px;
+  border:1px solid #e1e3ea; border-radius:8px; background:#fff; cursor:pointer;
+  font-size:13px; font-weight:600; color:#374151;
+}
+.horario-trigger:hover { border-color:#c9cdd6; }
+.horario-caret { font-size:10px; color:#9ca3af; }
+.horario-badge {
+  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.02em;
+  color:#0077c8; background:#e7f3fb; border-radius:4px; padding:2px 6px;
+}
+.horario-dropdown {
+  position:absolute; top:calc(100% + 5px); left:0; z-index:30; min-width:270px;
+  background:#fff; border:1px solid #e1e3ea; border-radius:10px; padding:6px;
+  box-shadow:0 8px 24px rgba(0,0,0,.10);
+}
+.horario-dropdown[hidden] { display:none; }
+.horario-option {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:8px 10px; border-radius:7px; font-size:13px; color:#374151; text-decoration:none;
+}
+.horario-option:hover { background:#f3f4f6; color:#374151; }
+.horario-option.is-active { background:#e7f3fb; color:#0077c8; font-weight:600; }
+.horario-sep { height:1px; background:#eceef2; margin:6px 2px; }
+.horario-form-nuevo { display:flex; gap:6px; padding:2px; }
+.horario-form-nuevo input {
+  flex:1; min-width:0; border:1px solid #e1e3ea; border-radius:6px;
+  padding:5px 8px; font-size:12px; color:#374151;
+}
+.horario-form-nuevo button {
+  display:inline-flex; align-items:center; gap:4px; border:none; border-radius:6px;
+  background:#009ef7; color:#fff; font-size:12px; font-weight:600; padding:5px 10px; cursor:pointer;
+}
+.horario-form-nuevo button:hover { background:#0077c8; }
+.horario-acciones { display:flex; align-items:center; gap:5px; }
+.horario-acciones form { display:inline; }
+.horario-accion {
+  display:inline-flex; align-items:center; gap:5px; border:1px solid #e1e3ea;
+  border-radius:7px; background:#fff; color:#6b7280; font-size:12px; font-weight:500;
+  padding:6px 9px; cursor:pointer;
+}
+.horario-accion:hover { border-color:#c9cdd6; color:#374151; }
+.horario-accion-borrar:hover { border-color:#f1416c; color:#f1416c; }
+/* ---- Modal "usar en eventos" ---- */
+.hev-backdrop {
+  position:fixed; inset:0; z-index:1060; background:rgba(17,24,39,.45);
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.hev-backdrop[hidden] { display:none; }
+.hev-card {
+  background:#fff; border-radius:12px; width:100%; max-width:520px;
+  max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,.2);
+}
+.hev-head { padding:18px 20px 12px; }
+.hev-head h6 { margin:0; font-weight:700; font-size:15px; color:#181c32; }
+.hev-head p { margin:4px 0 0; font-size:12px; color:#6b7280; }
+.hev-body { padding:6px 20px; overflow-y:auto; flex:1; }
+.hev-row { display:flex; align-items:center; gap:9px; padding:8px 2px; border-bottom:1px solid #f3f4f6; }
+.hev-row:last-child { border-bottom:none; }
+.hev-row input { width:16px; height:16px; cursor:pointer; flex-shrink:0; }
+.hev-row label { flex:1; font-size:13px; color:#374151; cursor:pointer; margin:0; }
+.hev-row .hev-nota { font-size:11px; color:#f1a11b; }
+.hev-row .hev-inactivo { font-size:11px; color:#9ca3af; }
+.hev-foot { padding:12px 20px 18px; display:flex; justify-content:flex-end; gap:8px; }
+.hev-msg { font-size:12px; padding:0 20px 8px; }
+.hev-msg.is-error { color:#f1416c; }
+
+.fm-cerrado { display:flex; align-items:center; gap:8px; margin-top:14px; font-size:12px; color:#6b7280; cursor:pointer; }
+.fm-cerrado input { width:16px; height:16px; cursor:pointer; flex-shrink:0; }
+.avail-fecha-cerrado {
+  display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600;
+  color:#f1416c; background:#fff5f8; border-radius:7px; padding:5px 10px;
+}
 </style>
 {% endblock css %}
 
@@ -1295,6 +1373,72 @@
               {{ host_objetivo.timezone|default:"UTC" }}
             </div>
           </div>
+
+          <!--begin::Selector de horario-->
+          <div class="horario-picker">
+            <span class="horario-picker-label"><i class="bi bi-clock-history"></i>Horario:</span>
+            <div class="horario-combo" id="horario-combo">
+              <button type="button" class="horario-trigger" id="horario-trigger"
+                      aria-haspopup="listbox" aria-expanded="false">
+                <span class="horario-nombre">{{ horario_objetivo.nombre }}</span>
+                {% if horario_objetivo.es_default %}<span class="horario-badge">por defecto</span>{% endif %}
+                <i class="bi bi-chevron-down horario-caret"></i>
+              </button>
+              <div class="horario-dropdown" id="horario-dropdown" hidden>
+                {% for h in horarios_del_host %}
+                <a class="horario-option {% if h.pk == horario_objetivo.pk %}is-active{% endif %}"
+                   href="?{% if editando_a_otro %}host={{ host_objetivo.pk }}&amp;{% endif %}horario={{ h.pk }}">
+                  <span class="horario-option-nombre">{{ h.nombre }}</span>
+                  {% if h.es_default %}<span class="horario-badge">por defecto</span>{% endif %}
+                </a>
+                {% endfor %}
+                {% if 'availability.editar' in PERMISOS_USUARIO %}
+                <div class="horario-sep"></div>
+                <form method="post" action="{% url 'panel_disponibilidad:horario_create' %}" class="horario-form-nuevo">
+                  {% csrf_token %}
+                  {% include "pages/panel/disponibilidad/_contexto.html" %}
+                  <input type="text" name="nombre" placeholder="Nombre del horario nuevo" maxlength="80" required />
+                  <button type="submit"><i class="bi bi-plus-lg"></i>Crear</button>
+                </form>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if 'availability.editar' in PERMISOS_USUARIO %}
+            <div class="horario-acciones">
+              <button type="button" class="horario-accion" id="btn-horario-eventos"
+                      data-url="{% url 'panel_disponibilidad:horario_eventos' horario_objetivo.pk %}"
+                      title="Elegir en qué tipos de evento se usa este horario">
+                <i class="bi bi-calendar-check"></i>Usar en eventos
+              </button>
+              <form method="post" action="{% url 'panel_disponibilidad:horario_duplicate' horario_objetivo.pk %}">
+                {% csrf_token %}
+                {% include "pages/panel/disponibilidad/_contexto.html" %}
+                <button type="submit" class="horario-accion" title="Duplicar este horario">
+                  <i class="bi bi-files"></i>
+                </button>
+              </form>
+              {% if not horario_objetivo.es_default %}
+              <form method="post" action="{% url 'panel_disponibilidad:horario_default' horario_objetivo.pk %}">
+                {% csrf_token %}
+                {% include "pages/panel/disponibilidad/_contexto.html" %}
+                <button type="submit" class="horario-accion" title="Marcar como horario por defecto">
+                  <i class="bi bi-star"></i>
+                </button>
+              </form>
+              <form method="post" action="{% url 'panel_disponibilidad:horario_delete' horario_objetivo.pk %}"
+                    onsubmit="return confirm('¿Eliminar este horario? Los eventos que lo usen volverán al horario por defecto.')">
+                {% csrf_token %}
+                {% include "pages/panel/disponibilidad/_contexto.html" %}
+                <button type="submit" class="horario-accion horario-accion-borrar" title="Eliminar este horario">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+          <!--end::Selector de horario-->
 
           {% if puede_elegir_host %}
           <div class="host-picker">
@@ -1379,7 +1523,7 @@
           <div class="avail-add-form-wrap" id="initform-{{ grupo.dia_valor }}">
             <form method="post" action="{% url 'panel_disponibilidad:bloque_create' %}" class="avail-add-form-inner">
               {% csrf_token %}
-              {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+              {% include "pages/panel/disponibilidad/_contexto.html" %}
               <input type="hidden" name="dia_semana" value="{{ grupo.dia_valor }}" />
               <input type="text" name="hora_inicio" class="avail-time-input js-hora24" value="09:00" required />
               <span class="avail-sep">–</span>
@@ -1399,7 +1543,7 @@
                   action="{% url 'panel_disponibilidad:bloque_update' b.pk %}"
                   class="avail-time-row avail-row-edit">
               {% csrf_token %}
-              {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+              {% include "pages/panel/disponibilidad/_contexto.html" %}
               <input type="text" name="hora_inicio" value="{{ b.hora_inicio|time:'H:i' }}"
                      data-original="{{ b.hora_inicio|time:'H:i' }}"
                      class="avail-time-input js-hora24 avail-time-editable" required />
@@ -1431,7 +1575,7 @@
                   action="{% url 'panel_disponibilidad:dia_copiar' grupo.dia_valor %}"
                   class="avail-copy-pop" hidden>
               {% csrf_token %}
-              {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+              {% include "pages/panel/disponibilidad/_contexto.html" %}
               <div class="avail-copy-title">Copiar horas a…</div>
               <div class="avail-copy-dias">
                 <label class="avail-copy-dia avail-copy-todos">
@@ -1458,7 +1602,7 @@
                   class="d-none"
                   onsubmit="return confirm('¿Eliminar este bloque?')">
               {% csrf_token %}
-              {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+              {% include "pages/panel/disponibilidad/_contexto.html" %}
             </form>
           </div>
           {% else %}
@@ -1489,7 +1633,7 @@
                     action="{% url 'panel_disponibilidad:bloque_create' %}"
                     class="avail-add-form-inner">
                 {% csrf_token %}
-                {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+                {% include "pages/panel/disponibilidad/_contexto.html" %}
                 <input type="hidden" name="dia_semana" value="{{ grupo.dia_valor }}" />
                 <input type="text" name="hora_inicio" class="avail-time-input js-hora24" value="09:00" required />
                 <span class="avail-sep">–</span>
@@ -1507,7 +1651,7 @@
                   action="{% url 'panel_disponibilidad:dia_limpiar' grupo.dia_valor %}"
                   style="display:none;">
               {% csrf_token %}
-              {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+              {% include "pages/panel/disponibilidad/_contexto.html" %}
             </form>
           </div>
           {% endif %}
@@ -1530,12 +1674,29 @@
         <div class="avail-fecha-label">{{ grupo.fecha|date:"l, j \d\e F" }}</div>
         <div class="avail-fecha-ranges">
           {% for b in grupo.bloques %}
+          {% if b.cerrado %}
+          <span class="avail-fecha-cerrado">
+            <i class="bi bi-slash-circle"></i>Cerrado
+            {% if 'availability.editar' in PERMISOS_USUARIO %}
+            <button type="submit" form="del-fecha-{{ b.pk }}" class="avail-btn-del" title="Volver a abrir el día">
+              <i class="bi bi-trash3" style="font-size:14px;"></i>
+            </button>
+            {% endif %}
+          </span>
           {% if 'availability.editar' in PERMISOS_USUARIO %}
+          <form id="del-fecha-{{ b.pk }}" method="post"
+                action="{% url 'panel_disponibilidad:bloque_fecha_delete' b.pk %}"
+                class="d-none">
+            {% csrf_token %}
+            {% include "pages/panel/disponibilidad/_contexto.html" %}
+          </form>
+          {% endif %}
+          {% elif 'availability.editar' in PERMISOS_USUARIO %}
           <form method="post"
                 action="{% url 'panel_disponibilidad:bloque_fecha_update' b.pk %}"
                 class="avail-time-row avail-row-edit">
             {% csrf_token %}
-            {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+            {% include "pages/panel/disponibilidad/_contexto.html" %}
             <input type="text" name="hora_inicio" value="{{ b.hora_inicio|time:'H:i' }}"
                    data-original="{{ b.hora_inicio|time:'H:i' }}"
                    class="avail-time-input js-hora24 avail-time-editable" required />
@@ -1560,7 +1721,7 @@
                 class="d-none"
                 onsubmit="return confirm('¿Eliminar este horario?')">
             {% csrf_token %}
-            {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+            {% include "pages/panel/disponibilidad/_contexto.html" %}
           </form>
           {% else %}
           <div class="avail-time-row">
@@ -1592,7 +1753,7 @@
       </p>
       <form method="post" action="{% url 'panel_usuarios:actualizar_timezone' %}">
         {% csrf_token %}
-        {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+        {% include "pages/panel/disponibilidad/_contexto.html" %}
         <input type="hidden" name="next" value="{{ request.get_full_path }}" />
         <div class="tz-combo">
           <input type="text" id="tz-input" class="tz-input" placeholder="Buscar zona…" autocomplete="off" />
@@ -1620,7 +1781,7 @@
   <div class="fm-box">
     <form method="post" action="{% url 'panel_disponibilidad:bloque_fecha_create' %}" id="fecha-form">
       {% csrf_token %}
-      {% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+      {% include "pages/panel/disponibilidad/_contexto.html" %}
       <input type="hidden" name="fechas" id="fm-fechas" value="" />
       <div class="fm-body">
         <h3 class="fm-title">Selecciona la(s) fecha(s) a las que asignar horas específicas</h3>
@@ -1642,6 +1803,10 @@
           <button type="button" class="fm-add-range" id="fm-add-range" title="Añadir rango">
             <i class="bi bi-plus-lg"></i>
           </button>
+          <label class="fm-cerrado">
+            <input type="checkbox" name="cerrado" id="fm-cerrado" value="1" />
+            <span>Cerrado ese día — sin huecos, aunque el horario semanal diga otra cosa</span>
+          </label>
         </div>
       </div>
 
@@ -1678,6 +1843,23 @@
 {{ horas_semanales_json|json_script:"weekly-data" }}
 {{ overrides_json|json_script:"overrides-data" }}
 {% endif %}
+<!--begin::Usar este horario en varios eventos-->
+<div class="hev-backdrop" id="hev-modal" hidden>
+  <div class="hev-card">
+    <div class="hev-head">
+      <h6>Usar «{{ horario_objetivo.nombre }}» en tipos de evento</h6>
+      <p>Lo que dejes sin marcar vuelve al horario por defecto de {% if editando_a_otro %}{{ host_objetivo.nombre_display }}{% else %}esta cuenta{% endif %}.</p>
+    </div>
+    <div class="hev-msg is-error" id="hev-error" hidden></div>
+    <div class="hev-body" id="hev-body"></div>
+    <div class="hev-foot">
+      <button type="button" class="avail-btn-hours" id="hev-cancelar">Cancelar</button>
+      <button type="button" class="avail-btn-hours avail-btn-cal" id="hev-guardar">Guardar</button>
+    </div>
+  </div>
+</div>
+<!--end::Usar este horario en varios eventos-->
+
 {% endblock content %}
 
 {% block js_footer %}
@@ -2105,6 +2287,7 @@
   var hoursWrap = document.getElementById('fm-hours');
   var rangesWrap = document.getElementById('fm-ranges');
   var addRangeBtn = document.getElementById('fm-add-range');
+  var cerradoCb = document.getElementById('fm-cerrado');
   var applyBtn = document.getElementById('fm-apply');
   var cancelBtn = document.getElementById('fm-cancel');
   var fechasInput = document.getElementById('fm-fechas');
@@ -2122,6 +2305,11 @@
   }
   function updateApply() {
     applyBtn.disabled = Object.keys(selected).length === 0;
+    if (cerradoCb && !expanded) {
+      cerradoCb.checked = false;
+      rangesWrap.style.display = '';
+      addRangeBtn.style.display = '';
+    }
   }
 
   function renderPickerCal() {
@@ -2240,6 +2428,14 @@
     rangesWrap.appendChild(rangeRow('09:00', '17:00'));
   });
 
+  // "Cerrado" y los rangos son excluyentes: un día cerrado no tiene horas.
+  if (cerradoCb) {
+    cerradoCb.addEventListener('change', function () {
+      rangesWrap.style.display = cerradoCb.checked ? 'none' : '';
+      addRangeBtn.style.display = cerradoCb.checked ? 'none' : '';
+    });
+  }
+
   applyBtn.addEventListener('click', function () {
     if (!expanded) {
       if (Object.keys(selected).length === 0) return;
@@ -2356,5 +2552,135 @@
     });
   }
 }());
+</script>
+
+<script>
+/* Selector de horario y asignación a tipos de evento. */
+(function () {
+  var trigger  = document.getElementById('horario-trigger');
+  var dropdown = document.getElementById('horario-dropdown');
+  if (trigger && dropdown) {
+    trigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var abierto = !dropdown.hidden;
+      dropdown.hidden = abierto;
+      trigger.setAttribute('aria-expanded', String(!abierto));
+    });
+    document.addEventListener('click', function (e) {
+      if (!dropdown.hidden && !dropdown.contains(e.target) && e.target !== trigger) {
+        dropdown.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') dropdown.hidden = true;
+    });
+  }
+
+  var btnEventos = document.getElementById('btn-horario-eventos');
+  var modal      = document.getElementById('hev-modal');
+  if (!btnEventos || !modal) return;
+
+  var cuerpo   = document.getElementById('hev-body');
+  var errorEl  = document.getElementById('hev-error');
+  var btnGuardar = document.getElementById('hev-guardar');
+  var url = btnEventos.getAttribute('data-url');
+
+  function csrf() {
+    var el = document.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
+  }
+
+  function mostrarError(msg) {
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+  }
+
+  function cerrar() {
+    modal.hidden = true;
+    errorEl.hidden = true;
+  }
+
+  function pintar(eventos) {
+    cuerpo.innerHTML = '';
+    if (!eventos.length) {
+      cuerpo.innerHTML = '<p class="text-muted" style="font-size:13px;">Esta persona no organiza ningún tipo de evento todavía.</p>';
+      return;
+    }
+    eventos.forEach(function (ev) {
+      var row = document.createElement('div');
+      row.className = 'hev-row';
+
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = ev.usa_este;
+      cb.value = String(ev.event_type_id);
+      cb.id = 'hev-cb-' + ev.event_type_id;
+      cb.className = 'hev-cb';
+
+      var label = document.createElement('label');
+      label.setAttribute('for', cb.id);
+      label.textContent = ev.nombre;
+
+      row.appendChild(cb);
+      row.appendChild(label);
+
+      if (!ev.activo) {
+        var inac = document.createElement('span');
+        inac.className = 'hev-inactivo';
+        inac.textContent = 'desactivado';
+        row.appendChild(inac);
+      }
+      if (ev.otro_horario) {
+        // Marcarlo aquí se lo quita al horario que lo tenía: mejor decirlo.
+        var nota = document.createElement('span');
+        nota.className = 'hev-nota';
+        nota.textContent = 'usa «' + ev.otro_horario + '»';
+        row.appendChild(nota);
+      }
+      cuerpo.appendChild(row);
+    });
+  }
+
+  btnEventos.addEventListener('click', function () {
+    modal.hidden = false;
+    errorEl.hidden = true;
+    cuerpo.innerHTML = '<p class="text-muted" style="font-size:13px;">Cargando…</p>';
+    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (data) { pintar(data.eventos || []); })
+      .catch(function (err) {
+        cuerpo.innerHTML = '';
+        mostrarError('No se pudo cargar la lista: ' + err.message);
+      });
+  });
+
+  document.getElementById('hev-cancelar').addEventListener('click', cerrar);
+  modal.addEventListener('click', function (e) { if (e.target === modal) cerrar(); });
+
+  btnGuardar.addEventListener('click', function () {
+    var ids = Array.prototype.map.call(
+      cuerpo.querySelectorAll('.hev-cb:checked'), function (cb) { return parseInt(cb.value, 10); }
+    );
+    btnGuardar.disabled = true;
+    btnGuardar.textContent = 'Guardando…';
+    fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest'},
+      body: JSON.stringify({event_type_ids: ids}),
+    })
+      .then(function (r) { return r.json().catch(function () { throw new Error('HTTP ' + r.status); }); })
+      .then(function (data) {
+        if (!data.ok) throw new Error(data.error || 'Error desconocido');
+        window.location.reload();
+      })
+      .catch(function (err) {
+        // Sin cerrar: lo marcado sigue ahí para reintentar.
+        mostrarError('No se pudo guardar: ' + err.message);
+        btnGuardar.disabled = false;
+        btnGuardar.textContent = 'Guardar';
+      });
+  });
+})();
 </script>
 {% endblock js_footer %}

@@ -27,14 +27,14 @@ from django.utils import timezone
 from calendario.availability.models import BloqueHorarioSemanal, BloqueHorarioFecha
 from calendario.bookings.services import calcular_slots
 from calendario.users.models import User
-from tests.factories import crear_host, crear_event_type, crear_disponibilidad
+from tests.factories import crear_host, crear_event_type, crear_disponibilidad, horario_default
 
 TZ = 'America/Bogota'
 
 
 def _reset_semanal(host):
     """Borra la disponibilidad semanal por defecto (sembrada por el signal)."""
-    BloqueHorarioSemanal.objects.filter(host=host).delete()
+    BloqueHorarioSemanal.objects.filter(horario__host=host).delete()
 
 
 def _horas_locales(slots):
@@ -53,43 +53,43 @@ class BloqueHorarioFechaModelTest(TestCase):
 
     def test_str_incluye_fecha_y_horas(self):
         b = BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         self.assertIn(self.fecha.isoformat(), str(b))
         self.assertIn('09:00', str(b))
 
     def test_clean_rechaza_fin_menor_o_igual_a_inicio(self):
         b = BloqueHorarioFecha(
-            host=self.host, fecha=self.fecha, hora_inicio=time(10, 0), hora_fin=time(9, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(10, 0), hora_fin=time(9, 0),
         )
         with self.assertRaises(ValidationError):
             b.clean()
 
     def test_clean_rechaza_solape_en_misma_fecha(self):
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(12, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(12, 0),
         )
         b = BloqueHorarioFecha(
-            host=self.host, fecha=self.fecha, hora_inicio=time(11, 0), hora_fin=time(13, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(11, 0), hora_fin=time(13, 0),
         )
         with self.assertRaises(ValidationError):
             b.clean()
 
     def test_clean_permite_rangos_contiguos(self):
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(12, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(12, 0),
         )
         b = BloqueHorarioFecha(
-            host=self.host, fecha=self.fecha, hora_inicio=time(12, 0), hora_fin=time(14, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(12, 0), hora_fin=time(14, 0),
         )
         b.clean()  # no debe lanzar
 
     def test_clean_permite_mismo_rango_en_otra_fecha(self):
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         b = BloqueHorarioFecha(
-            host=self.host, fecha=self.fecha + timedelta(days=1),
+            horario=horario_default(self.host), fecha=self.fecha + timedelta(days=1),
             hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         b.clean()  # no debe lanzar
@@ -98,18 +98,18 @@ class BloqueHorarioFechaModelTest(TestCase):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
                 BloqueHorarioFecha.objects.create(
-                    host=self.host, fecha=self.fecha,
+                    horario=horario_default(self.host), fecha=self.fecha,
                     hora_inicio=time(15, 0), hora_fin=time(15, 0),
                 )
 
     def test_constraint_bd_unico_host_fecha_rango(self):
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
                 BloqueHorarioFecha.objects.create(
-                    host=self.host, fecha=self.fecha,
+                    horario=horario_default(self.host), fecha=self.fecha,
                     hora_inicio=time(9, 0), hora_fin=time(10, 0),
                 )
 
@@ -134,7 +134,7 @@ class SlotsOverrideFechaTest(TestCase):
 
     def test_override_reemplaza_horario_semanal(self, _mock_busy):
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=self.fecha, hora_inicio=time(13, 0), hora_fin=time(15, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(13, 0), hora_fin=time(15, 0),
         )
         slots = calcular_slots(self.et, self.fecha, self.fecha)
         # Solo el rango específico 13–15 (slots 60 min: 13–14, 14–15).
@@ -146,10 +146,10 @@ class SlotsOverrideFechaTest(TestCase):
 
     def test_override_multi_rango_genera_slots_en_ambos(self, _mock_busy):
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(11, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(9, 0), hora_fin=time(11, 0),
         )
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=self.fecha, hora_inicio=time(15, 0), hora_fin=time(17, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(15, 0), hora_fin=time(17, 0),
         )
         slots = calcular_slots(self.et, self.fecha, self.fecha)
         self.assertEqual(_horas_locales(slots), [9, 10, 15, 16])
@@ -158,7 +158,7 @@ class SlotsOverrideFechaTest(TestCase):
         # Mismo día de semana 7 días después: NO debe verse afectado por el override.
         siguiente = self.fecha + timedelta(days=7)
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=self.fecha, hora_inicio=time(13, 0), hora_fin=time(15, 0),
+            horario=horario_default(self.host), fecha=self.fecha, hora_inicio=time(13, 0), hora_fin=time(15, 0),
         )
         slots = calcular_slots(self.et, self.fecha, siguiente)
         tz = ZoneInfo(TZ)
@@ -176,7 +176,7 @@ class SlotsOverrideFechaTest(TestCase):
         self.assertEqual(calcular_slots(self.et, libre, libre), [])
 
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=libre, hora_inicio=time(10, 0), hora_fin=time(12, 0),
+            horario=horario_default(self.host), fecha=libre, hora_inicio=time(10, 0), hora_fin=time(12, 0),
         )
         slots = calcular_slots(self.et, libre, libre)
         self.assertEqual(_horas_locales(slots), [10, 11])
@@ -204,7 +204,7 @@ class HorasFechaViewTest(TestCase):
         crear_disponibilidad(self.host, dia=0, inicio=time(9, 0), fin=time(17, 0))
         fecha = timezone.localdate() + timedelta(days=4)
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=fecha, hora_inicio=time(14, 0), hora_fin=time(15, 0),
+            horario=horario_default(self.host), fecha=fecha, hora_inicio=time(14, 0), hora_fin=time(15, 0),
         )
         resp = self.client.get(reverse('panel_disponibilidad:bloque_list'))
         html = resp.content.decode()
@@ -217,10 +217,10 @@ class HorasFechaViewTest(TestCase):
         pasada = timezone.localdate() - timedelta(days=2)
         futura = timezone.localdate() + timedelta(days=2)
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=pasada, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.host), fecha=pasada, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=futura, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.host), fecha=futura, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         resp = self.client.get(reverse('panel_disponibilidad:bloque_list'))
         fechas = [g['fecha'] for g in resp.context['fechas_agrupadas']]
@@ -236,7 +236,7 @@ class HorasFechaViewTest(TestCase):
         })
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(
-            BloqueHorarioFecha.objects.filter(host=self.host, fecha=fecha).count(), 2
+            BloqueHorarioFecha.objects.filter(horario__host=self.host, fecha=fecha).count(), 2
         )
 
     def test_crear_override_multi_fecha(self):
@@ -248,13 +248,13 @@ class HorasFechaViewTest(TestCase):
             'hora_fin': ['11:00'],
         })
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(BloqueHorarioFecha.objects.filter(host=self.host).count(), 2)
+        self.assertEqual(BloqueHorarioFecha.objects.filter(horario__host=self.host).count(), 2)
 
     def test_crear_override_reemplaza_existente(self):
         fecha = (timezone.localdate() + timedelta(days=6)).isoformat()
         self.client.post(self.create_url, {'fechas': fecha, 'hora_inicio': ['09:00'], 'hora_fin': ['12:00']})
         self.client.post(self.create_url, {'fechas': fecha, 'hora_inicio': ['15:00'], 'hora_fin': ['18:00']})
-        bloques = BloqueHorarioFecha.objects.filter(host=self.host, fecha=fecha)
+        bloques = BloqueHorarioFecha.objects.filter(horario__host=self.host, fecha=fecha)
         self.assertEqual(bloques.count(), 1)
         self.assertEqual(bloques.first().hora_inicio, time(15, 0))
 
@@ -264,7 +264,7 @@ class HorasFechaViewTest(TestCase):
             'fechas': fecha, 'hora_inicio': ['15:00'], 'hora_fin': ['12:00'],  # fin <= inicio
         })
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(BloqueHorarioFecha.objects.filter(host=self.host).count(), 0)
+        self.assertEqual(BloqueHorarioFecha.objects.filter(horario__host=self.host).count(), 0)
 
     def test_rangos_solapados_no_crea(self):
         fecha = (timezone.localdate() + timedelta(days=10)).isoformat()
@@ -274,26 +274,26 @@ class HorasFechaViewTest(TestCase):
             'hora_fin': ['11:00', '12:00'],  # 10–11 solapa con 09–11
         })
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(BloqueHorarioFecha.objects.filter(host=self.host).count(), 0)
+        self.assertEqual(BloqueHorarioFecha.objects.filter(horario__host=self.host).count(), 0)
 
     def test_sin_fechas_no_crea(self):
         resp = self.client.post(self.create_url, {
             'fechas': '', 'hora_inicio': ['09:00'], 'hora_fin': ['12:00'],
         })
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(BloqueHorarioFecha.objects.filter(host=self.host).count(), 0)
+        self.assertEqual(BloqueHorarioFecha.objects.filter(horario__host=self.host).count(), 0)
 
     def test_fecha_invalida_se_ignora(self):
         resp = self.client.post(self.create_url, {
             'fechas': 'no-es-fecha', 'hora_inicio': ['09:00'], 'hora_fin': ['12:00'],
         })
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(BloqueHorarioFecha.objects.filter(host=self.host).count(), 0)
+        self.assertEqual(BloqueHorarioFecha.objects.filter(horario__host=self.host).count(), 0)
 
     def test_borrar_override(self):
         fecha = timezone.localdate() + timedelta(days=10)
         bloque = BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.host), fecha=fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         resp = self.client.post(
             reverse('panel_disponibilidad:bloque_fecha_delete', kwargs={'pk': bloque.pk})
@@ -305,7 +305,7 @@ class HorasFechaViewTest(TestCase):
         otro = crear_host(email='otro.host@test.com')
         fecha = timezone.localdate() + timedelta(days=5)
         ajeno = BloqueHorarioFecha.objects.create(
-            host=otro, fecha=fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(otro), fecha=fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         self.client.post(
             reverse('panel_disponibilidad:bloque_fecha_delete', kwargs={'pk': ajeno.pk})
@@ -327,16 +327,16 @@ class LimpiarFechaViewTest(TestCase):
     def test_limpia_todos_los_rangos_de_la_fecha(self):
         fecha = timezone.localdate() + timedelta(days=5)
         otra = timezone.localdate() + timedelta(days=6)
-        BloqueHorarioFecha.objects.create(host=self.host, fecha=fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0))
-        BloqueHorarioFecha.objects.create(host=self.host, fecha=fecha, hora_inicio=time(11, 0), hora_fin=time(12, 0))
-        BloqueHorarioFecha.objects.create(host=self.host, fecha=otra, hora_inicio=time(9, 0), hora_fin=time(10, 0))
+        BloqueHorarioFecha.objects.create(horario=horario_default(self.host), fecha=fecha, hora_inicio=time(9, 0), hora_fin=time(10, 0))
+        BloqueHorarioFecha.objects.create(horario=horario_default(self.host), fecha=fecha, hora_inicio=time(11, 0), hora_fin=time(12, 0))
+        BloqueHorarioFecha.objects.create(horario=horario_default(self.host), fecha=otra, hora_inicio=time(9, 0), hora_fin=time(10, 0))
 
         resp = self.client.post(
             reverse('panel_disponibilidad:fecha_limpiar', kwargs={'fecha': fecha.isoformat()})
         )
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(BloqueHorarioFecha.objects.filter(host=self.host, fecha=fecha).count(), 0)
-        self.assertEqual(BloqueHorarioFecha.objects.filter(host=self.host, fecha=otra).count(), 1)
+        self.assertEqual(BloqueHorarioFecha.objects.filter(horario__host=self.host, fecha=fecha).count(), 0)
+        self.assertEqual(BloqueHorarioFecha.objects.filter(horario__host=self.host, fecha=otra).count(), 1)
 
     def test_fecha_invalida_no_rompe(self):
         resp = self.client.post(
@@ -373,4 +373,4 @@ class PermisosHorasFechaTest(TestCase):
             'fechas': fecha, 'hora_inicio': ['09:00'], 'hora_fin': ['12:00'],
         })
         self.assertEqual(resp.status_code, 403)
-        self.assertEqual(BloqueHorarioFecha.objects.filter(host=self.user).count(), 0)
+        self.assertEqual(BloqueHorarioFecha.objects.filter(horario__host=self.user).count(), 0)

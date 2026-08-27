@@ -7,7 +7,7 @@ from datetime import date, time, datetime, timezone, timedelta
 from calendario.users.models import User
 from calendario.permisos.models import Rol, RolXUsuario
 from calendario.event_types.models import EventType, EventTypeXHost
-from calendario.availability.models import BloqueHorarioSemanal
+from calendario.availability.models import BloqueHorarioSemanal, Horario
 from calendario.bookings.models import Reserva
 
 
@@ -56,9 +56,19 @@ def crear_event_type(host, nombre='Reunión test', duracion=30):
     return et
 
 
-def crear_disponibilidad(host, dia=0, inicio=time(9, 0), fin=time(18, 0)):
-    bloque, _ = BloqueHorarioSemanal.objects.get_or_create(
+def horario_default(host):
+    """El horario "Default" del host, creándolo si el signal no llegó a hacerlo."""
+    horario, _ = Horario.objects.get_or_create(
         host=host,
+        nombre=Horario.NOMBRE_DEFAULT,
+        defaults={'es_default': True},
+    )
+    return horario
+
+
+def crear_disponibilidad(host, dia=0, inicio=time(9, 0), fin=time(18, 0), horario=None):
+    bloque, _ = BloqueHorarioSemanal.objects.get_or_create(
+        horario=horario or horario_default(host),
         dia_semana=dia,
         hora_inicio=inicio,
         hora_fin=fin,

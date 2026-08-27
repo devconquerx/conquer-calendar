@@ -330,6 +330,19 @@ class EventTypeXHost(models.Model):
             "hasta que se le ponga un número mayor que 0."
         ),
     )
+    horario = models.ForeignKey(
+        'availability.Horario',
+        on_delete=models.SET_NULL,
+        related_name='event_types_x_hosts',
+        null=True,
+        blank=True,
+        verbose_name='Horario que usa en este evento',
+        help_text=(
+            'Sin nada seleccionado usa el horario por defecto del organizador. '
+            'Al asignar uno concreto, ese sustituye al de por defecto solo para '
+            'este tipo de evento.'
+        ),
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -355,47 +368,6 @@ class EventTypeXHost(models.Model):
 
     def __str__(self):
         return f"{self.event_type.nombre} ↔ {self.host.username}"
-
-
-class DisponibilidadEtxh(models.Model):
-    DIAS = [
-        (0, 'Lunes'), (1, 'Martes'), (2, 'Miércoles'),
-        (3, 'Jueves'), (4, 'Viernes'), (5, 'Sábado'), (6, 'Domingo'),
-    ]
-    etxh = models.ForeignKey(
-        EventTypeXHost,
-        on_delete=models.CASCADE,
-        related_name='disponibilidad',
-    )
-    dia_semana = models.PositiveSmallIntegerField(choices=DIAS)
-    hora_inicio = models.TimeField()
-    hora_fin = models.TimeField()
-
-    class Meta:
-        db_table = 'disponibilidad_etxh'
-        ordering = ['dia_semana', 'hora_inicio']
-
-    def __str__(self):
-        return f"{self.etxh} · {self.get_dia_semana_display()} {self.hora_inicio:%H:%M}–{self.hora_fin:%H:%M}"
-
-
-class DisponibilidadFechaEtxh(models.Model):
-    etxh = models.ForeignKey(
-        EventTypeXHost,
-        on_delete=models.CASCADE,
-        related_name='disponibilidad_fechas',
-    )
-    fecha = models.DateField()
-    hora_inicio = models.TimeField(null=True, blank=True)
-    hora_fin = models.TimeField(null=True, blank=True)
-
-    class Meta:
-        db_table = 'disponibilidad_fecha_etxh'
-        ordering = ['fecha', 'hora_inicio']
-
-    def __str__(self):
-        rango = f"{self.hora_inicio:%H:%M}–{self.hora_fin:%H:%M}" if self.hora_inicio else "Cerrado"
-        return f"{self.etxh} · {self.fecha} {rango}"
 
 
 class EnlaceUnico(models.Model):

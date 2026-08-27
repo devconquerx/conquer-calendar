@@ -24,7 +24,7 @@ from calendario.bookings.services import (
     crear_reserva as svc_crear,
 )
 from calendario.event_types.models import EventType, EventTypeXHost
-from tests.factories import crear_disponibilidad, crear_host, slot_futuro
+from tests.factories import crear_disponibilidad, crear_host, horario_default, slot_futuro
 
 
 def _reservar(et, inicio, email):
@@ -184,7 +184,7 @@ class PrioridadRoundRobinTest(TestCase):
         )
         EventTypeXHost.objects.create(event_type=et, host=self.a)
         EventTypeXHost.objects.create(event_type=et, host=self.b)
-        BloqueHorarioSemanal.objects.filter(host=self.b, dia_semana=2).delete()
+        BloqueHorarioSemanal.objects.filter(horario__host=self.b, dia_semana=2).delete()
 
         miercoles = slot_futuro(dias=1).date()
         while miercoles.weekday() != 2:

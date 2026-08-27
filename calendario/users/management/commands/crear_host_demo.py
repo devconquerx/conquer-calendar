@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from calendario.users.models import User
 from calendario.permisos.models import Rol, RolXUsuario
 from calendario.event_types.models import EventType, EventTypeXHost
-from calendario.availability.models import BloqueHorarioSemanal
+from calendario.availability.models import BloqueHorarioSemanal, Horario
 
 
 class Command(BaseCommand):
@@ -83,11 +83,17 @@ class Command(BaseCommand):
             f"  · Slug usuario: {user.slug}, slug demo-30: {et.slug}, slug demo-60: {et2.slug}"
         ))
 
+        horario = Horario.objects.filter(host=user, es_default=True).first()
+        if horario is None:
+            horario = Horario.objects.create(
+                host=user, nombre=Horario.NOMBRE_DEFAULT, es_default=True,
+            )
+
         bloques_creados = 0
         for dia in range(5):  # lunes a viernes (0–4)
             for inicio, fin in [(time(9, 0), time(13, 0)), (time(15, 0), time(18, 0))]:
                 _, creado = BloqueHorarioSemanal.objects.get_or_create(
-                    host=user, dia_semana=dia, hora_inicio=inicio, hora_fin=fin,
+                    horario=horario, dia_semana=dia, hora_inicio=inicio, hora_fin=fin,
                 )
                 if creado:
                     bloques_creados += 1

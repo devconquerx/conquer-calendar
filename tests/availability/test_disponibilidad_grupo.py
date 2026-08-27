@@ -18,12 +18,12 @@ from django.utils import timezone
 from calendario.availability.models import BloqueHorarioSemanal, BloqueHorarioFecha
 from calendario.grupos.models import Grupo, GrupoXUsuario
 from calendario.permisos.models import Rol, RolXUsuario
-from tests.factories import crear_host
+from tests.factories import crear_host, horario_default
 
 
 def _reset_semanal(host):
     """Borra la disponibilidad semanal por defecto (sembrada por el signal)."""
-    BloqueHorarioSemanal.objects.filter(host=host).delete()
+    BloqueHorarioSemanal.objects.filter(horario__host=host).delete()
 
 
 def _hacer_admin(user):
@@ -98,7 +98,7 @@ class DisponibilidadDeGrupoTest(TestCase):
         _reset_semanal(self.supervisor)
         _reset_semanal(self.miembro)
         BloqueHorarioSemanal.objects.create(
-            host=self.miembro, dia_semana=2, hora_inicio=time(7, 0), hora_fin=time(11, 0),
+            horario=horario_default(self.miembro), dia_semana=2, hora_inicio=time(7, 0), hora_fin=time(11, 0),
         )
         resp = self.client.get(self.list_url, {'host': self.miembro.pk})
         self.assertEqual(resp.status_code, 200)
@@ -136,12 +136,12 @@ class DisponibilidadDeGrupoTest(TestCase):
              'hora_inicio': '10:00', 'hora_fin': '13:00'},
         )
         self.assertRedirects(resp, f'{self.list_url}?host={self.miembro.pk}')
-        self.assertEqual(BloqueHorarioSemanal.objects.filter(host=self.miembro).count(), 1)
-        self.assertEqual(BloqueHorarioSemanal.objects.filter(host=self.supervisor).count(), 0)
+        self.assertEqual(BloqueHorarioSemanal.objects.filter(horario__host=self.miembro).count(), 1)
+        self.assertEqual(BloqueHorarioSemanal.objects.filter(horario__host=self.supervisor).count(), 0)
 
     def test_elimina_bloque_del_miembro(self):
         bloque = BloqueHorarioSemanal.objects.create(
-            host=self.miembro, dia_semana=5, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.miembro), dia_semana=5, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         resp = self.client.post(
             reverse('panel_disponibilidad:bloque_delete', args=[bloque.pk]),
@@ -152,7 +152,7 @@ class DisponibilidadDeGrupoTest(TestCase):
 
     def test_no_elimina_bloque_de_un_host_fuera_de_alcance(self):
         bloque = BloqueHorarioSemanal.objects.create(
-            host=self.ajeno, dia_semana=5, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.ajeno), dia_semana=5, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         resp = self.client.post(
             reverse('panel_disponibilidad:bloque_delete', args=[bloque.pk]),
@@ -163,10 +163,10 @@ class DisponibilidadDeGrupoTest(TestCase):
 
     def test_limpiar_dia_del_miembro(self):
         BloqueHorarioSemanal.objects.create(
-            host=self.miembro, dia_semana=3, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.miembro), dia_semana=3, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         BloqueHorarioSemanal.objects.create(
-            host=self.supervisor, dia_semana=3, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.supervisor), dia_semana=3, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         resp = self.client.post(
             reverse('panel_disponibilidad:dia_limpiar', args=[3]),
@@ -174,10 +174,10 @@ class DisponibilidadDeGrupoTest(TestCase):
         )
         self.assertRedirects(resp, f'{self.list_url}?host={self.miembro.pk}')
         self.assertFalse(
-            BloqueHorarioSemanal.objects.filter(host=self.miembro, dia_semana=3).exists()
+            BloqueHorarioSemanal.objects.filter(horario__host=self.miembro, dia_semana=3).exists()
         )
         self.assertTrue(
-            BloqueHorarioSemanal.objects.filter(host=self.supervisor, dia_semana=3).exists()
+            BloqueHorarioSemanal.objects.filter(horario__host=self.supervisor, dia_semana=3).exists()
         )
 
     def test_horas_especificas_por_fecha_del_miembro(self):
@@ -189,9 +189,9 @@ class DisponibilidadDeGrupoTest(TestCase):
         )
         self.assertRedirects(resp, f'{self.list_url}?host={self.miembro.pk}')
         self.assertTrue(
-            BloqueHorarioFecha.objects.filter(host=self.miembro, fecha=manana).exists()
+            BloqueHorarioFecha.objects.filter(horario__host=self.miembro, fecha=manana).exists()
         )
-        self.assertFalse(BloqueHorarioFecha.objects.filter(host=self.supervisor).exists())
+        self.assertFalse(BloqueHorarioFecha.objects.filter(horario__host=self.supervisor).exists())
 
     def test_bloqueo_del_grupo_no_frena_al_supervisor(self):
         """bloquear_editar_disponibilidad afecta al host sobre su propio horario,
@@ -205,7 +205,7 @@ class DisponibilidadDeGrupoTest(TestCase):
              'hora_inicio': '10:00', 'hora_fin': '13:00'},
         )
         self.assertEqual(
-            BloqueHorarioSemanal.objects.filter(host=self.miembro, dia_semana=6).count(), 1
+            BloqueHorarioSemanal.objects.filter(horario__host=self.miembro, dia_semana=6).count(), 1
         )
 
     # ── Zona horaria ──
@@ -241,7 +241,7 @@ class EdicionEnLineaTest(TestCase):
         self.client.force_login(self.host)
         _reset_semanal(self.host)
         self.bloque = BloqueHorarioSemanal.objects.create(
-            host=self.host, dia_semana=0, hora_inicio=time(9, 0), hora_fin=time(13, 0),
+            horario=horario_default(self.host), dia_semana=0, hora_inicio=time(9, 0), hora_fin=time(13, 0),
         )
         self.list_url = reverse('panel_disponibilidad:bloque_list')
 
@@ -268,7 +268,7 @@ class EdicionEnLineaTest(TestCase):
     def test_ampliar_un_bloque_no_exige_borrar_el_otro(self):
         """El caso que molestaba: estirar el primer bloque hasta pegarlo al segundo."""
         segundo = BloqueHorarioSemanal.objects.create(
-            host=self.host, dia_semana=0, hora_inicio=time(16, 0), hora_fin=time(18, 0),
+            horario=horario_default(self.host), dia_semana=0, hora_inicio=time(16, 0), hora_fin=time(18, 0),
         )
         resp = self._editar(self.bloque.pk, '09:00', '16:00')
         self.assertRedirects(resp, self.list_url)
@@ -278,7 +278,7 @@ class EdicionEnLineaTest(TestCase):
 
     def test_solape_con_otro_bloque_no_guarda_y_avisa(self):
         BloqueHorarioSemanal.objects.create(
-            host=self.host, dia_semana=0, hora_inicio=time(16, 0), hora_fin=time(18, 0),
+            horario=horario_default(self.host), dia_semana=0, hora_inicio=time(16, 0), hora_fin=time(18, 0),
         )
         resp = self._editar(self.bloque.pk, '09:00', '17:00')
         self.assertEqual(resp.status_code, 302)
@@ -302,7 +302,7 @@ class EdicionEnLineaTest(TestCase):
     def test_no_edita_el_bloque_de_otro_host(self):
         ajeno = crear_host(email='ajeno.edicion@test.com')
         bloque_ajeno = BloqueHorarioSemanal.objects.create(
-            host=ajeno, dia_semana=1, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(ajeno), dia_semana=1, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         resp = self._editar(bloque_ajeno.pk, '11:00', '12:00')
         self.assertEqual(resp.status_code, 404)
@@ -312,7 +312,7 @@ class EdicionEnLineaTest(TestCase):
     def test_edita_un_horario_de_fecha_concreta(self):
         manana = timezone.localdate() + timedelta(days=1)
         bloque = BloqueHorarioFecha.objects.create(
-            host=self.host, fecha=manana, hora_inicio=time(8, 0), hora_fin=time(12, 0),
+            horario=horario_default(self.host), fecha=manana, hora_inicio=time(8, 0), hora_fin=time(12, 0),
         )
         resp = self.client.post(
             reverse('panel_disponibilidad:bloque_fecha_update', args=[bloque.pk]),
@@ -342,7 +342,7 @@ class EdicionEnLineaDeGrupoTest(TestCase):
 
     def test_supervisor_edita_el_bloque_del_miembro(self):
         bloque = BloqueHorarioSemanal.objects.create(
-            host=self.miembro, dia_semana=2, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.miembro), dia_semana=2, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         resp = self.client.post(
             reverse('panel_disponibilidad:bloque_update', args=[bloque.pk]),
@@ -354,7 +354,7 @@ class EdicionEnLineaDeGrupoTest(TestCase):
 
     def test_no_edita_el_bloque_de_alguien_fuera_del_grupo(self):
         bloque = BloqueHorarioSemanal.objects.create(
-            host=self.ajeno, dia_semana=2, hora_inicio=time(9, 0), hora_fin=time(10, 0),
+            horario=horario_default(self.ajeno), dia_semana=2, hora_inicio=time(9, 0), hora_fin=time(10, 0),
         )
         resp = self.client.post(
             reverse('panel_disponibilidad:bloque_update', args=[bloque.pk]),
@@ -378,7 +378,7 @@ class CopiarHorasADiasTest(TestCase):
         self.client.force_login(self.host)
         _reset_semanal(self.host)
         self.lunes = BloqueHorarioSemanal.objects.create(
-            host=self.host, dia_semana=0, hora_inicio=time(9, 0), hora_fin=time(17, 0),
+            horario=horario_default(self.host), dia_semana=0, hora_inicio=time(9, 0), hora_fin=time(17, 0),
         )
         self.list_url = reverse('panel_disponibilidad:bloque_list')
 
@@ -394,7 +394,7 @@ class CopiarHorasADiasTest(TestCase):
         return [
             (b.hora_inicio, b.hora_fin)
             for b in BloqueHorarioSemanal.objects.filter(
-                host=self.host, dia_semana=dia
+                horario__host=self.host, dia_semana=dia
             ).order_by('hora_inicio')
         ]
 
@@ -408,7 +408,7 @@ class CopiarHorasADiasTest(TestCase):
 
     def test_solo_la_primera_fila_del_dia_lleva_el_icono_de_copiar(self):
         BloqueHorarioSemanal.objects.create(
-            host=self.host, dia_semana=0, hora_inicio=time(19, 0), hora_fin=time(21, 0),
+            horario=horario_default(self.host), dia_semana=0, hora_inicio=time(19, 0), hora_fin=time(21, 0),
         )
         resp = self.client.get(self.list_url)
         # 'avail-btn-copy' también aparece en el CSS y el JS: cuenta el botón en sí
@@ -423,7 +423,7 @@ class CopiarHorasADiasTest(TestCase):
 
     def test_copia_todos_los_rangos_del_dia_no_solo_uno(self):
         BloqueHorarioSemanal.objects.create(
-            host=self.host, dia_semana=0, hora_inicio=time(19, 0), hora_fin=time(21, 0),
+            horario=horario_default(self.host), dia_semana=0, hora_inicio=time(19, 0), hora_fin=time(21, 0),
         )
         self._copiar(['2'])
         self.assertEqual(
@@ -433,10 +433,10 @@ class CopiarHorasADiasTest(TestCase):
     def test_reemplaza_por_completo_el_dia_destino(self):
         """El destino queda idéntico al origen: lo que tenía desaparece."""
         BloqueHorarioSemanal.objects.create(
-            host=self.host, dia_semana=1, hora_inicio=time(7, 0), hora_fin=time(8, 0),
+            horario=horario_default(self.host), dia_semana=1, hora_inicio=time(7, 0), hora_fin=time(8, 0),
         )
         BloqueHorarioSemanal.objects.create(
-            host=self.host, dia_semana=1, hora_inicio=time(19, 0), hora_fin=time(21, 0),
+            horario=horario_default(self.host), dia_semana=1, hora_inicio=time(19, 0), hora_fin=time(21, 0),
         )
         self._copiar(['1'])
         self.assertEqual(self._rangos(1), [(time(9, 0), time(17, 0))])
@@ -462,7 +462,7 @@ class CopiarHorasADiasTest(TestCase):
     def test_valores_de_dia_invalidos_se_descartan(self):
         resp = self._copiar(['99', 'lunes', '-1'])
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(BloqueHorarioSemanal.objects.filter(host=self.host).count(), 1)
+        self.assertEqual(BloqueHorarioSemanal.objects.filter(horario__host=self.host).count(), 1)
 
     def test_copiar_desde_un_dia_vacio_avisa(self):
         resp = self._copiar(['1'], dia_origen=6)
@@ -480,7 +480,7 @@ class CopiarHorasADiasTest(TestCase):
         _reset_semanal(ajeno)
         self._copiar(['1'])
         self.assertEqual(
-            BloqueHorarioSemanal.objects.filter(host=ajeno).count(), 0
+            BloqueHorarioSemanal.objects.filter(horario__host=ajeno).count(), 0
         )
 
     def test_supervisor_copia_en_el_calendario_del_miembro(self):
@@ -497,10 +497,10 @@ class CopiarHorasADiasTest(TestCase):
         otro = crear_host(email='fuera.copiar@test.com')
         _reset_semanal(otro)
         BloqueHorarioSemanal.objects.create(
-            host=otro, dia_semana=0, hora_inicio=time(8, 0), hora_fin=time(9, 0),
+            horario=horario_default(otro), dia_semana=0, hora_inicio=time(8, 0), hora_fin=time(9, 0),
         )
         resp = self._copiar(['1'], extra={'host': otro.pk})
         self.assertEqual(resp.status_code, 403)
         self.assertEqual(
-            BloqueHorarioSemanal.objects.filter(host=otro, dia_semana=1).count(), 0
+            BloqueHorarioSemanal.objects.filter(horario__host=otro, dia_semana=1).count(), 0
         )

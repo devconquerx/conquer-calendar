@@ -156,32 +156,32 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     if fecha_hasta < fecha_desde:
         return []
 
+    # De qué horario salen las horas: el que este tipo de evento tenga asignado
+    # a este organizador, y si no tiene ninguno el que la persona marcó como
+    # default. Un solo camino —antes había dos, el global y el del etxh, con
+    # reglas de precedencia distintas para cada uno.
+    horario = resolver_horario(event_type, host)
+    if horario is None:
+        return []
+
     bloques_por_dia = defaultdict(list)
-    for b in BloqueHorarioSemanal.objects.filter(host=host):
+    for b in BloqueHorarioSemanal.objects.filter(horario=horario):
         bloques_por_dia[b.dia_semana].append(b)
 
     # Overrides por fecha: si una fecha tiene bloques específicos, estos
-    # sobrescriben el horario semanal de ese día (igual que Calendly).
+    # sobrescriben el horario semanal de ese día (igual que Calendly). Una fila
+    # sin horas cierra el día entero, por mucho que la acompañen otras franjas.
     overrides_por_fecha = defaultdict(list)
+    fechas_cerradas = set()
     for b in BloqueHorarioFecha.objects.filter(
-        host=host, fecha__range=(fecha_desde, fecha_hasta)
+        horario=horario, fecha__range=(fecha_desde, fecha_hasta)
     ):
-        overrides_por_fecha[b.fecha].append(b)
-
-    # Si este EventTypeXHost tiene disponibilidad específica configurada,
-    # reemplaza el horario semanal global y agrega sus overrides de fecha.
-    etxh = EventTypeXHost.objects.filter(event_type=event_type, host=host).first()
-    if etxh:
-        franjas_etxh = list(etxh.disponibilidad.all())
-        if franjas_etxh:
-            bloques_por_dia = defaultdict(list)
-            for f in franjas_etxh:
-                bloques_por_dia[f.dia_semana].append(f)
-        for f in etxh.disponibilidad_fechas.filter(fecha__range=(fecha_desde, fecha_hasta)):
-            if f.hora_inicio and f.hora_fin:
-                overrides_por_fecha[f.fecha] = [f]
-            else:
-                overrides_por_fecha[f.fecha] = []  # día bloqueado
+        if b.hora_inicio and b.hora_fin:
+            overrides_por_fecha[b.fecha].append(b)
+        else:
+            fechas_cerradas.add(b.fecha)
+    for fecha_cerrada in fechas_cerradas:
+        overrides_por_fecha[fecha_cerrada] = []
 
     desde_utc = datetime.combine(fecha_desde, datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
     hasta_utc = datetime.combine(fecha_hasta + timedelta(days=1), datetime.min.time()).replace(tzinfo=tz_host).astimezone(UTC)
@@ -313,6 +313,28 @@ def _slots_host_threadsafe(event_type, host, fecha_desde, fecha_hasta):
         # Cada hilo abre su propia conexión a la BD; la cerramos al terminar
         # para no agotar el pool del backend.
         connections.close_all()
+
+
+def resolver_horario(event_type, host):
+    """
+    El horario que manda para este par evento/organizador.
+
+    Sin nada asignado en el `EventTypeXHost` se usa el default de la persona,
+    que es como se comportaba todo antes de que existieran los horarios con
+    nombre. Devuelve `None` si la persona no tiene ni default, en cuyo caso no
+    hay horas que ofrecer.
+    """
+    from calendario.availability.models import Horario
+
+    etxh = (
+        EventTypeXHost.objects
+        .filter(event_type=event_type, host=host)
+        .select_related('horario')
+        .first()
+    )
+    if etxh and etxh.horario_id:
+        return etxh.horario
+    return Horario.objects.filter(host=host, es_default=True).first()
 
 
 def calcular_slots(event_type, fecha_desde, fecha_hasta):

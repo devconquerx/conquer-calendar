@@ -127,8 +127,10 @@ class Command(BaseCommand):
         }
 
         # 1. Disponibilidad configurada
-        tiene_semanal = BloqueHorarioSemanal.objects.filter(host=host).exists()
-        tiene_fecha_futura = BloqueHorarioFecha.objects.filter(host=host, fecha__gte=fecha_desde).exists()
+        tiene_semanal = BloqueHorarioSemanal.objects.filter(horario__host=host).exists()
+        tiene_fecha_futura = BloqueHorarioFecha.objects.filter(
+            horario__host=host, fecha__gte=fecha_desde, hora_inicio__isnull=False
+        ).exists()
         if not tiene_semanal and not tiene_fecha_futura:
             r['avisos'].append('SIN_DISPONIBILIDAD — no tiene bloques semanales ni fechas futuras configuradas')
 

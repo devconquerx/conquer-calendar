@@ -1,0 +1,7 @@
+{% comment %}
+Sobre qué calendario se está trabajando. Va en todos los formularios de la
+pantalla para que el POST caiga en el mismo sitio que el GET: la persona
+(cuando un admin o supervisor edita a otro) y el horario abierto.
+{% endcomment %}
+{% if editando_a_otro %}<input type="hidden" name="host" value="{{ host_objetivo.pk }}" />{% endif %}
+{% if not horario_objetivo.es_default %}<input type="hidden" name="horario" value="{{ horario_objetivo.pk }}" />{% endif %}
