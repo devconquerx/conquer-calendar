@@ -68,13 +68,53 @@ export function generateScheduleEventId() {
   return `${Date.now()}_${randomSuffix()}`
 }
 
+/** Cuánto vive el uuid de la Prellamada guardado en el navegador.
+ *
+ * 24h cubre de sobra a quien vuelve al embudo el mismo día (los reingresos
+ * medidos en producción van de 22 segundos a 34 minutos) sin llegar a fundir
+ * dos visitas lejanas: alguien que vuelve semanas después por otra campaña
+ * merece una Prellamada nueva, no pisar las respuestas y la variante A/B de la
+ * anterior. También acota el estropicio en un ordenador compartido. */
+export const UUID_PRELLAMADA_TTL_MS = 24 * 60 * 60 * 1000
+
+const CLAVE_UUID = 'cqx_prellamada_uuid'
+
 /**
- * UUID de la Prellamada — clave de upsert en el CRM (campo `uuid`).
- * Se genera nuevo por montaje del formulario y NO se persiste, así que cambia
- * en cada recarga del navegador, igual que el `useState(uuidv4())` de
- * conquerx-funnels-new. Todas las llamadas de un mismo montaje comparten este
- * uuid; una recarga genera uno nuevo (fila nueva en el CRM).
+ * UUID de la Prellamada — clave de upsert, tanto de nuestra tabla como del CRM.
+ *
+ * Se persiste con caducidad. Antes se generaba por montaje y no se guardaba
+ * (herencia de `useState(uuidv4())` de conquerx-funnels-new), así que volver a
+ * entrar al embudo creaba una Prellamada nueva. Cuando esa persona pedía la
+ * misma hora que ya tenía reservada, la reserva —que es OneToOne— ya tenía
+ * dueña y el POST reventaba: el visitante veía un error después de haber
+ * reservado bien (FUNNELS-96, 112 veces en dos días).
+ *
+ * Reutilizarlo también deja de partir en dos el registro del CRM cuando alguien
+ * vuelve sobre sus pasos.
+ *
+ * Si el almacenamiento está bloqueado, `leer`/`guardar` devuelven vacío sin
+ * lanzar y se cae al comportamiento de antes: uuid nuevo por montaje. Peor,
+ * pero nunca roto — por eso el arreglo de servidor sigue haciendo falta.
  */
+export function getOrCreatePrellamadaUuid() {
+  if (typeof window === 'undefined') return generatePrellamadaUuid()
+
+  const guardado = leer(CLAVE_UUID)
+  if (guardado) {
+    try {
+      const { uuid, expira } = JSON.parse(guardado)
+      if (uuid && typeof expira === 'number' && Date.now() < expira) return uuid
+    } catch (_) {
+      // Valor corrupto o de un formato anterior: se descarta y se genera otro.
+    }
+  }
+
+  const uuid = generatePrellamadaUuid()
+  guardar(CLAVE_UUID, JSON.stringify({ uuid, expira: Date.now() + UUID_PRELLAMADA_TTL_MS }))
+  return uuid
+}
+
+/** UUID v4 suelto, sin persistir. */
 export function generatePrellamadaUuid() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
