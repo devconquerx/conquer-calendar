@@ -112,7 +112,12 @@ MARCAS = {
         'acento': '#3e7f92',
         'acento_texto': '#ffffff',
         'fuente': 'Poppins,Arial,sans-serif',
-        'radio': '20px',
+        # Botones cuadrados: `--radio` solo alimenta el
+        # `calc(var(--radio) - 2px)` de los botones, así que 2px los deja a 0.
+        # Es lo que hace su CTA del embudo, que va a 0 (el de la web va a 2).
+        # Antes estaba en 20px, o sea píldoras de 18, que no usa ninguno de los
+        # dos sitios donde sale el banner.
+        'radio': '2px',
     },
     'conquer-legal': {
         # Legal cuelga sus textos legales de /legal/; sin ese tramo la URL da

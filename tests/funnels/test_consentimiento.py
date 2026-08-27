@@ -369,12 +369,15 @@ class CadaMarcaHablaSuIdiomaVisualTest(TestCase):
             self.assertIn('clip-path:var(--pixel-clip)', html, f'{host}{ruta}')
             self.assertIn(f'linear-gradient(135deg,{g1},{g2})', html, f'{host}{ruta}')
 
-    def test_languages_se_queda_liso_y_redondeado(self):
+    def test_languages_se_queda_liso_y_cuadrado(self):
         html = self._html('www.conquerlanguages.com', '/cl-evento')
-        # Su fondo es una foto y sus botones píldoras: ni cartón ni píxeles.
+        # Su fondo es una foto: ni cartón ni píxeles.
         self.assertNotIn('paperboard-texture', html.split('id="cqx-consent"')[0].split('<style>')[-1])
         self.assertNotIn('clip-path:var(--pixel-clip)', html)
-        self.assertIn('--radio:20px', html)
+        # Botones cuadrados: `--radio` solo alimenta el `calc(var(--radio) - 2px)`
+        # de los botones, así que 2px los deja a 0. Antes iba a 20 (píldoras de
+        # 18), que no lo usa ni su web (2px) ni su embudo (0px).
+        self.assertIn('--radio:2px', html)
 
     def test_el_pixelado_no_deja_el_foco_sin_marcar(self):
         # `outline` se recorta junto con el botón, así que se marca por dentro.
