@@ -98,9 +98,18 @@ MARCAS = {
         'grad_1': '#aed916',
         'grad_2': '#3ac043',
     },
+    # Languages es TEAL, no verde. El verde que había aquí no coincidía con
+    # ninguno de los dos sitios donde sale el banner: su CTA del embudo («Ver
+    # vídeo gratis») es un degradado #8fd4e3 → #70b3c4 → #3e7f92, y el de la web
+    # («¡Agenda tu llamada!») es #6ca5bc plano.
+    #
+    # Se coge el extremo oscuro de su propio degradado en vez del teal plano de
+    # la web porque el plano se queda en 2,71:1 de contraste con el texto blanco
+    # y no llega a AA. #3e7f92 da 4,53:1 y sigue siendo un color suyo. (El verde
+    # anterior estaba aún peor, en 2,58:1.)
     'conquer-languages': {
         'politica_url': 'https://www.conquerlanguages.com/politica-de-privacidad',
-        'acento': '#15b961',
+        'acento': '#3e7f92',
         'acento_texto': '#ffffff',
         'fuente': 'Poppins,Arial,sans-serif',
         'radio': '20px',

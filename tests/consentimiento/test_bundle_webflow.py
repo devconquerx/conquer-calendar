@@ -54,7 +54,7 @@ class BundleConsentimientoTest(TestCase):
         # El acento viaja dentro de una cadena JS, así que `-` y `<` van
         # escapados: se busca el color, que no lo está.
         self.assertIn('#ff4000', self._cuerpo(host='www.conquerblocks.com'))
-        self.assertIn('#15b961', self._cuerpo(host='www.conquerlanguages.com'))
+        self.assertIn('#3e7f92', self._cuerpo(host='www.conquerlanguages.com'))
 
     def test_la_corporativa_tiene_su_propia_paleta(self):
         """conquerx.com no es una escuela y no comparte su lenguaje visual: sin
@@ -74,7 +74,7 @@ class BundleConsentimientoTest(TestCase):
 
     def test_la_marca_se_puede_forzar_por_query(self):
         cuerpo = self._cuerpo(host='loquesea.com', marca='conquer-languages')
-        self.assertIn('#15b961', cuerpo)
+        self.assertIn('#3e7f92', cuerpo)
 
     def test_el_comportamiento_va_incrustado(self):
         """Sin segunda petición: un fallo ahí dejaría el diálogo pintado y muerto."""

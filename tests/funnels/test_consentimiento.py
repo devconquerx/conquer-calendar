@@ -208,7 +208,7 @@ class LaMarcaDeCadaPaginaTest(TestCase):
         for host, ruta, acento in (
             ('www.conquerblocks.com', '/evento/evento-online', '#ff4000'),
             ('www.conquerfinance.com', '/evento/evento-online', '#3ac043'),
-            ('www.conquerlanguages.com', '/cl-evento', '#15b961'),
+            ('www.conquerlanguages.com', '/cl-evento', '#3e7f92'),
         ):
             html = self.client.get(ruta, HTTP_HOST=host, HTTP_CF_IPCOUNTRY='ES').content.decode()
             self.assertIn(f'--acento:{acento}', html, f'{host}{ruta}')
