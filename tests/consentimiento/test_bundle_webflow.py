@@ -56,6 +56,18 @@ class BundleConsentimientoTest(TestCase):
         self.assertIn('#ff4000', self._cuerpo(host='www.conquerblocks.com'))
         self.assertIn('#15b961', self._cuerpo(host='www.conquerlanguages.com'))
 
+    def test_la_corporativa_tiene_su_propia_paleta(self):
+        """conquerx.com no es una escuela y no comparte su lenguaje visual: sin
+        textura de cartón y sin el CTA pixelado. Los valores salen del botón
+        «Contacto» de la propia página."""
+        cuerpo = self._cuerpo(host='www.conquerx.com')
+        self.assertIn('#333333', cuerpo)
+        self.assertIn('Funnel Display', cuerpo)
+        # `papel` y `pixel` son los que meten la textura y el recorte; sin ellos
+        # esos bloques de CSS no se renderizan.
+        self.assertNotIn('paperboard-texture', cuerpo)
+        self.assertNotIn('clip-path:var(--pixel-clip)', cuerpo.replace('\\u002D', '-'))
+
     def test_un_dominio_desconocido_no_revienta(self):
         resp = self._get(host='loquesea.com')
         self.assertEqual(resp.status_code, 200)

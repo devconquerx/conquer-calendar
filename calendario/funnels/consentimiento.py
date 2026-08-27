@@ -120,6 +120,20 @@ MARCAS = {
         # en vez de aproximarlo con `grad_1`/`grad_2`.
         'gradiente': 'linear-gradient(90deg,#3E76FF 0%,#1845D6 42%,#031464 100%)',
     },
+    # La corporativa del grupo. No es una escuela y no comparte su lenguaje:
+    # fondo blanco liso, sin la textura de cartón, y el CTA es un rectángulo
+    # gris oscuro casi sin redondear — nada de degradados ni de esquinas
+    # pixeladas. Valores sacados del botón «Contacto» de www.conquerx.com:
+    # `background rgb(51,51,51)`, `color #fff`, `border-radius 2px`, sin borde
+    # y sin `clip-path`. Como los botones del banner se redondean con
+    # `calc(var(--radio) - 2px)`, el radio va a 4px para que salgan a 2.
+    'conquerx': {
+        'politica_url': 'https://www.conquerx.com/politica-de-privacidad',
+        'acento': '#333333',
+        'acento_texto': '#ffffff',
+        'fuente': "'Funnel Display',Arial,sans-serif",
+        'radio': '4px',
+    },
 }
 
 _POR_DEFECTO = {

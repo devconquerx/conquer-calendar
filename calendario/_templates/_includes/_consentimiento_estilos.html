@@ -49,7 +49,11 @@
 /* Tarjeta de cartón, la misma textura y el mismo velo que el resto de tarjetas
    de la marca (`.event-div`, `.pasos__container`). */
 #cqx-consent .tarjeta{
-  background-image:linear-gradient(to bottom,#fff9,#fff9),url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
+  /* `base_estatico` va vacío en las páginas de Django (el asset y la página
+     salen del mismo sitio) y absoluto en el bundle de /f/conquerx-cookies.js:
+     ahí la página puede estar en un dominio donde /static/ no exista —en
+     conquerx.com da 404— y la ruta relativa apuntaría a la nada. */
+  background-image:linear-gradient(to bottom,#fff9,#fff9),url("{{ base_estatico }}{% static 'img/eventos/cb-paperboard-texture.avif' %}");
   background-position:0 0,50% 0;background-size:auto,216px;
   border-color:rgba(0,0,0,.08);
 }

@@ -235,6 +235,8 @@ class LaMarcaDeCadaPaginaTest(TestCase):
             'conquer-finance': 'https://www.conquerfinance.com/legal/politica-de-privacidad',
             'conquer-languages': 'https://www.conquerlanguages.com/politica-de-privacidad',
             'conquer-legal': 'https://www.conquerlegal.com/legal/politica-de-privacidad',
+            # La corporativa la cuelga de la raíz, sin /legal/ (comprobado: 200).
+            'conquerx': 'https://www.conquerx.com/politica-de-privacidad',
         }
         self.assertEqual({e: m['politica_url'] for e, m in MARCAS.items()}, esperado)
 

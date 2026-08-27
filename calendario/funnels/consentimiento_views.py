@@ -36,6 +36,7 @@ llevar `?marca=`, y como es uno por sitio tampoco cuesta nada.
 import logging
 from pathlib import Path
 
+from django.conf import settings
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_GET
@@ -52,6 +53,11 @@ DOMINIOS = (
     ('conquerfinance.com', 'conquer-finance'),
     ('conquerlanguages.com', 'conquer-languages'),
     ('conquerlegal.com', 'conquer-legal'),
+    # La corporativa del grupo. Ojo: la búsqueda es por sufijo, así que esto
+    # también captura `calendar.conquerx.com` — o sea que pedir el fichero
+    # directamente al origen, sin `?marca=`, devuelve la paleta corporativa en
+    # vez de la neutra. Es lo que uno esperaría, pero conviene saberlo.
+    ('conquerx.com', 'conquerx'),
 )
 
 # El comportamiento vive en el mismo fichero que usan las páginas de Django. Se
@@ -59,6 +65,18 @@ DOMINIOS = (
 # petición podría llegar tarde o fallar, y el diálogo se quedaría pintado pero
 # muerto, con los botones sin responder.
 _CONDUCTA = Path(__file__).resolve().parent.parent / 'static' / 'js' / 'consentimiento.js'
+
+# Origen absoluto de los assets del banner (hoy solo la textura de cartón).
+#
+# En las páginas de Django la ruta relativa vale, porque el asset y la página
+# salen del mismo sitio. En el bundle no: la página puede estar en un dominio
+# donde /static/ no esté enrutado. En www.conquerx.com da 404 (comprobado),
+# mientras que calendar.conquerx.com sirve el fichero (200), así que se apunta
+# ahí. Esto es lo que permite cargar el mismo script desde un solo dominio para
+# todas las webs del grupo.
+ORIGEN_ASSETS = (
+    getattr(settings, 'CALENDAR_PUBLIC_ORIGIN', '') or 'https://calendar.conquerx.com'
+).rstrip('/')
 
 
 def _escuela_desde_dominio(host):
@@ -94,7 +112,10 @@ def conquerx_cookies_js(request):
     ctx = {'consentimiento': consent.contexto(request, escuela)}
     cuerpo = render_to_string('js/conquerx-cookies.js', {
         **ctx,
-        'css': render_to_string('_includes/_consentimiento_estilos.html', ctx, request),
+        'css': render_to_string(
+            '_includes/_consentimiento_estilos.html',
+            {**ctx, 'base_estatico': ORIGEN_ASSETS}, request,
+        ),
         'markup': render_to_string('_includes/_consentimiento_markup.html', ctx, request),
         'conducta': conducta,
         'bloquear_cookiebot': request.GET.get('cookiebot') != '1',
