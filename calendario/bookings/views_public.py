@@ -56,16 +56,19 @@ def _avisar_si_es_nueva(reserva):
     transaction.on_commit(lambda: _enviar_correos_confirmacion(reserva.pk))
 
 
-def _render_booking(request, ctx, invitado, status=200):
+def _render_booking(request, ctx, invitado, event_type, status=200):
     """Pinta la página de reserva, ya sea la pública de siempre o la embebida.
 
     Con `invitado` a None es exactamente el render de antes. Con un alumno
-    detrás, adapta el contexto y deja que la página se pueda pintar dentro del
-    iframe de la academia.
+    detrás, adapta el contexto para que la reserva salga a su nombre.
+
+    Que la página se pueda pintar dentro del iframe depende del evento y no de
+    si hay alumno: en transición el iframe carga también sin token, que es justo
+    lo que permite desplegarlo en la academia sin cerrar antes el enlace.
     """
     embed.aplicar_embed(ctx, invitado, embed.token_de_request(request))
     resp = render(request, 'pages/public/booking/page.html', ctx, status=status)
-    return embed.permitir_embebido(resp) if invitado is not None else resp
+    return embed.permitir_embebido(resp) if event_type.embebible else resp
 
 
 def _identidad(form, invitado):
@@ -353,7 +356,7 @@ class BookingPageView(View):
         auto_avanzar = not request.GET.get('mes') and not fecha
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
                                        auto_avanzar=auto_avanzar, hoy_local=hoy_local))
-        return _render_booking(request, ctx, invitado)
+        return _render_booking(request, ctx, invitado, event_type)
 
 
 class BookingFormView(View):
@@ -429,7 +432,7 @@ class BookingFormView(View):
                                        hoy_local=hoy_local))
         if duplicado is not None:
             ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
-        return _render_booking(request, ctx, invitado, status=400 if not duplicado else 200)
+        return _render_booking(request, ctx, invitado, event_type, status=400 if not duplicado else 200)
 
 
 def _duplicado_ctx(duplicado, inicio_nuevo_utc, tz_ref):
@@ -513,7 +516,7 @@ class TeamBookingPageView(View):
         auto_avanzar = not request.GET.get('mes') and not fecha
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
                                        auto_avanzar=auto_avanzar, hoy_local=hoy_local))
-        return _render_booking(request, ctx, invitado)
+        return _render_booking(request, ctx, invitado, event_type)
 
 
 class TeamBookingFormView(View):
@@ -592,7 +595,7 @@ class TeamBookingFormView(View):
                                        hoy_local=hoy_local))
         if duplicado is not None:
             ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
-        return _render_booking(request, ctx, invitado, status=400 if not duplicado else 200)
+        return _render_booking(request, ctx, invitado, event_type, status=400 if not duplicado else 200)
 
 
 class ConfirmacionView(View):
@@ -824,7 +827,7 @@ class EnlaceUnicoPageView(View):
         auto_avanzar = not request.GET.get('mes') and not fecha
         ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
                                        auto_avanzar=auto_avanzar, hoy_local=hoy_local))
-        return _render_booking(request, ctx, invitado)
+        return _render_booking(request, ctx, invitado, event_type)
 
 
 class EnlaceUnicoFormView(View):
@@ -913,7 +916,7 @@ class EnlaceUnicoFormView(View):
                                        hoy_local=hoy_local))
         if duplicado is not None:
             ctx.update(_duplicado_ctx(duplicado, inicio, tz_visitante))
-        return _render_booking(request, ctx, invitado, status=400 if not duplicado else 200)
+        return _render_booking(request, ctx, invitado, event_type, status=400 if not duplicado else 200)
 
 
 class EnlaceUnicoSlotsView(View):

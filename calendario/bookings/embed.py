@@ -147,13 +147,28 @@ def con_token(url, token):
 
 
 def invitado_de_request(request, event_type):
-    """Payload del alumno, o None si el evento no exige token.
+    """Payload del alumno, o None si se reserva como cualquier visitante.
 
-    Levanta AccesoDenegado si lo exige y no hay uno bueno.
+    Levanta AccesoDenegado solo cuando el evento exige token y no hay uno bueno.
+
+    En transición el token es opcional: quien llega desde la academia reserva
+    con su identidad respaldada, y quien llega por el enlace público rellena el
+    formulario a mano, como siempre. Un token caducado o roto tampoco cierra la
+    puerta ahí —sería absurdo bloquear a alguien que podría reservar igual sin
+    él—, así que se cae al comportamiento público sin decir nada.
     """
-    if not event_type.solo_alumnos:
-        return None
-    return leer_token(token_de_request(request))
+    if event_type.solo_alumnos:
+        return leer_token(token_de_request(request))
+
+    if event_type.acceso == event_type.ACCESO_TRANSICION:
+        raw = token_de_request(request)
+        if raw:
+            try:
+                return leer_token(raw)
+            except AccesoDenegado:
+                return None
+
+    return None
 
 
 def aplicar_embed(ctx, invitado, token):
@@ -212,6 +227,9 @@ def permitir_embebido(response):
     Sin esto, XFrameOptionsMiddleware manda `X-Frame-Options: DENY` y el iframe
     sale en blanco por muy bueno que sea el token. `frame-ancestors` es la
     versión moderna y la única que admite una lista de orígenes.
+
+    Se aplica según el evento (`EventType.embebible`) y no según si hay token,
+    porque en transición el iframe tiene que pintar también sin él.
     """
     origenes = getattr(settings, 'EMBED_LMS_ORIGENES', None)
     if not origenes:

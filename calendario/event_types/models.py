@@ -177,10 +177,16 @@ class EventType(models.Model):
     #                 alumnos ni sincronización con el LMS; si al alumno se le
     #                 retira el acceso, el LMS deja de emitirle token y esto se
     #                 corta solo.
+    #                 `transicion` es el paso intermedio: la página ya se puede
+    #                 embeber en la academia, pero el enlace público sigue
+    #                 funcionando. Sirve para que el LMS despliegue su iframe sin
+    #                 dejar fuera a nadie; cerrar es luego cambiar a `academia`.
     ACCESO_PUBLICO = 'publico'
+    ACCESO_TRANSICION = 'transicion'
     ACCESO_ACADEMIA = 'academia'
     ACCESO_CHOICES = [
         (ACCESO_PUBLICO, 'Público — cualquiera con el enlace'),
+        (ACCESO_TRANSICION, 'Público, y además embebible en la academia'),
         (ACCESO_ACADEMIA, 'Solo alumnos — requiere acceso desde la academia'),
     ]
     acceso = models.CharField(
@@ -189,8 +195,10 @@ class EventType(models.Model):
         default=ACCESO_PUBLICO,
         verbose_name='Quién puede reservar',
         help_text=(
-            "«Solo alumnos» restringe la reserva a quien entre desde la academia. "
-            "La página deja de ser accesible por su enlace directo."
+            "«Solo alumnos» restringe la reserva a quien entre desde la academia: "
+            "la página deja de ser accesible por su enlace directo. La opción "
+            "intermedia permite el embebido sin cerrar todavía el enlace, para "
+            "poder hacer el cambio en dos pasos."
         ),
     )
 
@@ -245,6 +253,15 @@ class EventType(models.Model):
     def solo_alumnos(self):
         """La reserva exige un token firmado por el LMS de la academia."""
         return self.acceso == self.ACCESO_ACADEMIA
+
+    @property
+    def embebible(self):
+        """La página se puede pintar dentro del iframe de la academia.
+
+        Es más ancho que `solo_alumnos` a propósito: durante la transición el
+        iframe tiene que funcionar mientras el enlace público sigue abierto.
+        """
+        return self.acceso in (self.ACCESO_ACADEMIA, self.ACCESO_TRANSICION)
 
     @property
     def usa_rango_de_fechas(self):

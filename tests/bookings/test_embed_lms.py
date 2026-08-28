@@ -75,6 +75,10 @@ class EmbedBase(TestCase):
         self.privado.acceso = EventType.ACCESO_ACADEMIA
         self.privado.save(update_fields=['acceso'])
 
+        self.transicion = crear_event_type(self.host, nombre='Clase en transición')
+        self.transicion.acceso = EventType.ACCESO_TRANSICION
+        self.transicion.save(update_fields=['acceso'])
+
     # -- URLs --------------------------------------------------------------
     def url_pagina(self, et):
         return reverse('public_booking:booking_page', kwargs={
@@ -459,3 +463,110 @@ class CompatibilidadConElLmsTest(TestCase):
 
         datos = leer_token(firmar_token({'email': EMAIL_ALUMNO, 'nombre': NOMBRE_ALUMNO}))
         self.assertEqual(datos['email'], EMAIL_ALUMNO)
+
+
+# ---------------------------------------------------------------------------
+# 8. Transición: embebible y con el enlace público todavía abierto
+# ---------------------------------------------------------------------------
+
+class TransicionTest(EmbedBase):
+    """El paso intermedio para que el LMS despliegue su iframe sin cerrar nada.
+
+    Lo que se prueba aquí es sobre todo que las dos puertas están abiertas a la
+    vez, porque justo eso es lo que hace que el cambio de verdad —pasar a
+    «solo alumnos»— pueda hacerse otro día y sin prisa.
+    """
+
+    # -- La puerta pública sigue abierta -----------------------------------
+    def test_sin_token_la_pagina_sigue_abierta(self):
+        resp = self.client.get(self.url_pagina(self.transicion))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_sin_token_los_slots_siguen_abiertos(self):
+        resp = self.client.get(self.url_slots(self.transicion))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_sin_token_los_campos_no_se_bloquean(self):
+        resp = self.client.get(self.url_pagina(self.transicion))
+        self.assertFalse(resp.context.get('campos_identidad_bloqueados', False))
+
+    def test_sin_token_la_reserva_usa_el_formulario(self):
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            resp = self.client.post(self.url_submit(self.transicion), self.datos_reserva())
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(Reserva.objects.latest('id').email_invitado, EMAIL_INVITADO)
+
+    # -- Y a la vez ya se puede embeber ------------------------------------
+    def test_se_deja_embeber_aunque_no_haya_token(self):
+        """Esto es lo que arregla el «ha rechazado la conexión» del iframe."""
+        resp = self.client.get(self.url_pagina(self.transicion))
+        self.assertIn(ORIGEN_LMS, resp['Content-Security-Policy'])
+
+    def test_se_deja_embeber_tambien_con_token(self):
+        resp = self.client.get(f'{self.url_pagina(self.transicion)}?t={token_lms()}')
+        self.assertIn(ORIGEN_LMS, resp['Content-Security-Policy'])
+
+    # -- Con token, la identidad manda igual que en «solo alumnos» ---------
+    def test_con_token_los_campos_se_bloquean(self):
+        resp = self.client.get(f'{self.url_pagina(self.transicion)}?t={token_lms()}')
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.context['campos_identidad_bloqueados'])
+        self.assertEqual(resp.context['email_invitado'], EMAIL_ALUMNO)
+
+    def test_con_token_la_reserva_se_crea_con_la_identidad_firmada(self):
+        """Rodaje real del camino con token antes de cerrar la puerta pública."""
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            resp = self.client.post(
+                f'{self.url_submit(self.transicion)}?t={token_lms()}',
+                self.datos_reserva(nombre_invitado='Colado Sinpagar',
+                                   email_invitado='colado@gmail.com'))
+        self.assertEqual(resp.status_code, 302)
+        reserva = Reserva.objects.latest('id')
+        self.assertEqual(reserva.email_invitado, EMAIL_ALUMNO)
+        self.assertEqual(reserva.nombre_invitado, NOMBRE_ALUMNO)
+
+    # -- Un token malo no puede dejar a nadie fuera ------------------------
+    def test_un_token_roto_no_cierra_la_puerta(self):
+        """Bloquear por un token malo sería absurdo: sin él entraría igual."""
+        resp = self.client.get(f'{self.url_pagina(self.transicion)}?t=esto-no-es-un-token')
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.context.get('campos_identidad_bloqueados', False))
+
+    @override_settings(EMBED_LMS_MAX_AGE=-1)
+    def test_un_token_caducado_tampoco_cierra_la_puerta(self):
+        resp = self.client.get(f'{self.url_pagina(self.transicion)}?t={token_lms()}')
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.context.get('campos_identidad_bloqueados', False))
+
+    @override_settings(EMBED_LMS_SECRET='')
+    def test_sin_secreto_configurado_se_sigue_pudiendo_reservar(self):
+        """Al revés que en «solo alumnos», aquí fallar abierto es lo correcto."""
+        resp = self.client.get(f'{self.url_pagina(self.transicion)}?t={token_lms()}')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_dentro_del_iframe_sin_token_no_se_puede_enviar_el_formulario(self):
+        """La única pega del modo transición, y queda documentada aquí.
+
+        La exención de CSRF se gana enseñando un token válido. Sin él, un POST
+        desde otro dominio no lleva la cookie —`SameSite=Lax` no la manda— y se
+        queda fuera. No estorba en la práctica porque el LMS solo pinta el
+        iframe a quien puede firmarle un token, pero si algún día lo pintara sin
+        token, se vería el calendario y no se podría reservar.
+        """
+        cliente = Client(enforce_csrf_checks=True)
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            resp = cliente.post(self.url_submit(self.transicion), self.datos_reserva())
+        self.assertEqual(resp.status_code, 403)
+
+    def test_dentro_del_iframe_con_token_si_se_puede(self):
+        cliente = Client(enforce_csrf_checks=True)
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            resp = cliente.post(f'{self.url_submit(self.transicion)}?t={token_lms()}',
+                                self.datos_reserva())
+        self.assertEqual(resp.status_code, 302)
+
+    # -- Y cerrar sigue siendo cambiar un campo ----------------------------
+    def test_pasar_a_solo_alumnos_cierra_el_enlace_publico(self):
+        self.transicion.acceso = EventType.ACCESO_ACADEMIA
+        self.transicion.save(update_fields=['acceso'])
+        self.assertEqual(self.client.get(self.url_pagina(self.transicion)).status_code, 403)
