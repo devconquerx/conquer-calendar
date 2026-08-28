@@ -1353,6 +1353,29 @@
   display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600;
   color:#f1416c; background:#fff5f8; border-radius:7px; padding:5px 10px;
 }
+
+.horario-row { display:flex; align-items:center; gap:2px; }
+.horario-row .horario-option { flex:1; min-width:0; }
+.horario-row .horario-option-nombre { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.horario-editar {
+  border:none; background:none; color:#c4c8d0; cursor:pointer;
+  padding:6px 7px; border-radius:6px; font-size:12px; line-height:1; flex-shrink:0;
+}
+.horario-row:hover .horario-editar { color:#6b7280; }
+.horario-editar:hover { background:#eef0f4; color:#009ef7; }
+.horario-form-rename { display:flex; gap:4px; padding:2px 2px 6px; }
+.horario-form-rename.d-none { display:none; }
+.horario-form-rename input {
+  flex:1; min-width:0; border:1px solid #009ef7; border-radius:6px;
+  padding:5px 8px; font-size:12px; color:#374151;
+}
+.horario-form-rename button {
+  border:1px solid #e1e3ea; background:#fff; color:#6b7280; cursor:pointer;
+  border-radius:6px; padding:4px 8px; font-size:12px; line-height:1;
+}
+.horario-form-rename button[type="submit"] { border-color:#009ef7; background:#009ef7; color:#fff; }
+.horario-form-rename button:hover { border-color:#c9cdd6; }
+.horario-form-rename button[type="submit"]:hover { background:#0077c8; border-color:#0077c8; }
 </style>
 {% endblock css %}
 
@@ -1386,11 +1409,34 @@
               </button>
               <div class="horario-dropdown" id="horario-dropdown" hidden>
                 {% for h in horarios_del_host %}
-                <a class="horario-option {% if h.pk == horario_objetivo.pk %}is-active{% endif %}"
-                   href="?{% if editando_a_otro %}host={{ host_objetivo.pk }}&amp;{% endif %}horario={{ h.pk }}">
-                  <span class="horario-option-nombre">{{ h.nombre }}</span>
-                  {% if h.es_default %}<span class="horario-badge">por defecto</span>{% endif %}
-                </a>
+                <div class="horario-row" data-horario-row="{{ h.pk }}">
+                  <a class="horario-option {% if h.pk == horario_objetivo.pk %}is-active{% endif %}"
+                     href="?{% if editando_a_otro %}host={{ host_objetivo.pk }}&amp;{% endif %}horario={{ h.pk }}">
+                    <span class="horario-option-nombre">{{ h.nombre }}</span>
+                    {% if h.es_default %}<span class="horario-badge">por defecto</span>{% endif %}
+                  </a>
+                  {% comment %}
+                  El nombre del Default no se toca: es el que la app enseña en
+                  todas partes como "el de siempre".
+                  {% endcomment %}
+                  {% if not h.es_default and 'availability.editar' in PERMISOS_USUARIO %}
+                  <button type="button" class="horario-editar js-horario-editar"
+                          data-horario="{{ h.pk }}" title="Cambiar el nombre">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  {% endif %}
+                </div>
+                {% if not h.es_default and 'availability.editar' in PERMISOS_USUARIO %}
+                <form method="post" class="horario-form-rename d-none"
+                      data-horario-form="{{ h.pk }}"
+                      action="{% url 'panel_disponibilidad:horario_rename' h.pk %}">
+                  {% csrf_token %}
+                  {% include "pages/panel/disponibilidad/_contexto.html" %}
+                  <input type="text" name="nombre" value="{{ h.nombre }}" maxlength="80" required />
+                  <button type="submit" title="Guardar el nombre"><i class="bi bi-check-lg"></i></button>
+                  <button type="button" class="js-horario-cancelar" title="Descartar"><i class="bi bi-x-lg"></i></button>
+                </form>
+                {% endif %}
                 {% endfor %}
                 {% if 'availability.editar' in PERMISOS_USUARIO %}
                 <div class="horario-sep"></div>
@@ -2572,10 +2618,63 @@
       if (!dropdown.hidden && !dropdown.contains(e.target) && e.target !== trigger) {
         dropdown.hidden = true;
         trigger.setAttribute('aria-expanded', 'false');
+        cerrarRenames();
       }
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') dropdown.hidden = true;
+    });
+  }
+
+  // Renombrar: el lápiz cambia la fila por un campo de texto. El Default no
+  // lleva lápiz, así que aquí nunca aparece.
+  function filaRename(pk) {
+    return {
+      fila: dropdown && dropdown.querySelector('[data-horario-row="' + pk + '"]'),
+      form: dropdown && dropdown.querySelector('[data-horario-form="' + pk + '"]'),
+    };
+  }
+
+  function cerrarRenames() {
+    if (!dropdown) return;
+    Array.prototype.forEach.call(
+      dropdown.querySelectorAll('[data-horario-form]'), function (f) {
+        f.classList.add('d-none');
+        var fila = dropdown.querySelector('[data-horario-row="' + f.dataset.horarioForm + '"]');
+        if (fila) fila.classList.remove('d-none');
+      }
+    );
+  }
+
+  if (dropdown) {
+    dropdown.addEventListener('click', function (e) {
+      var lapiz = e.target.closest('.js-horario-editar');
+      if (lapiz) {
+        e.preventDefault();
+        e.stopPropagation();
+        cerrarRenames();
+        var partes = filaRename(lapiz.dataset.horario);
+        if (partes.fila && partes.form) {
+          partes.fila.classList.add('d-none');
+          partes.form.classList.remove('d-none');
+          var input = partes.form.querySelector('input[name="nombre"]');
+          if (input) { input.focus(); input.select(); }
+        }
+        return;
+      }
+      if (e.target.closest('.js-horario-cancelar')) {
+        e.preventDefault();
+        e.stopPropagation();
+        cerrarRenames();
+      }
+    });
+
+    // Escape cierra la edición sin cerrar el desplegable de golpe.
+    dropdown.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (!dropdown.querySelector('[data-horario-form]:not(.d-none)')) return;
+      e.stopPropagation();
+      cerrarRenames();
     });
   }
 

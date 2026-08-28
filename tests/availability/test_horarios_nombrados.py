@@ -538,6 +538,56 @@ class PantallaDisponibilidadPorHorarioTest(TestCase):
         ctx = self._cliente().get(self.url, {'horario': suyo.pk}).context
         self.assertEqual(ctx['horario_objetivo'].pk, self.default.pk)
 
+    def test_cada_horario_lleva_su_lapiz_menos_el_default(self, _sync):
+        html = self._cliente().get(self.url).content.decode()
+        # El "Horario USA" se puede renombrar...
+        self.assertIn(f'data-horario="{self.usa.pk}"', html)
+        self.assertIn(
+            reverse('panel_disponibilidad:horario_rename', kwargs={'pk': self.usa.pk}), html
+        )
+        # ...y el Default no: su nombre es el que la app enseña en todas partes.
+        self.assertNotIn(f'data-horario="{self.default.pk}"', html)
+        self.assertNotIn(
+            reverse('panel_disponibilidad:horario_rename', kwargs={'pk': self.default.pk}), html
+        )
+
+    def test_renombrar_desde_el_desplegable_deja_el_nombre_nuevo(self, _sync):
+        self._cliente().post(
+            reverse('panel_disponibilidad:horario_rename', kwargs={'pk': self.usa.pk}),
+            {'nombre': 'Horario mañanas'},
+        )
+        self.usa.refresh_from_db()
+        self.assertEqual(self.usa.nombre, 'Horario mañanas')
+
+    def test_renombrar_una_copia_no_choca_con_el_original(self, _sync):
+        # El caso que lo destapó: duplicar deja "X (copia)" y hay que poder
+        # ponerle un nombre propio.
+        copia = Horario.objects.create(host=self.host, nombre='Horario USA (copia)')
+        self._cliente().post(
+            reverse('panel_disponibilidad:horario_rename', kwargs={'pk': copia.pk}),
+            {'nombre': 'Horario tardes'},
+        )
+        copia.refresh_from_db()
+        self.assertEqual(copia.nombre, 'Horario tardes')
+
+    def test_renombrar_con_un_nombre_ya_usado_no_rompe(self, _sync):
+        copia = Horario.objects.create(host=self.host, nombre='Horario USA (copia)')
+        self._cliente().post(
+            reverse('panel_disponibilidad:horario_rename', kwargs={'pk': copia.pk}),
+            {'nombre': 'Horario USA'},
+        )
+        copia.refresh_from_db()
+        self.assertEqual(copia.nombre, 'Horario USA (2)')
+        self.assertEqual(Horario.objects.filter(host=self.host).count(), 3)
+
+    def test_renombrar_sin_nombre_lo_deja_como_estaba(self, _sync):
+        self._cliente().post(
+            reverse('panel_disponibilidad:horario_rename', kwargs={'pk': self.usa.pk}),
+            {'nombre': '   '},
+        )
+        self.usa.refresh_from_db()
+        self.assertEqual(self.usa.nombre, 'Horario USA')
+
     def test_solo_lista_los_bloques_del_horario_abierto(self, _sync):
         _franja(self.default, 0, time(9, 0), time(10, 0))
         _franja(self.usa, 0, time(15, 0), time(16, 0))
