@@ -641,3 +641,59 @@ class EndpointEventosRespondeJsonTest(TestCase):
         self.assertEqual(r['Content-Type'], 'application/json')
         self.assertIn('error', r.json())
 
+
+# ---------------------------------------------------------------------------
+# 8. Editar el horario de otra persona (admin / supervisor)
+# ---------------------------------------------------------------------------
+
+@patch(PATCH_SYNC)
+class HorarioDeOtraPersonaTest(TestCase):
+    """
+    Un admin que edita la disponibilidad de otro entra con `?host=<pk>`. Todo lo
+    que salga de esa pantalla tiene que arrastrar ese parámetro, o el backend
+    resuelve al usuario logueado y no encuentra nada.
+    """
+
+    def setUp(self):
+        self.otro = crear_host(email='brynja@test.com', first_name='Brynja', last_name='Turner')
+        self.admin = User.objects.create_user(
+            email='admin.otro@test.com', username='admin_otro',
+            password='test1234', is_active=True, is_superuser=True,
+        )
+        self.horario = horario_default(self.otro)
+        self.et = crear_event_type(self.otro, nombre='Evento de Brynja', duracion=30)
+        self.url = reverse(
+            'panel_disponibilidad:horario_eventos', kwargs={'pk': self.horario.pk}
+        )
+
+    def _cliente(self):
+        c = Client()
+        c.force_login(self.admin)
+        return c
+
+    def test_get_con_host_lista_los_eventos_de_esa_persona(self, _sync):
+        r = self._cliente().get(self.url, {'host': self.otro.pk})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('Evento de Brynja', {e['nombre'] for e in r.json()['eventos']})
+
+    def test_get_sin_host_no_encuentra_el_horario_ajeno(self, _sync):
+        # Este era el 404 que veía el usuario: sin `?host=` el backend busca el
+        # horario entre los del admin, no entre los de Brynja.
+        self.assertEqual(self._cliente().get(self.url).status_code, 404)
+
+    def test_post_con_host_asigna_el_horario_de_esa_persona(self, _sync):
+        r = self._cliente().post(
+            f'{self.url}?host={self.otro.pk}',
+            data={'event_type_ids': [self.et.pk]},
+            content_type='application/json',
+        )
+        self.assertEqual(r.status_code, 200)
+        etxh = EventTypeXHost.objects.get(event_type=self.et, host=self.otro)
+        self.assertEqual(etxh.horario_id, self.horario.pk)
+
+    def test_la_pantalla_pasa_el_host_en_la_url_del_boton(self, _sync):
+        html = self._cliente().get(
+            reverse('panel_disponibilidad:bloque_list'), {'host': self.otro.pk}
+        ).content.decode()
+        self.assertIn(f'{self.url}?host={self.otro.pk}', html)
+

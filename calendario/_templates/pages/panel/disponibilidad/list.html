@@ -1407,7 +1407,9 @@
             {% if 'availability.editar' in PERMISOS_USUARIO %}
             <div class="horario-acciones">
               <button type="button" class="horario-accion" id="btn-horario-eventos"
-                      data-url="{% url 'panel_disponibilidad:horario_eventos' horario_objetivo.pk %}"
+                      {# El fetch arrastra el ?host= igual que los formularios: sin él, el
+                         backend resuelve al usuario logueado y no encuentra el horario. #}
+                      data-url="{% url 'panel_disponibilidad:horario_eventos' horario_objetivo.pk %}{% if editando_a_otro %}?host={{ host_objetivo.pk }}{% endif %}"
                       title="Elegir en qué tipos de evento se usa este horario">
                 <i class="bi bi-calendar-check"></i>Usar en eventos
               </button>
