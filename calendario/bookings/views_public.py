@@ -162,11 +162,18 @@ def _build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha
     if auto_avanzar:
         mes_base = _primer_mes_con_slots(event_type, tz_visitante, min_fecha, max_fecha, mes_base)
 
-    # Días con slots en el mes visible. Pedimos ±1 día al servicio para no
+    # Grid (semanas con lunes primero). La última fila se completa con los
+    # primeros días del mes siguiente, que también son reservables: así los
+    # últimos días del mes no obligan al visitante a pasar de mes.
+    cal_obj = cal_module.Calendar(firstweekday=0)
+    semanas = cal_obj.monthdatescalendar(mes_base.year, mes_base.month)
+    fin_grid = semanas[-1][-1]
+    fin_mes = _siguiente_mes(mes_base) - timedelta(days=1)
+
+    # Días con slots en la cuadrícula visible. Pedimos ±1 día al servicio para no
     # perder slots que cruzan la frontera de día entre TZ del host y del visitante.
-    ultimo_dia = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
     desde = max(mes_base, min_fecha)
-    hasta = min(ultimo_dia, max_fecha)
+    hasta = min(fin_grid, max_fecha)
     dias_con_slots = set()
     if desde <= hasta:
         for s in calcular_slots(event_type, desde - timedelta(days=1), hasta + timedelta(days=1)):
@@ -174,19 +181,20 @@ def _build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha
             if desde <= d <= hasta:
                 dias_con_slots.add(d)
 
-    # Grid (semanas con lunes primero)
-    cal_obj = cal_module.Calendar(firstweekday=0)
     cal_semanas = []
-    for semana in cal_obj.monthdatescalendar(mes_base.year, mes_base.month):
+    for semana in semanas:
         fila = []
         for d in semana:
             fila.append({
                 'fecha': d,
                 'en_mes': d.month == mes_base.month,
+                # La cola sí se pinta (apagada si no tiene horas); el relleno
+                # del principio se sigue ocultando, el mes arranca en el día 1.
+                'es_cola': d > fin_mes,
                 'es_hoy': d == hoy_local,
                 'es_seleccionada': d == fecha_sel,
                 'clickable': (
-                    d.month == mes_base.month
+                    d >= mes_base
                     and min_fecha <= d <= max_fecha
                     and d in dias_con_slots
                 ),
@@ -216,9 +224,12 @@ def _calcular_slots_mes_json(event_type, tz_visitante, min_fecha, max_fecha, mes
     mes_max = max_fecha.replace(day=1)
     mes_base = max(mes_min, min(mes_max, mes_base))
 
-    ultimo_dia = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    # Hasta el final de la cuadrícula, no del mes: la última fila incluye los
+    # primeros días del mes siguiente y también deben traer sus slots.
+    fin_grid = cal_module.Calendar(firstweekday=0).monthdatescalendar(
+        mes_base.year, mes_base.month)[-1][-1]
     desde = max(mes_base, min_fecha)
-    hasta = min(ultimo_dia, max_fecha)
+    hasta = min(fin_grid, max_fecha)
 
     mes_anterior = (mes_base - timedelta(days=1)).replace(day=1)
     mes_siguiente = (mes_base.replace(day=28) + timedelta(days=4)).replace(day=1)

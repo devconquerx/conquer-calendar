@@ -532,16 +532,16 @@ body {
                 <tr>
                   {% for dia in semana %}
                   <td>
-                    {% if not dia.en_mes %}
-                      <span class="bk-day out">{{ dia.fecha.day }}</span>
-                    {% elif dia.clickable %}
+                    {% if dia.clickable %}
                       <a href="?fecha={{ dia.fecha|date:'Y-m-d' }}&mes={{ mes_base|date:'Y-m-d' }}&tz={{ tz_visitante }}"
                          class="bk-day avail{% if dia.es_seleccionada %} sel{% endif %}{% if dia.es_hoy %} today{% endif %}"
                          data-fecha="{{ dia.fecha|date:'Y-m-d' }}">
                         {{ dia.fecha.day }}
                       </a>
-                    {% else %}
+                    {% elif dia.en_mes or dia.es_cola %}
                       <span class="bk-day{% if dia.es_hoy %} today{% endif %}">{{ dia.fecha.day }}</span>
+                    {% else %}
+                      <span class="bk-day out">{{ dia.fecha.day }}</span>
                     {% endif %}
                   </td>
                   {% endfor %}
@@ -972,6 +972,9 @@ setTimeout(function () {
     var daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
     var numRows = Math.ceil((leadDays + daysInMonth) / 7);
     var cur = new Date(Date.UTC(year, month - 1, 1 - leadDays));
+    // La cola de la última fila (días del mes siguiente) es reservable y se
+    // pinta; el relleno del principio se sigue ocultando.
+    var mesIni = year + '-' + pad(month) + '-01';
 
     for (var w = 0; w < numRows; w++) {
       var tr = document.createElement('tr');
@@ -981,19 +984,19 @@ setTimeout(function () {
         var ds  = dy + '-' + pad(dm) + '-' + pad(dd);
         var inM = dm === month;
         var hasS = !!(data.dias && data.dias[ds] && data.dias[ds].length);
-        var ok   = inM && hasS && ds >= HOY && ds <= maxF;
+        var ok   = ds >= mesIni && hasS && ds >= HOY && ds <= maxF;
         var isSel = ds === fechaSelArg, isToday = ds === HOY;
 
         var el;
-        if (!inM) {
-          el = document.createElement('span');
-          el.className = 'bk-day out';
-          el.textContent = dd;
-        } else if (ok) {
+        if (ok) {
           el = document.createElement('a');
           el.className = 'bk-day avail' + (isSel ? ' sel' : '') + (isToday ? ' today' : '');
           el.href = '?fecha=' + ds + '&mes=' + mes + '&tz=' + encodeURIComponent(TZ);
           el.dataset.fecha = ds;
+          el.textContent = dd;
+        } else if (!inM && ds < mesIni) {
+          el = document.createElement('span');
+          el.className = 'bk-day out';
           el.textContent = dd;
         } else {
           el = document.createElement('span');

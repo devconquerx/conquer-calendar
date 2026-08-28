@@ -151,15 +151,20 @@ export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSe
     const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
     const numRows = Math.ceil((leadDays + daysInMonth) / 7)
     const cur = new Date(Date.UTC(year, month - 1, 1 - leadDays))
+    // La última fila se completa con los primeros días del mes siguiente, que
+    // también son reservables: a final de mes ya no hay que pasar de mes para
+    // ver las horas. El relleno del principio sí se sigue ocultando.
+    const mesIni = `${year}-${pad(month)}-01`
     for (let w = 0; w < numRows; w++) {
       const week = []
       for (let c = 0; c < 7; c++) {
         const dy = cur.getUTCFullYear(), dm = cur.getUTCMonth() + 1, dd = cur.getUTCDate()
         const ds = `${dy}-${pad(dm)}-${pad(dd)}`
         const inM = dm === month
+        const esCabecera = !inM && ds < mesIni
         const hasS = !!(mesData.dias?.[ds]?.length)
-        const ok = inM && hasS && ds >= HOY && ds <= mesData.max_fecha
-        week.push({ ds, dd, inM, ok, isToday: ds === HOY, isSel: ds === selectedDate })
+        const ok = !esCabecera && hasS && ds >= HOY && ds <= mesData.max_fecha
+        week.push({ ds, dd, esCabecera, ok, isToday: ds === HOY, isSel: ds === selectedDate })
         cur.setUTCDate(cur.getUTCDate() + 1)
       }
       gridRows.push(week)
@@ -205,9 +210,9 @@ export default function Calendar({ hostSlug, eventTypeSlug, eventoInfo, onSlotSe
                     <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px', color: '#aaa', fontSize: '14px' }}>Cargando…</td></tr>
                   ) : gridRows.map((week, wi) => (
                     <tr key={wi}>
-                      {week.map(({ ds, dd, inM, ok, isToday, isSel }) => (
+                      {week.map(({ ds, dd, esCabecera, ok, isToday, isSel }) => (
                         <td key={ds}>
-                          {!inM ? (
+                          {esCabecera ? (
                             <span className="bk-day out">{dd}</span>
                           ) : ok ? (
                             <button
