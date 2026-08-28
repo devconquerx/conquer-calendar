@@ -933,6 +933,41 @@
   color: #fff;
 }
 
+.avail-btn-vac {
+  color: #f1416c;
+  border-color: #f1416c;
+}
+
+.avail-btn-vac:hover {
+  background: #f1416c;
+  color: #fff;
+}
+
+/* ── Días cerrados (vacaciones) ── */
+.avail-vac-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--bs-gray-200);
+}
+
+.avail-vac-row:last-child { border-bottom: none; }
+
+.avail-vac-icon {
+  width: 30px; height: 30px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 8px; background: #fff5f8; color: #f1416c; font-size: 14px;
+}
+
+.avail-vac-texto { flex: 1; min-width: 0; }
+
+.avail-vac-fechas {
+  font-size: 13px; font-weight: 600; color: var(--bs-gray-800);
+}
+
+.avail-vac-dias { font-size: 12px; color: var(--bs-gray-600); }
+
 #open-fecha-modal .bi-plus-lg {
   font-size: 15px;
   -webkit-text-stroke: 0.4px currentColor;
@@ -1365,6 +1400,20 @@
 .hev-msg { font-size:12px; padding:0 20px 8px; }
 .hev-msg.is-error { color:#f1416c; }
 
+.cal-cell-cerrado {
+  display:flex; align-items:center; justify-content:center; gap:4px;
+  font-size:10px; font-weight:600; color:#f1416c;
+}
+.fm-cal-day.ya-cerrado { color:#f1416c; border-color:#f8b3c6; }
+.fm-cal-day.ya-cerrado.sel { color:#fff; }
+.fm-sub { font-size:12px; color:#6b7280; margin:-8px 0 14px; }
+.fm-vac-count { font-size:12px; color:#6b7280; margin-top:12px; text-align:center; }
+.fm-vac-count b { color:#f1416c; }
+.fm-todos { display:flex; align-items:center; gap:8px; margin-top:12px; font-size:12px; color:#6b7280; cursor:pointer; }
+.fm-todos input { width:16px; height:16px; cursor:pointer; flex-shrink:0; }
+/* En modo vacaciones el día seleccionado se pinta en rojo: es un cierre, no un horario. */
+.fm-vac .fm-cal-day.sel { background:#f1416c; border-color:#f1416c; color:#fff; }
+.fm-vac .fm-btn-apply { background:#f1416c; }
 .fm-cerrado { display:flex; align-items:center; gap:8px; margin-top:14px; font-size:12px; color:#6b7280; cursor:pointer; }
 .fm-cerrado input { width:16px; height:16px; cursor:pointer; flex-shrink:0; }
 .avail-fecha-cerrado {
@@ -1544,6 +1593,9 @@
         <div class="avail-header-btns">
           <button type="button" id="open-fecha-modal" class="avail-btn-hours">
             <i class="bi bi-plus-lg"></i>Horas específicas
+          </button>
+          <button type="button" id="open-vac-modal" class="avail-btn-hours avail-btn-vac">
+            <i class="bi bi-airplane"></i>Vacaciones
           </button>
           <button type="button" id="open-cal-modal" class="avail-btn-hours avail-btn-cal">
             <i class="bi bi-calendar3"></i>Calendario
@@ -1732,6 +1784,41 @@
     {% endfor %}
     </div>
 
+    <!-- ── Días cerrados (vacaciones) ── -->
+    {% if dias_cerrados %}
+    <div class="avail-fechas-section">
+      <div class="avail-fechas-title">Días cerrados</div>
+      {% for tramo in dias_cerrados %}
+      <div class="avail-vac-row">
+        <span class="avail-vac-icon"><i class="bi bi-airplane"></i></span>
+        <div class="avail-vac-texto">
+          <div class="avail-vac-fechas">
+            {% if tramo.dias == 1 %}
+              {{ tramo.inicio|date:"l, j \d\e F" }}
+            {% else %}
+              Del {{ tramo.inicio|date:"j \d\e F" }} al {{ tramo.fin|date:"j \d\e F" }}
+            {% endif %}
+          </div>
+          <div class="avail-vac-dias">
+            {{ tramo.dias }} día{{ tramo.dias|pluralize }} sin disponibilidad
+          </div>
+        </div>
+        {% if 'availability.editar' in PERMISOS_USUARIO %}
+        <form method="post" action="{% url 'panel_disponibilidad:dias_reabrir' %}"
+              onsubmit="return confirm('¿Volver a abrir estos días?')">
+          {% csrf_token %}
+          {% include "pages/panel/disponibilidad/_contexto.html" %}
+          <input type="hidden" name="pks" value="{{ tramo.pks_csv }}" />
+          <button type="submit" class="avail-btn-del" title="Volver a abrir estos días">
+            <i class="bi bi-trash3" style="font-size:14px;"></i>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- ── Date-specific hours list ── -->
     {% if fechas_agrupadas %}
     <div class="avail-fechas-section">
@@ -1851,7 +1938,11 @@
       {% include "pages/panel/disponibilidad/_contexto.html" %}
       <input type="hidden" name="fechas" id="fm-fechas" value="" />
       <div class="fm-body">
-        <h3 class="fm-title">Selecciona la(s) fecha(s) a las que asignar horas específicas</h3>
+        <h3 class="fm-title" id="fm-title">Selecciona la(s) fecha(s) a las que asignar horas específicas</h3>
+        <p class="fm-sub" id="fm-sub" hidden>
+          Marca los días que no vas a trabajar. Quedan cerrados enteros: nadie
+          podrá reservar contigo.
+        </p>
 
         <div id="fm-cal-section">
           <div class="fm-cal-head">
@@ -1862,6 +1953,16 @@
             </span>
           </div>
           <div class="fm-cal-grid" id="fm-grid"></div>
+        </div>
+
+        <div id="fm-vac-extra" hidden>
+          <div class="fm-vac-count" id="fm-vac-count"></div>
+          {% if horarios_del_host|length > 1 %}
+          <label class="fm-todos">
+            <input type="checkbox" name="todos_horarios" id="fm-todos" value="1" checked />
+            <span>Cerrar estos días en todos mis horarios ({{ horarios_del_host|length }})</span>
+          </label>
+          {% endif %}
         </div>
 
         <div class="fm-hours" id="fm-hours">
@@ -2415,22 +2516,71 @@ window.tzHoraEn = (function () {
   var form = document.getElementById('fecha-form');
   var openBtn = document.getElementById('open-fecha-modal');
   var calSection = document.getElementById('fm-cal-section');
+  var box = overlay.querySelector('.fm-box');
+  var vacBtn = document.getElementById('open-vac-modal');
+  var titleEl = document.getElementById('fm-title');
+  var subEl = document.getElementById('fm-sub');
+  var vacExtra = document.getElementById('fm-vac-extra');
+  var vacCount = document.getElementById('fm-vac-count');
+  var todosCb = document.getElementById('fm-todos');
+  var TITULO_HORAS = titleEl.textContent;
 
   var viewYear = today.getFullYear();
   var viewMonth = today.getMonth();
   var selected = {};      // iso -> true
   var expanded = false;
+  // Modo vacaciones: mismo calendario, pero sin horas. Se eligen días y se
+  // cierran enteros — que es lo que antes se hacía a mano con un rango de un
+  // minuto (10:10–10:11) para simular un día libre.
+  var modoVac = false;
+  var arrastrando = false;
+  var anclaDrag = null;
+  var valorDrag = true;
+  var baseDrag = {};
 
   function atCurrentMonth() {
     return viewYear === today.getFullYear() && viewMonth === today.getMonth();
   }
   function updateApply() {
-    applyBtn.disabled = Object.keys(selected).length === 0;
+    var n = Object.keys(selected).length;
+    applyBtn.disabled = n === 0;
+    if (modoVac) {
+      vacCount.innerHTML = n
+        ? '<b>' + n + '</b> día' + (n === 1 ? '' : 's') + ' seleccionado' + (n === 1 ? '' : 's')
+        : 'Ningún día seleccionado todavía.';
+      return;
+    }
     if (cerradoCb && !expanded) {
       cerradoCb.checked = false;
       rangesWrap.style.display = '';
       addRangeBtn.style.display = '';
     }
+  }
+
+  // Pinta el .sel de cada celda a partir de `selected`, sin rehacer el grid:
+  // durante el arrastre no se pueden recrear los nodos bajo el puntero.
+  function repintarSeleccion() {
+    var celdas = grid.querySelectorAll('.fm-cal-day[data-iso]');
+    for (var i = 0; i < celdas.length; i++) {
+      celdas[i].classList.toggle('sel', !!selected[celdas[i].dataset.iso]);
+    }
+  }
+
+  // Aplica el tramo ancla→destino sobre la selección que había al empezar el
+  // arrastre, para que al retroceder el ratón el tramo se encoja de verdad.
+  function aplicarTramo(destino) {
+    var a = anclaDrag < destino ? anclaDrag : destino;
+    var b = anclaDrag < destino ? destino : anclaDrag;
+    selected = {};
+    for (var k in baseDrag) selected[k] = true;
+    var celdas = grid.querySelectorAll('.fm-cal-day[data-iso]');
+    for (var i = 0; i < celdas.length; i++) {
+      var k = celdas[i].dataset.iso;
+      if (k < a || k > b) continue;
+      if (valorDrag) { selected[k] = true; } else { delete selected[k]; }
+    }
+    repintarSeleccion();
+    updateApply();
   }
 
   function renderPickerCal() {
@@ -2467,13 +2617,35 @@ window.tzHoraEn = (function () {
         btn.disabled = true;
       } else {
         if (selected[key]) btn.classList.add('sel');
+        if (overridesData[key] && overridesData[key].length === 0) {
+          btn.classList.add('ya-cerrado');
+          btn.title = 'Este día ya está cerrado';
+        }
         btn.dataset.iso = key;
-        btn.addEventListener('click', function () {
-          var k = this.dataset.iso;
-          if (selected[k]) { delete selected[k]; } else { selected[k] = true; }
-          this.classList.toggle('sel');
-          updateApply();
-        });
+        if (modoVac) {
+          btn.addEventListener('pointerdown', function (e) {
+            e.preventDefault();               // sin selección de texto al arrastrar
+            arrastrando = true;
+            anclaDrag = this.dataset.iso;
+            valorDrag = !selected[anclaDrag];
+            baseDrag = {};
+            for (var k in selected) baseDrag[k] = true;
+            aplicarTramo(anclaDrag);
+          });
+          btn.addEventListener('pointerenter', function (e) {
+            // Si se soltó el botón fuera del modal, el pointerup no llegó:
+            // sin esto el calendario se seguiría pintando al pasar el ratón.
+            if (arrastrando && e.buttons === 0) arrastrando = false;
+            if (arrastrando) aplicarTramo(this.dataset.iso);
+          });
+        } else {
+          btn.addEventListener('click', function () {
+            var k = this.dataset.iso;
+            if (selected[k]) { delete selected[k]; } else { selected[k] = true; }
+            this.classList.toggle('sel');
+            updateApply();
+          });
+        }
       }
       grid.appendChild(btn);
     }
@@ -2500,6 +2672,15 @@ window.tzHoraEn = (function () {
   // desplegado (con las horas de ese día precargadas) — sin pasar por el
   // primer "Aplicar", porque la fecha ya viene elegida desde el calendario.
   function openPicker(preset) {
+    modoVac = false;
+    box.classList.remove('fm-vac');
+    titleEl.textContent = TITULO_HORAS;
+    subEl.hidden = true;
+    vacExtra.hidden = true;
+    hoursWrap.style.display = '';
+    if (cerradoCb) cerradoCb.checked = false;
+    if (todosCb) todosCb.checked = false;
+    applyBtn.textContent = 'Aplicar';
     selected = {};
     rangesWrap.innerHTML = '';
     if (preset) {
@@ -2527,7 +2708,33 @@ window.tzHoraEn = (function () {
     overlay.classList.add('open');
   }
 
+  // Modo vacaciones: solo calendario. El "cerrado" viaja en el POST igual que
+  // antes, pero quien lo usa no tiene que saber que existe ni inventarse horas.
+  function openVacaciones() {
+    modoVac = true;
+    expanded = false;
+    box.classList.add('fm-vac');
+    titleEl.textContent = 'Elige los días que no vas a estar disponible';
+    subEl.hidden = false;
+    vacExtra.hidden = false;
+    hoursWrap.style.display = 'none';
+    hoursWrap.classList.remove('open');
+    if (cerradoCb) cerradoCb.checked = true;   // es lo que lee la vista
+    if (todosCb) todosCb.checked = true;
+    applyBtn.textContent = 'Cerrar estos días';
+    selected = {};
+    rangesWrap.innerHTML = '';
+    viewYear = today.getFullYear();
+    viewMonth = today.getMonth();
+    calSection.style.display = '';
+    renderPickerCal();
+    updateApply();
+    overlay.classList.add('open');
+  }
+
   if (openBtn) openBtn.addEventListener('click', function () { openPicker(); });
+  if (vacBtn) vacBtn.addEventListener('click', openVacaciones);
+  document.addEventListener('pointerup', function () { arrastrando = false; });
   cancelBtn.addEventListener('click', closeModal);
   overlay.addEventListener('mousedown', function (e) {
     if (e.target === overlay) closeModal();
@@ -2558,6 +2765,13 @@ window.tzHoraEn = (function () {
   }
 
   applyBtn.addEventListener('click', function () {
+    if (modoVac) {
+      if (Object.keys(selected).length === 0) return;
+      fechasInput.value = Object.keys(selected).sort().join(',');
+      applyBtn.disabled = true;
+      form.submit();
+      return;
+    }
     if (!expanded) {
       if (Object.keys(selected).length === 0) return;
       expanded = true;
@@ -2573,11 +2787,11 @@ window.tzHoraEn = (function () {
 
   // Salvaguarda: si el form se envía con Enter, asegura fechas y que esté expandido.
   form.addEventListener('submit', function (e) {
-    if (!expanded || Object.keys(selected).length === 0) {
+    if ((!expanded && !modoVac) || Object.keys(selected).length === 0) {
       e.preventDefault();
       return;
     }
-    fechasInput.value = Object.keys(selected).join(',');
+    fechasInput.value = Object.keys(selected).sort().join(',');
   });
 
   // ===== Modal vista calendario mensual =====
@@ -2632,11 +2846,15 @@ window.tzHoraEn = (function () {
         var repeatIcon = (!eff.isOverride && eff.ranges.length)
           ? '<i class="bi bi-arrow-repeat cal-cell-repeat"></i>' : '';
         var head = '<div class="cal-cell-daynum"><span>' + day + '</span>' + repeatIcon + '</div>';
+        // Un override sin rangos es un día cerrado: sin esta marca se ve igual
+        // que un día que simplemente no tiene horario.
         var body = eff.ranges.length
           ? '<div class="cal-cell-range">' +
               eff.ranges.map(function (r) { return r[0] + ' – ' + r[1]; }).join('<br>') +
             '</div>'
-          : '';
+          : (eff.isOverride
+              ? '<div class="cal-cell-cerrado"><i class="bi bi-airplane"></i>Cerrado</div>'
+              : '');
         cell.innerHTML = head + body;
 
         if (!isPast) {

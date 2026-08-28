@@ -13,6 +13,7 @@ urlpatterns = [
     path('bloques-fecha/<int:pk>/editar/', views.BloqueHorarioFechaUpdateView.as_view(), name='bloque_fecha_update'),
     path('bloques-fecha/<int:pk>/eliminar/', views.BloqueHorarioFechaDeleteView.as_view(), name='bloque_fecha_delete'),
     path('bloques-fecha/<str:fecha>/limpiar/', views.LimpiarFechaView.as_view(), name='fecha_limpiar'),
+    path('bloques-fecha/reabrir/', views.ReabrirDiasCerradosView.as_view(), name='dias_reabrir'),
     path('horarios/nuevo/', views.HorarioCreateView.as_view(), name='horario_create'),
     path('horarios/<int:pk>/renombrar/', views.HorarioRenameView.as_view(), name='horario_rename'),
     path('horarios/<int:pk>/duplicar/', views.HorarioDuplicateView.as_view(), name='horario_duplicate'),

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -172,6 +172,29 @@ class MiDisponibilidadListView(HostObjetivoMixin, RequierePermisoMixin, ListView
             ]
             for grupo in fechas_agrupadas
         }
+
+        # Los días cerrados salen de la lista de horas y van a su propia sección,
+        # agrupados en tramos consecutivos: unas vacaciones de dos semanas son
+        # una fila ("del 3 al 17"), no catorce.
+        cerrados, con_horas = [], []
+        for grupo in fechas_agrupadas:
+            if len(grupo['bloques']) == 1 and grupo['bloques'][0].cerrado:
+                cerrados.append(grupo['bloques'][0])
+            else:
+                con_horas.append(grupo)
+        ctx['fechas_agrupadas'] = con_horas
+
+        tramos = []
+        for bloque in cerrados:
+            if tramos and bloque.fecha - tramos[-1]['fin'] == timedelta(days=1):
+                tramos[-1]['fin'] = bloque.fecha
+                tramos[-1]['pks'].append(bloque.pk)
+            else:
+                tramos.append({'inicio': bloque.fecha, 'fin': bloque.fecha, 'pks': [bloque.pk]})
+        for tramo in tramos:
+            tramo['dias'] = len(tramo['pks'])
+            tramo['pks_csv'] = ','.join(str(pk) for pk in tramo['pks'])
+        ctx['dias_cerrados'] = tramos
 
         # Selector "editar horario de" (admin / supervisor de grupo)
         from calendario.grupos.utils import hosts_editables
@@ -385,9 +408,11 @@ class BloqueHorarioFechaCreateView(HostObjetivoMixin, _BloqueaDisponibilidadMixi
             if not token:
                 continue
             try:
-                fechas.append(date.fromisoformat(token))
+                fecha = date.fromisoformat(token)
             except ValueError:
                 continue
+            if fecha not in fechas:
+                fechas.append(fecha)
 
         inicios = request.POST.getlist('hora_inicio')
         fines = request.POST.getlist('hora_fin')
@@ -406,17 +431,28 @@ class BloqueHorarioFechaCreateView(HostObjetivoMixin, _BloqueaDisponibilidadMixi
             return redirect(self.url_lista())
 
         if cerrar:
+            # Unas vacaciones son de la persona, no de uno de sus horarios: el
+            # modal marca "todos" por defecto para que el día libre no se cuele
+            # por el hueco de un horario secundario.
+            if request.POST.get('todos_horarios') in ('1', 'on', 'true'):
+                horarios = list(Horario.objects.filter(host=self.host_objetivo))
+            else:
+                horarios = [self.horario_objetivo]
             with transaction.atomic():
-                for fecha in fechas:
-                    BloqueHorarioFecha.objects.filter(
-                        horario=self.horario_objetivo, fecha=fecha
-                    ).delete()
-                    BloqueHorarioFecha.objects.create(
-                        horario=self.horario_objetivo, fecha=fecha,
-                        hora_inicio=None, hora_fin=None,
+                # Cerrar gana a lo que hubiera: las horas sueltas de esa fecha
+                # se van, que es justo lo que se pide al marcar el día libre.
+                BloqueHorarioFecha.objects.filter(
+                    horario__in=horarios, fecha__in=fechas
+                ).delete()
+                BloqueHorarioFecha.objects.bulk_create([
+                    BloqueHorarioFecha(
+                        horario=horario, fecha=fecha, hora_inicio=None, hora_fin=None,
                     )
+                    for horario in horarios
+                    for fecha in fechas
+                ])
             plural = 's' if len(fechas) > 1 else ''
-            messages.success(request, f"{len(fechas)} fecha{plural} marcada{plural} como cerrada{plural}.")
+            messages.success(request, f"{len(fechas)} día{plural} cerrado{plural}.")
             return redirect(self.url_lista())
 
         if not rangos:
@@ -470,6 +506,34 @@ class BloqueHorarioFechaDeleteView(HostObjetivoMixin, _BloqueaDisponibilidadMixi
     def post(self, request, pk):
         BloqueHorarioFecha.objects.filter(horario=self.horario_objetivo, pk=pk).delete()
         messages.success(request, "Bloque horario eliminado.")
+        return redirect(self.url_lista())
+
+
+class ReabrirDiasCerradosView(HostObjetivoMixin, _BloqueaDisponibilidadMixin,
+                              RequierePermisoMixin, View):
+    """
+    Vuelve a abrir días cerrados. La lista los pinta agrupados en tramos
+    ("del 3 al 17 de agosto"), así que el botón manda los pks del tramo entero
+    y no obliga a borrar día por día.
+    """
+    permiso_requerido = 'availability.editar'
+
+    def post(self, request):
+        pks = []
+        for raw in request.POST.get('pks', '').split(','):
+            try:
+                pks.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        if not pks:
+            return redirect(self.url_lista())
+
+        borrados, _ = BloqueHorarioFecha.objects.filter(
+            horario=self.horario_objetivo, pk__in=pks, hora_inicio__isnull=True
+        ).delete()
+        if borrados:
+            plural = 's' if borrados > 1 else ''
+            messages.success(request, f"{borrados} día{plural} vuelve{'n' if plural else ''} a estar abierto{plural}.")
         return redirect(self.url_lista())
 
 

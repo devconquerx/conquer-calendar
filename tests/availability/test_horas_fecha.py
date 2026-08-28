@@ -24,7 +24,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.utils import timezone
 
-from calendario.availability.models import BloqueHorarioSemanal, BloqueHorarioFecha
+from calendario.availability.models import BloqueHorarioSemanal, BloqueHorarioFecha, Horario
 from calendario.bookings.services import calcular_slots
 from calendario.users.models import User
 from tests.factories import crear_host, crear_event_type, crear_disponibilidad, horario_default
@@ -374,3 +374,145 @@ class PermisosHorasFechaTest(TestCase):
         })
         self.assertEqual(resp.status_code, 403)
         self.assertEqual(BloqueHorarioFecha.objects.filter(horario__host=self.user).count(), 0)
+
+
+# ---------------------------------------------------------------------------
+# 6. Días cerrados ("vacaciones"): se eligen fechas y ya, sin inventar horas
+# ---------------------------------------------------------------------------
+
+class DiasCerradosViewTest(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+        self.host = crear_host(email='host.vacaciones@test.com')
+        self.client.force_login(self.host)
+        self.create_url = reverse('panel_disponibilidad:bloque_fecha_create')
+
+    def _cerrar(self, fechas, **extra):
+        datos = {'fechas': ','.join(f.isoformat() for f in fechas), 'cerrado': '1'}
+        datos.update(extra)
+        return self.client.post(self.create_url, datos)
+
+    def test_panel_ofrece_el_boton_de_vacaciones(self):
+        resp = self.client.get(reverse('panel_disponibilidad:bloque_list'))
+        self.assertContains(resp, 'id="open-vac-modal"')
+
+    def test_cierra_un_tramo_de_dias_sin_horas(self):
+        dias = [timezone.localdate() + timedelta(days=n) for n in range(3, 8)]
+        resp = self._cerrar(dias)
+        self.assertEqual(resp.status_code, 302)
+
+        bloques = BloqueHorarioFecha.objects.filter(horario__host=self.host).order_by('fecha')
+        self.assertEqual([b.fecha for b in bloques], dias)
+        self.assertTrue(all(b.cerrado for b in bloques))
+
+    def test_fechas_repetidas_no_rompen_el_unique(self):
+        dia = timezone.localdate() + timedelta(days=4)
+        resp = self.client.post(self.create_url, {
+            'fechas': f'{dia.isoformat()},{dia.isoformat()}',
+            'cerrado': '1',
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(BloqueHorarioFecha.objects.filter(horario__host=self.host).count(), 1)
+
+    def test_cerrar_pisa_las_horas_especificas_que_hubiera(self):
+        dia = timezone.localdate() + timedelta(days=5)
+        BloqueHorarioFecha.objects.create(
+            horario=horario_default(self.host), fecha=dia,
+            hora_inicio=time(9, 0), hora_fin=time(10, 0),
+        )
+        self._cerrar([dia])
+        bloques = list(BloqueHorarioFecha.objects.filter(horario__host=self.host, fecha=dia))
+        self.assertEqual(len(bloques), 1)
+        self.assertTrue(bloques[0].cerrado)
+
+    def test_todos_los_horarios_cierra_tambien_los_secundarios(self):
+        otro = Horario.objects.create(host=self.host, nombre='Horario USA', es_default=False)
+        dia = timezone.localdate() + timedelta(days=6)
+        self._cerrar([dia], todos_horarios='1')
+        self.assertTrue(BloqueHorarioFecha.objects.filter(horario=otro, fecha=dia, hora_inicio__isnull=True).exists())
+        self.assertTrue(
+            BloqueHorarioFecha.objects
+            .filter(horario=horario_default(self.host), fecha=dia, hora_inicio__isnull=True)
+            .exists()
+        )
+
+    def test_sin_todos_los_horarios_solo_toca_el_abierto(self):
+        otro = Horario.objects.create(host=self.host, nombre='Horario USA', es_default=False)
+        dia = timezone.localdate() + timedelta(days=6)
+        self._cerrar([dia])
+        self.assertFalse(BloqueHorarioFecha.objects.filter(horario=otro).exists())
+
+    def test_los_cerrados_van_a_su_propia_seccion_agrupados_en_tramos(self):
+        hoy = timezone.localdate()
+        tramo = [hoy + timedelta(days=n) for n in (2, 3, 4)]
+        suelto = hoy + timedelta(days=9)
+        self._cerrar(tramo + [suelto])
+        BloqueHorarioFecha.objects.create(
+            horario=horario_default(self.host), fecha=hoy + timedelta(days=6),
+            hora_inicio=time(9, 0), hora_fin=time(10, 0),
+        )
+
+        resp = self.client.get(reverse('panel_disponibilidad:bloque_list'))
+        cerrados = resp.context['dias_cerrados']
+        self.assertEqual(len(cerrados), 2)
+        self.assertEqual((cerrados[0]['inicio'], cerrados[0]['fin'], cerrados[0]['dias']), (tramo[0], tramo[-1], 3))
+        self.assertEqual((cerrados[1]['inicio'], cerrados[1]['fin'], cerrados[1]['dias']), (suelto, suelto, 1))
+        # Los días cerrados salen de la lista de horas específicas.
+        self.assertEqual([g['fecha'] for g in resp.context['fechas_agrupadas']], [hoy + timedelta(days=6)])
+
+    def test_reabrir_devuelve_el_tramo_entero(self):
+        hoy = timezone.localdate()
+        tramo = [hoy + timedelta(days=n) for n in (2, 3, 4)]
+        otro = hoy + timedelta(days=10)
+        self._cerrar(tramo + [otro])
+        pks = list(
+            BloqueHorarioFecha.objects
+            .filter(horario__host=self.host, fecha__in=tramo).values_list('pk', flat=True)
+        )
+
+        resp = self.client.post(
+            reverse('panel_disponibilidad:dias_reabrir'),
+            {'pks': ','.join(str(pk) for pk in pks)},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(
+            [b.fecha for b in BloqueHorarioFecha.objects.filter(horario__host=self.host)],
+            [otro],
+        )
+
+    def test_reabrir_no_toca_dias_de_otro_host(self):
+        ajeno = crear_host(email='host.ajeno.vac@test.com')
+        dia = timezone.localdate() + timedelta(days=3)
+        bloque = BloqueHorarioFecha.objects.create(
+            horario=horario_default(ajeno), fecha=dia, hora_inicio=None, hora_fin=None,
+        )
+        resp = self.client.post(
+            reverse('panel_disponibilidad:dias_reabrir'), {'pks': str(bloque.pk)},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(BloqueHorarioFecha.objects.filter(pk=bloque.pk).exists())
+
+    def test_reabrir_no_borra_un_horario_con_horas(self):
+        dia = timezone.localdate() + timedelta(days=3)
+        bloque = BloqueHorarioFecha.objects.create(
+            horario=horario_default(self.host), fecha=dia,
+            hora_inicio=time(9, 0), hora_fin=time(10, 0),
+        )
+        self.client.post(reverse('panel_disponibilidad:dias_reabrir'), {'pks': str(bloque.pk)})
+        self.assertTrue(BloqueHorarioFecha.objects.filter(pk=bloque.pk).exists())
+
+    def test_reabrir_con_pks_basura_no_rompe(self):
+        resp = self.client.post(reverse('panel_disponibilidad:dias_reabrir'), {'pks': 'a,,b'})
+        self.assertEqual(resp.status_code, 302)
+
+    def test_un_dia_cerrado_no_genera_slots(self):
+        _reset_semanal(self.host)
+        dia = timezone.localdate() + timedelta(days=5)
+        crear_disponibilidad(self.host, dia=dia.weekday(), inicio=time(9, 0), fin=time(17, 0))
+        event_type = crear_event_type(self.host, duracion=60)
+
+        with patch('calendario.bookings.services.obtener_busy_intervalos', return_value=[]):
+            self.assertTrue(calcular_slots(event_type, dia, dia))  # antes de cerrarlo, sí hay
+            self._cerrar([dia])
+            self.assertEqual(calcular_slots(event_type, dia, dia), [])
