@@ -209,8 +209,14 @@ body {
 .bk-tz-option {
   padding: 8px 12px; font-size: 12.5px; color: var(--bk-text);
   cursor: pointer; border-bottom: 1px solid #f3f4f6;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
+.bk-tz-option-nombre { overflow: hidden; text-overflow: ellipsis; }
+.bk-tz-option-hora {
+  flex: none; color: var(--bk-muted); font-variant-numeric: tabular-nums;
+}
+.bk-tz-option.tz-selected .bk-tz-option-hora { color: inherit; }
 .bk-tz-option:last-child { border-bottom: none; }
 .bk-tz-option:hover { background: #f3f4f6; }
 .bk-tz-option.tz-selected {
@@ -710,14 +716,18 @@ body {
   var zones = [];
   try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { if (activeTz) zones = [activeTz]; }
 
+  function tzHora(tz) {
+    try {
+      return '(' + now.toLocaleTimeString('es-ES', {
+        hour: '2-digit', minute: '2-digit', timeZone: tz, hour12: false,
+      }) + ')';
+    } catch (e) { return ''; }
+  }
+
   function tzLabel(tz) {
     var city = tz.split('/').pop().replace(/_/g, ' ');
-    try {
-      var time = now.toLocaleTimeString('es-ES', {
-        hour: '2-digit', minute: '2-digit', timeZone: tz, hour12: false,
-      });
-      return city + ' (' + time + ')';
-    } catch (e) { return city; }
+    var hora = tzHora(tz);
+    return hora ? city + ' ' + hora : city;
   }
 
   var displayBtn  = document.getElementById('tz-display-btn');
@@ -744,7 +754,14 @@ body {
     top.concat(rest).slice(0, 120).forEach(function (tz) {
       var item = document.createElement('div');
       item.className = 'bk-tz-option' + (tz === activeTz ? ' tz-selected' : '');
-      item.textContent = tz;
+      var nombre = document.createElement('span');
+      nombre.className = 'bk-tz-option-nombre';
+      nombre.textContent = tz;
+      var hora = document.createElement('span');
+      hora.className = 'bk-tz-option-hora';
+      hora.textContent = tzHora(tz);
+      item.appendChild(nombre);
+      item.appendChild(hora);
       item.addEventListener('mousedown', function (e) {
         e.preventDefault();
         var p = new URLSearchParams(window.location.search);
@@ -756,6 +773,7 @@ body {
   }
 
   function openDropdown() {
+    now = new Date();
     input.style.display = 'block';
     input.value = '';
     input.placeholder = tzLabel(activeTz);

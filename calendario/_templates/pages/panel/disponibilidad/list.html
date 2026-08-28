@@ -42,6 +42,12 @@
   margin-top: 4px;
 }
 
+.avail-tz-hora {
+  color: var(--bs-gray-500);
+}
+
+.avail-tz-hora:empty { display: none; }
+
 /* ── Selector de host (admin / supervisor) ── */
 .avail-header-left {
   display: flex;
@@ -802,7 +808,19 @@
   color: var(--bs-gray-800);
   cursor: pointer;
   border-bottom: 1px solid var(--bs-gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
+
+.tz-option-hora {
+  color: var(--bs-gray-600);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.tz-option.tz-selected .tz-option-hora { color: inherit; }
 
 .tz-option:last-child { border-bottom: none; }
 
@@ -1391,9 +1409,10 @@
         <div class="avail-header-left">
           <div>
             <h5 class="fw-medium">Horas semanales</h5>
-            <div class="avail-tz">
+            <div class="avail-tz" data-tz="{{ host_objetivo.timezone|default:'UTC' }}">
               <i class="bi bi-globe2"></i>
-              {{ host_objetivo.timezone|default:"UTC" }}
+              <span>{{ host_objetivo.timezone|default:"UTC" }}</span>
+              <span class="avail-tz-hora"></span>
             </div>
           </div>
 
@@ -2213,6 +2232,39 @@
 </script>
 
 <script>
+// ── Hora actual en la zona horaria del host (badge de la cabecera) ──
+window.tzHoraEn = (function () {
+  var cache = {};
+  return function (tz) {
+    if (!tz) return '';
+    if (!(tz in cache)) {
+      try {
+        cache[tz] = new Intl.DateTimeFormat('es-ES', {
+          timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false,
+        });
+      } catch (e) {
+        cache[tz] = null;
+      }
+    }
+    if (!cache[tz]) return '';
+    try { return cache[tz].format(new Date()); } catch (e) { return ''; }
+  };
+}());
+
+(function () {
+  var badge = document.querySelector('.avail-tz[data-tz]');
+  if (!badge) return;
+  var salida = badge.querySelector('.avail-tz-hora');
+  function pintar() {
+    var hora = window.tzHoraEn(badge.dataset.tz);
+    salida.textContent = hora ? '(' + hora + ')' : '';
+  }
+  pintar();
+  setInterval(pintar, 30000);
+}());
+</script>
+
+<script>
 // ── Timezone combobox: input filtrable + dropdown estilo Facebook ──
 (function () {
   var input = document.getElementById('tz-input');
@@ -2231,9 +2283,14 @@
     return match ? match.label : value;
   }
 
+  function textoConHora(value) {
+    var hora = window.tzHoraEn(value);
+    return hora ? labelOf(value) + ' (' + hora + ')' : labelOf(value);
+  }
+
   function setSelected(value) {
     hidden.value = value;
-    input.value = labelOf(value);
+    input.value = textoConHora(value);
   }
 
   function render(filter) {
@@ -2253,8 +2310,14 @@
     matched.forEach(function (o) {
       var item = document.createElement('div');
       item.className = 'tz-option' + (o.value === current ? ' tz-selected' : '');
-      item.textContent = o.label;
       item.dataset.value = o.value;
+      var nombre = document.createElement('span');
+      nombre.textContent = o.label;
+      var hora = document.createElement('span');
+      hora.className = 'tz-option-hora';
+      hora.textContent = window.tzHoraEn(o.value);
+      item.appendChild(nombre);
+      item.appendChild(hora);
       item.addEventListener('mousedown', function (e) {
         e.preventDefault();
         setSelected(o.value);
@@ -2266,18 +2329,28 @@
 
   function openDropdown() {
     input.value = '';
-    input.setAttribute('placeholder', labelOf(hidden.value));
+    input.setAttribute('placeholder', textoConHora(hidden.value));
     render('');
     dropdown.hidden = false;
   }
 
   function closeDropdown() {
     dropdown.hidden = true;
-    input.value = labelOf(hidden.value);
+    input.value = textoConHora(hidden.value);
     input.setAttribute('placeholder', 'Buscar zona…');
   }
 
   setSelected(hidden.value);
+
+  // Mantener las horas al día sin tocar el desplegable si está abierto
+  setInterval(function () {
+    if (document.activeElement !== input) input.value = textoConHora(hidden.value);
+    if (dropdown.hidden) return;
+    dropdown.querySelectorAll('.tz-option').forEach(function (item) {
+      var salida = item.querySelector('.tz-option-hora');
+      if (salida) salida.textContent = window.tzHoraEn(item.dataset.value);
+    });
+  }, 30000);
 
   input.addEventListener('focus', openDropdown);
   input.addEventListener('input', function () { render(this.value); dropdown.hidden = false; });
