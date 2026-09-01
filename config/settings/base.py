@@ -507,6 +507,21 @@ CANCELACIONES_EMAILS_AUTORIZADOS = [
 EMBED_LMS_SECRET = env.str('CALENDARIO_EMBED_LMS_SECRET', default='')
 EMBED_LMS_SALT = env.str('CALENDARIO_EMBED_LMS_SALT', default='lms-embed')
 
+# Secretos ADICIONALES que también se dan por buenos al verificar. El LMS tiene
+# un entorno de pruebas con su propia clave, y sin esto habría que elegir: o
+# Daniel prueba, o reservan los alumnos.
+#
+# Se aceptan todos, sin mirar de dónde viene la petición, porque el origen de un
+# iframe no es comprobable en el servidor: `frame-ancestors` lo aplica el
+# navegador y el `Referer` se falsifica trivialmente fuera de uno. Atar cada
+# clave a su dominio parecería más seguro y no lo sería —bastaría con omitir la
+# cabecera—, así que la única frontera real es quién tiene cada secreto.
+#
+# La consecuencia hay que tenerla presente: quien tenga la clave de pruebas
+# puede firmar un token bueno contra producción. Se queda aquí mientras el LMS
+# esté en despliegue; cuando deje de hacer falta, se vacía la variable.
+EMBED_LMS_SECRETS_EXTRA = env.list('CALENDARIO_EMBED_LMS_SECRETS_EXTRA', default=[])
+
 # Cuánto vale un token desde que el LMS lo emite. Es la ventana entera para
 # elegir hueco y confirmar, no solo para abrir la página: si se queda corta, a
 # quien deje la pestaña abierta un rato le falla el envío del formulario. Una

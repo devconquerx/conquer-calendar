@@ -597,3 +597,64 @@ class TransicionTest(EmbedBase):
         self.transicion.acceso = EventType.ACCESO_ACADEMIA
         self.transicion.save(update_fields=['acceso'])
         self.assertEqual(self.client.get(self.url_pagina(self.transicion)).status_code, 403)
+
+
+# ---------------------------------------------------------------------------
+# 6. Dos entornos del LMS a la vez: producción y el de pruebas de Daniel
+# ---------------------------------------------------------------------------
+
+SECRETO_TEST = 'secreto-del-lmstest-que-usa-daniel'
+
+
+@override_settings(EMBED_LMS_SECRETS_EXTRA=[SECRETO_TEST])
+class VariosSecretosTest(EmbedBase):
+    """Mientras el LMS está desplegándose hacen falta las dos claves vivas: con
+    una sola, o prueba Daniel o reservan los alumnos."""
+
+    def token_de_test(self, **kw):
+        payload = {'uid': 7, 'email': EMAIL_ALUMNO, 'nombre': NOMBRE_ALUMNO}
+        payload.update(kw)
+        return signing.dumps(payload, key=SECRETO_TEST, salt=SALT)
+
+    def test_el_token_de_produccion_sigue_valiendo(self):
+        resp = self.client.get(self.url_pagina(self.privado) + f'?t={token_lms()}')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_el_token_del_lms_de_pruebas_tambien_vale(self):
+        resp = self.client.get(self.url_pagina(self.privado) + f'?t={self.token_de_test()}')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['email_invitado'], EMAIL_ALUMNO)
+
+    def test_una_clave_que_no_es_ninguna_de_las_dos_sigue_fuera(self):
+        malo = signing.dumps({'uid': 7, 'email': EMAIL_ALUMNO, 'nombre': NOMBRE_ALUMNO},
+                             key='secreto-de-un-tercero', salt=SALT)
+        resp = self.client.get(self.url_pagina(self.privado) + f'?t={malo}')
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.context['motivo'], 'invalido')
+
+    def test_un_token_caducado_no_se_confunde_con_uno_invalido(self):
+        """Con varias claves es fácil que el caducado acabe reportado como
+        inválido: la clave buena lanza SignatureExpired y las demás BadSignature.
+        El alumno vería «este enlace no es válido» cuando lo único que pasa es
+        que la pestaña llevaba mucho abierta."""
+        with override_settings(EMBED_LMS_MAX_AGE=-1):
+            resp = self.client.get(self.url_pagina(self.privado) + f'?t={self.token_de_test()}')
+        self.assertEqual(resp.context['motivo'], 'caducado')
+
+    def test_la_reserva_del_lms_de_pruebas_usa_la_identidad_de_su_token(self):
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            self.client.post(
+                self.url_submit(self.privado) + f'?t={self.token_de_test()}',
+                self.datos_reserva(),
+            )
+        self.assertEqual(Reserva.objects.get().email_invitado, EMAIL_ALUMNO)
+
+
+@override_settings(EMBED_LMS_SECRET='', EMBED_LMS_SECRETS_EXTRA=[])
+class SinNingunaClaveTest(EmbedBase):
+
+    def test_sin_ninguna_clave_se_cierra(self):
+        """Sigue fallando hacia el lado seguro: sin claves no entra nadie."""
+        resp = self.client.get(self.url_pagina(self.privado) + f'?t={token_lms()}')
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.context['motivo'], 'sin_configurar')

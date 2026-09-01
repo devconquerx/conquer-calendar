@@ -52,8 +52,21 @@ class AccesoDenegado(Exception):
         self.detalle = detalle
 
 
+def _claves():
+    """Todas las claves con las que se da por bueno un token, en orden.
+
+    La primera es la de producción —la que usa `firmar_token`— y detrás van las
+    de los entornos de pruebas del LMS. Se prueban todas porque desde aquí no
+    hay forma fiable de saber desde qué academia se está embebiendo: ver la nota
+    de `EMBED_LMS_SECRETS_EXTRA` en settings.
+    """
+    claves = [settings.EMBED_LMS_SECRET]
+    claves += list(getattr(settings, 'EMBED_LMS_SECRETS_EXTRA', []) or [])
+    return [c for c in claves if c]
+
+
 def _config_incompleta():
-    return not settings.EMBED_LMS_SECRET
+    return not _claves()
 
 
 def firmar_token(payload):
@@ -89,21 +102,34 @@ def leer_token(raw):
             'Vuelve a intentarlo en un rato. Si sigue igual, avisa a soporte.',
         )
 
-    try:
-        datos = signing.loads(
-            raw,
-            key=settings.EMBED_LMS_SECRET,
-            salt=settings.EMBED_LMS_SALT,
-            max_age=settings.EMBED_LMS_MAX_AGE,
-        )
-    except signing.SignatureExpired:
-        raise AccesoDenegado(
-            'caducado',
-            'Esta página llevaba demasiado tiempo abierta',
-            'Por seguridad ha caducado. Vuelve a entrar desde la academia y '
-            'podrás reservar con normalidad.',
-        )
-    except signing.BadSignature:
+    # `SignatureExpired` hereda de `BadSignature`, así que se anota aparte: un
+    # token que caduca con alguna de las claves es auténtico y merece el mensaje
+    # de caducado, no el de enlace inválido, aunque las demás claves lo rechacen
+    # por firma.
+    datos = None
+    caducado = False
+    for clave in _claves():
+        try:
+            datos = signing.loads(
+                raw,
+                key=clave,
+                salt=settings.EMBED_LMS_SALT,
+                max_age=settings.EMBED_LMS_MAX_AGE,
+            )
+            break
+        except signing.SignatureExpired:
+            caducado = True
+        except signing.BadSignature:
+            continue
+
+    if datos is None:
+        if caducado:
+            raise AccesoDenegado(
+                'caducado',
+                'Esta página llevaba demasiado tiempo abierta',
+                'Por seguridad ha caducado. Vuelve a entrar desde la academia y '
+                'podrás reservar con normalidad.',
+            )
         raise AccesoDenegado(
             'invalido',
             'Este enlace no es válido',
