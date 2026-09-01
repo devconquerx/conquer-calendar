@@ -259,6 +259,33 @@ class ConTokenValidoTest(EmbedBase):
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(Reserva.objects.count(), 1)
 
+    def test_la_confirmacion_se_deja_embeber(self):
+        """Es la pantalla a la que redirige el POST: si va con `X-Frame-Options:
+        DENY`, la reserva se crea pero el marco se cae al terminar y el alumno
+        cree que ha fallado."""
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            resp = self.client.post(
+                self.url_submit(self.privado) + f'?t={token_lms()}',
+                self.datos_reserva(),
+            )
+        confirmacion = self.client.get(resp['Location'])
+        self.assertEqual(confirmacion.status_code, 200)
+        self.assertIn(ORIGEN_LMS, confirmacion['Content-Security-Policy'])
+        self.assertIn('frame-ancestors', confirmacion['Content-Security-Policy'])
+        self.assertNotIn('X-Frame-Options', confirmacion)
+
+    def test_la_confirmacion_de_un_evento_publico_sigue_sin_embeberse(self):
+        """El cambio va por evento, no por si venía token: los 143 públicos
+        tienen que seguir respondiendo DENY."""
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            resp = self.client.post(self.url_submit(self.publico), self.datos_reserva())
+        confirmacion = self.client.get(resp['Location'])
+        # El valor concreto lo decide X_FRAME_OPTIONS (DENY en producción,
+        # SAMEORIGIN en local); lo que importa es que la cabecera siga puesta y
+        # que no se les regale un `frame-ancestors`.
+        self.assertIn('X-Frame-Options', confirmacion)
+        self.assertNotIn('Content-Security-Policy', confirmacion)
+
     def test_la_reserva_se_crea_con_la_identidad_del_token(self):
         """El corazón del diseño.
 

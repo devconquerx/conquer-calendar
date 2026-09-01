@@ -630,7 +630,15 @@ class ConfirmacionView(View):
             ),
             'tz_host': tz_display_str,
         }
-        return render(request, 'pages/public/booking/confirmacion.html', ctx)
+        resp = render(request, 'pages/public/booking/confirmacion.html', ctx)
+        # Es la pantalla a la que redirige el POST de reserva, así que dentro
+        # del iframe de la academia es lo primero que se ve al terminar: sin
+        # esto sale `X-Frame-Options: DENY` y el marco se cae justo después de
+        # haber reservado bien. Mismo criterio que `_render_booking`: manda el
+        # evento, no si venía token.
+        if reserva.event_type.embebible:
+            return embed.permitir_embebido(resp)
+        return resp
 
 
 class CancelarPublicaView(View):
