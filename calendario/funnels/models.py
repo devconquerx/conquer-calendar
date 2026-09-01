@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 from taggit.managers import TaggableManager
 
@@ -186,3 +187,90 @@ class Prellamada(models.Model):
 
     def __str__(self):
         return f'{self.nombre} <{self.email}> — {self.resultado} ({self.creado_en:%Y-%m-%d %H:%M})'
+
+
+class ContenidoDeEvento(models.Model):
+    """Los textos de una página de evento, editables desde el admin.
+
+    Una fila por página de las que lista `/funnels/` (lanzamientos, gracias y
+    campañas). Guarda SOLO los textos: el diseño —plantilla, colores, fotos,
+    enlaces de WhatsApp, IDs de vídeo, códigos de funnel— sigue en las fichas de
+    `evento_views`, que además son el valor por defecto de cada texto.
+
+    `textos` es un diccionario {clave del campo: valor}; qué claves lleva cada
+    página lo declara `contenido.PAGINAS`, y el admin lo pinta como un
+    formulario con una caja por texto, así que nadie ve el JSON. Lo que no esté
+    aquí se sirve del código: una fila vacía deja la página exactamente como
+    estaba.
+
+    Las filas las crea la migración, una por página conocida: no se añaden ni se
+    borran desde el admin, porque una página sin plantilla no existiría.
+    """
+
+    clave = models.SlugField(
+        max_length=60,
+        unique=True,
+        verbose_name='Página',
+        help_text='Identificador de la página en `contenido.PAGINAS`.',
+    )
+    textos = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Textos publicados',
+        help_text='{clave: valor} de los textos en vivo. Lo que falte sale del código.',
+    )
+    # Lo que se está escribiendo pero todavía no ve nadie. La pantalla del panel
+    # guarda aquí y la vista previa lee de aquí; `publicar()` lo pasa a `textos`,
+    # que es lo único que sirve la página pública. Vacío = no hay nada pendiente.
+    borrador = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Borrador',
+        help_text='Cambios sin publicar. Solo se ven en la vista previa.',
+    )
+    publicado_en = models.DateTimeField(null=True, blank=True, verbose_name='Última publicación')
+    publicado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='contenidos_publicados',
+        verbose_name='Publicado por',
+    )
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'contenido_eventos'
+        ordering = ['clave']
+        verbose_name = 'textos de una página de evento'
+        verbose_name_plural = 'textos de las páginas de evento'
+
+    def __str__(self):
+        return self.pagina.nombre if self.pagina else self.clave
+
+    @property
+    def pagina(self):
+        """La ficha de la página en el registro (nombre, escuela, campos…)."""
+        from .contenido import PAGINAS
+
+        return PAGINAS.get(self.clave)
+
+    @property
+    def hay_cambios_sin_publicar(self):
+        return bool(self.borrador) and self.borrador != self.textos
+
+    def publicar(self, usuario=None):
+        """Pasa el borrador a la página pública."""
+        from django.utils import timezone
+
+        self.textos = dict(self.borrador)
+        self.borrador = {}
+        self.publicado_en = timezone.now()
+        self.publicado_por = usuario if (usuario and usuario.is_authenticated) else None
+        self.save(update_fields=['textos', 'borrador', 'publicado_en', 'publicado_por',
+                                 'actualizado_en'])
+
+    def descartar_borrador(self):
+        """Tira lo escrito y deja la página como está publicada."""
+        self.borrador = {}
+        self.save(update_fields=['borrador', 'actualizado_en'])

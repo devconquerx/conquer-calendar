@@ -78,7 +78,8 @@ a{text-decoration:none}
 }
 .titular{margin:0;font-size:38px}
 .subtitular{margin:0;font-size:23px;font-weight:300}
-.titular em,.subtitular em{font-style:normal;color:var(--azul-claro)}
+.titular em,.subtitular em,
+.titular strong,.subtitular strong{font-style:normal;font-weight:inherit;color:var(--azul-claro)}
 
 /* ── Hero: formulario e imagen ─────────────────────────────────────────── */
 .hero{
@@ -125,6 +126,9 @@ a{text-decoration:none}
 .curso-cabecera{
   display:flex;flex-direction:column;gap:8px;max-width:1024px;margin:0 auto;padding:20px;
 }
+/* El título va en mayúsculas, así que el resalte solo puede ser el color:
+   se le deja el mismo peso para no cambiar el dibujo. */
+.curso-titulo strong{font-weight:inherit}
 .curso-titulo{
   margin:0;color:#fff;text-align:center;text-transform:uppercase;align-self:center;
   font-family:var(--titular);font-size:30px;font-weight:600;line-height:53px;
@@ -188,8 +192,9 @@ a{text-decoration:none}
 .perfil-foto{width:30%}
 .perfil-foto img{border-radius:16px}
 .perfil-texto{flex:1;align-self:center;width:60%;padding:50px}
-.perfil-texto h2{margin:0 0 12px;color:#fff;font-family:var(--titular);text-transform:uppercase}
+.perfil-texto h2{margin:0 0 12px;color:#fff;font-family:var(--titular);text-transform:uppercase;font-weight:200}
 .perfil-texto h2 span{font-weight:200}
+.perfil-texto h2 strong{font-weight:700}
 .perfil-texto div{color:#fff;font-family:var(--cuerpo)}
 
 /* ── Cierre ────────────────────────────────────────────────────────────── */
@@ -199,8 +204,8 @@ a{text-decoration:none}
   background-image:linear-gradient(206deg,#212068 35%,var(--azul-claro));
 }
 .cierre-fila{display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:28px;width:100%}
-.cierre-fila p{margin:0;font-family:var(--titular);font-size:27px;font-weight:300}
-.cierre-fila h2{margin:0 0 1rem;color:#fff;text-align:center;font-family:var(--titular);font-size:4rem;font-weight:700;line-height:1.1}
+.cierre-fila p{margin:0;font-family:var(--titular);font-size:27px;font-weight:300;text-transform:uppercase}
+.cierre-fila h2{text-transform:uppercase;margin:0 0 1rem;color:#fff;text-align:center;font-family:var(--titular);font-size:4rem;font-weight:700;line-height:1.1}
 .cierre-texto{
   color:#fff;text-align:center;font-family:var(--cuerpo);font-size:28px;font-weight:200;line-height:35px;
 }
@@ -286,12 +291,12 @@ a{text-decoration:none}
     <div class="nav-contenedor">
       <img src="{% static 'img/eventos/pildoras/logo.svg' %}" alt="Conquer Finance" width="227">
       <div class="aviso">
-        <div class="aviso-texto aviso-cta">{{ pagina.aviso }}</div>
+        <div class="aviso-texto aviso-cta">{{ pagina.aviso|safe }}</div>
         <div class="aviso-fecha">
           <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M8 4H5C3.89543 4 3 4.89543 3 6V9M8 4H16M8 4V2M8 4V6M16 4H19C20.1046 4 21 4.89543 21 6V9H3M16 4V2M16 4V6M3 9V20C3 21.1046 3.89543 22 5 22H10M17 15.25V17L18.25 18.25M22 17C22 19.7614 19.7614 22 17 22C14.2386 22 12 19.7614 12 17C12 14.2386 14.2386 12 17 12C19.7614 12 22 14.2386 22 17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <div class="aviso-texto"><span>{{ pagina.fecha }}</span></div>
+          <div class="aviso-texto"><span>{{ pagina.fecha|safe }}</span></div>
         </div>
       </div>
     </div>
@@ -308,12 +313,12 @@ a{text-decoration:none}
     <div class="hero-caja">
       <div class="hero-imagen">
         <div class="aviso aviso-movil">
-          <div class="aviso-texto aviso-cta">{{ pagina.aviso }}</div>
+          <div class="aviso-texto aviso-cta">{{ pagina.aviso|safe }}</div>
           <div class="aviso-fecha">
             <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M8 4H5C3.89543 4 3 4.89543 3 6V9M8 4H16M8 4V2M8 4V6M16 4H19C20.1046 4 21 4.89543 21 6V9H3M16 4V2M16 4V6M3 9V20C3 21.1046 3.89543 22 5 22H10M17 15.25V17L18.25 18.25M22 17C22 19.7614 19.7614 22 17 22C14.2386 22 12 19.7614 12 17C12 14.2386 14.2386 12 17 12C19.7614 12 22 14.2386 22 17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <div class="aviso-texto"><span>{{ pagina.fecha }}</span></div>
+            <div class="aviso-texto"><span>{{ pagina.fecha|safe }}</span></div>
           </div>
         </div>
         <div class="marco">
@@ -325,20 +330,20 @@ a{text-decoration:none}
         <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
           <div class="campo">
             <label class="sr-only" for="fullname" hidden>Nombre</label>
-            <input type="text" id="fullname" name="fullname" placeholder="Introduce tu nombre" autocomplete="name" required>
+            <input type="text" id="fullname" name="fullname" placeholder="{{ pagina.campo_nombre }}" autocomplete="name" required>
           </div>
           <div class="campo">
             <label class="sr-only" for="email" hidden>Correo</label>
-            <input type="email" id="email" name="email" placeholder="Tu mejor email" autocomplete="email" required>
+            <input type="email" id="email" name="email" placeholder="{{ pagina.campo_email }}" autocomplete="email" required>
           </div>
           <div class="campo">
             <div class="legal">
               <input type="checkbox" id="privacidad" name="privacidad" required>
-              <span><label for="privacidad">He leído y acepto la
-                <a href="{{ pagina.politica_url }}" target="_blank" rel="noopener">política de privacidad</a>*</label></span>
+              <span><label for="privacidad">{{ pagina.legal_pre|safe }}
+                <a href="{{ pagina.politica_url }}" target="_blank" rel="noopener">{{ pagina.legal_enlace|safe }}</a>*</label></span>
             </div>
           </div>
-          <button type="submit">{{ pagina.cta }}</button>
+          <button type="submit">{{ pagina.cta|safe }}</button>
           <p class="aviso-envio" id="avisoEvento" role="status" aria-live="polite"></p>
         </form>
       </div>
@@ -347,7 +352,7 @@ a{text-decoration:none}
 
   <section class="curso">
     <div class="curso-cabecera">
-      <p class="curso-titulo">{{ pagina.curso_titulo }}</p>
+      <p class="curso-titulo">{{ pagina.curso_titulo|safe }}</p>
       <div class="curso-bajada">{{ pagina.curso_bajada|safe }}</div>
     </div>
     <div class="explicacion">
@@ -355,7 +360,7 @@ a{text-decoration:none}
         {% for c in pagina.columnas %}
         <div class="columna">
           <img src="{% static c.imagen %}" alt="" loading="lazy">
-          <h3>{{ c.titulo }}</h3>
+          <h3>{{ c.titulo|safe }}</h3>
           <p>{{ c.texto|safe }}</p>
         </div>
         {% endfor %}
@@ -363,7 +368,7 @@ a{text-decoration:none}
       <div class="fila-cta">
         <a href="#hero" class="boton-subir">
           <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" d="M8 12a.5.5 0 0 0 .5-.5V5.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 5.707V11.5a.5.5 0 0 0 .5.5z" fill="currentColor"/></svg>
-          <span>{{ pagina.cta_secundario }}</span>
+          <span>{{ pagina.cta_secundario|safe }}</span>
         </a>
       </div>
     </div>
@@ -371,18 +376,18 @@ a{text-decoration:none}
 
   <section class="taller">
     <div class="curso-cabecera">
-      <p class="curso-titulo">{{ pagina.taller_titulo }}</p>
-      <div class="curso-bajada">{{ pagina.taller_bajada }}</div>
+      <p class="curso-titulo">{{ pagina.taller_titulo|safe }}</p>
+      <div class="curso-bajada">{{ pagina.taller_bajada|safe }}</div>
     </div>
     <div class="pildoras">
       {% for p in pagina.pildoras %}
-      <div class="pildora pildora-{{ forloop.counter }}"><p>{{ p }}</p></div>
+      <div class="pildora pildora-{{ forloop.counter }}"><p>{{ p|safe }}</p></div>
       {% endfor %}
     </div>
     <div class="fila-cta">
       <a href="#hero" class="boton-subir claro">
         <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" d="M8 12a.5.5 0 0 0 .5-.5V5.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 5.707V11.5a.5.5 0 0 0 .5.5z" fill="currentColor"/></svg>
-        <span>{{ pagina.cta_secundario }}</span>
+        <span>{{ pagina.cta_secundario|safe }}</span>
       </a>
     </div>
   </section>
@@ -393,7 +398,7 @@ a{text-decoration:none}
         <img src="{% static 'img/eventos/tradingweek/felix.avif' %}" alt="Félix Fuertes" loading="lazy" width="940" height="1175">
       </div>
       <div class="perfil-texto">
-        <h2><span>Soy</span> Félix Fuertes</h2>
+        <h2>{{ pagina.perfil_titulo|safe }}</h2>
         <div>{{ pagina.perfil|safe }}</div>
       </div>
     </div>
@@ -402,13 +407,13 @@ a{text-decoration:none}
   <section class="cierre">
     <div class="cierre-caja">
       <div class="cierre-fila">
-        <p>- NO LA DEJES PASAR -</p>
-        <h2>LA TRADING<br>WEEK</h2>
+        <p>{{ pagina.cierre_antetitulo|safe }}</p>
+        <h2>{{ pagina.cierre_titulo|safe }}</h2>
         <div class="cierre-texto">{{ pagina.cierre|safe }}</div>
         <div class="fila-cta">
           <a href="#hero" class="boton-subir">
             <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" d="M8 12a.5.5 0 0 0 .5-.5V5.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 5.707V11.5a.5.5 0 0 0 .5.5z" fill="currentColor"/></svg>
-            <span>{{ pagina.cta_secundario }}</span>
+            <span>{{ pagina.cta_secundario|safe }}</span>
           </a>
         </div>
       </div>
@@ -422,9 +427,14 @@ a{text-decoration:none}
 window.__EVENTO__ = { funnel: "{{ funnel|escapejs }}", gracias: "{{ gracias|escapejs }}",
                       titulo_gracias: "{{ gr.titulo_pagina|escapejs }}" };
 </script>
-{# La suya es la maqueta de tres tarjetas, la misma que sirve
-   `/grupos-comunidad`; con la de Blocks y Finance no cuadraban ni el texto
-   del botón ni los degradados, que esta ficha no declara. #}
+{% comment %}
+  La suya es la maqueta de tres tarjetas, la misma que sirve
+  `/grupos-comunidad`; con la de Blocks y Finance no cuadraban ni el texto
+  del botón ni los degradados, que esta ficha no declara.
+
+  Va con {% comment %} y no con {#...#}: los de almohadilla son de UNA línea, y
+  este, al ocupar tres, se estaba imprimiendo al pie de la página.
+{% endcomment %}
 {% include 'pages/public/evento/_gracias_languages.html' with oculto=True %}
 {% include 'pages/public/evento/_salto_whatsapp.html' %}
 <script src="{% static 'js/evento-registro.js' %}"></script>

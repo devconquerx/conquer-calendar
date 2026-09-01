@@ -45,6 +45,10 @@ urlpatterns = [
     path('panel/reservas/', include('calendario.bookings.urls_panel')),
     path('panel/correos/', include('calendario.bookings.urls_correos')),
     path('panel/grupos/', include('calendario.grupos.urls')),
+    # Los textos de las páginas de evento: editor con vista previa (ver
+    # funnels/views_panel.py). El admin tiene su formulario, pero el bueno
+    # para escribir la copia es este.
+    path('panel/contenido/', include('calendario.funnels.urls_panel')),
     path('', RedirectView.as_view(url='/panel/', permanent=False)),
     path('r/', include('calendario.bookings.urls_public_token')),
     path('u/<uuid:token>/', include('calendario.bookings.urls_public_enlace_unico')),

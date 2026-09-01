@@ -1,0 +1,341 @@
+{% extends 'layout/panel.html' %}
+{% load static %}
+
+{% block title %}{{ pagina.nombre }} · Textos · {% endblock %}
+
+{% block css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'plugins/codemirror/codemirror.min.css' %}">
+<style>
+/* ── Editor de textos: cajas a la izquierda, página de verdad a la derecha ── */
+.ct-barra{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  margin-bottom:18px;
+}
+.ct-cuerpo{display:flex;align-items:flex-start;gap:20px}
+.ct-campos{flex:1 1 46%;min-width:0}
+.ct-vista{flex:1 1 54%;min-width:0;position:sticky;top:16px}
+
+.ct-seccion{margin-bottom:18px}
+.ct-seccion > summary{
+  cursor:pointer;list-style:none;padding:12px 16px;border-radius:8px;
+  background:var(--bs-gray-100);font-weight:600;font-size:13px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.ct-seccion > summary::-webkit-details-marker{display:none}
+.ct-seccion > summary::after{content:'▾';font-size:11px;opacity:.6}
+.ct-seccion[open] > summary::after{content:'▴'}
+.ct-seccion .ct-campo{padding:14px 4px 0}
+
+.ct-etiqueta{
+  display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;
+  color:var(--bs-gray-800);margin-bottom:5px;
+}
+/* El punto avisa de que ese texto no es el que está publicado. */
+.ct-cambiado::before{content:'';width:7px;height:7px;border-radius:50%;background:#f1a10a}
+.ct-ayuda{font-size:11.5px;color:var(--bs-gray-600);margin-top:5px}
+.ct-campo .CodeMirror{
+  height:auto;border:1px solid var(--bs-gray-300);border-radius:8px;padding:6px 4px;
+  font-size:12.5px;line-height:1.5;background:var(--bs-body-bg);color:var(--bs-gray-900);
+}
+.ct-campo .CodeMirror-focused{border-color:var(--bs-primary)}
+.ct-campo .CodeMirror-cursor{border-left-color:var(--bs-gray-900)}
+.ct-campo.ct-error .CodeMirror{border-color:var(--bs-danger)}
+.cm-s-default .cm-tag{color:#2f80ed}
+.cm-s-default .cm-attribute{color:#8e44ad}
+.cm-s-default .cm-string{color:#27ae60}
+
+.ct-vista-caja{border:1px solid var(--bs-gray-300);border-radius:10px;overflow:hidden;background:#fff}
+.ct-vista-barra{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:8px 10px;background:var(--bs-gray-100);border-bottom:1px solid var(--bs-gray-300);
+}
+.ct-vista-marco{background:var(--bs-gray-200);display:flex;justify-content:center}
+.ct-vista-marco iframe{
+  width:100%;height:calc(100vh - 220px);border:0;background:#fff;transition:width .15s;
+}
+.ct-vista-marco.movil iframe{width:420px}
+
+.ct-estado{font-size:12px;color:var(--bs-gray-600)}
+.ct-aviso{
+  padding:12px 14px;margin-bottom:16px;border-radius:8px;font-size:11.5px;line-height:1.6;
+  background:var(--bs-gray-100);border:1px solid var(--bs-gray-300);color:var(--bs-gray-700);
+}
+@media (max-width:1200px){
+  .ct-cuerpo{flex-direction:column}
+  .ct-vista{position:static;width:100%}
+  .ct-vista-marco iframe{height:70vh}
+}
+</style>
+{% endblock css %}
+
+{% block content %}
+<div class="ct-barra">
+  <div>
+    <a href="{% url 'panel_contenido:lista' %}" class="text-muted fs-8">← Todas las páginas</a>
+    <h3 class="fw-medium mb-0 mt-1">{{ pagina.nombre }}</h3>
+    <div class="text-muted fs-8">
+      {{ tipo }} · {{ pagina.escuela }}
+      {% if fila.publicado_en %} · publicada el {{ fila.publicado_en|date:"d/m/Y H:i" }}{% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <span class="ct-estado" id="ct-estado">
+      {% if fila.hay_cambios_sin_publicar %}Hay un borrador sin publicar{% endif %}
+    </span>
+    {% if puede_editar %}
+    <button type="button" class="btn btn-sm btn-light" id="ct-descartar"
+            {% if not fila.hay_cambios_sin_publicar %}disabled{% endif %}>Descartar borrador</button>
+    <button type="button" class="btn btn-sm btn-light-primary" id="ct-guardar">Guardar borrador</button>
+    <button type="button" class="btn btn-sm btn-primary" id="ct-publicar">Publicar</button>
+    {% else %}
+    <span class="badge badge-light-warning">Solo lectura: te falta el permiso para editar</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="ct-cuerpo">
+  <div class="ct-campos">
+    <div class="ct-aviso">
+      {{ ayuda_html|safe }}
+      <br>Una caja vacía no borra nada: ese texto vuelve a ser el original, así que vaciarla
+      es la forma de deshacer un cambio.
+    </div>
+
+    <form id="ct-form" onsubmit="return false">
+      {% for seccion in secciones %}
+      <details class="ct-seccion" {% if forloop.first %}open{% endif %}>
+        <summary>{{ seccion.nombre }}<span class="text-muted fw-normal fs-8">{{ seccion.campos|length }} texto{{ seccion.campos|length|pluralize:"s" }}</span></summary>
+        {% for campo in seccion.campos %}
+        <div class="ct-campo" data-nombre="{{ campo.nombre }}" data-publicado="{{ campo.publicado }}">
+          <label class="ct-etiqueta">{{ campo.etiqueta }}</label>
+          <textarea name="{{ campo.nombre }}" rows="{{ campo.lineas }}"
+                    data-tipo="{{ campo.tipo }}">{{ campo.valor }}</textarea>
+          {% if campo.ayuda %}<div class="ct-ayuda">{{ campo.ayuda|safe }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </details>
+      {% endfor %}
+    </form>
+  </div>
+
+  <div class="ct-vista">
+    <div class="ct-vista-caja">
+      <div class="ct-vista-barra">
+        <div class="d-flex align-items-center gap-2">
+          <span class="fw-semibold fs-8 text-gray-700">Vista previa</span>
+          {% if url_preview_v2 %}
+          <select class="form-select form-select-sm w-auto fs-8" id="ct-version">
+            <option value="{{ url_preview }}">Versión 1</option>
+            <option value="{{ url_preview_v2 }}">Versión 2</option>
+          </select>
+          {% endif %}
+        </div>
+        <div class="d-flex align-items-center gap-1">
+          <button type="button" class="btn btn-sm btn-light py-1 px-2 fs-8 active" data-ancho="escritorio">Escritorio</button>
+          <button type="button" class="btn btn-sm btn-light py-1 px-2 fs-8" data-ancho="movil">Móvil</button>
+          <button type="button" class="btn btn-sm btn-light py-1 px-2 fs-8" id="ct-recargar">Recargar</button>
+          <a class="btn btn-sm btn-light py-1 px-2 fs-8" id="ct-abrir" href="{{ url_preview }}" target="_blank" rel="noopener">Abrir ↗</a>
+        </div>
+      </div>
+      <div class="ct-vista-marco" id="ct-marco">
+        <iframe id="ct-iframe" src="{{ url_preview }}" title="Vista previa de {{ pagina.nombre }}"></iframe>
+      </div>
+    </div>
+    <div class="text-muted fs-8 mt-2">
+      Esta vista previa lleva tu borrador. Quien entre a
+      <a href="{{ url_publica }}" target="_blank" rel="noopener">la página</a> sigue viendo lo publicado.
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block javascript %}
+{{ block.super }}
+<script src="{% static 'plugins/codemirror/codemirror.min.js' %}"></script>
+<script src="{% static 'plugins/codemirror/xml.min.js' %}"></script>
+<script src="{% static 'plugins/codemirror/xml-fold.min.js' %}"></script>
+<script src="{% static 'plugins/codemirror/closetag.min.js' %}"></script>
+<script>
+(function () {
+  var PUEDE_EDITAR = {{ puede_editar|yesno:"true,false" }};
+  var URLS = {
+    guardar: '{{ url_guardar }}',
+    publicar: '{{ url_publicar }}',
+    descartar: '{{ url_descartar }}'
+  };
+
+  var editores = [];      // {nombre, cm, caja}
+  var sucio = false;      // hay cambios sin guardar en el borrador
+  var guardando = false;
+  var temporizador = null;
+
+  function csrf() {
+    var m = document.cookie.match(/(^|;\s*)csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[2]) : '';
+  }
+
+  function estado(texto) {
+    document.getElementById('ct-estado').textContent = texto;
+  }
+
+  /* Cada caja es un CodeMirror en modo XML: resalta las etiquetas, las cierra
+     solas y avisa de las que se quedan abiertas. Los textos son fragmentos de
+     HTML, no documentos, así que XML basta y pesa una décima parte que el modo
+     completo. */
+  document.querySelectorAll('.ct-campo').forEach(function (caja) {
+    var area = caja.querySelector('textarea');
+    var esLista = area.dataset.tipo === 'lista';
+    var cm = CodeMirror.fromTextArea(area, {
+      mode: 'text/html',
+      lineWrapping: true,
+      autoCloseTags: true,
+      readOnly: PUEDE_EDITAR ? false : 'nocursor',
+      viewportMargin: Infinity,
+      lineNumbers: esLista,   // en las listas importa en qué línea va cada entrada
+      extraKeys: {
+        'Ctrl-S': guardarBorrador,
+        'Cmd-S': guardarBorrador,
+        // Tab mueve al campo siguiente en vez de meter un tabulador: aquí se
+        // escribe copia, no código indentado.
+        Tab: false,
+        'Shift-Tab': false
+      }
+    });
+    editores.push({ nombre: caja.dataset.nombre, cm: cm, caja: caja });
+    marcaCambio(caja, cm.getValue());
+    cm.on('change', function () {
+      sucio = true;
+      marcaCambio(caja, cm.getValue());
+      estado('Cambios sin guardar…');
+      clearTimeout(temporizador);
+      if (PUEDE_EDITAR) temporizador = setTimeout(guardarBorrador, 1200);
+    });
+  });
+
+  function marcaCambio(caja, valor) {
+    var etiqueta = caja.querySelector('.ct-etiqueta');
+    if (valor.trim() !== (caja.dataset.publicado || '').trim()) {
+      etiqueta.classList.add('ct-cambiado');
+    } else {
+      etiqueta.classList.remove('ct-cambiado');
+    }
+  }
+
+  function datos() {
+    var d = {};
+    editores.forEach(function (e) { d[e.nombre] = e.cm.getValue(); });
+    return d;
+  }
+
+  function pinta(errores) {
+    editores.forEach(function (e) {
+      e.caja.classList.toggle('ct-error', (errores || []).indexOf(e.nombre) !== -1);
+    });
+  }
+
+  function envia(url) {
+    return fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrf(),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify(datos())
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, json: j }; }); });
+  }
+
+  /* La vista previa se recarga conservando el punto de la página en el que
+     estabas: si no, cada guardado te devuelve arriba del todo. */
+  function recargaVista() {
+    var iframe = document.getElementById('ct-iframe');
+    var alto = 0;
+    try { alto = iframe.contentWindow.scrollY || 0; } catch (e) { alto = 0; }
+    var base = document.getElementById('ct-abrir').getAttribute('href');
+    iframe.onload = function () {
+      try { iframe.contentWindow.scrollTo(0, alto); } catch (e) { /* otro dominio */ }
+      iframe.onload = null;
+    };
+    iframe.src = base + (base.indexOf('?') === -1 ? '?' : '&') + '_t=' + Date.now();
+  }
+
+  function guardarBorrador() {
+    if (!PUEDE_EDITAR || guardando) return;
+    guardando = true;
+    estado('Guardando…');
+    return envia(URLS.guardar).then(function (r) {
+      guardando = false;
+      if (!r.ok) {
+        pinta(r.json.errores);
+        estado('No se ha guardado: revisa los campos marcados en rojo.');
+        return;
+      }
+      pinta([]);
+      sucio = false;
+      estado('Borrador guardado. Sin publicar.');
+      document.getElementById('ct-descartar').disabled = false;
+      recargaVista();
+    }).catch(function () {
+      guardando = false;
+      estado('No se ha podido guardar (¿se ha caído la conexión?).');
+    });
+  }
+
+  if (PUEDE_EDITAR) {
+    document.getElementById('ct-guardar').addEventListener('click', guardarBorrador);
+
+    document.getElementById('ct-publicar').addEventListener('click', function () {
+      if (!confirm('Se van a publicar estos textos. La página pública cambia al momento.')) return;
+      estado('Publicando…');
+      envia(URLS.publicar).then(function (r) {
+        if (!r.ok) {
+          pinta(r.json.errores);
+          estado('No se ha publicado: revisa los campos marcados en rojo.');
+          return;
+        }
+        sucio = false;
+        pinta([]);
+        editores.forEach(function (e) { e.caja.dataset.publicado = e.cm.getValue(); marcaCambio(e.caja, e.cm.getValue()); });
+        document.getElementById('ct-descartar').disabled = true;
+        estado(r.json.mensaje);
+        recargaVista();
+      });
+    });
+
+    document.getElementById('ct-descartar').addEventListener('click', function () {
+      if (!confirm('Se pierde lo escrito desde la última publicación. ¿Seguimos?')) return;
+      fetch(URLS.descartar, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest' }
+      }).then(function () { window.location.reload(); });
+    });
+
+    window.addEventListener('beforeunload', function (e) {
+      if (!sucio) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+  }
+
+  document.getElementById('ct-recargar').addEventListener('click', recargaVista);
+
+  document.querySelectorAll('[data-ancho]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('[data-ancho]').forEach(function (o) { o.classList.remove('active'); });
+      b.classList.add('active');
+      document.getElementById('ct-marco').classList.toggle('movil', b.dataset.ancho === 'movil');
+    });
+  });
+
+  var version = document.getElementById('ct-version');
+  if (version) {
+    version.addEventListener('change', function () {
+      document.getElementById('ct-abrir').setAttribute('href', version.value);
+      recargaVista();
+    });
+  }
+})();
+</script>
+{% endblock javascript %}

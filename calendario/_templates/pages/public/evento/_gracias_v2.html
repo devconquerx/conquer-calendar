@@ -39,7 +39,8 @@
 #gracias-evento .destacar{margin:0;font-family:var(--fuente);font-size:clamp(17px,2vw,22px);font-weight:600;line-height:1.25;color:var(--tinta)}
 #gracias-evento .texto{margin:0;max-width:560px;color:var(--tinta-suave);font-size:15px;font-weight:300;line-height:1.55}
 #gracias-evento .texto strong{font-weight:600;color:var(--tinta)}
-#gracias-evento .subrayado{font-weight:600;text-decoration:underline;color:var(--tinta)}
+#gracias-evento .subrayado,
+#gracias-evento .texto u{font-weight:600;text-decoration:underline;color:var(--tinta)}
 #gracias-evento .cta-fila{display:flex;justify-content:center;width:100%}
 /* El CTA es verde de WhatsApp, no el degradado de la marca: es el color por el
    que se reconoce el botón, y en esta pantalla es lo único que hay que pulsar. */
@@ -65,28 +66,19 @@
 
   <div class="pila">
     <div class="tarjeta">
-      <p class="titular">¡Obligatorio! Queda un último paso para reservar tu entrada…</p>
-      <p class="texto">
-        Hemos creado una comunidad VIP en WhatsApp para todos los asistentes a la
-        <strong>{{ gr.clase }}</strong> de {{ gr.marca }}.<br><br>
-        <span class="subrayado">Es de vital importancia que te unas para confirmar tu asistencia.</span>
-      </p>
+      <p class="titular">{{ gr.titular|safe }}</p>
+      <p class="texto">{{ gr.texto_1|safe }}</p>
       {% include 'pages/public/evento/_boton_whatsapp_v2.html' %}
     </div>
 
     <div class="tarjeta">
-      <p class="destacar">⬇️ Dale al botón verde de abajo para unirte totalmente gratis al grupo exclusivo del evento de {{ gr.marca }} ⬇️</p>
+      <p class="destacar">{{ gr.texto_2|safe }}</p>
       {% include 'pages/public/evento/_boton_whatsapp_v2.html' %}
     </div>
 
     <div class="tarjeta">
-      <p class="destacar">¿Miras más tu WhatsApp que tu e-mail?</p>
-      <p class="texto">
-        Tranquilo, a mucha gente de nuestra comunidad le ocurre.<br>
-        Por eso, hemos creado una comunidad de WhatsApp, donde recibirás todas las
-        comunicaciones de la Clase, mucho valor adicional de {{ gr.marca }}, y
-        algún que otro regalo.
-      </p>
+      <p class="destacar">{{ gr.destacar_3|safe }}</p>
+      <p class="texto">{{ gr.texto_3|safe }}</p>
       {% include 'pages/public/evento/_boton_whatsapp_v2.html' %}
     </div>
   </div>

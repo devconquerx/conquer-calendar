@@ -13,7 +13,7 @@ lleve a otra parte.
 <div class="cta-fila">
   <a class="boton" href="{{ gr.whatsapp }}" target="_blank" rel="noopener">
     <div class="boton-cuerpo">
-      <span class="boton-texto">{{ gr.cta }}</span>
+      <span class="boton-texto">{{ gr.cta|safe }}</span>
       {% if gr.icono_cta %}
       <span class="boton-icono" aria-hidden="true">
         <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">

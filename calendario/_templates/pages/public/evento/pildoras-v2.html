@@ -65,10 +65,10 @@
   <section class="pb-ancho cabeza">
     <span class="pb-pildora">
       <svg viewBox="0 0 24 24" data-relleno aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-      Trading Week
+      {{ pagina.chapa|safe }}
     </span>
-    <p class="numero">{{ pagina.numero }}</p>
-    <h1 class="pb-titular">{{ pagina.titular }}</h1>
+    <p class="numero">{{ pagina.numero|safe }}</p>
+    <h1 class="pb-titular">{{ pagina.titular|safe }}</h1>
   </section>
 
   <section class="pb-ancho video">
@@ -86,16 +86,16 @@
   {% if pagina.tarjetas %}
   <section class="pb-oscuro otras">
     <div class="pb-ancho">
-      <p class="pb-seccion-titulo">Sigue con las <strong>demás píldoras</strong></p>
+      <p class="pb-seccion-titulo">{{ pagina.otras_titulo|safe }}</p>
       <div class="otras-fila">
         {% for t in pagina.tarjetas %}
         <div class="pildora-enlace">
           <a href="{{ app_base_path }}/{{ t.ruta }}{% if version == 2 %}?v=2{% endif %}">
             <img src="{% static t.imagen %}" alt="" loading="lazy">
-            <h3>{{ t.texto }}</h3>
+            <h3>{{ t.texto|safe }}</h3>
           </a>
           <a class="pb-cta" href="{{ app_base_path }}/{{ t.ruta }}{% if version == 2 %}?v=2{% endif %}">
-            Ya disponible
+            {{ pagina.boton_tarjeta|safe }}
             <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
             </svg>

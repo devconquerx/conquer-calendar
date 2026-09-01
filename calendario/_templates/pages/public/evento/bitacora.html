@@ -87,7 +87,7 @@ img{max-width:100%;height:auto;display:block}
 
 <header class="cabecera">
   <img src="{% static 'img/eventos/bitacora/logo.svg' %}" alt="Conquer Languages" width="350">
-  <div class="evento">English Week</div>
+  <div class="evento">{{ pagina.chapa|safe }}</div>
 </header>
 
 <main class="contenedor">
@@ -99,22 +99,12 @@ img{max-width:100%;height:auto;display:block}
     </div>
   </div>
 
-  <p class="antetitulo">Bienvenidos a La Clase 0</p>
-  <h1 class="titular">Prepárate para transforar tu inglés antes de la English Week</h1>
+  <p class="antetitulo">{{ pagina.antetitulo|safe }}</p>
+  <h1 class="titular">{{ pagina.titular|safe }}</h1>
 
-  <p class="cuerpo">
-    Prepárate para la English Week, el evento donde descubrirás por qué cientos de
-    personas están logrando un inglés fluido en tiempo récord, sin memorizar y sin
-    horas interminables.
-  </p>
-  <p class="cuerpo">
-    Esta clase previa es clave: te mostrará la mentalidad adecuada, los errores que
-    frenan tu aprendizaje y el sistema que realmente acelera tu fluidez.
-  </p>
-  <p class="cuerpo">
-    Entenderás por qué sí puedes aprender inglés aunque nada te haya funcionado antes…<br>
-    y llegarás al evento listo para transformar tu inglés para siempre.
-  </p>
+  {% for parrafo in pagina.parrafos %}
+  <p class="cuerpo">{{ parrafo|safe }}</p>
+  {% endfor %}
 
   <div class="cierre-hueco"></div>
 </main>

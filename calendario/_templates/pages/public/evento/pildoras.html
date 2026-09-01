@@ -96,7 +96,7 @@ img{max-width:100%;height:auto;display:block}
   display:block;text-align:center;font-family:var(--cuerpo);
   font-size:16px;font-style:italic;font-weight:900;line-height:20px;
 }
-.pildora-enlace .boton{
+.pildora-enlace .boton{text-transform:uppercase;
   display:block;width:100%;margin-top:10px;padding:9px 15px;
   background:var(--azul-oscuro);color:#fff;border-radius:20px;text-align:center;
   font-family:var(--titular);font-size:21px;font-weight:600;
@@ -140,7 +140,7 @@ img{max-width:100%;height:auto;display:block}
   <header class="cabecera-barra">
     <div class="cabecera">
       <img src="{% static 'img/eventos/pildoras/logo.svg' %}" alt="Conquer Finance" width="227">
-      <div class="evento">Trading Week</div>
+      <div class="evento">{{ pagina.chapa|safe }}</div>
     </div>
   </header>
 
@@ -154,8 +154,8 @@ img{max-width:100%;height:auto;display:block}
 
   <section class="texto">
     <div class="titulo-pildora">
-      <div class="numero">{{ pagina.numero }}</div>
-      <h2 class="titular"><strong>{{ pagina.titular }}</strong></h2>
+      <div class="numero">{{ pagina.numero|safe }}</div>
+      <h2 class="titular"><strong>{{ pagina.titular|safe }}</strong></h2>
     </div>
     <p class="cuerpo">{{ pagina.cuerpo|safe }}</p>
   </section>
@@ -168,9 +168,9 @@ img{max-width:100%;height:auto;display:block}
       <div class="pildora-enlace">
         <a href="{{ app_base_path }}/{{ t.ruta }}">
           <img src="{% static t.imagen %}" alt="" loading="lazy">
-          <h3><strong>{{ t.texto }}</strong></h3>
+          <h3><strong>{{ t.texto|safe }}</strong></h3>
         </a>
-        <a class="boton" href="{{ app_base_path }}/{{ t.ruta }}">YA DISPONIBLE</a>
+        <a class="boton" href="{{ app_base_path }}/{{ t.ruta }}">{{ pagina.boton_tarjeta|safe }}</a>
       </div>
       {% endfor %}
     </div>

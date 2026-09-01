@@ -18,6 +18,7 @@ from django.utils.cache import patch_vary_headers
 from django.views.generic import TemplateView
 
 from . import consentimiento as consent
+from .contenido import con_textos, puede_ver_borrador
 from .context_processors import get_gtm_config
 from .views import _base_path, _escuela_por_host
 
@@ -35,6 +36,7 @@ EVENTOS = {
         # panel de /funnels/, que lista todas las páginas de evento juntas en
         # ese orden: es el hilo por el que se han ido revisando, y ordenarlas
         # por escuela o alfabéticamente lo rompía.
+        'clave': 'lanzamiento-blocks',
         'orden': 1,
         'publicada': True,
         'plantilla': 'pages/public/evento/paperboard.html',
@@ -75,8 +77,14 @@ EVENTOS = {
         'legal_pre': 'Al continuar, confirmas que has leído y aceptas nuestra',
         'legal_enlace': 'política de privacidad.',
         'politica_url': 'https://www.conquerblocks.com/politica-de-privacidad',
+        # Marcadores de posición del formulario, editables como el resto de la
+        # copia: los pinta la plantilla desde la ficha.
+        'campo_nombre': 'Introduce tu nombre',
+        'campo_email': 'Tu mejor email',
+        'campo_telefono': 'Número de WhatsApp',
     },
     'conquer-finance': {
+        'clave': 'lanzamiento-finance',
         'orden': 2,
         'publicada': True,
         # Misma maqueta que Blocks: en Webflow son la misma página con otra
@@ -124,8 +132,14 @@ EVENTOS = {
         'legal_pre': 'Al continuar, confirmas que has le\u00eddo y aceptas nuestra',
         'legal_enlace': 'pol\u00edtica de privacidad.',
         'politica_url': 'https://www.conquerfinance.com/politica-de-privacidad',
+        # Marcadores de posición del formulario, editables como el resto de la
+        # copia: los pinta la plantilla desde la ficha.
+        'campo_nombre': 'Introduce tu nombre',
+        'campo_email': 'Tu mejor email',
+        'campo_telefono': 'Número de WhatsApp',
     },
     'conquer-languages': {
+        'clave': 'lanzamiento-languages',
         'orden': 3,
         'publicada': True,
         'plantilla': 'pages/public/evento/languages.html',
@@ -155,6 +169,11 @@ EVENTOS = {
         'consentimiento': 'He leído y acepto la',
         'politica_texto': 'política de privacidad*',
         'politica_url': 'https://www.conquerlanguages.com/politica-de-privacidad',
+        # Marcadores de posición del formulario, editables como el resto de la
+        # copia: los pinta la plantilla desde la ficha.
+        'campo_nombre': 'Introduce tu nombre',
+        'campo_email': 'Tu mejor email',
+        'campo_telefono': 'Número de WhatsApp',
     },
 }
 
@@ -172,8 +191,22 @@ GRACIAS = {
         'publicada': True,
         'ruta': 'evento/gracias-comunidad',
         'titulo_pagina': 'Gracias Comunidad',
+        'clave': 'gracias-blocks',
+        # Los textos de las tres tarjetas. Estaban escritos en la plantilla, que
+        # es común a las dos marcas; aquí cada una lleva los suyos y se pueden
+        # editar por separado desde el admin.
+        'titular_destacado': '¡OBLIGATORIO!',
+        'titular_resto': 'Queda un último paso para reservar tu entrada...',
+        'texto_1': 'Hemos creado una comunidad VIP en WhatsApp para todos los asistentes a la '
+                   '<strong>Clase Privada de Conquer Blocks.</strong><br>'
+                   'Es de vital importancia que te unas para confirmar tu asistencia.',
+        'texto_2': 'Dale al botón de abajo para unirte totalmente gratis al grupo exclusivo '
+                   'del Evento ⬇️',
+        'destacar_3': '<strong>¿Miras más tu Whatsapp que tu e-mail?</strong>',
+        'texto_3': 'Tranquilo, a mucha gente de nuestra comunidad le ocurre.<br>'
+                   'Por eso, hemos creado una comunidad de WhatsApp, donde recibirás todas las '
+                   'comunicaciones del Evento, y mucho valor adicional de Conquer Blocks.',
         'whatsapp': 'https://cb.conquerx.com/1Qt1ef/',
-        'clase': 'Clase Privada de Conquer Blocks.',
         'cta': 'Unirme a la Comunidad VIP de WhatsApp',
         'icono_cta': True,
         'marca': 'Conquer Blocks',
@@ -191,9 +224,23 @@ GRACIAS = {
         'publicada': True,
         'ruta': 'evento/gracias-comunidad',
         'titulo_pagina': '¡Registro Confirmado! - Trading Week | Conquer Finance',
+        'clave': 'gracias-finance',
+        # Los textos de las tres tarjetas. Estaban escritos en la plantilla, que
+        # es común a las dos marcas; aquí cada una lleva los suyos y se pueden
+        # editar por separado desde el admin.
+        'titular_destacado': '¡OBLIGATORIO!',
+        'titular_resto': 'Queda un último paso para reservar tu entrada...',
+        'texto_1': 'Hemos creado una comunidad VIP en WhatsApp para todos los asistentes a la '
+                   '<strong>Clase Privada de Conquer Finance.</strong><br>'
+                   'Es de vital importancia que te unas para confirmar tu asistencia.',
+        'texto_2': 'Dale al botón de abajo para unirte totalmente gratis al grupo exclusivo '
+                   'del Evento ⬇️',
+        'destacar_3': '<strong>¿Miras más tu Whatsapp que tu e-mail?</strong>',
+        'texto_3': 'Tranquilo, a mucha gente de nuestra comunidad le ocurre.<br>'
+                   'Por eso, hemos creado una comunidad de WhatsApp, donde recibirás todas las '
+                   'comunicaciones del Evento, y mucho valor adicional de Conquer Finance.',
         # OJO: es el grupo de Blocks, tal como está hoy en Webflow.
         'whatsapp': 'https://cb.conquerx.com/1Qt1ef/',
-        'clase': 'Clase Privada de Conquer Finance.',
         'cta': 'Unirme a la Comunidad VIP de WhatsApp',
         'icono_cta': True,
         'marca': 'Conquer Finance',
@@ -209,10 +256,21 @@ GRACIAS = {
         'publicada': True,
         'ruta': 'grupos-comunidad',
         'titulo_pagina': 'Gracias-Comunidad',
+        'clave': 'gracias-languages',
+        'titular': '¡OBLIGATORIO! Queda un último paso para reservar tu entrada...',
+        'texto_1': 'Hemos creado una comunidad VIP en WhatsApp para todos los asistentes a la '
+                   '<strong>Clase de 0 a Inglés fluido</strong> de Conquer Languages.<br><br>'
+                   '<u>Es de vital importancia que te unas para confirmar tu asistencia.</u>',
+        'texto_2': '⬇️ Dale al botón verde de abajo para unirte totalmente gratis al grupo '
+                   'exclusivo del evento de Conquer Languages ⬇️',
+        'destacar_3': '¿Miras más tu Whatsapp que tu e-mail?',
+        'texto_3': 'Tranquilo, a mucha gente de nuestra comunidad le ocurre.<br>'
+                   'Por eso, hemos creado una comunidad de WhatsApp, donde recibirás todas las '
+                   'comunicaciones de la Clase, mucho valor adicional de Conquer Languages, y algún que '
+                   'otro regalo.',
         'fondo': 'img/eventos/cl-fondo.jpg',
         'verde': '#15b961',
         'whatsapp': 'https://cl.conquerx.com/5P9e7L/',
-        'clase': 'Clase de 0 a Inglés fluido',
         'cta': 'UNIRME A LA COMUNIDAD VIP DE WHATSAPP >>',
         'icono_cta': False,
         'marca': 'Conquer Languages',
@@ -232,6 +290,18 @@ GRACIAS_TRADING_WEEK = {
     'plantilla_v2': 'pages/public/evento/gracias-v2.html',
     'ruta': 'grupos-comunidad',
     'titulo_pagina': 'Grupos Comunidad',
+    'clave': 'gracias-trading-week',
+    'titular': '¡OBLIGATORIO! Queda un último paso para reservar tu entrada...',
+    'texto_1': 'Hemos creado una comunidad VIP en WhatsApp para todos los asistentes a la '
+               '<strong>Trading Week 2025</strong> de Conquer Finance.<br><br>'
+               '<u>Es de vital importancia que te unas para confirmar tu asistencia.</u>',
+    'texto_2': '⬇️ Dale al botón verde de abajo para unirte totalmente gratis al grupo '
+               'exclusivo del evento de Conquer Finance ⬇️',
+    'destacar_3': '¿Miras más tu Whatsapp que tu e-mail?',
+    'texto_3': 'Tranquilo, a mucha gente de nuestra comunidad le ocurre.<br>'
+               'Por eso, hemos creado una comunidad de WhatsApp, donde recibirás todas las '
+               'comunicaciones de la Clase, mucho valor adicional de Conquer Finance, y algún que '
+               'otro regalo.',
     'fondo': 'img/eventos/pildoras/fondo-blur.avif',
     'fondo_color': '#000',
     'verde': '#00d663',
@@ -242,7 +312,6 @@ GRACIAS_TRADING_WEEK = {
     # queda vacío: la pantalla se sirve igual, sin botón y sin salto
     # automático, hasta que alguien ponga el enlace bueno.
     'whatsapp': '',
-    'clase': 'Trading Week 2025',
     'cta': 'UNIRME A LA COMUNIDAD VIP DE WHATSAPP >>',
     'icono_cta': False,
     'marca': 'Conquer Finance',
@@ -318,26 +387,95 @@ def _gtm(escuela):
 # una vez aquí y las otras dos la referencian.
 _PILDORAS = {
     1: {'ruta': 'evento/pildoras-evento-1', 'imagen': 'img/eventos/pildoras/pildora-1.avif',
-        'texto': 'DESCUBRE LA SITUACIÓN ECONÓMICA ACTUAL Y POR QUÉ DEBES ACTUAR YA'},
+        'clave': 'pildora-1'},
     2: {'ruta': 'evento/pildoras-evento-2', 'imagen': 'img/eventos/pildoras/pildora-2.avif',
-        'texto': 'QUÉ ES EL TRADING: LA FORMA MÁS INTELIGENTE DE GENERAR DINERO'},
+        'clave': 'pildora-2'},
     3: {'ruta': 'evento/pildoras-evento-3', 'imagen': 'img/eventos/pildoras/pildora-3.avif',
-        'texto': 'LOS 3 PERFILES DE PERSONAS QUE TENDRÁN ÉXITO EN EL TRADING INSTITUCIONAL'},
+        'clave': 'pildora-3'},
 }
 
 
 PAGINAS_DE_CAMPANA = {
     'evento-coding-week-eu': {
         'orden': 4,
+        'clave': 'coding-week',
         'escuela': 'conquer-blocks',
         'plantilla': 'pages/public/evento/codingweek.html',
         'plantilla_v2': 'pages/public/evento/codingweek-v2.html',
         'titulo_pagina': 'Evento Coding Week - Conquer Blocks EU',
         'funnel': 'cb-codingweek5-eu',
+        # Toda la copia de la página. Estaba escrita en las dos plantillas (v1 y
+        # v2), que ahora la sacan de aquí: así se edita una sola vez y las dos
+        # versiones dicen lo mismo.
+        'chapa_evento': 'Evento gratuito y en directo de 2 Días',
+        'chapa_fecha': 'El 24 y 25 de Noviembre a las 19:00h Madrid',
+        'titular': 'Consigue trabajo 100% remoto y un salario por encima de los '
+                   '<strong>3.000€ mensuales</strong> convirtiéndote en Desarrollador Full Stack',
+        'subtitular': 'Descubre cómo aprender la habilidad más demandada, en menos de 1 año y '
+                      'sin necesidad de experiencia previa',
+        'campo_nombre': 'Introduce tu nombre',
+        'campo_email': 'Tu mejor email',
+        'campo_telefono': 'Número de WhatsApp',
+        'legal_pre': 'Al continuar aceptas las',
+        'legal_enlace': 'politicas de privacidad',
+        'cta': 'Regístrate gratis ahora',
+        'reclamo': '¡No lo pienses más y regístrate para acceder a la '
+                   '<strong>coding WEEK</strong>!',
+        'reclamo_detalle': 'Un evento donde mostraremos el paso a paso para conseguir una '
+                           'profesión en auge, con salarios superiores a la media, '
+                           '<strong>tasas de desempleo del 0% y 100% remoto.</strong>',
+        'tarjetas': (
+            {'imagen': 'img/eventos/codingweek/tarjeta-1.avif',
+             'titulo': '¿Por qué convertirse en <strong>Desarrollador Full Stack</strong> es la '
+                       'mejor opción para asegurar tu futuro?',
+             'texto_1': 'En los últimos años, no hemos parado de ver como el precio de todo '
+                        'sube, pero como los salarios y las profesiones cada vez son más '
+                        'precarias.',
+             'texto_2': 'En esta clase entenderás hacia donde se dirige el mercado laboral, y '
+                        'cómo tú puedes aprovecharlo para conseguir posicionarte en una '
+                        'profesión bien pagada y que te dé la calidad de vida que buscas.'},
+            {'imagen': 'img/eventos/codingweek/tarjeta-2.avif',
+             'titulo': 'El <strong>Paso a Paso</strong> para conseguirlo en menos de 12 meses y '
+                       'disfrutar de <strong>las ventajas de esta habilidad</strong>',
+             'texto_1': 'A día de hoy encontrar un empleo, en remoto y con salarios por encima '
+                        'a 3.000 euros mensuales, se ha convertido en algo que todo el mundo '
+                        'quiere, pero que nadie consigue encontrar.',
+             'texto_2': 'En este evento verás como no es tan complicado conseguir todo esto, '
+                        'gracias a aprender esta habilidad en menos de 12 meses, '
+                        'independientemente de tu experiencia previa o conocimientos.'},
+        ),
+        # `<strong>` es el resalte de color; `<em>`, el secundario (aquí, la
+        # negrita blanca de "coding week").
+        'clase0_titulo': 'Conseguirás desbloquear <strong>la clase 0</strong> previa a la '
+                         '<em>coding week</em>',
+        'clase0_detalle': 'para romper con todos los mitos acerca de las profesiones '
+                          'tecnológicas, entender esta profesión, el porqué es tan demandada y '
+                          'hasta donde puede llegar a cambiar nuestra vida gracias a ella.',
+        'clase0_cartel': 'El sentido común detrás de una de las profesiones más demandadas, con '
+                         'mejores condiciones y salarios más altos que la media',
+        'bio_titulo': 'Soy <strong>Bienvenido Sáez</strong>',
+        'bio_parrafos': [
+            'Bienvenido es Director de Educación Tecnológica en Conquer Blocks.',
+            'Con más de 20 años de experiencia en el sector del desarrollo y la formación. '
+            'Habiendo sido una de las personas más influyentes de este 2025 en el mundo hispano '
+            'enseñando una de las profesiones más demandas y mejor pagadas.',
+            'En Conquer Blocks enseña un método que ha ayudado a más de 6.000 personas a '
+            'aprender una <strong>nueva profesión con la que cambiar sus vidas por '
+            'completo</strong>.',
+            'Y en este evento te enseñará el porqué deberías aprender una profesión tecnológica, '
+            'cómo romper con los mitos acerca de esto, y cómo alcanzar un salario superior a los '
+            '3.000 euros mensuales como Desarrollador Full-Stack.',
+        ],
+        'cierre_antetitulo': '- No la dejes pasar -',
+        'cierre_titulo': 'La Coding Week',
+        'cierre_texto': 'Prepárate para descubrir cómo <strong>conseguir una profesión con la '
+                        'que no sufrir</strong> por la falta de trabajo, los salarios precarios '
+                        'o las malas condiciones laborales.',
         'politica_url': 'https://www.conquerblocks.com/politica-de-privacidad',
     },
     'evento-testimonios': {
         'orden': 5,
+        'clave': 'testimonios',
         'escuela': 'conquer-blocks',
         'plantilla': 'pages/public/evento/testimonios.html',
         'plantilla_v2': 'pages/public/evento/testimonios-v2.html',
@@ -348,6 +486,20 @@ PAGINAS_DE_CAMPANA = {
         'cta_texto': 'Agendar mi llamada gratuita',
         'cta_url': ('https://agendar.conquerblocks.com/?utm_source=landing'
                     '&utm_medium=testimonios&utm_campaign=codingweek1'),
+        'titular': 'Historias reales de personas que transformaron <strong>su futuro</strong> '
+                   'en el sector tech',
+        'subtitular': 'Descubre cómo nuestros alumnos consiguieron trabajos bien pagados en '
+                      'tiempo récord gracias a nuestra metodología probada',
+        'seccion_titulo': 'Conoce la experiencia de nuestros alumnos dentro de Conquer Blocks',
+        'sistema_titulo': 'El sistema que garantiza resultados',
+        'sistema_puntos': [
+            'Método basado en aprender haciendo.',
+            'Apoyo de mentores y comunidad activa.',
+            'Garantía de empleo al finalizar la formación.',
+        ],
+        'cierre_titulo': 'Tú podrías ser el <strong>próximo caso de éxito</strong>',
+        'cierre_texto': '· Reserva una llamada con nuestro equipo y descubre cómo puedes '
+                        'lograrlo ·',
         'video_principal': 'db9ea002-b58a-44ea-8221-31e8d3685c31',
         # Ocho en apaisado y cinco en vertical, en el mismo orden que el
         # original: las dos últimas filas quedan incompletas, no centradas.
@@ -367,6 +519,7 @@ PAGINAS_DE_CAMPANA = {
     },
     'bitacora': {
         'orden': 6,
+        'clave': 'bitacora',
         'escuela': 'conquer-languages',
         'plantilla': 'pages/public/evento/bitacora.html',
         'titulo_pagina': 'bitacora',
@@ -375,6 +528,20 @@ PAGINAS_DE_CAMPANA = {
         'funnel': None,
         'biblioteca': '348662',
         'video_principal': '879ce1c6-e0d5-422f-9893-b663a8341f5d',
+        'chapa': 'English Week',
+        'antetitulo': 'Bienvenidos a La Clase 0',
+        # El titular lleva la errata del original ("transforar"). Se replica tal
+        # cual; corregirla es ahora un cambio de texto en el admin.
+        'titular': 'Prepárate para transforar tu inglés antes de la English Week',
+        'parrafos': [
+            'Prepárate para la English Week, el evento donde descubrirás por qué cientos de '
+            'personas están logrando un inglés fluido en tiempo récord, sin memorizar y sin '
+            'horas interminables.',
+            'Esta clase previa es clave: te mostrará la mentalidad adecuada, los errores que '
+            'frenan tu aprendizaje y el sistema que realmente acelera tu fluidez.',
+            'Entenderás por qué sí puedes aprender inglés aunque nada te haya funcionado '
+            'antes…<br>y llegarás al evento listo para transformar tu inglés para siempre.',
+        ],
         'politica_url': 'https://www.conquerlanguages.com/politica-de-privacidad',
     },
     # Las tres píldoras que precalientan la Trading Week de Finance. No
@@ -383,6 +550,7 @@ PAGINAS_DE_CAMPANA = {
     # octubre de 2025.
     'pildoras-evento-1': {
         'orden': 7,
+        'clave': 'pildora-1',
         'escuela': 'conquer-finance',
         'plantilla': 'pages/public/evento/pildoras.html',
         'plantilla_v2': 'pages/public/evento/pildoras-v2.html',
@@ -391,6 +559,10 @@ PAGINAS_DE_CAMPANA = {
         'biblioteca': '185796',
         'video_principal': '1806c327-dbfa-4ac4-9c81-bcc8d6240572',
         'numero': 'Píldora Nº1',
+        'chapa': 'Trading Week',
+        'otras_titulo': 'Sigue con las <strong>demás píldoras</strong>',
+        'boton_tarjeta': 'Ya disponible',
+        'texto_tarjeta': 'DESCUBRE LA SITUACIÓN ECONÓMICA ACTUAL Y POR QUÉ DEBES ACTUAR YA',
         'titular': 'DESCUBRE LA SITUACIÓN ECONÓMICA ACTUAL Y POR QUÉ DEBES ACTUAR YA',
         'cuerpo': (
             'Prepárate para la <strong>Trading Week</strong>, el evento online en el que '
@@ -411,6 +583,7 @@ PAGINAS_DE_CAMPANA = {
     },
     'pildoras-evento-2': {
         'orden': 8,
+        'clave': 'pildora-2',
         'escuela': 'conquer-finance',
         'plantilla': 'pages/public/evento/pildoras.html',
         'plantilla_v2': 'pages/public/evento/pildoras-v2.html',
@@ -419,6 +592,10 @@ PAGINAS_DE_CAMPANA = {
         'biblioteca': '185796',
         'video_principal': 'd9f08fbc-1782-44e2-bbb8-5194b05db850',
         'numero': 'Píldora Nº2',
+        'chapa': 'Trading Week',
+        'otras_titulo': 'Sigue con las <strong>demás píldoras</strong>',
+        'boton_tarjeta': 'Ya disponible',
+        'texto_tarjeta': 'QUÉ ES EL TRADING: LA FORMA MÁS INTELIGENTE DE GENERAR DINERO',
         'titular': 'QUÉ ES EL TRADING: LA FORMA MÁS INTELIGENTE DE GENERAR DINERO',
         'cuerpo': (
             'Esta es la segunda de 3 píldoras de valor que te llevarán a entender el '
@@ -438,6 +615,7 @@ PAGINAS_DE_CAMPANA = {
     },
     'pildoras-evento-3': {
         'orden': 9,
+        'clave': 'pildora-3',
         'escuela': 'conquer-finance',
         'plantilla': 'pages/public/evento/pildoras.html',
         'plantilla_v2': 'pages/public/evento/pildoras-v2.html',
@@ -446,6 +624,11 @@ PAGINAS_DE_CAMPANA = {
         'biblioteca': '185796',
         'video_principal': 'b4bb5c13-b44d-4cfe-8c45-efb329b15149',
         'numero': 'Píldora Nº3',
+        'chapa': 'Trading Week',
+        'otras_titulo': 'Sigue con las <strong>demás píldoras</strong>',
+        'boton_tarjeta': 'Ya disponible',
+        'texto_tarjeta': 'LOS 3 PERFILES DE PERSONAS QUE TENDRÁN ÉXITO EN EL TRADING '
+                         'INSTITUCIONAL',
         'titular': 'LOS 3 PERFILES DE PERSONAS QUE TENDRÁN ÉXITO EN EL TRADING INSTITUCIONAL',
         'cuerpo': (
             'Ahora que ya hemos visto tanto la situación económica actual y el porqué el '
@@ -472,6 +655,7 @@ PAGINAS_DE_CAMPANA = {
     # esa misma plantilla (Twitch, Webflow, Pinterest). Ver la plantilla.
     'trading-week-2025': {
         'orden': 10,
+        'clave': 'trading-week',
         'escuela': 'conquer-finance',
         'plantilla': 'pages/public/evento/tradingweek.html',
         'plantilla_v2': 'pages/public/evento/tradingweek-v2.html',
@@ -495,11 +679,16 @@ PAGINAS_DE_CAMPANA = {
              'subtitular': ('Permite a traders sin experiencia <em>generar hasta 5000\u20ac '
                             'mensuales</em> sin arriesgar su capital')},
         ),
+        'campo_nombre': 'Introduce tu nombre',
+        'campo_email': 'Tu mejor email',
+        'legal_pre': 'He leído y acepto la',
+        'legal_enlace': 'política de privacidad',
         'aviso': 'Evento gratuito y en directo de 2 Días',
         'fecha': 'Los días 7 y 8 de Abril a las 19:00h de Madrid',
         'cta': 'Regístrate gratis ahora',
         'cta_secundario': 'QUIERO ASISTIR',
-        'curso_titulo': '¡Multiplica tus ingresos este 2025 con trading sin arriesgar tu capital!',
+        'curso_titulo': '¡Multiplica tus ingresos este 2025 con <strong>trading sin '
+                        'arriesgar tu capital</strong>!',
         'curso_bajada': ('Un evento donde mostraremos el paso a paso que ya han implementado más '
                          'de 2.000 alumnos para <strong>empezar a generar ingresos extra</strong>'),
         'columnas': (
@@ -528,7 +717,7 @@ PAGINAS_DE_CAMPANA = {
                        'ese ingreso extra en menos de 7 semanas y sin arriesgar tu propio '
                        'capital.')},
         ),
-        'taller_titulo': 'ConseguirÁs El mini taller previo a la TRADING WEEK',
+        'taller_titulo': 'Conseguirás <strong>el mini taller previo</strong> a la Trading Week',
         'taller_bajada': ('para que puedas llegar preparado, y entiendas la metodología de '
                           'Trading que te hará generar ese ingreso extra mensual'),
         # Son los titulares de las tres píldoras, que también viven aquí como
@@ -538,6 +727,9 @@ PAGINAS_DE_CAMPANA = {
             'Qué es el Trading y por qué se ha convertido en la mejor manera para generar dinero este 2025',
             'Los 3 perfiles de personas que tendrán éxito en el trading (Testimonios y cifras)',
         ),
+        'perfil_titulo': 'Soy <strong>Félix Fuertes</strong>',
+        'cierre_antetitulo': '- No la dejes pasar -',
+        'cierre_titulo': 'La Trading<br>Week',
         'perfil': (
             'Inversor profesional y CEO de Conquer Finance. Después de más de 10 años '
             'dedicándome a los mercados financieros tanto por mi cuenta, como en grandes fondos '
@@ -591,9 +783,12 @@ class EventoView(TemplateView):
     def get(self, request, *args, **kwargs):
         escuela = kwargs.get('escuela') or _escuela_por_host(request)
         self.escuela = escuela
-        self.evento = EVENTOS.get(escuela)
-        if not self.evento:
+        ficha = EVENTOS.get(escuela)
+        if not ficha:
             raise Http404('No hay evento para esta escuela')
+        # `con_textos` pone encima lo que se haya editado en el admin; si no hay
+        # nada guardado, devuelve la ficha tal cual.
+        self.evento = con_textos(ficha, borrador=puede_ver_borrador(request))
         self.template_name = self.evento['plantilla']
         respuesta = super().get(request, *args, **kwargs)
         # Este HTML NO se puede cachear en ningún sitio. Cambia con cada
@@ -632,7 +827,8 @@ class EventoView(TemplateView):
         # muestra sin recargar. Va bajo `gr` porque `EVENTOS` y `GRACIAS`
         # comparten claves con valores distintos (`cta`, `marca`, `logo`…) y
         # volcarlas juntas al contexto se comería la mitad.
-        ctx['gr'] = GRACIAS[self.escuela]
+        ctx['gr'] = con_textos(GRACIAS[self.escuela],
+                               borrador=puede_ver_borrador(self.request))
         ctx['gtm'] = _gtm(self.escuela)
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         # País del selector según Cloudflare. Se manda VACÍO si la cabecera no
@@ -662,18 +858,21 @@ class GraciasView(TemplateView):
         if kwargs.pop('compartida', False):
             escuela = _escuela_por_host(request)
             if escuela == 'conquer-finance':
-                self.escuela, self.gracias = escuela, GRACIAS_TRADING_WEEK
+                self.escuela, self.gracias = escuela, con_textos(
+                    GRACIAS_TRADING_WEEK, borrador=puede_ver_borrador(request))
             else:
                 self.escuela = 'conquer-languages'
-                self.gracias = GRACIAS['conquer-languages']
+                self.gracias = con_textos(GRACIAS['conquer-languages'],
+                                          borrador=puede_ver_borrador(request))
             self.template_name = plantilla_de(self.gracias, request)
             return super().get(request, *args, **kwargs)
 
         escuela = kwargs.get('escuela') or _escuela_por_host(request)
         self.escuela = escuela
-        self.gracias = GRACIAS.get(escuela)
-        if not self.gracias:
+        ficha = GRACIAS.get(escuela)
+        if not ficha:
             raise Http404('No hay página de gracias para esta escuela')
+        self.gracias = con_textos(ficha, borrador=puede_ver_borrador(request))
         self.template_name = plantilla_de(self.gracias, request)
         return super().get(request, *args, **kwargs)
 
@@ -697,9 +896,10 @@ class PaginaDeCampanaView(TemplateView):
     mire."""
 
     def get(self, request, *args, **kwargs):
-        self.pagina = PAGINAS_DE_CAMPANA.get(kwargs.get('pagina'))
-        if not self.pagina:
+        ficha = PAGINAS_DE_CAMPANA.get(kwargs.get('pagina'))
+        if not ficha:
             raise Http404('No hay página de campaña con ese nombre')
+        self.pagina = con_textos(ficha, borrador=puede_ver_borrador(request))
         self.escuela = self.pagina['escuela']
         self.template_name = plantilla_de(self.pagina, request)
         respuesta = super().get(request, *args, **kwargs)
@@ -717,7 +917,8 @@ class PaginaDeCampanaView(TemplateView):
         if self.pagina.get('funnel'):
             # La Trading Week tiene pantalla de gracias propia; el resto usa la
             # de su marca.
-            gr = self.pagina.get('gracias') or GRACIAS[self.escuela]
+            gr = con_textos(self.pagina.get('gracias') or GRACIAS[self.escuela],
+                            borrador=puede_ver_borrador(self.request))
             ctx['funnel'] = self.pagina['funnel']
             ctx['gracias'] = _base_path(self.request) + '/' + gr['ruta']
             ctx['gr'] = gr

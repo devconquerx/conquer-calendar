@@ -76,7 +76,8 @@ img{max-width:100%;height:auto;display:block}
   margin:0 auto;max-width:900px;color:var(--tinta);text-align:center;
   font-family:var(--titular);font-size:38px;font-weight:600;line-height:53px;text-transform:uppercase;
 }
-.titular .verde{color:var(--verde)}
+.titular .verde,
+.titular strong{color:var(--verde);font-weight:inherit}
 .subtitular{
   margin:14px auto 0;max-width:820px;color:var(--tinta);text-align:center;
   font-size:20px;font-weight:300;line-height:1.35;text-transform:uppercase;
@@ -143,7 +144,8 @@ img{max-width:100%;height:auto;display:block}
   margin:0 auto;max-width:820px;color:var(--tinta);
   font-family:var(--titular);font-size:22px;font-weight:600;text-transform:uppercase;line-height:1.35;
 }
-.reclamo .subrayado{border-bottom:2px solid var(--verde)}
+.reclamo .subrayado,
+.reclamo .reclamo-titulo strong{border-bottom:2px solid var(--verde);font-weight:inherit}
 .reclamo .detalle{
   margin:14px auto 0;max-width:760px;font-family:var(--cuerpo);font-size:14px;
   font-weight:400;text-transform:none;color:var(--tinta-suave);line-height:1.6;
@@ -161,7 +163,8 @@ img{max-width:100%;height:auto;display:block}
   margin:18px 0 12px;color:var(--tinta);font-family:var(--titular);
   font-size:26px;font-weight:600;line-height:1.2;
 }
-.tarjeta h3 .verde{color:var(--verde)}
+.tarjeta h3 .verde,
+.tarjeta h3 strong{color:var(--verde);font-weight:inherit}
 .tarjeta p{margin:0 0 12px;font-size:14px;line-height:1.65}
 
 /* ── clase 0 ─────────────────────────────────────────────────────────────── */
@@ -170,7 +173,10 @@ img{max-width:100%;height:auto;display:block}
   margin:0 auto;max-width:820px;color:var(--tinta);
   font-family:var(--titular);font-size:22px;font-weight:600;text-transform:uppercase;line-height:1.4;
 }
-.clase0 .titulo .azul{color:var(--azul)}
+.clase0 .titulo .azul,
+.clase0 .titulo strong{color:var(--azul);font-weight:inherit}
+/* Resalte secundario del titular de la clase 0: negrita, sin color. */
+.clase0 .titulo em{font-style:normal;font-weight:700}
 .clase0 .detalle{margin:14px auto 0;max-width:700px;font-size:14px;line-height:1.6}
 /* `.pildora.p1`: no es una imagen, es un bloque de 240x300 con el fondo a
    `cover` y el texto encima, alineado a la izquierda. */
@@ -229,25 +235,21 @@ img{max-width:100%;height:auto;display:block}
 <header class="cabecera">
   <img class="logo" src="{% static 'img/eventos/codingweek/logo-blanco.png' %}" alt="Conquer Blocks" width="180">
   <div class="chapa">
-    <span class="destacado">Evento gratuito y en directo de 2 Días</span>
+    <span class="destacado">{{ pagina.chapa_evento|safe }}</span>
     <span class="fecha">
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
         <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
-      El 24 y 25 de Noviembre a las 19:00h Madrid
+      {{ pagina.chapa_fecha|safe }}
     </span>
   </div>
 </header>
 
 <section class="hero">
   <div class="contenedor">
-    <h1 class="titular">
-      Consigue trabajo 100% remoto y un salario por encima de los
-      <span class="verde">3.000€ mensuales</span>
-      convirtiéndote en Desarrollador Full Stack
-    </h1>
-    <h2 class="subtitular">Descubre cómo aprender la habilidad más demandada, en menos de 1 año y sin necesidad de experiencia previa</h2>
+    <h1 class="titular">{{ pagina.titular|safe }}</h1>
+    <h2 class="subtitular">{{ pagina.subtitular|safe }}</h2>
 
     <div class="hero-cols">
       <div class="hero-foto">
@@ -259,11 +261,11 @@ img{max-width:100%;height:auto;display:block}
         <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
           <div class="campo">
             <label class="sr-only" for="fullname" hidden>Nombre</label>
-            <input type="text" id="fullname" name="fullname" placeholder="Introduce tu nombre" autocomplete="name" required>
+            <input type="text" id="fullname" name="fullname" placeholder="{{ pagina.campo_nombre }}" autocomplete="name" required>
           </div>
           <div class="campo">
             <label class="sr-only" for="email" hidden>Correo</label>
-            <input type="email" id="email" name="email" placeholder="Tu mejor email" autocomplete="email" required>
+            <input type="email" id="email" name="email" placeholder="{{ pagina.campo_email }}" autocomplete="email" required>
           </div>
           <div class="campo">
             <div class="tel-row" data-prefijo="{% static 'js/paises-evento.json' %}" data-pais="{{ pais_detectado }}">
@@ -280,18 +282,18 @@ img{max-width:100%;height:auto;display:block}
                   <div class="prefijo-lista" role="listbox"></div>
                 </div>
               </div>
-              <input type="tel" id="phoneLocal" name="phoneLocal" placeholder="Número de WhatsApp" autocomplete="tel-national" required>
+              <input type="tel" id="phoneLocal" name="phoneLocal" placeholder="{{ pagina.campo_telefono }}" autocomplete="tel-national" required>
             </div>
             <input type="hidden" name="lead_phone_prefix" id="phonePrefix" value="+34">
             <input type="hidden" name="country_name" id="countryName" value="España">
           </div>
 
           <p class="legal">
-            Al continuar aceptas las
-            <a href="{{ pagina.politica_url }}" target="_blank" rel="noopener noreferrer">politicas de privacidad</a>.
+            {{ pagina.legal_pre|safe }}
+            <a href="{{ pagina.politica_url }}" target="_blank" rel="noopener noreferrer">{{ pagina.legal_enlace|safe }}</a>.
           </p>
 
-          <button type="submit" class="enviar">Regístrate gratis ahora</button>
+          <button type="submit" class="enviar">{{ pagina.cta|safe }}</button>
           <p class="aviso" id="aviso" role="status" aria-live="polite"></p>
         </form>
       </div>
@@ -301,54 +303,38 @@ img{max-width:100%;height:auto;display:block}
 
 <section class="reclamo">
   <div class="contenedor">
-    <p>¡No lo pienses más y regístrate para acceder a la <span class="subrayado">coding WEEK</span>!</p>
-    <p class="detalle">
-      Un evento donde mostraremos el paso a paso para conseguir una profesión en auge,
-      con salarios superiores a la media, <strong>tasas de desempleo del 0% y 100% remoto.</strong>
-    </p>
+    <p class="reclamo-titulo">{{ pagina.reclamo|safe }}</p>
+    <p class="detalle">{{ pagina.reclamo_detalle|safe }}</p>
   </div>
 </section>
 
 <section class="contenedor">
   <div class="tarjetas">
+    {% for t in pagina.tarjetas %}
     <div class="tarjeta">
-      <img src="{% static 'img/eventos/codingweek/tarjeta-1.avif' %}" alt="" width="532" height="299">
-      <h3>¿Por qué convertirse en <span class="verde">Desarrollador Full Stack</span> es la mejor opción para asegurar tu futuro?</h3>
-      <p>En los últimos años, no hemos parado de ver como el precio de todo sube, pero como los salarios y las profesiones cada vez son más precarias.</p>
-      <p>En esta clase entenderás hacia donde se dirige el mercado laboral, y cómo tú puedes aprovecharlo para conseguir posicionarte en una profesión bien pagada y que te dé la calidad de vida que buscas.</p>
+      <img src="{% static t.imagen %}" alt="" width="532" height="299">
+      <h3>{{ t.titulo|safe }}</h3>
+      <p>{{ t.texto_1|safe }}</p>
+      <p>{{ t.texto_2|safe }}</p>
     </div>
-    <div class="tarjeta">
-      <img src="{% static 'img/eventos/codingweek/tarjeta-2.avif' %}" alt="" width="532" height="299">
-      <h3>El <span class="verde">Paso a Paso</span> para conseguirlo en menos de 12 meses y disfrutar de <span class="verde">las ventajas de esta habilidad</span></h3>
-      <p>A día de hoy encontrar un empleo, en remoto y con salarios por encima a 3.000 euros mensuales, se ha convertido en algo que todo el mundo quiere, pero que nadie consigue encontrar.</p>
-      <p>En este evento verás como no es tan complicado conseguir todo esto, gracias a aprender esta habilidad en menos de 12 meses, independientemente de tu experiencia previa o conocimientos.</p>
-    </div>
+    {% endfor %}
   </div>
 </section>
 
 <section class="clase0">
   <div class="contenedor">
-    <p class="titulo">Conseguirás desbloquear <span class="azul">la clase 0</span> previa a la <strong>coding week</strong></p>
-    <p class="detalle">
-      para romper con todos los mitos acerca de las profesiones tecnológicas, entender esta
-      profesión, el porqué es tan demandada y hasta donde puede llegar a cambiar nuestra vida
-      gracias a ella.
-    </p>
-    <div class="cartel">
-      El sentido común detrás de una de las profesiones más demandadas, con
-      mejores condiciones y salarios más altos que la media
-    </div>
+    <p class="titulo">{{ pagina.clase0_titulo|safe }}</p>
+    <p class="detalle">{{ pagina.clase0_detalle|safe }}</p>
+    <div class="cartel">{{ pagina.clase0_cartel|safe }}</div>
   </div>
 </section>
 
 <section class="bio">
   <div class="contenedor bio-cols">
     <div class="bio-texto">
-      <h2>Soy <strong>Bienvenido Sáez</strong></h2>
-      <p>Bienvenido es Director de Educación Tecnológica en Conquer Blocks.</p>
-      <p>Con más de 20 años de experiencia en el sector del desarrollo y la formación. Habiendo sido una de las personas más influyentes de este 2025 en el mundo hispano enseñando una de las profesiones más demandas y mejor pagadas.</p>
-      <p>En Conquer Blocks enseña un método que ha ayudado a más de 6.000 personas a aprender una <strong>nueva profesión con la que cambiar sus vidas por completo</strong>.</p>
-      <p>Y en este evento te enseñará el porqué deberías aprender una profesión tecnológica, cómo romper con los mitos acerca de esto, y cómo alcanzar un salario superior a los 3.000 euros mensuales como Desarrollador Full-Stack.</p>
+      <h2>{{ pagina.bio_titulo|safe }}</h2>
+      {% for parrafo in pagina.bio_parrafos %}<p>{{ parrafo|safe }}</p>
+      {% endfor %}
     </div>
   </div>
 </section>
@@ -356,12 +342,9 @@ img{max-width:100%;height:auto;display:block}
 <section class="cierre">
   <div class="contenedor">
     <div class="caja">
-      <p class="antetitulo">- No la dejes pasar -</p>
-      <h2>La Coding Week</h2>
-      <p>
-        Prepárate para descubrir cómo <strong>conseguir una profesión con la que no sufrir</strong>
-        por la falta de trabajo, los salarios precarios o las malas condiciones laborales.
-      </p>
+      <p class="antetitulo">{{ pagina.cierre_antetitulo|safe }}</p>
+      <h2>{{ pagina.cierre_titulo|safe }}</h2>
+      <p>{{ pagina.cierre_texto|safe }}</p>
     </div>
   </div>
 </section>

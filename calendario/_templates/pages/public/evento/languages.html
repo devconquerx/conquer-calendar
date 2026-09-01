@@ -63,11 +63,15 @@ body{
 .col-form{width:50%;display:flex;flex-direction:column;gap:10px}
 
 .bullets{margin:0}
-.bullet{display:flex;margin-top:6px;padding-bottom:10px}
+/* El icono va con la PRIMERA línea del texto, no flotando entre la primera y
+   la segunda: `flex-start` y la misma altura que esa línea (19px). */
+.bullet{display:flex;align-items:flex-start;margin-top:6px;padding-bottom:10px}
 /* El icono va sobre la línea base del primer renglón, igual que el original:
    contenedor en bloque y svg en línea. Con `line-height:0` quedaba pegado
    arriba y desalineado respecto al texto. */
-.bullet-icono{flex:0 0 20px;width:20px;color:var(--dorado);line-height:0;padding-top:12px}
+.bullet-icono{flex:0 0 20px;width:20px;color:var(--dorado);height:19px;
+  display:flex;align-items:center}
+.bullet-icono svg{display:block}
 .bullet-texto{padding-left:10px;font-size:15px;line-height:19px;color:var(--tinta)}
 .bullet-texto strong{font-weight:700}
 
@@ -141,12 +145,12 @@ body{
 
   <section>
     <div class="contenedor">
-      <div class="barra-evento">{{ evento.barra }}</div>
+      <div class="barra-evento">{{ evento.barra|safe }}</div>
 
       <div class="tarjeta">
         <div class="titleblock">
-          <h1 class="titulo">{{ evento.titulo_pre }}<span class="destacado">{{ evento.titulo_destacado }}</span>{{ evento.titulo_post }}</h1>
-          <p class="subtitulo">{{ evento.subtitulo }}</p>
+          <h1 class="titulo">{{ evento.titulo_pre|safe }}<span class="destacado">{{ evento.titulo_destacado|safe }}</span>{{ evento.titulo_post|safe }}</h1>
+          <p class="subtitulo">{{ evento.subtitulo|safe }}</p>
         </div>
 
         <div class="bloque-columnas">
@@ -171,10 +175,10 @@ body{
                    nativo no debe dejar el email y el teléfono en la URL. -->
               <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
                 <div class="campo">
-                  <input type="text" name="fullname" id="fullname" placeholder="Introduce tu nombre" required autocomplete="given-name">
+                  <input type="text" name="fullname" id="fullname" placeholder="{{ evento.campo_nombre }}" required autocomplete="given-name">
                 </div>
                 <div class="campo">
-                  <input type="email" name="email" id="email" placeholder="Tu mejor email" required autocomplete="email">
+                  <input type="email" name="email" id="email" placeholder="{{ evento.campo_email }}" required autocomplete="email">
                 </div>
                 <div class="campo">
                   <div class="tel-row" data-prefijo="{% static 'js/paises-evento.json' %}" data-pais="{{ pais_detectado }}">
@@ -189,12 +193,12 @@ body{
                         <div class="prefijo-lista" role="listbox"></div>
                       </div>
                     </div>
-                    <input type="tel" name="lead_phone" id="phoneLocal" placeholder="Número de WhatsApp" required autocomplete="tel">
+                    <input type="tel" name="lead_phone" id="phoneLocal" placeholder="{{ evento.campo_telefono }}" required autocomplete="tel">
                     <input type="hidden" name="lead_phone_prefix" id="phonePrefix" value="+34">
                     <input type="hidden" name="country_name" id="countryName" value="España">
                   </div>
                 </div>
-                <button type="submit" class="enviar">{{ evento.cta }}</button>
+                <button type="submit" class="enviar">{{ evento.cta|safe }}</button>
                 <p class="aviso" id="aviso" role="status" aria-live="polite"></p>
               </form>
             </div>

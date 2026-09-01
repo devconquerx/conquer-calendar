@@ -360,15 +360,17 @@ class LasTresPildorasTest(TestCase):
             otras = [o for o in (1, 2, 3) if o != n]
             for o in otras:
                 self.assertIn(f'href="/evento/pildoras-evento-{o}"', html, (n, o))
-            # Dos tarjetas: la imagen enlazada y el botón, por cada una.
-            self.assertEqual(html.count('YA DISPONIBLE'), 2, n)
+            # Dos tarjetas: la imagen enlazada y el botón, por cada una. El texto
+            # del botón sale de la ficha (`boton_tarjeta`) y las mayúsculas las
+            # pone el CSS, así que se compara sin distinguir may/min.
+            self.assertEqual(html.lower().count('ya disponible'), 2, n)
 
     def test_la_primera_no_enseña_ninguna(self):
         # En el original su contenedor llevaba `display: none`, ya en el volcado
         # de abril. Se replica en vez de "arreglarlo": no sabemos si fue a
         # propósito, y añadir enlaces que nadie vio es inventar.
         html = self._html(1)
-        self.assertNotIn('YA DISPONIBLE', html)
+        self.assertNotIn('ya disponible', html.lower())
         self.assertEqual(PAGINAS_DE_CAMPANA['pildoras-evento-1']['tarjetas'], ())
 
     def test_los_parrafos_conservan_sus_negritas(self):

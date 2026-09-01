@@ -70,7 +70,10 @@
 
 .reclamo{margin-top:56px;text-align:center}
 .reclamo .detalle{margin:14px auto 0;max-width:720px;color:var(--tinta-suave);font-size:15px;font-weight:300;line-height:1.5}
-.reclamo .subrayado{text-transform:uppercase}
+.reclamo .pb-seccion-titulo strong{text-decoration:underline;text-decoration-color:var(--acento)}
+/* El resalte secundario del titular de la clase 0 (<em>): negrita, no cursiva,
+   igual que en la primera versión. */
+.clase0 .pb-seccion-titulo em{font-style:normal;font-weight:700}
 
 .tarjetas{display:flex;gap:20px;margin-top:36px}
 .tarjetas .pb-tarjeta{flex:1 1 50%;padding:0;display:flex;flex-direction:column}
@@ -125,21 +128,18 @@
     <div class="chapa">
       <span class="pb-pildora">
         <svg viewBox="0 0 24 24" data-relleno aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-        Evento gratuito y en directo de 2 Días
+        {{ pagina.chapa_evento|safe }}
       </span>
       <span class="pb-pildora fecha">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
           <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
-        El 24 y 25 de Noviembre a las 19:00h Madrid
+        {{ pagina.chapa_fecha|safe }}
       </span>
     </div>
-    <h1 class="pb-titular">
-      Consigue trabajo 100% remoto y un salario por encima de los
-      <strong>3.000€ mensuales</strong> convirtiéndote en Desarrollador Full Stack
-    </h1>
-    <p class="pb-bajada">Descubre cómo aprender la habilidad más demandada, en menos de 1 año y sin necesidad de experiencia previa</p>
+    <h1 class="pb-titular">{{ pagina.titular|safe }}</h1>
+    <p class="pb-bajada">{{ pagina.subtitular|safe }}</p>
   </section>
 
   <section class="pb-ancho hero">
@@ -151,11 +151,11 @@
         <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
           <div class="campo">
             <label class="sr-only" for="fullname">Nombre</label>
-            <input type="text" id="fullname" name="fullname" placeholder="Introduce tu nombre" autocomplete="name" required>
+            <input type="text" id="fullname" name="fullname" placeholder="{{ pagina.campo_nombre }}" autocomplete="name" required>
           </div>
           <div class="campo">
             <label class="sr-only" for="email">Correo</label>
-            <input type="email" id="email" name="email" placeholder="Tu mejor email" autocomplete="email" required>
+            <input type="email" id="email" name="email" placeholder="{{ pagina.campo_email }}" autocomplete="email" required>
           </div>
           <div class="campo">
             <div class="tel-row" data-prefijo="{% static 'js/paises-evento.json' %}" data-pais="{{ pais_detectado }}">
@@ -172,16 +172,16 @@
                   <div class="prefijo-lista" role="listbox"></div>
                 </div>
               </div>
-              <input type="tel" id="phoneLocal" name="phoneLocal" placeholder="Número de WhatsApp" autocomplete="tel-national" required>
+              <input type="tel" id="phoneLocal" name="phoneLocal" placeholder="{{ pagina.campo_telefono }}" autocomplete="tel-national" required>
             </div>
             <input type="hidden" name="lead_phone_prefix" id="phonePrefix" value="+34">
             <input type="hidden" name="country_name" id="countryName" value="España">
           </div>
           <p class="legal">
-            Al continuar aceptas las
-            <a href="{{ pagina.politica_url }}" target="_blank" rel="noopener noreferrer">politicas de privacidad</a>.
+            {{ pagina.legal_pre|safe }}
+            <a href="{{ pagina.politica_url }}" target="_blank" rel="noopener noreferrer">{{ pagina.legal_enlace|safe }}</a>.
           </p>
-          <button type="submit" class="pb-cta pb-cta-ancho">Regístrate gratis ahora</button>
+          <button type="submit" class="pb-cta pb-cta-ancho">{{ pagina.cta|safe }}</button>
           <p class="aviso" id="aviso" role="status" aria-live="polite"></p>
         </form>
       </div>
@@ -189,66 +189,45 @@
   </section>
 
   <section class="pb-ancho reclamo">
-    <p class="pb-seccion-titulo">¡No lo pienses más y regístrate para acceder a la <strong class="subrayado">coding week</strong>!</p>
-    <p class="detalle">
-      Un evento donde mostraremos el paso a paso para conseguir una profesión en auge,
-      con salarios superiores a la media, <strong>tasas de desempleo del 0% y 100% remoto.</strong>
-    </p>
+    <p class="pb-seccion-titulo">{{ pagina.reclamo|safe }}</p>
+    <p class="detalle">{{ pagina.reclamo_detalle|safe }}</p>
   </section>
 
   <section class="pb-ancho">
     <div class="tarjetas">
+      {% for t in pagina.tarjetas %}
       <div class="pb-tarjeta">
-        <img src="{% static 'img/eventos/codingweek/tarjeta-1.avif' %}" alt="" width="532" height="299" loading="lazy">
+        <img src="{% static t.imagen %}" alt="" width="532" height="299" loading="lazy">
         <div class="cuerpo">
-          <h3>¿Por qué convertirse en <strong>Desarrollador Full Stack</strong> es la mejor opción para asegurar tu futuro?</h3>
-          <p>En los últimos años, no hemos parado de ver como el precio de todo sube, pero como los salarios y las profesiones cada vez son más precarias.</p>
-          <p>En esta clase entenderás hacia donde se dirige el mercado laboral, y cómo tú puedes aprovecharlo para conseguir posicionarte en una profesión bien pagada y con futuro.</p>
+          <h3>{{ t.titulo|safe }}</h3>
+          <p>{{ t.texto_1|safe }}</p>
+          <p>{{ t.texto_2|safe }}</p>
         </div>
       </div>
-      <div class="pb-tarjeta">
-        <img src="{% static 'img/eventos/codingweek/tarjeta-2.avif' %}" alt="" width="532" height="299" loading="lazy">
-        <div class="cuerpo">
-          <h3>El <strong>Paso a Paso</strong> para conseguirlo en menos de 12 meses y disfrutar de <strong>las ventajas de esta habilidad</strong></h3>
-          <p>A día de hoy encontrar un empleo, en remoto y con salarios por encima a 3.000 euros mensuales, se ha convertido en algo que todo el mundo quiere, pero pocos consiguen.</p>
-          <p>En este evento verás como no es tan complicado conseguir todo esto, gracias a aprender esta habilidad en menos de 12 meses, independientemente de tu experiencia previa o conocimientos.</p>
-        </div>
-      </div>
+      {% endfor %}
     </div>
   </section>
 
   <section class="pb-ancho clase0">
-    <p class="pb-seccion-titulo">Conseguirás desbloquear <strong>la clase 0</strong> previa a la coding week</p>
-    <p class="detalle">
-      para romper con todos los mitos acerca de las profesiones tecnológicas, entender esta
-      profesión, el porqué es tan demandada y hasta donde puede llegar a cambiar nuestra vida
-      gracias a ella.
-    </p>
-    <div class="cartel">
-      El sentido común detrás de una de las profesiones más demandadas, con
-      mejores condiciones y salarios más altos que la media
-    </div>
+    <p class="pb-seccion-titulo">{{ pagina.clase0_titulo|safe }}</p>
+    <p class="detalle">{{ pagina.clase0_detalle|safe }}</p>
+    <div class="cartel">{{ pagina.clase0_cartel|safe }}</div>
   </section>
 
   <section class="pb-ancho bio">
     <div class="pb-tarjeta">
-      <h2>Soy <strong>Bienvenido Sáez</strong></h2>
-      <p>Bienvenido es Director de Educación Tecnológica en Conquer Blocks.</p>
-      <p>Con más de 20 años de experiencia en el sector del desarrollo y la formación. Habiendo sido una de las personas más influyentes de este 2025 en el mundo hispanohablante dentro del sector tecnológico.</p>
-      <p>En Conquer Blocks enseña un método que ha ayudado a más de 6.000 personas a aprender una <strong>nueva profesión con la que cambiar sus vidas por completo</strong>.</p>
-      <p>Y en este evento te enseñará el porqué deberías aprender una profesión tecnológica, cómo romper con los mitos acerca de esto, y cómo alcanzar un salario superior a la media.</p>
+      <h2>{{ pagina.bio_titulo|safe }}</h2>
+      {% for parrafo in pagina.bio_parrafos %}<p>{{ parrafo|safe }}</p>
+      {% endfor %}
     </div>
   </section>
 
   <section class="pb-oscuro cierre">
     <div class="pb-ancho">
       <div class="caja">
-        <p class="antetitulo">- No la dejes pasar -</p>
-        <h2>La Coding Week</h2>
-        <p>
-          Prepárate para descubrir cómo <strong>conseguir una profesión con la que no sufrir</strong>
-          por la falta de trabajo, los salarios precarios o las malas condiciones laborales.
-        </p>
+        <p class="antetitulo">{{ pagina.cierre_antetitulo|safe }}</p>
+        <h2>{{ pagina.cierre_titulo|safe }}</h2>
+        <p>{{ pagina.cierre_texto|safe }}</p>
       </div>
     </div>
   </section>

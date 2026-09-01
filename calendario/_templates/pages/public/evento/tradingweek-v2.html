@@ -115,14 +115,14 @@
     <div class="chapa">
       <span class="pb-pildora">
         <svg viewBox="0 0 24 24" data-relleno aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-        {{ pagina.aviso }}
+        {{ pagina.aviso|safe }}
       </span>
       <span class="pb-pildora">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
           <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
-        {{ pagina.fecha }}
+        {{ pagina.fecha|safe }}
       </span>
     </div>
     <h1 class="pb-titular">{{ variante.titular|safe }}</h1>
@@ -138,18 +138,18 @@
         <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
           <div class="campo">
             <label class="sr-only" for="fullname">Nombre</label>
-            <input type="text" id="fullname" name="fullname" placeholder="Introduce tu nombre" autocomplete="name" required>
+            <input type="text" id="fullname" name="fullname" placeholder="{{ pagina.campo_nombre }}" autocomplete="name" required>
           </div>
           <div class="campo">
             <label class="sr-only" for="email">Correo</label>
-            <input type="email" id="email" name="email" placeholder="Tu mejor email" autocomplete="email" required>
+            <input type="email" id="email" name="email" placeholder="{{ pagina.campo_email }}" autocomplete="email" required>
           </div>
           <label class="legal" for="privacidad">
             <input type="checkbox" id="privacidad" name="privacidad" required>
-            <span>He leído y acepto la
-              <a href="{{ pagina.politica_url }}" target="_blank" rel="noopener">política de privacidad</a>*</span>
+            <span>{{ pagina.legal_pre|safe }}
+              <a href="{{ pagina.politica_url }}" target="_blank" rel="noopener">{{ pagina.legal_enlace|safe }}</a>*</span>
           </label>
-          <button type="submit" class="pb-cta pb-cta-ancho">{{ pagina.cta }}</button>
+          <button type="submit" class="pb-cta pb-cta-ancho">{{ pagina.cta|safe }}</button>
           <p class="aviso" id="aviso" role="status" aria-live="polite"></p>
         </form>
       </div>
@@ -157,14 +157,14 @@
   </section>
 
   <section class="pb-ancho bloque">
-    <p class="pb-seccion-titulo">¡Multiplica tus ingresos este 2025 con <strong>trading sin arriesgar tu capital</strong>!</p>
+    <p class="pb-seccion-titulo">{{ pagina.curso_titulo|safe }}</p>
     <p class="bajada-seccion">{{ pagina.curso_bajada|safe }}</p>
     <div class="columnas">
       {% for c in pagina.columnas %}
       <div class="pb-tarjeta">
         <img src="{% static c.imagen %}" alt="" loading="lazy">
         <div class="cuerpo">
-          <h3>{{ c.titulo }}</h3>
+          <h3>{{ c.titulo|safe }}</h3>
           <p>{{ c.texto|safe }}</p>
         </div>
       </div>
@@ -172,7 +172,7 @@
     </div>
     <div class="fila-cta">
       <a href="#hero" class="pb-cta">
-        {{ pagina.cta_secundario }}
+        {{ pagina.cta_secundario|safe }}
         <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
         </svg>
@@ -182,16 +182,16 @@
 
   <section class="pb-oscuro taller">
     <div class="pb-ancho">
-      <p class="pb-seccion-titulo">Conseguirás <strong>el mini taller previo</strong> a la Trading Week</p>
-      <p class="bajada-seccion" style="color:#d4d4d4">{{ pagina.taller_bajada }}</p>
+      <p class="pb-seccion-titulo">{{ pagina.taller_titulo|safe }}</p>
+      <p class="bajada-seccion" style="color:#d4d4d4">{{ pagina.taller_bajada|safe }}</p>
       <div class="pildoras">
         {% for p in pagina.pildoras %}
-        <div class="pildora"><p>{{ p }}</p></div>
+        <div class="pildora"><p>{{ p|safe }}</p></div>
         {% endfor %}
       </div>
       <div class="fila-cta">
         <a href="#hero" class="pb-cta">
-          {{ pagina.cta_secundario }}
+          {{ pagina.cta_secundario|safe }}
           <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
           </svg>
@@ -206,7 +206,7 @@
         <div class="pb-foto" style="background-image:url('{% static 'img/eventos/tradingweek/felix.avif' %}')" role="img" aria-label="Félix Fuertes"></div>
       </div>
       <div class="perfil-texto">
-        <h2>Soy <strong>Félix Fuertes</strong></h2>
+        <h2>{{ pagina.perfil_titulo|safe }}</h2>
         <div>{{ pagina.perfil|safe }}</div>
       </div>
     </div>
@@ -215,12 +215,12 @@
   <section class="pb-oscuro cierre">
     <div class="pb-ancho">
       <div class="caja">
-        <p class="antetitulo">- No la dejes pasar -</p>
-        <h2>La Trading Week</h2>
+        <p class="antetitulo">{{ pagina.cierre_antetitulo|safe }}</p>
+        <h2>{{ pagina.cierre_titulo|safe }}</h2>
         <p class="texto">{{ pagina.cierre|safe }}</p>
         <div class="fila-cta">
           <a href="#hero" class="pb-cta">
-            {{ pagina.cta_secundario }}
+            {{ pagina.cta_secundario|safe }}
             <svg viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M1 7L7 1M7 1H2M7 1V6" stroke="currentColor" stroke-width="1.4" stroke-linecap="square"/>
             </svg>

@@ -59,7 +59,8 @@ img{max-width:100%;height:auto;display:block}
   margin:0 auto;max-width:900px;color:var(--tinta);text-align:center;
   font-family:var(--titular);font-size:32px;font-weight:800;line-height:53px;text-transform:uppercase;
 }
-.titular .verde{color:var(--verde)}
+.titular .verde,
+.titular strong{color:var(--verde);font-weight:inherit}
 .subtitular{margin:6px auto 0;max-width:760px;text-align:center;font-size:14px;line-height:1.6}
 
 /* ── vídeos (Bunny Stream) ───────────────────────────────────────────────── */
@@ -143,11 +144,8 @@ img{max-width:100%;height:auto;display:block}
 </header>
 
 <section class="contenedor">
-  <h1 class="titular">
-    Historias reales de personas que transformaron
-    <span class="verde">su futuro</span> en el sector tech
-  </h1>
-  <p class="subtitular">Descubre cómo nuestros alumnos consiguieron trabajos bien pagados en tiempo récord gracias a nuestra metodología probada</p>
+  <h1 class="titular">{{ pagina.titular|safe }}</h1>
+  <p class="subtitular">{{ pagina.subtitular|safe }}</p>
 
   <div class="video apaisado video-principal">
     <iframe src="https://iframe.mediadelivery.net/embed/135359/{{ pagina.video_principal }}?autoplay=false&preload=false"
@@ -159,7 +157,7 @@ img{max-width:100%;height:auto;display:block}
 </section>
 
 <section class="contenedor">
-  <p class="seccion-titulo">Conoce la experiencia de nuestros alumnos dentro de Conquer Blocks</p>
+  <p class="seccion-titulo">{{ pagina.seccion_titulo|safe }}</p>
 
   <div class="rejilla tres">
     {% for v in pagina.videos_apaisados %}
@@ -191,7 +189,7 @@ img{max-width:100%;height:auto;display:block}
 </section>
 
 <section class="contenedor sistema">
-  <p class="seccion-titulo" style="margin-top:0">El sistema que garantiza resultados</p>
+  <p class="seccion-titulo" style="margin-top:0">{{ pagina.sistema_titulo|safe }}</p>
   <div class="sistema-cols">
     <div class="sistema-foto">
       <img src="{% static 'img/eventos/testimonios/holografia.avif' %}" alt="" width="340" height="227" loading="lazy">
@@ -199,15 +197,15 @@ img{max-width:100%;height:auto;display:block}
     <div class="puntos">
       <div class="punto">
         <span class="icono"><svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" aria-hidden="true" fill="currentColor" viewBox="0 0 16 16"><path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4m9.886-3.54c.18-.613 1.048-.613 1.229 0l.043.148a.64.64 0 0 0 .921.382l.136-.074c.561-.306 1.175.308.87.869l-.075.136a.64.64 0 0 0 .382.92l.149.045c.612.18.612 1.048 0 1.229l-.15.043a.64.64 0 0 0-.38.921l.074.136c.305.561-.309 1.175-.87.87l-.136-.075a.64.64 0 0 0-.92.382l-.045.149c-.18.612-1.048.612-1.229 0l-.043-.15a.64.64 0 0 0-.921-.38l-.136.074c-.561.305-1.175-.309-.87-.87l.075-.136a.64.64 0 0 0-.382-.92l-.148-.045c-.613-.18-.613-1.048 0-1.229l.148-.043a.64.64 0 0 0 .382-.921l-.074-.136c-.306-.561.308-1.175.869-.87l.136.075a.64.64 0 0 0 .92-.382zM14 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"/></svg></span>
-        <p>Método basado en aprender haciendo.</p>
+        <p>{{ pagina.sistema_puntos.0|safe }}</p>
       </div>
       <div class="punto">
         <span class="icono"><svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M21 3H3C1.9 3 1 3.9 1 5V8H3V5H21V19H14V21H21C22.1 21 23 20.1 23 19V5C23 3.9 22.1 3 21 3ZM1 18V21H4C4 19.34 2.66 18 1 18ZM1 14V16C3.76 16 6 18.24 6 21H8C8 17.13 4.87 14 1 14ZM1 10V12C5.97 12 10 16.03 10 21H12C12 14.92 7.07 10 1 10ZM11 11.09V13.09L14.5 15L18 13.09V11.09L14.5 13L11 11.09ZM14.5 6L9 9L14.5 12L20 9L14.5 6Z" fill="currentColor"/></svg></span>
-        <p>Apoyo de mentores y comunidad activa.</p>
+        <p>{{ pagina.sistema_puntos.1|safe }}</p>
       </div>
       <div class="punto">
         <span class="icono"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" d="M10.586 2.1a2 2 0 0 1 2.7-.116l.128.117L15.314 4H18a2 2 0 0 1 1.994 1.85L20 6v2.686l1.9 1.9a2 2 0 0 1 .116 2.701l-.117.127-1.9 1.9V18a2 2 0 0 1-1.85 1.995L18 20h-2.685l-1.9 1.9a2 2 0 0 1-2.701.116l-.127-.116-1.9-1.9H6a2 2 0 0 1-1.995-1.85L4 18v-2.686l-1.9-1.9a2 2 0 0 1-.116-2.701l.116-.127 1.9-1.9V6a2 2 0 0 1 1.85-1.994L6 4h2.686l1.9-1.9Zm4.493 6.883-4.244 4.244-1.768-1.768a1 1 0 0 0-1.414 1.415l2.404 2.404a1.1 1.1 0 0 0 1.556 0l4.88-4.881a1 1 0 0 0-1.414-1.414Z"/></svg></span>
-        <p>Garantía de empleo al finalizar la formación.</p>
+        <p>{{ pagina.sistema_puntos.2|safe }}</p>
       </div>
     </div>
   </div>
@@ -216,8 +214,8 @@ img{max-width:100%;height:auto;display:block}
 <section class="cierre">
   <div class="contenedor">
     <div class="caja">
-      <h2>Tú podrías ser el próximo caso de éxito</h2>
-      <p>· Reserva una llamada con nuestro equipo y descubre cómo puedes lograrlo ·</p>
+      <h2>{{ pagina.cierre_titulo|safe }}</h2>
+      <p>{{ pagina.cierre_texto|safe }}</p>
       {% include 'pages/public/evento/_cta_agendar.html' %}
     </div>
   </div>

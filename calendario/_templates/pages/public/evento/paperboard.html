@@ -75,9 +75,13 @@ body{
 .col{width:50%;padding:0 10px}
 .col img{width:100%;height:auto;display:block;border:var(--foto-borde);border-radius:9px}
 .div-block-73{display:flex;flex-flow:column;justify-content:space-between;height:100%;gap:8px}
-.div-block-71{display:flex;margin-top:6px;padding-bottom:10px}
+/* El icono se alinea con la PRIMERA línea del texto, no con el bloque entero:
+   `flex-start` + el mismo alto que la caja de esa línea (20px = 1rem × 1.25). */
+.div-block-71{display:flex;align-items:flex-start;margin-top:6px;padding-bottom:10px}
 /* `margin-top:-8px` y el naranja de marca salen del original. */
-.bullet-icon{flex:0 0 20px;max-width:25px;color:var(--icono-bullet);line-height:0;margin-top:-8px}
+.bullet-icon{flex:0 0 20px;max-width:25px;color:var(--icono-bullet);height:1.25rem;
+  display:flex;align-items:center}
+.bullet-icon svg{display:block}
 .event-bullet{padding-left:10px;color:var(--tinta-bullet);font-size:1rem;font-weight:400;line-height:1.25}
 .event-bullet strong{font-weight:700}
 
@@ -193,11 +197,11 @@ body{
 
   <section>
     <div class="contenedor">
-      <div class="event-top-bar">{{ evento.barra }}</div>
+      <div class="event-top-bar">{{ evento.barra|safe }}</div>
 
       <div class="event-div">
-        <h1 class="event-title">{{ evento.titulo_pre }}<span class="conquer-gradient">{{ evento.titulo_grad }}</span></h1>
-        <p class="event-subtitle">{{ evento.subtitulo }}</p>
+        <h1 class="event-title">{{ evento.titulo_pre|safe }}<span class="conquer-gradient">{{ evento.titulo_grad|safe }}</span></h1>
+        <p class="event-subtitle">{{ evento.subtitulo|safe }}</p>
 
         <div class="div-block-70">
         <div class="columns-25">
@@ -217,7 +221,7 @@ body{
 
               <button type="button" class="button_wrap" data-abrir-modal>
                 <span class="button_content">
-                  <span class="button_text">{{ evento.cta }}</span>
+                  <span class="button_text">{{ evento.cta|safe }}</span>
                   <span class="button_icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.574 7.1 4.285 21.399a1.77 1.77 0 0 1-.893.379c-.336 0-.63-.13-.884-.389a1.77 1.77 0 0 1-.388-.893c0-.336.129-.634.388-.893L16.797 5.315H4.216c-.364 0-.668-.123-.912-.367a1.24 1.24 0 0 1-.366-.912c0-.365.122-.669.366-.913.244-.244.548-.366.912-.366h15.66c.365 0 .669.122.913.366.244.244.366.548.366.913v15.66c0 .364-.122.668-.366.912a1.24 1.24 0 0 1-.913.366c-.364 0-.668-.122-.912-.366a1.24 1.24 0 0 1-.366-.913V7.1Z" fill="currentColor"/></svg>
                   </span>
@@ -234,8 +238,8 @@ body{
   <div class="modal-popup" id="modal-registro" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
     <button type="button" class="modal-cerrar" data-cerrar-modal aria-label="Cerrar">&times;</button>
     <div class="modal-container">
-      <h2 class="modal-title" id="modal-titulo">{{ evento.modal_titulo }}</h2>
-      <p class="modal-sub">{{ evento.modal_subtitulo }}</p>
+      <h2 class="modal-title" id="modal-titulo">{{ evento.modal_titulo|safe }}</h2>
+      <p class="modal-sub">{{ evento.modal_subtitulo|safe }}</p>
 
       <!-- method="post" a propósito: el envío real lo hace el JS de abajo, pero si
            este falla o aún no ha cargado, el navegador haría el submit nativo. Con
@@ -243,10 +247,10 @@ body{
            direcciones, en el historial y en los logs del servidor. -->
       <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
         <div class="campo">
-          <input type="text" name="fullname" id="fullname" placeholder="Introduce tu nombre" required autocomplete="given-name">
+          <input type="text" name="fullname" id="fullname" placeholder="{{ evento.campo_nombre }}" required autocomplete="given-name">
         </div>
         <div class="campo">
-          <input type="email" name="email" id="email" placeholder="Tu mejor email" required autocomplete="email">
+          <input type="email" name="email" id="email" placeholder="{{ evento.campo_email }}" required autocomplete="email">
         </div>
         <div class="campo">
           <div class="tel-row" data-prefijo="{% static 'js/paises-evento.json' %}" data-pais="{{ pais_detectado }}">
@@ -261,13 +265,13 @@ body{
                 <div class="prefijo-lista" role="listbox"></div>
               </div>
             </div>
-            <input type="tel" name="lead_phone" id="phoneLocal" placeholder="Número de WhatsApp" required autocomplete="tel">
+            <input type="tel" name="lead_phone" id="phoneLocal" placeholder="{{ evento.campo_telefono }}" required autocomplete="tel">
             <input type="hidden" name="lead_phone_prefix" id="phonePrefix" value="+34">
             <input type="hidden" name="country_name" id="countryName" value="España">
           </div>
         </div>
-        <p class="legal">{{ evento.legal_pre }} <a href="{{ evento.politica_url }}" target="_blank" rel="noopener noreferrer">{{ evento.legal_enlace }}</a></p>
-        <button type="submit" class="modal-submit">{{ evento.modal_cta }}</button>
+        <p class="legal">{{ evento.legal_pre|safe }} <a href="{{ evento.politica_url }}" target="_blank" rel="noopener noreferrer">{{ evento.legal_enlace|safe }}</a></p>
+        <button type="submit" class="modal-submit">{{ evento.modal_cta|safe }}</button>
         <p class="aviso" id="aviso" role="status" aria-live="polite"></p>
       </form>
     </div>
