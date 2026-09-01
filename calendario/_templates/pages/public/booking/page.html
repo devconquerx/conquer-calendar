@@ -637,9 +637,9 @@ body {
                      required value="{{ email_invitado|default:'' }}" autocomplete="email"
                      {% if campos_identidad_bloqueados %}readonly{% endif %}>
               {% if campos_identidad_bloqueados %}
-              {# La reserva se crea con el nombre y el email del token, se manden
+              {% comment %} La reserva se crea con el nombre y el email del token, se manden
                  los que se manden en el formulario: el readonly es solo para que
-                 se entienda, no es lo que lo garantiza. #}
+                 se entienda, no es lo que lo garantiza. {% endcomment %}
               <div class="bk-identidad-nota">Reservas con tu cuenta de la academia.</div>
               {% endif %}
             </div>

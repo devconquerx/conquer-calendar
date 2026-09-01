@@ -658,3 +658,29 @@ class SinNingunaClaveTest(EmbedBase):
         resp = self.client.get(self.url_pagina(self.privado) + f'?t={token_lms()}')
         self.assertEqual(resp.status_code, 403)
         self.assertEqual(resp.context['motivo'], 'sin_configurar')
+
+
+# ---------------------------------------------------------------------------
+# 7. Los comentarios de plantilla no se le enseñan a nadie
+# ---------------------------------------------------------------------------
+
+class ComentariosNoSeFiltranTest(EmbedBase):
+    """`{# ... #}` solo vale de UNA línea: repartido en varias, Django no lo
+    reconoce y lo escupe tal cual al HTML. Pasó de verdad —se veía una nota
+    interna dentro del iframe de la academia— y no salta a la vista revisando
+    la plantilla, así que queda fijado aquí."""
+
+    def test_la_pagina_con_token_no_lleva_comentarios_de_plantilla(self):
+        resp = self.client.get(self.url_pagina(self.privado) + f'?t={token_lms()}')
+        self.assertNotContains(resp, '{#')
+        self.assertNotContains(resp, '{% comment %}')
+
+    def test_la_pantalla_de_acceso_denegado_tampoco(self):
+        """Se pinta dentro del iframe, que es donde más se nota."""
+        resp = self.client.get(self.url_pagina(self.privado))
+        self.assertEqual(resp.status_code, 403)
+        self.assertNotContains(resp, '{#', status_code=403)
+
+    def test_la_pagina_publica_tampoco(self):
+        resp = self.client.get(self.url_pagina(self.publico))
+        self.assertNotContains(resp, '{#')
