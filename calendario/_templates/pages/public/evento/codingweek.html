@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -38,7 +38,7 @@ body{
   margin:0;background:#000;color:var(--tinta-suave);
   font-family:var(--cuerpo);font-size:16px;line-height:1.5;
   -webkit-font-smoothing:antialiased;
-  background-image:url("{% static 'img/eventos/cb-grid-background.avif' %}");
+  background-image:url("{% imagen pagina.fondo %}");
   background-attachment:fixed;
 }
 img{max-width:100%;height:auto;display:block}
@@ -182,7 +182,7 @@ img{max-width:100%;height:auto;display:block}
    `cover` y el texto encima, alineado a la izquierda. */
 .clase0 .cartel{
   width:240px;height:300px;margin:34px auto 0;padding:40px;border-radius:10px;
-  background:center/cover no-repeat url("{% static 'img/eventos/codingweek/cartel-clase-0.avif' %}");
+  background:center/cover no-repeat url("{% imagen pagina.cartel_clase0 %}");
   color:#a5a5a5;font-size:16px;line-height:1.35;text-align:left;
 }
 
@@ -203,7 +203,7 @@ img{max-width:100%;height:auto;display:block}
 /* ── cierre ──────────────────────────────────────────────────────────────── */
 .cierre{
   margin-top:90px;padding:90px 0;background:#333 center/cover no-repeat;
-  background-image:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)),url("{% static 'img/eventos/codingweek/fondo-cierre.avif' %}");
+  background-image:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)),url("{% imagen pagina.fondo_cierre %}");
 }
 .cierre .caja{
   max-width:640px;margin:0 auto;padding:40px 30px;border-radius:14px;text-align:center;
@@ -233,7 +233,7 @@ img{max-width:100%;height:auto;display:block}
 <body>
 <div id="evento-contenido">
 <header class="cabecera">
-  <img class="logo" src="{% static 'img/eventos/codingweek/logo-blanco.png' %}" alt="Conquer Blocks" width="180">
+  <img class="logo" src="{% imagen pagina.logo %}" alt="Conquer Blocks" width="180">
   <div class="chapa">
     <span class="destacado">{{ pagina.chapa_evento|safe }}</span>
     <span class="fecha">
@@ -253,8 +253,8 @@ img{max-width:100%;height:auto;display:block}
 
     <div class="hero-cols">
       <div class="hero-foto">
-        <img class="escritorio" src="{% static 'img/eventos/codingweek/hero.avif' %}" alt="Bienvenido Sáez" width="532" height="299">
-        <img class="movil" src="{% static 'img/eventos/codingweek/hero-movil.avif' %}" alt="Bienvenido Sáez" width="532" height="532">
+        <img class="escritorio" src="{% imagen pagina.hero %}" alt="Bienvenido Sáez" width="532" height="299">
+        <img class="movil" src="{% imagen pagina.hero_movil %}" alt="Bienvenido Sáez" width="532" height="532">
       </div>
 
       <div class="hero-form">
@@ -312,7 +312,7 @@ img{max-width:100%;height:auto;display:block}
   <div class="tarjetas">
     {% for t in pagina.tarjetas %}
     <div class="tarjeta">
-      <img src="{% static t.imagen %}" alt="" width="532" height="299">
+      <img src="{% imagen t.imagen %}" alt="" width="532" height="299">
       <h3>{{ t.titulo|safe }}</h3>
       <p>{{ t.texto_1|safe }}</p>
       <p>{{ t.texto_2|safe }}</p>

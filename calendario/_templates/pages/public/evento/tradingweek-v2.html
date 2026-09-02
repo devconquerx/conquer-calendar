@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -132,7 +132,7 @@
   <section class="pb-ancho hero" id="hero">
     <div class="hero-cols">
       <div class="hero-foto">
-        <img src="{% static 'img/eventos/tradingweek/hero.avif' %}" alt="Félix Fuertes" width="940" height="529">
+        <img src="{% imagen pagina.hero %}" alt="Félix Fuertes" width="940" height="529">
       </div>
       <div class="pb-tarjeta hero-form">
         <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
@@ -162,7 +162,7 @@
     <div class="columnas">
       {% for c in pagina.columnas %}
       <div class="pb-tarjeta">
-        <img src="{% static c.imagen %}" alt="" loading="lazy">
+        <img src="{% imagen c.imagen %}" alt="" loading="lazy">
         <div class="cuerpo">
           <h3>{{ c.titulo|safe }}</h3>
           <p>{{ c.texto|safe }}</p>
@@ -186,7 +186,7 @@
       <p class="bajada-seccion" style="color:#d4d4d4">{{ pagina.taller_bajada|safe }}</p>
       <div class="pildoras">
         {% for p in pagina.pildoras %}
-        <div class="pildora"><p>{{ p|safe }}</p></div>
+        <div class="pildora"><p>{{ p.texto|safe }}</p></div>
         {% endfor %}
       </div>
       <div class="fila-cta">
@@ -203,7 +203,7 @@
   <section class="pb-ancho perfil">
     <div class="pb-tarjeta perfil-cols">
       <div class="perfil-foto">
-        <div class="pb-foto" style="background-image:url('{% static 'img/eventos/tradingweek/felix.avif' %}')" role="img" aria-label="Félix Fuertes"></div>
+        <div class="pb-foto" style="background-image:url('{% imagen pagina.felix %}')" role="img" aria-label="Félix Fuertes"></div>
       </div>
       <div class="perfil-texto">
         <h2>{{ pagina.perfil_titulo|safe }}</h2>

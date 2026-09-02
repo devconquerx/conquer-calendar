@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -28,7 +28,7 @@
 *{box-sizing:border-box}
 body{
   margin:0;background-color:#fff;
-  background-image:url("{% static 'img/eventos/cl-fondo.jpg' %}");
+  background-image:url("{% imagen evento.fondo %}");
   background-size:cover;background-position:0 0;background-repeat:repeat;
   font-family:var(--fuente);font-size:14px;font-weight:400;line-height:20px;color:var(--tinta);
   -webkit-font-smoothing:antialiased;
@@ -140,7 +140,7 @@ body{
 </head>
 <body>
   <section class="header_logos">
-    <img src="{% static 'img/eventos/cl-logo-horizontal.png' %}" alt="Conquer Languages" width="229" height="41">
+    <img src="{% imagen evento.logo %}" alt="Conquer Languages" width="229" height="41">
   </section>
 
   <section>
@@ -156,7 +156,7 @@ body{
         <div class="bloque-columnas">
           <div class="columnas">
             <div class="col-imagen">
-              <img src="{% static 'img/eventos/cl-evento-imagen.webp' %}" alt="" width="532" height="299">
+              <img src="{% imagen evento.foto %}" alt="" width="532" height="299">
             </div>
 
             <div class="col-form">

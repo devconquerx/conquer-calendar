@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -37,7 +37,7 @@
 *{box-sizing:border-box}
 body{
   margin:0;background-color:#000;
-  background-image:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.15)),url("{% static 'img/eventos/cb-grid-background.avif' %}");
+  background-image:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.15)),url("{% imagen evento.fondo %}");
   font-family:var(--fuente);font-size:16px;font-weight:300;line-height:20px;color:#737373;
   -webkit-font-smoothing:antialiased;
 }
@@ -192,7 +192,7 @@ body{
 </head>
 <body>
   <section class="header_logos">
-    <img src="{% static evento.logo %}" alt="{{ evento.marca }}" width="{{ evento.logo_ancho }}" height="30">
+    <img src="{% imagen evento.logo %}" alt="{{ evento.marca }}" width="{{ evento.logo_ancho }}" height="30">
   </section>
 
   <section>
@@ -206,7 +206,7 @@ body{
         <div class="div-block-70">
         <div class="columns-25">
           <div class="col">
-            <img src="{% static evento.foto %}" alt="" width="542" height="406">
+            <img src="{% imagen evento.foto %}" alt="" width="542" height="406">
           </div>
           <div class="col">
             <div class="div-block-73">

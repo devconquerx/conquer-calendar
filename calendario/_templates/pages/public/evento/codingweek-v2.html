@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -90,7 +90,7 @@
 .clase0 .detalle{margin:14px auto 0;max-width:720px;color:var(--tinta-suave);font-size:15px;font-weight:300;line-height:1.5}
 .clase0 .cartel{
   max-width:760px;margin:26px auto 0;padding:44px 30px;
-  background:center/cover no-repeat url("{% static 'img/eventos/codingweek/cartel-clase-0.avif' %}");
+  background:center/cover no-repeat url("{% imagen pagina.cartel_clase0 %}");
   color:#fafafa;font-family:var(--fuente);font-size:clamp(17px,2vw,23px);font-weight:600;line-height:1.3;
 }
 
@@ -145,7 +145,7 @@
   <section class="pb-ancho hero">
     <div class="hero-cols">
       <div class="hero-foto">
-        <div class="pb-foto" style="background-image:url('{% static 'img/eventos/codingweek/hero.avif' %}')" role="img" aria-label="Bienvenido Sáez"></div>
+        <div class="pb-foto" style="background-image:url('{% imagen pagina.hero %}')" role="img" aria-label="Bienvenido Sáez"></div>
       </div>
       <div class="pb-tarjeta hero-form">
         <form id="formEvento" method="post" action="/f/api/lead/" novalidate>
@@ -197,7 +197,7 @@
     <div class="tarjetas">
       {% for t in pagina.tarjetas %}
       <div class="pb-tarjeta">
-        <img src="{% static t.imagen %}" alt="" width="532" height="299" loading="lazy">
+        <img src="{% imagen t.imagen %}" alt="" width="532" height="299" loading="lazy">
         <div class="cuerpo">
           <h3>{{ t.titulo|safe }}</h3>
           <p>{{ t.texto_1|safe }}</p>

@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -124,9 +124,9 @@
     {% include 'pages/public/evento/_cta_agendar_v2.html' %}
 
     <div class="resenas">
-      {% for i in pagina.resenas %}
+      {% for r in pagina.resenas %}
       <div class="pb-tarjeta">
-        <img src="{% static i %}" alt="Reseña de un alumno en Trustpilot" loading="lazy" width="370">
+        <img src="{% imagen r.imagen %}" alt="Reseña de un alumno en Trustpilot" loading="lazy" width="370">
       </div>
       {% endfor %}
     </div>
@@ -136,7 +136,7 @@
     <p class="pb-seccion-titulo">{{ pagina.sistema_titulo|safe }}</p>
     <div class="pb-tarjeta sistema-cols" style="margin-top:24px">
       <div class="sistema-foto">
-        <img src="{% static 'img/eventos/testimonios/holografia.avif' %}" alt="" width="340" height="227" loading="lazy">
+        <img src="{% imagen pagina.holografia %}" alt="" width="340" height="227" loading="lazy">
       </div>
       <div class="puntos">
         <div class="punto">

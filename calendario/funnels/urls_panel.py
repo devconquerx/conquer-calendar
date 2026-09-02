@@ -9,5 +9,6 @@ urlpatterns = [
     path('<slug:clave>/', views_panel.EditorView.as_view(), name='editor'),
     path('<slug:clave>/guardar/', views_panel.guardar_borrador, name='guardar'),
     path('<slug:clave>/publicar/', views_panel.publicar, name='publicar'),
+    path('<slug:clave>/subir-imagen/', views_panel.subir_imagen, name='subir_imagen'),
     path('<slug:clave>/descartar/', views_panel.descartar_borrador, name='descartar'),
 ]

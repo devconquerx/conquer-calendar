@@ -9,10 +9,15 @@ hasta pulsar Publicar.
 El admin de Django sigue teniendo su formulario (ver `admin.py`), pero allí
 guardar publica de una vez.
 """
+import hashlib
 import json
+import os
 
+from django.conf import settings
+from django.core.files.storage import default_storage
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.utils.text import slugify
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
@@ -26,6 +31,20 @@ from .models import ContenidoDeEvento
 
 TIPOS = {'lanzamiento': 'Pantalla de lanzamiento', 'gracias': 'Pantalla de gracias',
          'campana': 'Página de campaña'}
+
+# Lo que se admite al subir una imagen. La lista es corta a propósito: son
+# formatos que cualquier navegador pinta y que no ejecutan nada. Sin SVG —es un
+# documento con scripts dentro— y sin más de 8 MB, que ya es una foto enorme
+# para una landing.
+FORMATOS = {
+    '.jpg': (b'\xff\xd8\xff',),
+    '.jpeg': (b'\xff\xd8\xff',),
+    '.png': (b'\x89PNG\r\n\x1a\n',),
+    '.gif': (b'GIF87a', b'GIF89a'),
+    '.webp': (b'RIFF',),
+    '.avif': (b'ftyp',),   # en los AVIF/HEIF el marcador va tras los 4 primeros bytes
+}
+TOPE_BYTES = 8 * 1024 * 1024
 
 
 class ListaDePaginasView(RequierePermisoMixin, TemplateView):
@@ -74,6 +93,9 @@ class EditorView(RequierePermisoMixin, TemplateView):
         # y donde no haya nada, el texto con el que se migró la página.
         escritos = contenido.a_formulario(clave, contenido.valores_de(clave, borrador=True))
         publicados = contenido.a_formulario(clave, contenido.valores_de(clave))
+        # Los del código: lo que se restaura al vaciar un campo, y la imagen a
+        # la que vuelve el botón de «restaurar la original».
+        originales = contenido.a_formulario(clave, contenido.defectos_de(clave))
 
         secciones = []
         for campo in pagina.campos:
@@ -92,11 +114,11 @@ class EditorView(RequierePermisoMixin, TemplateView):
                         nombre = contenido.nombre_campo(campo, i, sub)
                         seccion['campos'].append(self._campo(
                             nombre, f'{campo.etiqueta.rstrip("s")} {i + 1} · {sub.etiqueta}',
-                            sub, escritos, publicados))
+                            sub, escritos, publicados, originales))
             else:
                 nombre = contenido.nombre_campo(campo)
                 seccion['campos'].append(
-                    self._campo(nombre, campo.etiqueta, campo, escritos, publicados))
+                    self._campo(nombre, campo.etiqueta, campo, escritos, publicados, originales))
 
         ctx.update({
             'pagina': pagina,
@@ -110,19 +132,28 @@ class EditorView(RequierePermisoMixin, TemplateView):
             'url_guardar': reverse('panel_contenido:guardar', args=[pagina.clave]),
             'url_publicar': reverse('panel_contenido:publicar', args=[pagina.clave]),
             'url_descartar': reverse('panel_contenido:descartar', args=[pagina.clave]),
+            'url_subir': reverse('panel_contenido:subir_imagen', args=[pagina.clave]),
             'ayuda_html': contenido.AYUDA_HTML,
         })
         return ctx
 
     @staticmethod
-    def _campo(nombre, etiqueta, campo, escritos, publicados):
+    def _campo(nombre, etiqueta, campo, escritos, publicados, originales):
         valor = escritos.get(nombre, '')
         return {
             'nombre': nombre,
             'etiqueta': etiqueta,
             'ayuda': campo.ayuda,
             'tipo': campo.tipo,
+            'es_imagen': campo.tipo == contenido.IMAGEN,
+            'es_enlace': campo.tipo == contenido.ENLACE,
             'valor': valor,
+            # La imagen se enseña resuelta (del repo o subida); el valor que
+            # viaja al guardar sigue siendo la ruta.
+            'url': url_de_imagen(valor) if campo.tipo == contenido.IMAGEN else '',
+            'valor_original': originales.get(nombre, ''),
+            'url_original': (url_de_imagen(originales.get(nombre, ''))
+                             if campo.tipo == contenido.IMAGEN else ''),
             # Para marcar en el editor lo que cambia respecto a lo publicado.
             'publicado': publicados.get(nombre, ''),
             'lineas': min(12, max(2, valor.count('\n') + 1 + (1 if len(valor) > 90 else 0))),
@@ -139,8 +170,23 @@ def _textos_del_post(request, clave):
     """Los textos que manda el editor, ya en la forma en que se guardan."""
     datos = json.loads(request.body or '{}') if request.content_type == 'application/json' \
         else request.POST.dict()
-    errores = contenido.errores_de_html(clave, datos)
+    errores = (contenido.errores_de_html(clave, datos)
+               + contenido.errores_de_imagen(clave, datos)
+               + contenido.errores_de_enlace(clave, datos))
     return contenido.desde_formulario(clave, datos), errores
+
+
+def url_de_imagen(valor):
+    """La URL con la que se ve una imagen: subida o del repo.
+
+    Misma regla que la etiqueta `{% imagen %}` de las plantillas; aquí hace
+    falta para pintar la miniatura en el editor.
+    """
+    from django.templatetags.static import static
+
+    if not valor:
+        return ''
+    return valor if str(valor).startswith(('/media/', 'http', '//')) else static(valor)
 
 
 @require_POST
@@ -175,6 +221,52 @@ def publicar(request, clave):
         'publicado_en': fila.publicado_en.isoformat(),
         'mensaje': 'Publicado. La página ya sirve estos textos.',
     })
+
+
+@require_POST
+@requiere_permiso('contenido_eventos.editar')
+def subir_imagen(request, clave):
+    """Guarda una imagen subida desde el editor y devuelve su URL.
+
+    El fichero va a `MEDIA_ROOT/eventos/<página>/`, que en producción es un
+    volumen del host servido por nginx: sobrevive a los despliegues y no
+    depende del color (blue/green) que esté activo.
+
+    Quien sube no elige el nombre: se compone del original saneado más un trozo
+    del hash del contenido. Así dos ficheros distintos nunca se pisan, subir el
+    mismo dos veces no duplica, y el nombre nuevo invalida la caché de nginx (7
+    días) sin tener que purgarla.
+    """
+    _fila_o_404(clave)
+    archivo = request.FILES.get('archivo')
+    if not archivo:
+        return JsonResponse({'ok': False, 'mensaje': 'No ha llegado ningún fichero.'}, status=400)
+    if archivo.size > TOPE_BYTES:
+        return JsonResponse(
+            {'ok': False, 'mensaje': 'La imagen pesa más de 8 MB. Compárimela antes de subirla.'},
+            status=400)
+
+    nombre, extension = os.path.splitext(archivo.name)
+    extension = extension.lower()
+    if extension not in FORMATOS:
+        return JsonResponse(
+            {'ok': False,
+             'mensaje': 'Formato no admitido. Usa JPG, PNG, WEBP, AVIF o GIF.'},
+            status=400)
+
+    # Que la extensión diga «png» no significa que lo sea: se comprueba la firma
+    # del propio fichero antes de dejarlo en disco.
+    cabecera = archivo.read(16)
+    archivo.seek(0)
+    if not any(firma in cabecera for firma in FORMATOS[extension]):
+        return JsonResponse(
+            {'ok': False, 'mensaje': 'Ese fichero no parece una imagen de verdad.'}, status=400)
+
+    limpio = slugify(nombre)[:60] or 'imagen'
+    firma = hashlib.sha256(archivo.read()).hexdigest()[:8]
+    archivo.seek(0)
+    ruta = default_storage.save(f'eventos/{clave}/{limpio}-{firma}{extension}', archivo)
+    return JsonResponse({'ok': True, 'url': settings.MEDIA_URL + ruta})
 
 
 @require_POST

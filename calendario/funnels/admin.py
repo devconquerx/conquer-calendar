@@ -214,12 +214,21 @@ class ContenidoDeEventoForm(forms.ModelForm):
             return forms.CharField(widget=forms.Textarea(attrs={'rows': filas, 'cols': 100}), **comun)
         if campo.tipo == contenido.HTML:
             return forms.CharField(widget=forms.Textarea(attrs={'rows': 4, 'cols': 100}), **comun)
+        if campo.tipo == contenido.IMAGEN:
+            # Aquí no se sube nada: solo se ve (y se puede pegar) la ruta. Para
+            # cambiar la imagen de verdad está la pantalla del panel.
+            comun['help_text'] = ('Ruta de la imagen. Para subir una nueva, usa la pantalla '
+                                  'del panel.')
         return forms.CharField(widget=forms.TextInput(attrs={'size': 100}), **comun)
 
     def clean(self):
         datos = super().clean()
         for nombre in contenido.errores_de_html(self.instance.clave, datos):
             self.add_error(nombre, mark_safe(contenido.ERROR_HTML))
+        for nombre in contenido.errores_de_imagen(self.instance.clave, datos):
+            self.add_error(nombre, contenido.ERROR_IMAGEN)
+        for nombre in contenido.errores_de_enlace(self.instance.clave, datos):
+            self.add_error(nombre, contenido.ERROR_ENLACE)
         return datos
 
     def save(self, commit=True):

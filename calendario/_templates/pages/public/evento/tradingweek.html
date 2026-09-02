@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -41,7 +41,7 @@ a{text-decoration:none}
 .main{
   /* Negro con la textura azul repetida en vertical y ajustada al ancho. */
   background:#000 50% 0/contain repeat-y;
-  background-image:url("{% static 'img/eventos/tradingweek/fondo.avif' %}");
+  background-image:url("{% imagen pagina.fondo %}");
   overflow:clip;
 }
 
@@ -168,16 +168,16 @@ a{text-decoration:none}
 /* ── Mini taller: las tres píldoras ────────────────────────────────────── */
 .taller{
   width:100%;padding-bottom:60px;background:var(--azul-tarjeta) 0 0/auto;
-  background-image:url("{% static 'img/eventos/tradingweek/pildora-1.avif' %}");
+  background-image:url("{% imagen pagina.pildoras.0.imagen %}");
 }
 .pildoras{display:flex;justify-content:center;align-items:center;gap:14px;max-width:1200px;margin:0 auto}
 .pildora{
   width:20%;height:300px;padding:40px;border-radius:10px;
   background:#161616 100% 0/cover;
 }
-.pildora-1{background-image:url("{% static 'img/eventos/tradingweek/pildora-1.avif' %}");filter:hue-rotate(311deg)}
-.pildora-2{background-image:url("{% static 'img/eventos/tradingweek/pildora-2.avif' %}");background-position:0 0;background-size:auto;filter:hue-rotate(294deg)}
-.pildora-3{background-image:url("{% static 'img/eventos/tradingweek/pildora-3.avif' %}");background-position:100% 0;filter:hue-rotate(284deg)}
+.pildora-1{filter:hue-rotate(311deg)}
+.pildora-2{background-position:0 0;background-size:auto;filter:hue-rotate(294deg)}
+.pildora-3{background-position:100% 0;filter:hue-rotate(284deg)}
 .pildora p{
   margin:0;color:#fff;text-align:center;text-transform:uppercase;text-shadow:3px 2px 9px #010101;
   font-family:var(--titular);font-size:20px;line-height:29px;
@@ -212,7 +212,7 @@ a{text-decoration:none}
 .cierre-fondo{
   position:absolute;inset:auto auto 0 0;width:100%;height:50%;
   background:var(--azul-tarjeta) 50% 100%/contain;
-  background-image:url("{% static 'img/eventos/tradingweek/footer.avif' %}");
+  background-image:url("{% imagen pagina.fondo_cierre %}");
   filter:brightness(74%) hue-rotate(354deg);
 }
 
@@ -289,7 +289,7 @@ a{text-decoration:none}
   <div id="evento-contenido">
   <header class="cabecera-barra">
     <div class="nav-contenedor">
-      <img src="{% static 'img/eventos/pildoras/logo.svg' %}" alt="Conquer Finance" width="227">
+      <img src="{% imagen pagina.logo %}" alt="Conquer Finance" width="227">
       <div class="aviso">
         <div class="aviso-texto aviso-cta">{{ pagina.aviso|safe }}</div>
         <div class="aviso-fecha">
@@ -322,7 +322,7 @@ a{text-decoration:none}
           </div>
         </div>
         <div class="marco">
-          <img src="{% static 'img/eventos/tradingweek/hero.avif' %}" alt="Félix Fuertes" width="940" height="529">
+          <img src="{% imagen pagina.hero %}" alt="Félix Fuertes" width="940" height="529">
         </div>
       </div>
 
@@ -359,7 +359,7 @@ a{text-decoration:none}
       <div class="columnas">
         {% for c in pagina.columnas %}
         <div class="columna">
-          <img src="{% static c.imagen %}" alt="" loading="lazy">
+          <img src="{% imagen c.imagen %}" alt="" loading="lazy">
           <h3>{{ c.titulo|safe }}</h3>
           <p>{{ c.texto|safe }}</p>
         </div>
@@ -381,7 +381,8 @@ a{text-decoration:none}
     </div>
     <div class="pildoras">
       {% for p in pagina.pildoras %}
-      <div class="pildora pildora-{{ forloop.counter }}"><p>{{ p|safe }}</p></div>
+      <div class="pildora pildora-{{ forloop.counter }}"
+           style="background-image:url('{% imagen p.imagen %}')"><p>{{ p.texto|safe }}</p></div>
       {% endfor %}
     </div>
     <div class="fila-cta">
@@ -395,7 +396,7 @@ a{text-decoration:none}
   <section class="perfil">
     <div class="perfil-caja">
       <div class="perfil-foto">
-        <img src="{% static 'img/eventos/tradingweek/felix.avif' %}" alt="Félix Fuertes" loading="lazy" width="940" height="1175">
+        <img src="{% imagen pagina.felix %}" alt="Félix Fuertes" loading="lazy" width="940" height="1175">
       </div>
       <div class="perfil-texto">
         <h2>{{ pagina.perfil_titulo|safe }}</h2>

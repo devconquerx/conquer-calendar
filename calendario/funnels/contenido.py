@@ -38,6 +38,8 @@ TEXTO = 'texto'   # una línea suelta (una chapa, un botón, un titular corto)
 HTML = 'html'     # un párrafo; admite <strong>, <em>, <br>, <a>…
 LISTA = 'lista'   # varias entradas, una por línea (los bullets)
 GRUPO = 'grupo'   # varias fichas fijas con los mismos subcampos (las columnas)
+IMAGEN = 'imagen' # una imagen: la del repo por defecto, o una subida al panel
+ENLACE = 'enlace' # una URL a la que lleva la página (el grupo de WhatsApp…)
 
 
 @dataclass(frozen=True)
@@ -91,8 +93,15 @@ class Pagina:
 
 AYUDA_HTML = ('Admite etiquetas HTML: &lt;strong&gt; negrita, &lt;em&gt; cursiva, '
               '&lt;u&gt; subrayado, &lt;br&gt; salto de línea y &lt;a href="…"&gt; enlace.')
+AYUDA_IMAGEN = 'JPG, PNG, WEBP o AVIF, hasta 8 MB.'
 AYUDA_RESALTE = ('Lo que envuelvas en &lt;strong&gt;…&lt;/strong&gt; se pinta con el color de '
                  'resalte de la página.')
+
+
+def _imagenes(*campos):
+    """Los campos de imagen de una página, todos en su propia sección."""
+    return tuple(Campo(clave, etiqueta, IMAGEN, ayuda or AYUDA_IMAGEN, 'Imágenes')
+                 for clave, etiqueta, ayuda in campos)
 
 
 def _pestana():
@@ -143,6 +152,15 @@ def _gracias(titular_partido):
         Campo('destacar_3', 'Titular de la tercera tarjeta', seccion='Tercera tarjeta'),
         Campo('texto_3', 'Texto de la tercera tarjeta', HTML, AYUDA_HTML, 'Tercera tarjeta'),
         Campo('cta', 'Texto del botón de WhatsApp', seccion='Botón'),
+    ) + (
+        Campo('whatsapp', 'Enlace del grupo de WhatsApp', ENLACE,
+              ayuda=('A donde llevan los tres botones y el salto automático de los 15 '
+                     'segundos. Si se deja vacío no se pinta ningún botón y no hay salto: '
+                     'es lo que se hace cuando el grupo de una edición ya no existe.'),
+              seccion='Grupo de WhatsApp'),
+    ) + _imagenes(
+        ('logo', 'Logo de la cabecera', ''),
+        ('fondo', 'Fondo de la página', ''),
     ) + _pestana()
 
 
@@ -164,6 +182,10 @@ CAMPOS_LANZAMIENTO = (
           'Ventana de registro'),
 ) + _formulario(boton='') + (
     Campo('modal_cta', 'Texto del botón de enviar', seccion='Formulario de registro'),
+) + _imagenes(
+    ('logo', 'Logo de la cabecera', ''),
+    ('foto', 'Foto junto a los bullets', ''),
+    ('fondo', 'Fondo de la página', ''),
 ) + _pestana()
 
 # Pantalla de lanzamiento de Languages: mismo contenido, pero el titular se
@@ -175,7 +197,11 @@ CAMPOS_LANZAMIENTO_LANGUAGES = (
     Campo('titulo_post', 'Titular · después del resalte', HTML, AYUDA_HTML, 'Cabecera'),
     Campo('subtitulo', 'Subtítulo', HTML, AYUDA_HTML, 'Cabecera'),
     Campo('bullets', 'Bullets', LISTA, 'Uno por línea. ' + AYUDA_HTML, 'Bullets'),
-) + _formulario(legal=False, boton='Texto del botón de enviar') + _pestana()
+) + _formulario(legal=False, boton='Texto del botón de enviar') + _imagenes(
+    ('logo', 'Logo de la cabecera', ''),
+    ('foto', 'Foto junto a los bullets', ''),
+    ('fondo', 'Fondo de la página', ''),
+) + _pestana()
 
 CAMPOS_CODING_WEEK = (
     Campo('chapa_evento', 'Chapa · qué es', seccion='Cabecera'),
@@ -189,6 +215,7 @@ CAMPOS_CODING_WEEK = (
         Campo('titulo', 'Título', HTML, AYUDA_RESALTE),
         Campo('texto_1', 'Primer párrafo', HTML, AYUDA_HTML),
         Campo('texto_2', 'Segundo párrafo', HTML, AYUDA_HTML),
+        Campo('imagen', 'Imagen', IMAGEN, AYUDA_IMAGEN),
     )),
     Campo('clase0_titulo', 'Título', HTML, AYUDA_RESALTE, 'Clase 0'),
     Campo('clase0_detalle', 'Detalle', HTML, AYUDA_HTML, 'Clase 0'),
@@ -198,6 +225,13 @@ CAMPOS_CODING_WEEK = (
     Campo('cierre_antetitulo', 'Antetítulo', seccion='Cierre'),
     Campo('cierre_titulo', 'Titular', seccion='Cierre'),
     Campo('cierre_texto', 'Texto', HTML, AYUDA_HTML, 'Cierre'),
+) + _imagenes(
+    ('logo', 'Logo de la cabecera', ''),
+    ('hero', 'Foto principal (escritorio)', ''),
+    ('hero_movil', 'Foto principal (móvil)', ''),
+    ('cartel_clase0', 'Cartel de la clase 0', ''),
+    ('fondo_cierre', 'Fondo del cierre', ''),
+    ('fondo', 'Fondo de la página', ''),
 ) + _pestana()
 
 CAMPOS_TESTIMONIOS = (
@@ -209,6 +243,13 @@ CAMPOS_TESTIMONIOS = (
     Campo('sistema_puntos', 'Puntos', LISTA, 'Uno por línea.', 'El sistema'),
     Campo('cierre_titulo', 'Titular', HTML, AYUDA_RESALTE, 'Cierre'),
     Campo('cierre_texto', 'Texto', HTML, AYUDA_HTML, 'Cierre'),
+    Campo('resenas', 'Reseñas', GRUPO, seccion='Reseñas', filas=9, subcampos=(
+        Campo('imagen', 'Captura', IMAGEN, AYUDA_IMAGEN),
+    )),
+) + _imagenes(
+    ('logo', 'Logo de la cabecera', ''),
+    ('holografia', 'Imagen de la sección del sistema', ''),
+    ('fondo_cierre', 'Fondo del cierre', ''),
 ) + _pestana()
 
 CAMPOS_BITACORA = (
@@ -216,6 +257,9 @@ CAMPOS_BITACORA = (
     Campo('antetitulo', 'Antetítulo', seccion='Cabecera'),
     Campo('titular', 'Titular', HTML, AYUDA_HTML, 'Cabecera'),
     Campo('parrafos', 'Párrafos', LISTA, 'Uno por línea. ' + AYUDA_HTML, 'Cuerpo'),
+) + _imagenes(
+    ('logo', 'Logo de la cabecera', ''),
+    ('fondo', 'Fondo de la página', ''),
 ) + _pestana()
 
 CAMPOS_PILDORA = (
@@ -228,6 +272,11 @@ CAMPOS_PILDORA = (
     Campo('texto_tarjeta', 'Texto de la tarjeta que lleva a esta píldora',
           ayuda='Es el titular con el que las otras dos píldoras enlazan a esta.',
           seccion='Las otras píldoras'),
+) + _imagenes(
+    ('logo', 'Logo de la cabecera', ''),
+    ('fondo', 'Fondo de la página', ''),
+    ('imagen_tarjeta', 'Imagen de la tarjeta que lleva a esta píldora',
+     'La miniatura con la que las otras dos píldoras enlazan a esta. ' + AYUDA_IMAGEN),
 ) + _pestana()
 
 CAMPOS_TRADING_WEEK = (
@@ -244,16 +293,26 @@ CAMPOS_TRADING_WEEK = (
     Campo('columnas', 'Las tres columnas', GRUPO, seccion='El evento', filas=3, subcampos=(
         Campo('titulo', 'Título', HTML, AYUDA_HTML),
         Campo('texto', 'Texto', HTML, AYUDA_HTML),
+        Campo('imagen', 'Imagen', IMAGEN, AYUDA_IMAGEN),
     )),
     Campo('cta_secundario', 'Texto de los botones que suben al formulario', seccion='El evento'),
     Campo('taller_titulo', 'Título de la sección', HTML, AYUDA_RESALTE, 'Mini taller'),
     Campo('taller_bajada', 'Bajada', HTML, AYUDA_HTML, 'Mini taller'),
-    Campo('pildoras', 'Las tres píldoras', LISTA, 'Una por línea.', 'Mini taller'),
+    Campo('pildoras', 'Las tres píldoras', GRUPO, seccion='Mini taller', filas=3, subcampos=(
+        Campo('texto', 'Titular', HTML, AYUDA_HTML),
+        Campo('imagen', 'Fondo de la tarjeta', IMAGEN, AYUDA_IMAGEN),
+    )),
     Campo('perfil_titulo', 'Nombre del ponente', HTML, AYUDA_RESALTE, 'Ponente'),
     Campo('perfil', 'Biografía', HTML, AYUDA_HTML, 'Ponente'),
     Campo('cierre_antetitulo', 'Antetítulo', seccion='Cierre'),
     Campo('cierre_titulo', 'Titular', HTML, AYUDA_HTML, 'Cierre'),
     Campo('cierre', 'Texto', HTML, AYUDA_HTML, 'Cierre'),
+) + _imagenes(
+    ('logo', 'Logo de la cabecera', ''),
+    ('hero', 'Foto principal', ''),
+    ('felix', 'Foto del ponente', ''),
+    ('fondo', 'Fondo de la página', ''),
+    ('fondo_cierre', 'Fondo del cierre', ''),
 ) + _pestana()
 
 
@@ -379,11 +438,13 @@ def con_textos(ficha, borrador=False):
     # es el que se edita en la página a la que lleva, no aquí.
     if salida.get('tarjetas') and all(isinstance(t, dict) and t.get('clave')
                                       for t in salida['tarjetas']):
-        salida['tarjetas'] = tuple(
-            {**t, 'texto': (valores_de(t['clave'], borrador=borrador).get('texto_tarjeta')
-                            or t.get('texto', ''))}
-            for t in salida['tarjetas']
-        )
+        tarjetas = []
+        for t in salida['tarjetas']:
+            suyos = valores_de(t['clave'], borrador=borrador)
+            tarjetas.append({**t,
+                             'texto': suyos.get('texto_tarjeta') or t.get('texto', ''),
+                             'imagen': suyos.get('imagen_tarjeta') or t.get('imagen', '')})
+        salida['tarjetas'] = tuple(tarjetas)
     return salida
 
 
@@ -480,6 +541,12 @@ def desde_formulario(clave, datos):
                         if l.strip()]
             if entradas:
                 textos[campo.clave] = entradas
+        elif campo.tipo == ENLACE:
+            # Vaciar un enlace es una decisión, no un descuido: significa «quita
+            # el botón». Por eso este sí se guarda vacío, y para recuperar el
+            # original está el botón de restaurar del editor.
+            if nombre_campo(campo) in datos:
+                textos[campo.clave] = (datos.get(nombre_campo(campo)) or '').strip()
         else:
             valor = (datos.get(nombre_campo(campo)) or '').strip()
             if valor:
@@ -505,3 +572,55 @@ def puede_ver_borrador(request):
     usuario = getattr(request, 'user', None)
     return bool(usuario and usuario.is_authenticated
                 and usuario.tiene_permiso('contenido_eventos.editar'))
+
+
+def errores_de_imagen(clave, datos):
+    """Los campos de imagen del formulario cuyo valor no es una ruta admisible.
+
+    Se aceptan las imágenes del repo (`img/…`, que es lo que trae la ficha) y
+    las subidas al panel (`/media/…`). Nada más: estos valores acaban en un
+    `src` y en un `url()` de CSS, y una URL de fuera dejaría la página
+    dependiendo de un servidor ajeno (o sirviendo un `javascript:`).
+    """
+    de_imagen = {nombre_campo(campo) for campo in campos_de(clave) if campo.tipo == IMAGEN}
+    for campo in campos_de(clave):
+        if campo.tipo != GRUPO:
+            continue
+        de_imagen |= {nombre_campo(campo, i, sub)
+                      for i in range(campo.filas)
+                      for sub in campo.subcampos if sub.tipo == IMAGEN}
+    malos = []
+    for nombre, valor in datos.items():
+        if nombre not in de_imagen or not isinstance(valor, str):
+            continue
+        valor = valor.strip()
+        if valor and not (valor.startswith('/media/') or valor.startswith('img/')):
+            malos.append(nombre)
+    return malos
+
+
+ERROR_IMAGEN = ('Esa imagen no vale: solo se admiten las que vienen con la página o las que '
+                'subas aquí.')
+
+
+def errores_de_enlace(clave, datos):
+    """Los campos de enlace cuyo valor no es una dirección admisible.
+
+    Vale una URL completa (`https://…`), una ruta del propio sitio (`/algo`) o
+    nada. Cualquier otra cosa —un `javascript:`, un texto suelto— se rechaza:
+    esto acaba en el `href` de un botón y en el salto automático de la página
+    de gracias.
+    """
+    de_enlace = {nombre_campo(campo) for campo in campos_de(clave) if campo.tipo == ENLACE}
+    malos = []
+    for nombre, valor in datos.items():
+        if nombre not in de_enlace or not isinstance(valor, str):
+            continue
+        valor = valor.strip()
+        if valor and not valor.startswith(('https://', 'http://', '/')):
+            malos.append(nombre)
+    return malos
+
+
+ERROR_ENLACE = ('Ese enlace no vale: pon una dirección completa (https://…), una ruta de este '
+                'sitio (/algo) o déjalo vacío para quitar el botón.')

@@ -46,6 +46,9 @@ EVENTOS = {
         'logo': 'img/eventos/cb-logo-horizontal-blanco.png',
         'logo_ancho': 316,
         'foto': 'img/eventos/cb-bienvenido-live.jpg',
+        # El fondo de rejilla oscura de la página; editable como el resto de
+        # imágenes desde el panel.
+        'fondo': 'img/eventos/cb-grid-background.avif',
         'foto_borde': '1.5px solid #f70',
         'hueco': '1rem',
         # Código de la edición con el que el CRM indexa estos leads. Es solo
@@ -104,6 +107,9 @@ EVENTOS = {
         'logo': 'img/eventos/cf-logo-horizontal-blanco.png',
         'logo_ancho': 338,
         'foto': 'img/eventos/cf-evento-imagen.webp',
+        # El fondo de rejilla oscura de la página; editable como el resto de
+        # imágenes desde el panel.
+        'fondo': 'img/eventos/cb-grid-background.avif',
         'foto_borde': '2px solid #3ac043',
         # Finance separa más los bloques de la tarjeta que Blocks.
         'hueco': '28px',
@@ -141,6 +147,11 @@ EVENTOS = {
     'conquer-languages': {
         'clave': 'lanzamiento-languages',
         'orden': 3,
+        # Las tres imágenes estaban escritas en la plantilla; aquí son ficha y
+        # se pueden cambiar desde el panel.
+        'logo': 'img/eventos/cl-logo-horizontal.png',
+        'foto': 'img/eventos/cl-evento-imagen.webp',
+        'fondo': 'img/eventos/cl-fondo.jpg',
         'publicada': True,
         'plantilla': 'pages/public/evento/languages.html',
         'titulo_pagina': 'English Event',
@@ -212,6 +223,7 @@ GRACIAS = {
         'marca': 'Conquer Blocks',
         'logo': 'img/eventos/cb-logo-horizontal-blanco.png',
         'logo_ancho': 152,
+        'fondo': 'img/eventos/cb-grid-background.avif',
         'gradiente_1': '#ff4000',
         'gradiente_2': '#ff9800',
         # El titular degradado (`.conquer-gradient`) no usa la misma pareja que
@@ -246,6 +258,7 @@ GRACIAS = {
         'marca': 'Conquer Finance',
         'logo': 'img/eventos/cf-logo-horizontal-blanco.png',
         'logo_ancho': 152,
+        'fondo': 'img/eventos/cb-grid-background.avif',
         'gradiente_1': '#aed916',
         'gradiente_2': '#3ac043',
         'titular_1': '#3ac043',
@@ -386,12 +399,9 @@ def _gtm(escuela):
 # página enseña tarjetas a las demás, así que la ficha de cada una se declara
 # una vez aquí y las otras dos la referencian.
 _PILDORAS = {
-    1: {'ruta': 'evento/pildoras-evento-1', 'imagen': 'img/eventos/pildoras/pildora-1.avif',
-        'clave': 'pildora-1'},
-    2: {'ruta': 'evento/pildoras-evento-2', 'imagen': 'img/eventos/pildoras/pildora-2.avif',
-        'clave': 'pildora-2'},
-    3: {'ruta': 'evento/pildoras-evento-3', 'imagen': 'img/eventos/pildoras/pildora-3.avif',
-        'clave': 'pildora-3'},
+    1: {'ruta': 'evento/pildoras-evento-1', 'clave': 'pildora-1'},
+    2: {'ruta': 'evento/pildoras-evento-2', 'clave': 'pildora-2'},
+    3: {'ruta': 'evento/pildoras-evento-3', 'clave': 'pildora-3'},
 }
 
 
@@ -407,6 +417,13 @@ PAGINAS_DE_CAMPANA = {
         # Toda la copia de la página. Estaba escrita en las dos plantillas (v1 y
         # v2), que ahora la sacan de aquí: así se edita una sola vez y las dos
         # versiones dicen lo mismo.
+        # Las imágenes de la página. Estaban en la plantilla; aquí se editan.
+        'logo': 'img/eventos/codingweek/logo-blanco.png',
+        'hero': 'img/eventos/codingweek/hero.avif',
+        'hero_movil': 'img/eventos/codingweek/hero-movil.avif',
+        'cartel_clase0': 'img/eventos/codingweek/cartel-clase-0.avif',
+        'fondo_cierre': 'img/eventos/codingweek/fondo-cierre.avif',
+        'fondo': 'img/eventos/cb-grid-background.avif',
         'chapa_evento': 'Evento gratuito y en directo de 2 Días',
         'chapa_fecha': 'El 24 y 25 de Noviembre a las 19:00h Madrid',
         'titular': 'Consigue trabajo 100% remoto y un salario por encima de los '
@@ -514,7 +531,11 @@ PAGINAS_DE_CAMPANA = {
             'fcd4dbe9-2559-4026-b17d-1d80794305e0', 'a1a2b40d-3fcc-443a-b326-bd180a334286',
             '51b1f995-521e-4f05-97a0-d27d2b65c074',
         ),
-        'resenas': tuple(f'img/eventos/testimonios/resena-{n}.avif' for n in range(1, 10)),
+        'resenas': tuple({'imagen': f'img/eventos/testimonios/resena-{n}.avif'}
+                         for n in range(1, 10)),
+        'logo': 'img/eventos/codingweek/logo-blanco.png',
+        'holografia': 'img/eventos/testimonios/holografia.avif',
+        'fondo_cierre': 'img/eventos/codingweek/fondo-cierre.avif',
         'politica_url': 'https://www.conquerblocks.com/politica-de-privacidad',
     },
     'bitacora': {
@@ -528,6 +549,8 @@ PAGINAS_DE_CAMPANA = {
         'funnel': None,
         'biblioteca': '348662',
         'video_principal': '879ce1c6-e0d5-422f-9893-b663a8341f5d',
+        'logo': 'img/eventos/bitacora/logo.svg',
+        'fondo': 'img/eventos/bitacora/blur-azul.avif',
         'chapa': 'English Week',
         'antetitulo': 'Bienvenidos a La Clase 0',
         # El titular lleva la errata del original ("transforar"). Se replica tal
@@ -558,6 +581,9 @@ PAGINAS_DE_CAMPANA = {
         'funnel': None,
         'biblioteca': '185796',
         'video_principal': '1806c327-dbfa-4ac4-9c81-bcc8d6240572',
+        'logo': 'img/eventos/pildoras/logo.svg',
+        'fondo': 'img/eventos/pildoras/fondo-blur.avif',
+        'imagen_tarjeta': 'img/eventos/pildoras/pildora-1.avif',
         'numero': 'Píldora Nº1',
         'chapa': 'Trading Week',
         'otras_titulo': 'Sigue con las <strong>demás píldoras</strong>',
@@ -591,6 +617,9 @@ PAGINAS_DE_CAMPANA = {
         'funnel': None,
         'biblioteca': '185796',
         'video_principal': 'd9f08fbc-1782-44e2-bbb8-5194b05db850',
+        'logo': 'img/eventos/pildoras/logo.svg',
+        'fondo': 'img/eventos/pildoras/fondo-blur.avif',
+        'imagen_tarjeta': 'img/eventos/pildoras/pildora-2.avif',
         'numero': 'Píldora Nº2',
         'chapa': 'Trading Week',
         'otras_titulo': 'Sigue con las <strong>demás píldoras</strong>',
@@ -623,6 +652,9 @@ PAGINAS_DE_CAMPANA = {
         'funnel': None,
         'biblioteca': '185796',
         'video_principal': 'b4bb5c13-b44d-4cfe-8c45-efb329b15149',
+        'logo': 'img/eventos/pildoras/logo.svg',
+        'fondo': 'img/eventos/pildoras/fondo-blur.avif',
+        'imagen_tarjeta': 'img/eventos/pildoras/pildora-3.avif',
         'numero': 'Píldora Nº3',
         'chapa': 'Trading Week',
         'otras_titulo': 'Sigue con las <strong>demás píldoras</strong>',
@@ -679,6 +711,11 @@ PAGINAS_DE_CAMPANA = {
              'subtitular': ('Permite a traders sin experiencia <em>generar hasta 5000\u20ac '
                             'mensuales</em> sin arriesgar su capital')},
         ),
+        'logo': 'img/eventos/pildoras/logo.svg',
+        'hero': 'img/eventos/tradingweek/hero.avif',
+        'felix': 'img/eventos/tradingweek/felix.avif',
+        'fondo': 'img/eventos/tradingweek/fondo.avif',
+        'fondo_cierre': 'img/eventos/tradingweek/footer.avif',
         'campo_nombre': 'Introduce tu nombre',
         'campo_email': 'Tu mejor email',
         'legal_pre': 'He leído y acepto la',
@@ -723,9 +760,14 @@ PAGINAS_DE_CAMPANA = {
         # Son los titulares de las tres píldoras, que también viven aquí como
         # páginas propias.
         'pildoras': (
-            'Descubre la Situación económica Actual y por qué debes actuar YA',
-            'Qué es el Trading y por qué se ha convertido en la mejor manera para generar dinero este 2025',
-            'Los 3 perfiles de personas que tendrán éxito en el trading (Testimonios y cifras)',
+            {'texto': 'Descubre la Situación económica Actual y por qué debes actuar YA',
+             'imagen': 'img/eventos/tradingweek/pildora-1.avif'},
+            {'texto': 'Qué es el Trading y por qué se ha convertido en la mejor manera para '
+                      'generar dinero este 2025',
+             'imagen': 'img/eventos/tradingweek/pildora-2.avif'},
+            {'texto': 'Los 3 perfiles de personas que tendrán éxito en el trading (Testimonios '
+                      'y cifras)',
+             'imagen': 'img/eventos/tradingweek/pildora-3.avif'},
         ),
         'perfil_titulo': 'Soy <strong>Félix Fuertes</strong>',
         'cierre_antetitulo': '- No la dejes pasar -',

@@ -57,6 +57,16 @@
 .ct-vista-marco.movil iframe{width:420px}
 
 .ct-estado{font-size:12px;color:var(--bs-gray-600)}
+.ct-imagen{display:flex;align-items:center;gap:14px}
+.ct-miniatura{
+  width:120px;height:76px;object-fit:cover;border-radius:8px;
+  border:1px solid var(--bs-gray-300);background:var(--bs-gray-100);flex:0 0 auto;
+}
+.ct-imagen-acciones{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ct-imagen-estado{font-size:11.5px;color:var(--bs-gray-600)}
+.ct-enlace{display:flex;align-items:center;gap:8px}
+.ct-enlace input{font-family:var(--bs-font-monospace);font-size:12.5px}
+.ct-imagen-estado.error{color:var(--bs-danger)}
 .ct-aviso{
   padding:12px 14px;margin-bottom:16px;border-radius:8px;font-size:11.5px;line-height:1.6;
   background:var(--bs-gray-100);border:1px solid var(--bs-gray-300);color:var(--bs-gray-700);
@@ -108,10 +118,42 @@
       <details class="ct-seccion" {% if forloop.first %}open{% endif %}>
         <summary>{{ seccion.nombre }}<span class="text-muted fw-normal fs-8">{{ seccion.campos|length }} texto{{ seccion.campos|length|pluralize:"s" }}</span></summary>
         {% for campo in seccion.campos %}
-        <div class="ct-campo" data-nombre="{{ campo.nombre }}" data-publicado="{{ campo.publicado }}">
+        <div class="ct-campo {% if campo.es_imagen %}ct-campo-imagen{% endif %}{% if campo.es_enlace %}ct-campo-enlace{% endif %}"
+             data-nombre="{{ campo.nombre }}" data-publicado="{{ campo.publicado }}">
           <label class="ct-etiqueta">{{ campo.etiqueta }}</label>
+
+          {% if campo.es_imagen %}
+          <div class="ct-imagen" data-original="{{ campo.valor_original }}"
+               data-url-original="{{ campo.url_original }}">
+            <img class="ct-miniatura" src="{{ campo.url }}" alt="">
+            <div class="ct-imagen-acciones">
+              <label class="btn btn-sm btn-light-primary mb-0">
+                Subir otra
+                <input type="file" accept="image/*" hidden>
+              </label>
+              <button type="button" class="btn btn-sm btn-light ct-restaurar"
+                      {% if campo.valor == campo.valor_original %}disabled{% endif %}>
+                Restaurar la original
+              </button>
+              <span class="ct-imagen-estado"></span>
+            </div>
+          </div>
+          <input type="hidden" name="{{ campo.nombre }}" value="{{ campo.valor }}">
+
+          {% elif campo.es_enlace %}
+          <div class="ct-enlace" data-original="{{ campo.valor_original }}">
+            <input type="text" class="form-control form-control-sm" name="{{ campo.nombre }}"
+                   value="{{ campo.valor }}" placeholder="https://… (vacío = sin botón)">
+            <button type="button" class="btn btn-sm btn-light ct-restaurar"
+                    {% if campo.valor == campo.valor_original %}disabled{% endif %}>
+              Restaurar el original
+            </button>
+          </div>
+          {% else %}
           <textarea name="{{ campo.nombre }}" rows="{{ campo.lineas }}"
                     data-tipo="{{ campo.tipo }}">{{ campo.valor }}</textarea>
+          {% endif %}
+
           {% if campo.ayuda %}<div class="ct-ayuda">{{ campo.ayuda|safe }}</div>{% endif %}
         </div>
         {% endfor %}
@@ -163,7 +205,8 @@
   var URLS = {
     guardar: '{{ url_guardar }}',
     publicar: '{{ url_publicar }}',
-    descartar: '{{ url_descartar }}'
+    descartar: '{{ url_descartar }}',
+    subir: '{{ url_subir }}'
   };
 
   var editores = [];      // {nombre, cm, caja}
@@ -184,7 +227,8 @@
      solas y avisa de las que se quedan abiertas. Los textos son fragmentos de
      HTML, no documentos, así que XML basta y pesa una décima parte que el modo
      completo. */
-  document.querySelectorAll('.ct-campo').forEach(function (caja) {
+  document.querySelectorAll('.ct-campo:not(.ct-campo-imagen):not(.ct-campo-enlace)')
+    .forEach(function (caja) {
     var area = caja.querySelector('textarea');
     var esLista = area.dataset.tipo === 'lista';
     var cm = CodeMirror.fromTextArea(area, {
@@ -214,6 +258,84 @@
     });
   });
 
+  /* Las imágenes no van por CodeMirror: se suben y lo que se guarda es su
+     ruta. La miniatura se actualiza al vuelo y la vista previa la recoge en el
+     siguiente guardado del borrador. */
+  document.querySelectorAll('.ct-campo-imagen').forEach(function (caja) {
+    var oculto = caja.querySelector('input[type=hidden]');
+    var miniatura = caja.querySelector('.ct-miniatura');
+    var archivo = caja.querySelector('input[type=file]');
+    var restaurar = caja.querySelector('.ct-restaurar');
+    var aviso = caja.querySelector('.ct-imagen-estado');
+    var ficha = caja.querySelector('.ct-imagen');
+
+    function fija(valor, url) {
+      oculto.value = valor;
+      miniatura.src = url;
+      restaurar.disabled = valor === ficha.dataset.original;
+      marcaCambio(caja, valor);
+      sucio = true;
+      if (PUEDE_EDITAR) guardarBorrador();
+    }
+
+    archivo.addEventListener('change', function () {
+      var f = archivo.files[0];
+      if (!f) return;
+      aviso.classList.remove('error');
+      aviso.textContent = 'Subiendo…';
+      var cuerpo = new FormData();
+      cuerpo.append('archivo', f);
+      fetch(URLS.subir, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest' },
+        body: cuerpo
+      }).then(function (r) {
+        return r.json().then(function (j) { return { ok: r.ok, json: j }; });
+      }).then(function (r) {
+        archivo.value = '';
+        if (!r.ok) {
+          aviso.classList.add('error');
+          aviso.textContent = r.json.mensaje || 'No se ha podido subir.';
+          return;
+        }
+        aviso.textContent = '';
+        fija(r.json.url, r.json.url);
+      }).catch(function () {
+        aviso.classList.add('error');
+        aviso.textContent = 'No se ha podido subir (¿se ha caído la conexión?).';
+      });
+    });
+
+    restaurar.addEventListener('click', function () {
+      aviso.textContent = '';
+      fija(ficha.dataset.original, ficha.dataset.urlOriginal);
+    });
+  });
+
+  /* Los enlaces (el grupo de WhatsApp) van en una caja normal: se pueden dejar
+     vacíos a propósito —eso quita el botón y el salto automático—, así que para
+     recuperar el de siempre tienen su propio botón. */
+  document.querySelectorAll('.ct-campo-enlace').forEach(function (caja) {
+    var campo = caja.querySelector('input');
+    var ficha = caja.querySelector('.ct-enlace');
+    var restaurar = caja.querySelector('.ct-restaurar');
+
+    function cambiado() {
+      restaurar.disabled = campo.value === ficha.dataset.original;
+      marcaCambio(caja, campo.value);
+      sucio = true;
+      estado('Cambios sin guardar…');
+      clearTimeout(temporizador);
+      if (PUEDE_EDITAR) temporizador = setTimeout(guardarBorrador, 1200);
+    }
+
+    campo.addEventListener('input', cambiado);
+    restaurar.addEventListener('click', function () {
+      campo.value = ficha.dataset.original;
+      cambiado();
+    });
+  });
+
   function marcaCambio(caja, valor) {
     var etiqueta = caja.querySelector('.ct-etiqueta');
     if (valor.trim() !== (caja.dataset.publicado || '').trim()) {
@@ -226,12 +348,14 @@
   function datos() {
     var d = {};
     editores.forEach(function (e) { d[e.nombre] = e.cm.getValue(); });
+    document.querySelectorAll('.ct-campo-imagen input[type=hidden], .ct-campo-enlace input')
+      .forEach(function (i) { d[i.name] = i.value; });
     return d;
   }
 
   function pinta(errores) {
-    editores.forEach(function (e) {
-      e.caja.classList.toggle('ct-error', (errores || []).indexOf(e.nombre) !== -1);
+    document.querySelectorAll('.ct-campo').forEach(function (caja) {
+      caja.classList.toggle('ct-error', (errores || []).indexOf(caja.dataset.nombre) !== -1);
     });
   }
 

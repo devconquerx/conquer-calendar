@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -37,7 +37,7 @@ body{
   /* Color plano con la textura de manchas azules encima, repetida a su tamaño
      natural y centrada, tal cual la sirve el original. */
   margin:0;min-height:100vh;background:#ecf1f3 50% 50% repeat;
-  background-image:url("{% static 'img/eventos/bitacora/blur-azul.avif' %}");
+  background-image:url("{% imagen pagina.fondo %}");
   font-family:var(--cuerpo);font-size:16px;line-height:1.6;color:var(--tinta-suave);
   -webkit-font-smoothing:antialiased;
 }
@@ -86,7 +86,7 @@ img{max-width:100%;height:auto;display:block}
 <body>
 
 <header class="cabecera">
-  <img src="{% static 'img/eventos/bitacora/logo.svg' %}" alt="Conquer Languages" width="350">
+  <img src="{% imagen pagina.logo %}" alt="Conquer Languages" width="350">
   <div class="evento">{{ pagina.chapa|safe }}</div>
 </header>
 

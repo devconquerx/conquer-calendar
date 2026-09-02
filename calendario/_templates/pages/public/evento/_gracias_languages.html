@@ -1,4 +1,4 @@
-{% load static %}
+{% load static imagenes_evento %}
 {% comment %}
   Contenido de la página de "gracias" de Languages. Mismas dos reglas que la de
   Blocks y Finance: CSS acotado a `#gracias-evento` porque convive con el de la
@@ -22,7 +22,7 @@
      manchas azules pensada para ir sobre negro; sin el color quedaba casi
      blanca y el logo, que es blanco, desaparecía. */
   background-color:{{ gr.fondo_color|default:'transparent' }};
-  background-image:url("{% static gr.fondo %}");
+  background-image:url("{% imagen gr.fondo %}");
   background-position:0 0;background-size:cover;background-attachment:fixed;
   font-family:Poppins,Arial,sans-serif;font-size:16px;line-height:1.5;color:var(--tinta);
 }
@@ -71,7 +71,7 @@
 
 <div id="gracias-evento" data-whatsapp="{{ gr.whatsapp }}"{% if oculto %} hidden{% endif %}>
   <div class="cabecera">
-    <img src="{% static gr.logo %}" alt="{{ gr.marca }}" width="{{ gr.logo_ancho|default:259 }}">
+    <img src="{% imagen gr.logo %}" alt="{{ gr.marca }}" width="{{ gr.logo_ancho|default:259 }}">
   </div>
 
   <div class="pila">

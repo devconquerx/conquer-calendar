@@ -1,4 +1,4 @@
-{% load static %}
+{% load static imagenes_evento %}
 {% comment %}
   Contenido de la página de "gracias" de Blocks y Finance.
 
@@ -100,7 +100,7 @@
 
 <div id="gracias-evento" data-whatsapp="{{ gr.whatsapp }}"{% if oculto %} hidden{% endif %}>
   <div class="cabecera">
-    <img src="{% static gr.logo %}" alt="{{ gr.marca }}" width="{{ gr.logo_ancho }}">
+    <img src="{% imagen gr.logo %}" alt="{{ gr.marca }}" width="{{ gr.logo_ancho }}">
   </div>
 
   <div class="pila">

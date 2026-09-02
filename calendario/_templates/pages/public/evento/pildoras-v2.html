@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -91,7 +91,7 @@
         {% for t in pagina.tarjetas %}
         <div class="pildora-enlace">
           <a href="{{ app_base_path }}/{{ t.ruta }}{% if version == 2 %}?v=2{% endif %}">
-            <img src="{% static t.imagen %}" alt="" loading="lazy">
+            <img src="{% imagen t.imagen %}" alt="" loading="lazy">
             <h3>{{ t.texto|safe }}</h3>
           </a>
           <a class="pb-cta" href="{{ app_base_path }}/{{ t.ruta }}{% if version == 2 %}?v=2{% endif %}">

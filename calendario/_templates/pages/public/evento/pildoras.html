@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -34,7 +34,7 @@ body{
   /* Negro con la textura de manchas azules encima, repetida a su tamaño
      natural y centrada, tal cual la sirve el original. */
   margin:0;min-height:100vh;background:#000 50% repeat;
-  background-image:url("{% static 'img/eventos/pildoras/fondo-blur.avif' %}");
+  background-image:url("{% imagen pagina.fondo %}");
   font-family:var(--cuerpo);color:#fff;-webkit-font-smoothing:antialiased;
 }
 img{max-width:100%;height:auto;display:block}
@@ -139,7 +139,7 @@ img{max-width:100%;height:auto;display:block}
 <div class="main">
   <header class="cabecera-barra">
     <div class="cabecera">
-      <img src="{% static 'img/eventos/pildoras/logo.svg' %}" alt="Conquer Finance" width="227">
+      <img src="{% imagen pagina.logo %}" alt="Conquer Finance" width="227">
       <div class="evento">{{ pagina.chapa|safe }}</div>
     </div>
   </header>
@@ -167,7 +167,7 @@ img{max-width:100%;height:auto;display:block}
       {% for t in pagina.tarjetas %}
       <div class="pildora-enlace">
         <a href="{{ app_base_path }}/{{ t.ruta }}">
-          <img src="{% static t.imagen %}" alt="" loading="lazy">
+          <img src="{% imagen t.imagen %}" alt="" loading="lazy">
           <h3><strong>{{ t.texto|safe }}</strong></h3>
         </a>
         <a class="boton" href="{{ app_base_path }}/{{ t.ruta }}">{{ pagina.boton_tarjeta|safe }}</a>

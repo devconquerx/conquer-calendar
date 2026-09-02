@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static imagenes_evento %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -110,7 +110,7 @@ img{max-width:100%;height:auto;display:block}
 /* ── cierre ──────────────────────────────────────────────────────────────── */
 .cierre{
   margin-top:90px;padding:80px 0;background:#333 center/cover no-repeat;
-  background-image:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)),url("{% static 'img/eventos/codingweek/fondo-cierre.avif' %}");
+  background-image:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)),url("{% imagen pagina.fondo_cierre %}");
 }
 .cierre .caja{
   max-width:640px;margin:0 auto;padding:40px 30px;border-radius:14px;text-align:center;
@@ -140,7 +140,7 @@ img{max-width:100%;height:auto;display:block}
 <body>
 
 <header class="cabecera">
-  <img src="{% static 'img/eventos/codingweek/logo-blanco.png' %}" alt="Conquer Blocks" width="227">
+  <img src="{% imagen pagina.logo %}" alt="Conquer Blocks" width="227">
 </header>
 
 <section class="contenedor">
@@ -182,8 +182,8 @@ img{max-width:100%;height:auto;display:block}
   {% include 'pages/public/evento/_cta_agendar.html' %}
 
   <div class="resenas">
-    {% for i in pagina.resenas %}
-    <img src="{% static i %}" alt="Reseña de un alumno en Trustpilot" loading="lazy" width="370">
+    {% for r in pagina.resenas %}
+    <img src="{% imagen r.imagen %}" alt="Reseña de un alumno en Trustpilot" loading="lazy" width="370">
     {% endfor %}
   </div>
 </section>
@@ -192,7 +192,7 @@ img{max-width:100%;height:auto;display:block}
   <p class="seccion-titulo" style="margin-top:0">{{ pagina.sistema_titulo|safe }}</p>
   <div class="sistema-cols">
     <div class="sistema-foto">
-      <img src="{% static 'img/eventos/testimonios/holografia.avif' %}" alt="" width="340" height="227" loading="lazy">
+      <img src="{% imagen pagina.holografia %}" alt="" width="340" height="227" loading="lazy">
     </div>
     <div class="puntos">
       <div class="punto">
