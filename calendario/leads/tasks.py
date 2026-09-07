@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import timedelta
 
 from celery import shared_task
@@ -105,38 +106,54 @@ def process_vsl_activecampaign(self, lead_id, percent, region=None):
     activecampaign.push_vsl_percent(lead, percent, region)
 
 
-@shared_task(**RETRY_POLICY)
+# El sondeo SMTP pregunta a Gmail si el buzón existe, y Gmail corta la IP si se
+# le pregunta demasiado seguido (nos pasó: 421 tras ~1.500 sondeos en 20 min).
+# El caudal normal de leads son ~3/min, pero hay ráfagas de campaña de hasta 27
+# en un minuto, así que sin freno una ráfaga bastaría para quemar la IP.
+#
+# `rate_limit` es por worker node y aquí solo hay uno, así que actúa de límite
+# global: las ráfagas se reparten en el tiempo en vez de salir de golpe. Se
+# puede subir por entorno sin tocar código si vemos que la cola se acumula.
+NEVERBOUNCE_RATE_LIMIT = os.environ.get('EMAIL_VERIFIER_RATE_LIMIT', '6/m')
+
+
+@shared_task(rate_limit=NEVERBOUNCE_RATE_LIMIT, **RETRY_POLICY)
 def process_neverbounce(self, lead_id):
     from calendario.leads.models import Lead
-    from calendario.leads.services import neverbounce
+    from calendario.leads.services import email_validation
 
     lead = Lead.objects.get(pk=lead_id)
 
-    # NeverBounce es enriquecimiento opcional: NO debe bloquear el envío al CRM.
-    # Si no está configurado o falla, se continúa sin resultado de validación.
+    # La validación es enriquecimiento opcional: NO debe bloquear el envío al
+    # CRM. Si no está configurada o falla, se continúa sin resultado.
+    #
+    # Desde el sondeo SMTP propio esto ya casi nunca depende de NeverBounce,
+    # pero el contrato de la tarea no cambia: rellena `neverbounce_result` y
+    # marca el mismo tag de siempre.
     if not lead.neverbounce_result:
         try:
-            neverbounce.validate_email(lead)
+            email_validation.validate_email(lead)
             lead.refresh_from_db(fields=['neverbounce_result'])
         except Exception as exc:
-            # Aquí ya no llegan los timeouts de lectura (el servicio los registra
-            # como 'unknown' y no relanza), sino los fallos transitorios de
-            # verdad: conexión caída, 5xx, respuesta ilegible. Esos sí merecen
-            # reintento, porque la siguiente vez pueden funcionar.
+            # Aquí ya no llegan los timeouts de lectura ni los vetos del
+            # proveedor (el servicio los registra como 'unknown' y no relanza),
+            # sino los fallos transitorios de verdad: conexión caída, 5xx,
+            # respuesta ilegible. Esos sí merecen reintento, porque la siguiente
+            # vez pueden funcionar.
             #
             # Sólo se reporta como error cuando se agotan los intentos: antes se
             # logueaba uno por intento, así que un único lead generaba hasta
             # cuatro eventos en Sentry aunque el reintento acabara bien.
             if self.request.retries < self.max_retries:
                 logger.warning(
-                    'Lead %s: NeverBounce falló (intento %s de %s), se reintenta: %s',
+                    'Lead %s: validación de email falló (intento %s de %s), se reintenta: %s',
                     lead_id, self.request.retries + 1, self.max_retries + 1, exc,
                 )
             try:
                 raise self.retry(exc=exc)
             except self.MaxRetriesExceededError:
                 logger.exception(
-                    'Lead %s: NeverBounce agotó los reintentos; se continúa sin '
+                    'Lead %s: la validación agotó los reintentos; se continúa sin '
                     'validación (el CRM lo reintentará al recibir el lead sin '
                     'neverbounce_result)', lead_id,
                 )

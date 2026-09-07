@@ -320,6 +320,20 @@ META_ACCESS_TOKEN = env.str('META_ACCESS_TOKEN', default='')
 ACTIVECAMPAIGN_API_URL = env.str('ACTIVECAMPAIGN_API_URL', default='')
 ACTIVECAMPAIGN_API_KEY = env.str('ACTIVECAMPAIGN_API_KEY', default='')
 NEVERBOUNCE_API_KEY = env.str('NEVERBOUNCE_API_KEY', default='')
+
+# Verificación de email propia (sondeo SMTP). Sustituye a NeverBounce como
+# primera opción: mismo trabajo, sin coste ni cuota de créditos. NeverBounce
+# queda de respaldo para lo que el sondeo no resuelva.
+EMAIL_VERIFIER_ENABLED = env.bool('EMAIL_VERIFIER_ENABLED', default=True)
+# Dominio que se anuncia en el HELO. Debe ser un dominio real nuestro.
+EMAIL_VERIFIER_HELO = env.str('EMAIL_VERIFIER_HELO', default='conquerblocks.com')
+# Remitente del MAIL FROM. Vacío (<>) es lo estándar para verificar sin enviar.
+EMAIL_VERIFIER_MAIL_FROM = env.str('EMAIL_VERIFIER_MAIL_FROM', default='')
+EMAIL_VERIFIER_TIMEOUT = env.float('EMAIL_VERIFIER_TIMEOUT', default=15.0)
+# La prueba de catch-all gasta un sondeo extra por dominio nuevo; el resultado
+# se cachea, así que sale barata salvo con muchos dominios corporativos.
+EMAIL_VERIFIER_DETECT_CATCHALL = env.bool('EMAIL_VERIFIER_DETECT_CATCHALL', default=True)
+EMAIL_VERIFIER_FALLBACK_NEVERBOUNCE = env.bool('EMAIL_VERIFIER_FALLBACK_NEVERBOUNCE', default=True)
 RESPONDIO_API_KEY = env.str('RESPONDIO_API_KEY', default='')
 GOOGLE_ADS_DEVELOPER_TOKEN = env.str('GOOGLE_ADS_DEVELOPER_TOKEN', default='')
 GOOGLE_ADS_CLIENT_ID = env.str('GOOGLE_ADS_CLIENT_ID', default='')

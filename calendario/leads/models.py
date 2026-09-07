@@ -144,3 +144,141 @@ class ConversionLog(models.Model):
     def __str__(self):
         status = 'OK' if self.success else 'FAIL'
         return f'[{status}] {self.platform} {self.event_name} - {self.school} ({self.created_at})'
+
+
+class EmailVerificationCache(models.Model):
+    """Veredictos de verificación de email ya calculados, reutilizables.
+
+    Cada sondeo SMTP cuesta tiempo y, sobre todo, cuota de reputación contra el
+    proveedor: Gmail corta la IP si se le pregunta demasiado seguido. Un email
+    ya verificado no se vuelve a preguntar mientras su veredicto siga vigente
+    (el 12,3% de los leads con email de los últimos 30 días eran direcciones
+    repetidas).
+
+    Los veredictos no concluyentes caducan enseguida a propósito: casi siempre
+    vienen de un fallo temporal y conviene reintentarlos pronto.
+    """
+
+    # Días que se considera vigente cada tipo de veredicto
+    TTL_DIAS = {
+        'invalid': 180,     # un buzón inexistente rara vez vuelve a existir
+        'disposable': 180,
+        'valid': 90,        # una cuenta viva puede cerrarse con el tiempo
+        'catchall': 90,     # es propiedad del dominio, cambia poco
+        'unknown': 1,       # no concluyente: reintentar pronto
+    }
+
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+
+    email = models.CharField(max_length=255, unique=True, db_index=True)
+    result = models.CharField(max_length=20, db_index=True)
+    reason = models.CharField(max_length=50, blank=True, default='')
+    smtp_code = models.IntegerField(null=True, blank=True)
+    smtp_message = models.CharField(max_length=500, blank=True, default='')
+
+    expires_at = models.DateTimeField(db_index=True)
+    hit_count = models.PositiveIntegerField(
+        default=0, help_text='Cuántos sondeos se ahorraron gracias a esta entrada'
+    )
+
+    class Meta:
+        db_table = 'email_verification_cache'
+        verbose_name = 'Caché de verificación de email'
+        verbose_name_plural = 'Caché de verificaciones de email'
+        ordering = ['-created']
+        indexes = [
+            Index(fields=['result', 'expires_at'], name='evcache_result_expires_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.email} = {self.result} (caduca {self.expires_at:%Y-%m-%d})'
+
+    @staticmethod
+    def _normalizar(email):
+        return (email or '').strip().lower()
+
+    @classmethod
+    def get_cached(cls, email):
+        """Veredicto vigente de un email, o None si no hay o ya caducó."""
+        from django.utils import timezone
+
+        email = cls._normalizar(email)
+        if not email:
+            return None
+
+        entrada = cls.objects.filter(email=email, expires_at__gt=timezone.now()).first()
+        if not entrada:
+            return None
+
+        cls.objects.filter(pk=entrada.pk).update(hit_count=models.F('hit_count') + 1)
+        return {
+            'result': entrada.result,
+            'is_rejected': entrada.result in ('invalid', 'disposable'),
+            'reason': entrada.reason,
+            'smtp_code': entrada.smtp_code,
+            'smtp_message': entrada.smtp_message,
+            'from_cache': True,
+        }
+
+    @classmethod
+    def get_cached_bulk(cls, emails):
+        """Versión por lotes de get_cached: una sola consulta para muchos emails."""
+        from django.utils import timezone
+
+        normalizados = {cls._normalizar(e) for e in emails if e}
+        normalizados.discard('')
+        if not normalizados:
+            return {}
+
+        encontrados = {}
+        ids = []
+        for entrada in cls.objects.filter(email__in=normalizados, expires_at__gt=timezone.now()):
+            ids.append(entrada.pk)
+            encontrados[entrada.email] = {
+                'result': entrada.result,
+                'is_rejected': entrada.result in ('invalid', 'disposable'),
+                'reason': entrada.reason,
+                'smtp_code': entrada.smtp_code,
+                'smtp_message': entrada.smtp_message,
+                'from_cache': True,
+            }
+
+        if ids:
+            cls.objects.filter(pk__in=ids).update(hit_count=models.F('hit_count') + 1)
+        return encontrados
+
+    @classmethod
+    def store(cls, email, veredicto):
+        """Guarda (o refresca) el veredicto de un email con el TTL que le toca."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        email = cls._normalizar(email)
+        if not email:
+            return None
+
+        result = veredicto.get('result', 'unknown')
+        entrada, _creada = cls.objects.update_or_create(
+            email=email,
+            defaults={
+                'result': result,
+                'reason': veredicto.get('reason', '') or '',
+                'smtp_code': veredicto.get('smtp_code'),
+                'smtp_message': (veredicto.get('smtp_message') or '')[:500],
+                'expires_at': timezone.now() + timedelta(days=cls.TTL_DIAS.get(result, 1)),
+            },
+        )
+        return entrada
+
+    @classmethod
+    def purgar_caducados(cls, dias_gracia=30):
+        """Borra entradas caducadas hace tiempo para que la tabla no crezca sin fin."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        limite = timezone.now() - timedelta(days=dias_gracia)
+        borradas, _ = cls.objects.filter(expires_at__lt=limite).delete()
+        return borradas
