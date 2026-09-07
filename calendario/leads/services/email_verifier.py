@@ -18,6 +18,7 @@ import re
 import smtplib
 import socket
 import string
+import threading
 import time
 from collections import defaultdict
 
@@ -82,13 +83,52 @@ CORTE_REPUTACION = (
     '4.7.28',                    # Gmail: unusual amount of unsolicited mail
     'unusual amount',
     'unsolicited mail',
-    'blocked using',             # Microsoft citando una DNSBL
     'too many connections',
     'rate limited',
     'try again later',
-    '5.7.25',                    # Yahoo: FCrDNS fallido
-    'reverse dns failed',
 )
+
+# Distinto del anterior: aquí el proveedor no nos habla por configuración o
+# reputación de la IP, y va a responder lo mismo a cada intento. No es urgente
+# ni tiene que ver con el ritmo, así que no aborta el lote: se apunta el host
+# como mudo y el resto de emails de ese proveedor se resuelven al momento como
+# no concluyentes, sin gastar una conexión que ya sabemos cómo acaba.
+RECHAZO_PERMANENTE = (
+    '5.7.25',                    # Yahoo: forward-confirmed reverse DNS failed
+    'reverse dns failed',
+    'blocked using',             # Microsoft citando una DNSBL
+    "weren't sent",              # Microsoft
+    'permanently deferred',      # Yahoo TSS09
+)
+
+# Hosts MX que ya sabemos que no nos hablan, compartido por todo el proceso: en
+# producción se crea un verificador por lead, así que guardarlo en la instancia
+# no serviría de nada y cada email de Hotmail o Yahoo volvería a gastar una
+# conexión para recibir el mismo rechazo (entre los dos son el 13% del volumen).
+#
+# Caduca para que un arreglo de rDNS o una salida de lista negra se detecten
+# solos, sin necesidad de reiniciar nada.
+_HOSTS_MUDOS = {}                  # host MX -> (motivo, momento en que se apuntó)
+_HOSTS_MUDOS_TTL = 3600            # segundos
+_hosts_mudos_lock = threading.Lock()
+
+
+def _marcar_host_mudo(host, motivo):
+    with _hosts_mudos_lock:
+        _HOSTS_MUDOS[host] = (motivo, time.time())
+
+
+def _host_esta_mudo(host):
+    """Devuelve el motivo si el host nos rechazó hace poco, o None."""
+    with _hosts_mudos_lock:
+        entrada = _HOSTS_MUDOS.get(host)
+        if not entrada:
+            return None
+        motivo, cuando = entrada
+        if time.time() - cuando > _HOSTS_MUDOS_TTL:
+            del _HOSTS_MUDOS[host]
+            return None
+        return motivo
 
 # Texto que indica bloqueo/política/límite: NO es un buzón inexistente. Si esto
 # se confundiera con "invalid" se bloquearían leads buenos en masa.
@@ -363,6 +403,16 @@ class EmailVerifier:
         bajo = (texto or '').lower()
         if code == 421 or any(f in bajo for f in CORTE_REPUTACION):
             raise ProveedorBloqueado(host, code, texto)
+        if any(f in bajo for f in RECHAZO_PERMANENTE):
+            if not _host_esta_mudo(host):
+                logger.info(
+                    'MX %s no acepta sondeos desde esta IP (%s %s): sus emails '
+                    'quedarán como no concluyentes durante %s min.',
+                    host, code, texto.strip()[:110], _HOSTS_MUDOS_TTL // 60,
+                )
+            _marcar_host_mudo(host, f'{code} {texto.strip()[:120]}')
+            return True
+        return False
 
     def _max_probes(self, host):
         """Outlook y Yahoo cortan sesiones largas; con ellos se recicla antes."""
@@ -384,7 +434,12 @@ class EmailVerifier:
         """
         ultimo_error = ''
 
-        for host in mx_hosts[:3]:
+        candidatos = [h for h in mx_hosts[:3] if not _host_esta_mudo(h)]
+        if not candidatos:
+            motivo = _host_esta_mudo(mx_hosts[0]) or 'proveedor no sondeable'
+            return None, f'MX no sondeable desde esta IP: {motivo}'
+
+        for host in candidatos:
             for intento in (1, 2):
                 try:
                     conn = self._get_connection(host, forzar_nueva=(intento == 2))
@@ -394,6 +449,8 @@ class EmailVerifier:
                         texto = msg.decode('utf-8', errors='replace') if isinstance(msg, bytes) else str(msg)
                         # Microsoft y Yahoo rechazan aquí, antes de ver el destinatario:
                         # es un veto a nuestra IP, nunca un veredicto sobre el email.
+                        # (lanza si es un corte por volumen; si solo es un
+                        # proveedor que no nos habla, lo apunta y sigue)
                         self._abortar_si_bloqueado(host, code, texto)
                         return None, f'MAIL FROM rechazado: {code} {texto[:200]}'
 
