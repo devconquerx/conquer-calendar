@@ -69,22 +69,25 @@ class TrackingLargoTest(TestCase):
             region='latam', nombre='Funnel de test', config={},
         )
 
-    def _reservar(self, tracking):
+    def _reservar(self, tracking, nombre='Jorge Cristhian', hora=None,
+                  tz='America/Lima', telefono=None):
         prellamada = Prellamada.objects.create(
-            funnel=self.funnel, nombre='Lead', email=EMAIL,
+            funnel=self.funnel, nombre=nombre[:160], email=EMAIL,
             resultado=Prellamada.Resultado.CALENDARIO, event_type=self.et,
             tracking=tracking,
         )
+        cuerpo = {
+            'prellamada_token': str(prellamada.token),
+            'inicio_utc': (slot_futuro(hora=hora) if hora else slot_futuro()).isoformat(),
+            'tz': tz,
+            'nombre': nombre,
+            'email': EMAIL,
+        }
+        if telefono:
+            cuerpo['telefono'] = telefono
         return self.client.post(
             reverse('funnels:reservar', kwargs={'slug': self.funnel.slug}),
-            data=json.dumps({
-                'prellamada_token': str(prellamada.token),
-                'inicio_utc': slot_futuro().isoformat(),
-                'tz': 'America/Lima',
-                'nombre': 'Jorge Cristhian',
-                'email': EMAIL,
-            }),
-            content_type='application/json',
+            data=json.dumps(cuerpo), content_type='application/json',
         )
 
     @patch('calendario.funnels.views._avisar_si_es_nueva')
@@ -121,6 +124,44 @@ class TrackingLargoTest(TestCase):
         self.assertEqual(len(reserva.utm_content), 255)
         self.assertEqual(len(reserva.utm_term), 255)
         self.assertEqual(len(reserva.utm_form_variant), 500)
+
+    @patch('calendario.funnels.views._avisar_si_es_nueva')
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+    @patch('calendario.bookings.services.crear_evento_google')
+    def test_un_mensaje_en_la_casilla_del_nombre_no_tumba_la_reserva(self, _ev, _conf, _mail):
+        """No basta con recortar el tracking: el nombre, el email, el teléfono y
+        la zona horaria van por separado y también tienen tope.
+
+        Literal de producción (FUNNELS-67): alguien escribió 185 caracteres en
+        la casilla del nombre contra el varchar(150) de `nombre_invitado`, y se
+        llevó un 500 después de haber elegido hora. El primer arreglo solo
+        cubría el tracking, así que el mismo fallo volvió por otra puerta.
+        """
+        mensaje = (
+            'Sandra  estoy interesada  en saber  esta  nuevo sistema  . Soy enpoeada de  '
+            'limpieza en un hispital pero  no tengo  . En  conpleto tiwmpo  aveces . '
+            'Ni es un medio tiwpoy eso es frustrante'
+        )
+        self.assertGreater(len(mensaje), 150)
+
+        resp = self._reservar({}, nombre=mensaje, hora=11)
+
+        self.assertEqual(resp.status_code, 200)
+        reserva = Reserva.objects.get(email_invitado=EMAIL)
+        self.assertEqual(len(reserva.nombre_invitado), 150)
+        self.assertTrue(mensaje.startswith(reserva.nombre_invitado))
+
+    @patch('calendario.funnels.views._avisar_si_es_nueva')
+    @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+    @patch('calendario.bookings.services.crear_evento_google')
+    def test_la_zona_horaria_y_el_telefono_tampoco(self, _ev, _conf, _mail):
+        resp = self._reservar({}, hora=12, tz='America/' + 'X' * 200,
+                              telefono='+34' + '9' * 90)
+
+        self.assertEqual(resp.status_code, 200)
+        reserva = Reserva.objects.get(email_invitado=EMAIL)
+        self.assertEqual(len(reserva.timezone_invitado), 100)
+        self.assertEqual(len(reserva.telefono_invitado), 50)
 
     @patch('calendario.funnels.views._avisar_si_es_nueva')
     @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)

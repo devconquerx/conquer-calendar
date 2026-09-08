@@ -492,14 +492,35 @@ RESERVA_TRACKING_FIELDS = (
 )
 
 
-# Tope de cada campo de tracking, leído del propio modelo para que no se quede
+# Tope de cada columna de texto, leído del propio modelo para que no se quede
 # desfasado si alguien cambia un max_length. Mismo mecanismo que
 # `_FIELD_MAX_LENGTHS` en leads/views.py.
-_TRACKING_MAX_LENGTHS = {
+_MAX_LENGTHS = {
     f.name: f.max_length
     for f in Reserva._meta.get_fields()
     if getattr(f, 'max_length', None)
 }
+
+
+def _recortar_a_columnas(**kwargs):
+    """Recorta al tope de su columna cualquier texto que vaya a la Reserva.
+
+    Antes esto solo cubría el tracking, y por eso el mismo fallo volvió por otra
+    puerta (FUNNELS-67): alguien escribió 185 caracteres en la casilla del
+    nombre —un mensaje, no un nombre— contra el varchar(150) de
+    `nombre_invitado`, y la reserva se cayó con un 500 después de haber elegido
+    hora. Quedaban igual de desnudos `email_invitado` (254), `telefono_invitado`
+    (50) y `timezone_invitado` (100).
+
+    Se aplica al `create()` entero en vez de a una lista de campos: así cubre
+    también el que alguien añada mañana. `notas` es TextField y no tiene tope,
+    así que no se toca.
+    """
+    for clave, valor in list(kwargs.items()):
+        tope = _MAX_LENGTHS.get(clave)
+        if tope and isinstance(valor, str) and len(valor) > tope:
+            kwargs[clave] = valor[:tope]
+    return kwargs
 
 
 def _tracking_kwargs(tracking):
@@ -521,7 +542,7 @@ def _tracking_kwargs(tracking):
         valor = tr.get(f) or ''
         if not isinstance(valor, str):
             valor = str(valor)
-        tope = _TRACKING_MAX_LENGTHS.get(f)
+        tope = _MAX_LENGTHS.get(f)
         kwargs[f] = valor[:tope] if tope else valor
     return kwargs
 
@@ -722,7 +743,7 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         ):
             raise SlotNoDisponibleError("Ese slot ya no está disponible.")
 
-        reserva = Reserva.objects.create(
+        reserva = Reserva.objects.create(**_recortar_a_columnas(
             event_type=et,
             host=host_elegido,
             inicio_utc=inicio_utc,
@@ -734,7 +755,7 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
             timezone_invitado=timezone_invitado,
             permite_overbooking=abierta,
             **_tracking_kwargs(tracking),
-        )
+        ))
         et_id = et.pk
         transaction.on_commit(lambda: invalidar_slots(et_id))
         transaction.on_commit(lambda: crear_evento_google(reserva.pk))
