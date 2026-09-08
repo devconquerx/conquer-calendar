@@ -14,6 +14,73 @@ import { useRouter } from '../../lib/router'
 const STORAGE_KEY = 'vsl_progress'
 const LEGACY_STORAGE_KEY = 'videolitics'
 
+/* Qué motor de medios reportó el fallo, deducido del texto del MediaError.
+   Hace falta porque el cubo de errores mezcla dos poblaciones distintas y en
+   Sentry no había forma de separarlas: los mensajes con forma de Chromium
+   ("PipelineStatus::…", "MEDIA_ELEMENT_ERROR: …", "DEMUXER_ERROR_…") aparecen
+   incluso en eventos que dicen venir de un iPhone —user-agent falseado, casi
+   siempre rastreadores desde centros de datos—, mientras que WebKit de verdad
+   deja el mensaje vacío. Va como etiqueta, no como dato suelto, para poder
+   filtrarlo y contarlo. */
+export function motorDelFallo(detalle) {
+  if (!detalle) return 'webkit-o-sin-mensaje'
+  if (/PipelineStatus|DEMUXER_ERROR|MEDIA_ELEMENT_ERROR|FFmpeg/i.test(detalle)) return 'chromium'
+  return 'otro'
+}
+
+/* Cuánto aguantó antes de fallar, en tramos.
+   Es la medida que distingue las dos explicaciones posibles del
+   SRC_NOT_SUPPORTED, y la única que funciona en todos los navegadores: el
+   `transferSize` del Resource Timing vendría a 0 porque el CDN sirve el vídeo
+   sin cabecera `Timing-Allow-Origin`.
+
+   Fallar en el primer segundo significa que el navegador rechazó la fuente sin
+   llegar a descargar vídeo (códec no admitido). Fallar al cabo de decenas de
+   segundos significa lo contrario: estuvo tragando datos hasta rendirse, que es
+   lo que se sospecha del navegador embebido de TikTok, del que se dice que no
+   respeta las peticiones por rangos y se descarga el fichero entero antes de
+   empezar. Con un vídeo de 400 MB eso no termina nunca. */
+export function tramoDeEspera(ms) {
+  if (ms == null) return 'desconocido'
+  if (ms < 1000) return '<1s'
+  if (ms < 5000) return '1-5s'
+  if (ms < 15000) return '5-15s'
+  if (ms < 45000) return '15-45s'
+  return '>45s'
+}
+
+/* Nombre del fichero de vídeo, para poder contar fallos POR VÍDEO.
+   Sentry agrupa estos errores por su mensaje, así que los siete vídeos de las
+   distintas marcas y regiones caen en el mismo cubo; y el `transaction` no vale
+   para separarlos porque la misma página llega con y sin barra final y con o
+   sin prefijo de marca, repartiendo un mismo vídeo en cuatro filas. Con el
+   nombre del fichero como etiqueta se puede preguntar lo que hasta ahora no se
+   podía: si el máster de 1,88 GB falla más que los de 350 MB.
+   Se descodifica el %20 porque alguno lleva espacios en el nombre. */
+export function idDelVideo(url) {
+  if (!url) return 'sin-video'
+  try {
+    const ruta = new URL(url, 'https://x.invalid').pathname
+    return decodeURIComponent(ruta.split('/').pop() || 'sin-video').slice(0, 80)
+  } catch {
+    return 'ilegible'
+  }
+}
+
+/* Segundos de vídeo que llegaron a bufferearse. Complementa lo anterior: si el
+   fallo llega tarde PERO con el buffer vacío, no estaba descargando vídeo útil. */
+export function segundosBuffereados(media) {
+  try {
+    const b = media?.buffered
+    if (!b || !b.length) return 0
+    let total = 0
+    for (let i = 0; i < b.length; i += 1) total += b.end(i) - b.start(i)
+    return Math.round(total * 10) / 10
+  } catch {
+    return null
+  }
+}
+
 function readStoredState(storageKey, videoUrl) {
   try {
     const data = JSON.parse(localStorage.getItem(storageKey) || '{}')
@@ -62,6 +129,9 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
   const [storedData, setStoredData] = useState(null)
   const buttonShownRef = useRef(false)
   const milestonesReportedRef = useRef(new Set())
+  // Momento en que se le da la fuente al <video>, para medir cuánto tardó en
+  // fallar. Ver `tramoDeEspera`.
+  const inicioCargaRef = useRef(null)
 
   // Se evalúa UNA vez, al montar, y de ahí que viva en un ref: lo que importa es
   // cómo se llegó a esta página, no lo que pase después. `useRouter()` devuelve
@@ -103,6 +173,9 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
       if (!tryUnmuted) setShowUnmute(true)
     }
 
+    // Asignar `src` arranca ya la carga del recurso, así que este es el momento
+    // desde el que se cuenta lo que tarde en fallar.
+    inicioCargaRef.current = performance.now()
     videoRef.current.src = videoUrl
     videoRef.current.muted = true
 
@@ -190,10 +263,14 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
         const media = videoRef.current
         const fallo = media?.error
         const MOTIVOS = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' }
+        const detalle = fallo?.message || ''
+        const esperaMs = inicioCargaRef.current == null
+          ? null
+          : Math.round(performance.now() - inicioCargaRef.current)
         const contexto = {
           motivo: MOTIVOS[fallo?.code] || 'sin MediaError',
           codigo: fallo?.code ?? null,
-          detalle: fallo?.message || '',
+          detalle,
           silenciado: !!media?.muted,
           pausado: !!media?.paused,
           segundo: Math.round(media?.currentTime || 0),
@@ -201,7 +278,23 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
           networkState: media?.networkState ?? null,
           pantallaCompleta: !!(document.fullscreenElement || document.webkitFullscreenElement || media?.webkitDisplayingFullscreen),
           fuente: (media?.currentSrc || '').slice(-60),
+          esperaMs,
+          segundosBuffereados: segundosBuffereados(media),
+          // Sólo lo tiene WebKit, que es justo el motor bajo sospecha. Cuando
+          // está, dice los bytes que llegó a decodificar de verdad.
+          bytesDecodificados: media?.webkitVideoDecodedByteCount ?? null,
         }
+
+        /* Historial de este visitante con este vídeo. Si los fallos se
+           concentran en los mismos dispositivos el problema es del dispositivo;
+           si están repartidos, es del fichero. El contador se guarda junto al
+           progreso, que ya vive en localStorage. */
+        const previo = getStoredProgress(videoUrl) || {}
+        const fallosPrevios = previo.fallos || 0
+        contexto.falloNumero = fallosPrevios + 1
+        contexto.visitaNumero = previo.visit_number || 1
+        contexto.esRecurrente = !!previo.is_returning
+        storeProgress(videoUrl, { fallos: contexto.falloNumero })
         console.warn('[VSL] error del reproductor', contexto)
         // Import perezoso: este módulo también se compila para el SSR, donde
         // @sentry/react no debe cargarse.
@@ -209,11 +302,46 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
           .then(({ captureMessage }) => {
             captureMessage(`[VSL] error del reproductor: ${contexto.motivo}`, {
               level: 'error',
-              tags: { motivo_video: contexto.motivo },
+              // Como etiquetas y no sólo como datos sueltos: `extra` no se puede
+              // agregar en Sentry, y la pregunta que hay que responder ("¿falla
+              // al instante o después de tragar datos?") es precisamente un
+              // recuento por tramos.
+              tags: {
+                motivo_video: contexto.motivo,
+                motor_video: motorDelFallo(detalle),
+                espera_video: tramoDeEspera(esperaMs),
+                id_video: idDelVideo(videoUrl),
+              },
               extra: contexto,
             })
           })
           .catch(() => {})
+
+        /* ¿Se recupera solo? Un rectángulo negro definitivo y uno que arranca
+           tres segundos tarde cuentan hoy exactamente igual, y el daño real es
+           muy distinto. Si el vídeo acaba reproduciéndose se manda un segundo
+           aviso —sólo en ese caso, que es el minoritario— con lo que tardó en
+           recuperarse. Errores partido por recuperaciones da la proporción de
+           fallos que de verdad dejan al visitante sin vídeo.
+           `once` para no encadenar avisos si el vídeo va y viene. */
+        media?.addEventListener?.('playing', () => {
+          const tardanza = esperaMs == null
+            ? null
+            : Math.round(performance.now() - inicioCargaRef.current)
+          import('@sentry/react')
+            .then(({ captureMessage }) => {
+              captureMessage('[VSL] el reproductor se recuperó tras el error', {
+                level: 'info',
+                tags: {
+                  motivo_video: contexto.motivo,
+                  id_video: idDelVideo(videoUrl),
+                  espera_video: tramoDeEspera(tardanza),
+                },
+                extra: { ...contexto, recuperadoEnMs: tardanza },
+              })
+            })
+            .catch(() => {})
+        }, { once: true })
       })
 
       if (tryUnmuted) {
