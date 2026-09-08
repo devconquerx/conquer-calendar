@@ -337,6 +337,23 @@ def resolver_horario(event_type, host):
     return Horario.objects.filter(host=host, es_default=True).first()
 
 
+# Tope de hilos al calcular slots. Cada hilo abre su PROPIA conexión a la BD, así
+# que este número es, en la práctica, cuántas conexiones se lleva UNA sola visita
+# al calendario.
+#
+# Antes era `len(hosts)`, sin tope, y por ahí se cayó el calendario público
+# (FUNNELS-AM): el pool de `1-on-1 | Conquer Languages` tiene 19 organizadores y
+# la Postgres gestionada admite 50 conexiones, 3 de ellas reservadas al
+# superusuario. Tres visitas simultáneas —o dos durante un despliegue azul/verde,
+# que levanta el doble de workers— agotaban las 47 restantes y Postgres empezaba
+# a rechazar con "remaining connection slots are reserved".
+#
+# Presupuesto con 4: 6 workers de gunicorn (los 3 de cada color) × (1 propia + 4
+# de hilos) + 4 de Celery + beat ≈ 35 de 47. Si se cambia el plan de la BD o el
+# número de workers, este es el número que hay que rehacer.
+_MAX_HILOS_SLOTS = 4
+
+
 def calcular_slots(event_type, fecha_desde, fecha_hasta):
     """
     Devuelve la unión de slots disponibles entre todos los hosts del pool del event_type.
@@ -351,7 +368,7 @@ def calcular_slots(event_type, fecha_desde, fecha_hasta):
             _calcular_slots_para_host(event_type, hosts[0], fecha_desde, fecha_hasta)
         )
     else:
-        with ThreadPoolExecutor(max_workers=len(hosts)) as pool:
+        with ThreadPoolExecutor(max_workers=min(len(hosts), _MAX_HILOS_SLOTS)) as pool:
             futuros = [
                 pool.submit(_slots_host_threadsafe, event_type, h, fecha_desde, fecha_hasta)
                 for h in hosts

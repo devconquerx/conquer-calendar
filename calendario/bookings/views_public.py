@@ -175,11 +175,18 @@ def _build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha
 
     # Días con slots en la cuadrícula visible. Pedimos ±1 día al servicio para no
     # perder slots que cruzan la frontera de día entre TZ del host y del visitante.
+    #
+    # Por la caché igual que `_calcular_slots_mes_json`, que calcula EXACTAMENTE
+    # este mismo rango (mismo `fin_grid`, mismos `desde`/`hasta`) para el
+    # slots.json que el front pide justo después de pintar la página: sin ella el
+    # mismo cálculo —y su abanico de hilos contra la BD— se hacía dos veces por
+    # visita. La invalidación ya está puesta (`invalidar_slots`), así que la vista
+    # no ve datos más viejos que la que sí la usaba.
     desde = max(mes_base, min_fecha)
     hasta = min(fin_grid, max_fecha)
     dias_con_slots = set()
     if desde <= hasta:
-        for s in calcular_slots(event_type, desde - timedelta(days=1), hasta + timedelta(days=1)):
+        for s in calcular_slots_cacheado(event_type, desde - timedelta(days=1), hasta + timedelta(days=1)):
             d = s.astimezone(tz_visitante).date()
             if desde <= d <= hasta:
                 dias_con_slots.add(d)
