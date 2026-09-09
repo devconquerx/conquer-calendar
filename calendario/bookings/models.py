@@ -166,6 +166,20 @@ class Reserva(models.Model):
     notas = models.TextField(blank=True, default='')
     timezone_invitado = models.CharField(max_length=100, blank=True, default='')
 
+    # Identificador del alumno EN LA ACADEMIA, tal cual viene dentro del token
+    # que el LMS firma para el iframe (`bookings/embed.py`). El token ya lo
+    # traía y hasta ahora se descartaba.
+    #
+    # Se guarda porque es lo único con lo que la academia puede emparejar la
+    # sesión con su alumno sin depender del email: la persona puede cambiarlo,
+    # tenerlo distinto del de matrícula o escribirlo con otra capitalización, y
+    # emparejar por email dejaría sesiones huérfanas justo en las métricas que
+    # se quieren medir. Vacío en las reservas que no vienen de la academia.
+    alumno_lms_uid = models.CharField(
+        max_length=64, blank=True, default='', db_index=True,
+        verbose_name='ID del alumno en la academia',
+    )
+
     # Tracking: snapshot al crear la reserva (del tracking de la Prellamada en el
     # flujo del funnel). Queda autocontenido en la reserva y se envía al CRM
     # schedule y al respaldo de Supabase sin depender del Lead/Prellamada

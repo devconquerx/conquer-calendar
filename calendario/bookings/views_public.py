@@ -84,6 +84,16 @@ def _identidad(form, invitado):
     return invitado['nombre'], invitado['email']
 
 
+def _uid_alumno(invitado):
+    """El identificador del alumno en la academia, si la reserva viene de allí.
+
+    Va firmado dentro del token del LMS, así que no se puede falsear desde el
+    formulario. Es lo que le permite luego a la academia emparejar la sesión con
+    su alumno sin depender del email.
+    """
+    return str((invitado or {}).get('uid') or '')
+
+
 def _tz_visitante(request, tz_fallback):
     """Lee tz de query/form y devuelve ZoneInfo válido o el fallback (TZ del host)."""
     raw = (request.GET.get('tz') or request.POST.get('tz') or '').strip()
@@ -391,6 +401,7 @@ class BookingFormView(View):
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
                 tracking={'url': form.cleaned_data.get('url', '')},
+                alumno_lms_uid=_uid_alumno(invitado),
             )
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, host, event_type, form, duplicado=e.reserva_existente)
@@ -553,6 +564,7 @@ class TeamBookingFormView(View):
                     'url': form.cleaned_data.get('url', ''),
                     'setter': form.cleaned_data.get('setter', ''),
                 },
+                alumno_lms_uid=_uid_alumno(invitado),
             )
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, event_type, form, duplicado=e.reserva_existente)
@@ -877,6 +889,7 @@ class EnlaceUnicoFormView(View):
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
                 tracking={'url': form.cleaned_data.get('url', '')},
+                alumno_lms_uid=_uid_alumno(invitado),
             )
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, enlace, event_type, form, duplicado=e.reserva_existente)

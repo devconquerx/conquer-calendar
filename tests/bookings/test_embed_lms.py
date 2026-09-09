@@ -453,6 +453,51 @@ class ReagendarNoCambiaLaIdentidadTest(EmbedBase):
         self.assertEqual(nueva.email_invitado, 'otro@ejemplo.com')
 
 
+class UidDelAlumnoTest(EmbedBase):
+    """El token trae el `uid` del alumno y la reserva se lo queda.
+
+    Es el `UserProfile.id` del LMS, o sea la única forma de emparejar la reserva
+    con su alumno sin depender del email: la persona puede tenerlo distinto del
+    de matrícula, escrito de otra forma o cambiado desde entonces. Hasta ahora se
+    leía para validar el token y se tiraba.
+    """
+
+    def test_la_reserva_desde_la_academia_guarda_el_uid(self):
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            resp = self.client.post(
+                self.url_submit(self.privado) + f'?t={token_lms()}',
+                self.datos_reserva(),
+            )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(Reserva.objects.latest('id').alumno_lms_uid, '41')
+
+    def test_una_reserva_publica_lo_deja_vacio(self):
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            self.client.post(self.url_submit(self.publico), self.datos_reserva())
+        self.assertEqual(Reserva.objects.latest('id').alumno_lms_uid, '')
+
+    def test_reagendar_conserva_el_uid(self):
+        """Al reagendar se llega por el enlace del correo, sin token: si no se
+        heredara de la reserva original, la clase movida perdería al alumno."""
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            self.client.post(
+                self.url_submit(self.privado) + f'?t={token_lms()}',
+                self.datos_reserva(),
+            )
+        vieja = Reserva.objects.latest('id')
+
+        url = reverse('public_token:reemplazar_publica',
+                      kwargs={'token': vieja.confirmacion_token})
+        with MOCKS_GCAL[0], MOCKS_GCAL[1], MOCKS_GCAL[2]:
+            self.client.post(url, self.datos_reserva(
+                inicio_utc=slot_futuro(dias=6, hora=12).strftime('%Y-%m-%dT%H:%M:%S+00:00'),
+            ))
+
+        nueva = Reserva.objects.filter(estado=Reserva.Estado.CONFIRMADA).latest('id')
+        self.assertNotEqual(nueva.pk, vieja.pk)
+        self.assertEqual(nueva.alumno_lms_uid, '41')
+
+
 # ---------------------------------------------------------------------------
 # 6. Compatibilidad con el LMS
 # ---------------------------------------------------------------------------

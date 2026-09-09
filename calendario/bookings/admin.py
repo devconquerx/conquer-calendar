@@ -474,7 +474,7 @@ class ReservaAdmin(admin.ModelAdmin):
     readonly_fields = (
         'confirmacion_token', 'google_event_id', 'google_event_link',
         'google_meet_url', 'fecha_creacion', 'fecha_actualizacion',
-        'tag_chips_detail', 'asistencia_confirmada_en',
+        'tag_chips_detail', 'asistencia_confirmada_en', 'alumno_lms_uid',
     )
 
     def get_queryset(self, request):
@@ -543,7 +543,7 @@ class ReservaAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Invitado', {
             'fields': ('nombre_invitado', 'email_invitado', 'telefono_invitado',
-                       'timezone_invitado', 'notas'),
+                       'timezone_invitado', 'alumno_lms_uid', 'notas'),
         }),
         ('Evento', {
             'fields': ('event_type', 'host', 'inicio_utc', 'fin_utc', 'estado'),

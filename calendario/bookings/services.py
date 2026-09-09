@@ -648,7 +648,8 @@ def mismo_invitado(reserva, email_invitado, telefono_invitado=''):
 
 
 def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
-                  telefono_invitado='', notas='', timezone_invitado='', tracking=None):
+                  telefono_invitado='', notas='', timezone_invitado='', tracking=None,
+                  alumno_lms_uid=''):
     """
     Crea una reserva eligiendo automáticamente un host del pool (round-robin
     least-loaded). Lock sobre la fila EventType para serializar concurrentes
@@ -661,6 +662,10 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
 
     `tracking` (dict, opcional): journey_id/event_id/UTMs a guardar como snapshot
     en la reserva (lo pasa el flujo del funnel desde Prellamada.tracking).
+
+    `alumno_lms_uid` (str, opcional): identificador del alumno en la academia,
+    del token que el LMS firmó para el iframe. Solo lo traen las reservas hechas
+    desde dentro de la academia.
     """
     with transaction.atomic():
         et = EventType.objects.select_for_update().get(pk=event_type.pk)
@@ -754,6 +759,7 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
             notas=notas.strip(),
             timezone_invitado=timezone_invitado,
             permite_overbooking=abierta,
+            alumno_lms_uid=alumno_lms_uid or '',
             **_tracking_kwargs(tracking),
         ))
         et_id = et.pk
@@ -834,6 +840,10 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
             notas=notas,
             timezone_invitado=timezone_invitado,
             tracking=tracking_previo,
+            # Al reagendar sigue siendo el mismo alumno: a esta vista se llega
+            # por el enlace del correo, sin token del LMS, así que el uid solo
+            # puede venir de la reserva original.
+            alumno_lms_uid=vieja.alumno_lms_uid if vieja else '',
         )
 
 
