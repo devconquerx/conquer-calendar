@@ -665,7 +665,8 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
 
     `alumno_lms_uid` (str, opcional): identificador del alumno en la academia,
     del token que el LMS firmó para el iframe. Solo lo traen las reservas hechas
-    desde dentro de la academia.
+    desde dentro de la academia; es con lo que ella empareja después la sesión
+    con su alumno.
     """
     with transaction.atomic():
         et = EventType.objects.select_for_update().get(pk=event_type.pk)
@@ -821,6 +822,11 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
             )
             vieja_et_id = vieja.event_type_id
             transaction.on_commit(lambda: invalidar_slots(vieja_et_id))
+            # Reagendar es, para la academia, cancelar una sesión y crear otra:
+            # llegan dos mutaciones con dos `reservationId` distintos. Sin esta, la
+            # hora vieja se quedaría allí como confirmada y el profesor
+            # aparecería con dos clases donde solo dio una.
+            _avisar_academia_cancelacion(vieja)
             if vieja.google_event_id:
                 vieja_pk = vieja.pk
                 transaction.on_commit(lambda: cancelar_evento_google(vieja_pk))
@@ -877,11 +883,36 @@ def cancelar_reserva(reserva, origen=None, usuario=None, detalle='', avisar_invi
         )
         et_id = reserva.event_type_id
         transaction.on_commit(lambda: invalidar_slots(et_id))
+        _avisar_academia_cancelacion(reserva)
         if reserva.google_event_id:
             transaction.on_commit(
                 lambda: cancelar_evento_google(reserva.pk, avisar_invitado=avisar_invitado)
             )
     return reserva
+
+
+def _avisar_academia_cancelacion(reserva):
+    """Le cuenta a la academia que esta sesión ya no se va a dar.
+
+    Best-effort y después del commit, como el resto de integraciones: que el LMS
+    esté caído no puede impedir cancelar una clase.
+    """
+    et = reserva.event_type
+    if not (et and et.registrar_en_academia):
+        return
+    reserva_pk = reserva.pk
+
+    def _encolar():
+        try:
+            from .tasks import process_academia_cancelacion
+            process_academia_cancelacion.delay(reserva_pk)
+        except Exception:
+            logger.exception(
+                'No se pudo avisar a la academia de la cancelación de la reserva %s',
+                reserva_pk,
+            )
+
+    transaction.on_commit(_encolar)
 
 
 def eliminar_reserva(reserva):
@@ -890,12 +921,48 @@ def eliminar_reserva(reserva):
     """
     google_event_id = reserva.google_event_id
     host_email = reserva.host.email
+    # El payload se arma ANTES de borrar: después no queda fila que consultar y
+    # la academia se quedaría con la sesión como confirmada. Se le manda como
+    # cancelada, que para sus métricas es lo mismo que no haberse dado.
+    payload_academia = _payload_academia_borrado(reserva)
     with transaction.atomic():
         reserva.delete()
+        if payload_academia is not None:
+            transaction.on_commit(lambda: _avisar_academia_borrado(payload_academia))
         if google_event_id:
             transaction.on_commit(
                 lambda: _eliminar_google_event_directo(google_event_id, host_email)
             )
+
+
+def _payload_academia_borrado(reserva):
+    """Los datos que la academia necesita para dar por cancelada una reserva que
+    está a punto de desaparecer de aquí. None si ese evento no va a la academia."""
+    et = reserva.event_type
+    if not (et and et.registrar_en_academia):
+        return None
+    try:
+        from .conversions.services.academia import ESTADOS, construir_payload
+        payload = construir_payload(reserva)
+        payload['status'] = ESTADOS['cancelada']
+        return payload
+    except Exception:
+        logger.exception(
+            'No se pudo preparar el aviso a la academia del borrado de la reserva %s',
+            reserva.pk,
+        )
+        return None
+
+
+def _avisar_academia_borrado(payload):
+    try:
+        from .tasks import process_academia_borrado
+        process_academia_borrado.delay(payload)
+    except Exception:
+        logger.exception(
+            'No se pudo avisar a la academia del borrado de la reserva %s',
+            payload.get('reservationId'),
+        )
 
 
 def _eliminar_google_event_directo(google_event_id, host_email):

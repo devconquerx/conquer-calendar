@@ -351,6 +351,34 @@ CRM_API_KEY = env.str('CRM_API_KEY', default='')
 CRM_INGEST_ENABLED = True
 
 # ──────────────────────────────────────────────────────────────────────
+# Academia (LMS) — registro de las sesiones 1 a 1
+# ──────────────────────────────────────────────────────────────────────
+# Las clases 1 a 1 de languages y blogs se reservan desde dentro de la academia
+# (el iframe de `bookings/embed.py`), pero la gestión académica —cuántas
+# sesiones da cada profesor, cuál es su media al mes, qué uso tiene el
+# servicio— vive en la academia, no aquí. Por eso cada reserva de un tipo de
+# evento marcado con `registrar_en_academia` se le envía al LMS al agendarse,
+# al cancelarse y al reagendarse.
+#
+# Se envía en vez de dejar que la academia lo lea porque este calendario mueve
+# ~500 agendas al día y en algún momento habrá que hacer limpieza de reservas
+# viejas: el histórico de sesiones tiene que sobrevivir a esa limpieza, y para
+# eso tiene que estar guardado del otro lado.
+#
+# Fail-safe igual que el resto de integraciones: sin ACADEMIA_ENABLED o sin URL
+# y clave, cada envío hace no-op y loguea. Una academia caída nunca puede
+# impedir que un alumno reserve su clase.
+ACADEMIA_ENABLED = env.bool('ACADEMIA_ENABLED', default=False)
+# Endpoint GraphQL del LMS (el mismo que ya usa para sus conexiones externas).
+ACADEMIA_GRAPHQL_URL = env.str('ACADEMIA_GRAPHQL_URL', default='')
+# Clave compartida, en la cabecera `X-API-Key`. No es el secreto del iframe
+# (EMBED_LMS_SECRET): aquel firma tokens para el navegador del alumno y este
+# autentica una llamada de servidor a servidor. Mezclarlos haría que filtrar
+# uno comprometiera los dos caminos.
+ACADEMIA_API_KEY = env.str('ACADEMIA_API_KEY', default='')
+ACADEMIA_TIMEOUT_SECONDS = env.int('ACADEMIA_TIMEOUT_SECONDS', default=15)
+
+# ──────────────────────────────────────────────────────────────────────
 # Supabase — respaldo rodante de lo que se envía al CRM (lead/preschedule/
 # schedule), vía la REST API (PostgREST) con la secret key del lado servidor.
 # Fail-safe: si SUPABASE_ENABLED=False o falta URL/secret, cada push hace no-op

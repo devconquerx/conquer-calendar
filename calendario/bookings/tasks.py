@@ -137,6 +137,70 @@ def process_onboarding_session(self, reserva_id):
 
 
 @shared_task(**RETRY_POLICY)
+def process_academia_sesion(self, reserva_id):
+    """Registra la reserva en la academia (LMS) como sesión 1 a 1.
+
+    Independiente del CRM: el destino lo decide `EventType.registrar_en_academia`
+    y no `crm_destino`. Son dos sistemas distintos y una misma reserva puede ir a
+    los dos, a uno o a ninguno.
+    """
+    from .models import Reserva
+    from .conversions.services import academia
+
+    reserva = Reserva.objects.select_related('event_type', 'host').get(pk=reserva_id)
+    if not (reserva.event_type and reserva.event_type.registrar_en_academia):
+        logger.info('Reserva %s: academia OMITIDA (registrar_en_academia=False)', reserva_id)
+        reserva.tags.add('sch_academia_skipped')
+        return
+
+    academia.push_sesion(reserva)
+    reserva.tags.add('sch_academia_done')
+    logger.info('Reserva %s: sch_academia_done', reserva_id)
+
+
+@shared_task(**RETRY_POLICY)
+def process_academia_cancelacion(self, reserva_id):
+    """Le cuenta a la academia que la sesión se canceló (o se movió).
+
+    Es la misma mutación que el alta con el estado ya en 'cancelada', así que del
+    otro lado es un upsert sobre la fila que ya existe. Sin esto, el dashboard
+    contaría como dadas clases que nunca ocurrieron, que es la forma más fácil de
+    que nadie se fíe del número.
+
+    No mira `sch_academia_done`: una reserva puede cancelarse antes de que su
+    alta llegue a salir, y en ese caso lo que la academia tiene que recibir es
+    directamente la sesión cancelada.
+    """
+    from .models import Reserva
+    from .conversions.services import academia
+
+    reserva = Reserva.objects.select_related('event_type', 'host').get(pk=reserva_id)
+    if not (reserva.event_type and reserva.event_type.registrar_en_academia):
+        logger.info('Reserva %s: cancelación en academia OMITIDA (registrar_en_academia=False)', reserva_id)
+        return
+
+    academia.push_sesion(reserva)
+    reserva.tags.add('sch_academia_cancelada')
+    logger.info('Reserva %s: sch_academia_cancelada', reserva_id)
+
+
+@shared_task(**RETRY_POLICY)
+def process_academia_borrado(self, payload):
+    """Da por cancelada en la academia una reserva que ya no existe aquí.
+
+    Recibe el payload en vez del id porque la fila se borró: cuando la tarea
+    corre ya no hay nada que consultar. Es el único envío a la academia que no
+    puede reconstruirse solo, así que si falla del todo se pierde —de ahí que el
+    borrado desde el panel sea la vía menos recomendable para quitar una clase;
+    cancelar deja rastro en las dos apps.
+    """
+    from .conversions.services import academia
+
+    academia.enviar_payload(payload)
+    logger.info('Reserva %s: borrado avisado a la academia', payload.get('reservationId'))
+
+
+@shared_task(**RETRY_POLICY)
 def process_schedule_supabase(self, reserva_id):
     """Respaldo de la Reserva en Supabase. Independiente del CRM: se ejecuta
     siempre, aunque el envío al CRM esté desactivado."""
@@ -167,6 +231,15 @@ def dispatch_schedule_tasks(reserva_id):
     process_schedule_supabase.delay(reserva_id)
 
     et = reserva.event_type
+
+    # Academia: al margen del CRM, lo decide `EventType.registrar_en_academia`
+    # (hoy, las clases 1 a 1 de los profesores). Se filtra ya aquí para no
+    # encolar una tarea por cada una de las ~500 agendas diarias que no van a la
+    # academia; la tarea vuelve a comprobarlo por su cuenta.
+    if et and et.registrar_en_academia:
+        process_academia_sesion.delay(reserva_id)
+        reserva.tags.add('sch_academia_dispatched')
+
     is_schedule = bool(et and et.crm_destino == 'schedule')
 
     # Conversiones a plataformas de ads (Meta/TikTok/Google) + ActiveCampaign +
@@ -256,6 +329,25 @@ def sweep_incomplete_reservas():
         if 'sch_supabase_done' not in tag_names and 'sch_supabase_failed' not in tag_names:
             process_schedule_supabase.delay(reserva.pk)
             requeued += 1
+
+        # Academia: solo los tipos de evento marcados.
+        #
+        # El alta y la cancelación se reintentan por separado porque son dos
+        # envíos distintos con dos finales distintos: una reserva que se agendó
+        # bien y se canceló después tiene su alta en `sch_academia_done`, y sin
+        # una condición propia para la cancelación ese tag la daría por
+        # resuelta. La sesión se quedaría en la academia como confirmada para
+        # siempre y contaría en las métricas del profesor.
+        if et and et.registrar_en_academia:
+            if ('sch_academia_done' not in tag_names
+                    and 'sch_academia_failed' not in tag_names):
+                process_academia_sesion.delay(reserva.pk)
+                requeued += 1
+            elif (reserva.estado == Reserva.Estado.CANCELADA
+                    and 'sch_academia_cancelada' not in tag_names
+                    and 'sch_academia_cancelacion_failed' not in tag_names):
+                process_academia_cancelacion.delay(reserva.pk)
+                requeued += 1
 
         # Ads (Meta/TikTok/Google) + ActiveCampaign + Respond.io: SOLO reservas Schedule.
         if is_schedule:

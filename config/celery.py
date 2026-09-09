@@ -40,6 +40,8 @@ TASK_FAILURE_TAGS = {
     'calendario.bookings.tasks.process_schedule_respondio': ('bookings.Reserva', 'sch_respondio_failed'),
     'calendario.bookings.tasks.process_schedule_crm': ('bookings.Reserva', 'sch_crm_failed'),
     'calendario.bookings.tasks.process_schedule_supabase': ('bookings.Reserva', 'sch_supabase_failed'),
+    'calendario.bookings.tasks.process_academia_sesion': ('bookings.Reserva', 'sch_academia_failed'),
+    'calendario.bookings.tasks.process_academia_cancelacion': ('bookings.Reserva', 'sch_academia_cancelacion_failed'),
     'calendario.funnels.tasks.process_pre_schedule_supabase': ('funnels.Prellamada', 'supabase_failed'),
     'calendario.funnels.tasks.process_pre_schedule_crm': ('funnels.Prellamada', 'crm_failed'),
     'calendario.funnels.tasks.process_pre_schedule_respondio': ('funnels.Prellamada', 'respondio_failed'),

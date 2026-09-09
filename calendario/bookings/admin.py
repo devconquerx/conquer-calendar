@@ -458,7 +458,8 @@ class ReservaAdmin(admin.ModelAdmin):
         'nombre_invitado', 'email_invitado', 'event_type', 'host',
         'inicio_utc', 'estado', 'asistencia_confirmada', 'google_sync_estado',
         'col_meta', 'col_tiktok', 'col_google', 'col_ac',
-        'col_respondio', 'col_crm', 'col_onboarding', 'col_supabase',
+        'col_respondio', 'col_crm', 'col_onboarding', 'col_academia',
+        'col_supabase',
         'fecha_creacion',
     )
     list_filter = ('estado', 'asistencia_confirmada', 'google_sync_estado', 'event_type', 'host', 'fecha_creacion', 'tags')
@@ -492,6 +493,8 @@ class ReservaAdmin(admin.ModelAdmin):
     # CRM: el destino depende de event_type.crm_destino. Cada columna aplica solo a su destino.
     col_crm = _tag_check('sch_crm_done', 'sch_crm_failed', 'process_schedule_crm', 'CRM·Sched', applies=lambda r: bool(r.event_type and r.event_type.crm_destino == 'schedule'))
     col_onboarding = _tag_check('sch_onboarding_done', 'sch_onboarding_failed', 'process_onboarding_session', 'CRM·ONB', applies=lambda r: bool(r.event_type and r.event_type.crm_destino == 'onboarding'))
+    # Academia: al margen del CRM, lo marca EventType.registrar_en_academia.
+    col_academia = _tag_check('sch_academia_done', 'sch_academia_failed', 'process_academia_sesion', 'Academia', applies=lambda r: bool(r.event_type and r.event_type.registrar_en_academia))
     col_supabase = _tag_check('sch_supabase_done', 'sch_supabase_failed', 'process_schedule_supabase', 'SP')
 
     def _render_chips(self, obj):
@@ -503,6 +506,8 @@ class ReservaAdmin(admin.ModelAdmin):
             'sch_activecampaign_done': '#356AE6',
             'sch_crm_done': '#FF6F00',
             'sch_onboarding_done': '#FF6F00',
+            'sch_academia_done': '#7C4DFF',
+            'sch_academia_cancelada': '#7C4DFF',
             'sch_supabase_done': '#3ECF8E',
         }
         chips = []
