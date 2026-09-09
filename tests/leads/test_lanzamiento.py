@@ -8,7 +8,10 @@ Languages con teléfono 3 (webhook + CRM + FunnelChat)—. Si salieran correos o
 Respond.io habría 5 o más, y no hay ninguna ejecución por encima de 4 en
 150.969 registros.
 
-Tampoco pasan por NeverBounce: Make postea directo al ingest y valida el CRM.
+Sí pasan por la validación del email, aunque Make no lo hiciera: el CRM
+decide con `neverbounce_result` si el lead entra en ActiveCampaign, y desde que
+dejó de consultar a NeverBounce no tiene forma de averiguarlo por su cuenta. Si
+no le llega el veredicto desde aquí, se queda sin ninguno.
 """
 import json
 import re
@@ -53,11 +56,29 @@ class DespachoDeLanzamientoTest(TestCase):
             for p in parches.values():
                 p.stop()
 
-    def test_el_de_evento_solo_va_al_crm(self):
+    def test_el_de_evento_va_al_crm_pasando_por_la_validacion(self):
         llamadas = self._crear('cb-lanzamiento11')
-        self.assertTrue(llamadas['process_crm_send'], 'el CRM debe recibirlo')
+        # El CRM le llega encadenado desde la validación, no directo: necesita
+        # el veredicto del email para decidir sobre ActiveCampaign.
+        self.assertTrue(llamadas['process_neverbounce'], 'el email debe validarse')
+        self.assertFalse(llamadas['process_crm_send'], 'al CRM se llega encadenado')
         for servicio in SERVICIOS:
+            if servicio == 'process_neverbounce':
+                continue
             self.assertFalse(llamadas[servicio], f'{servicio} no debería dispararse')
+
+    def test_el_de_evento_sin_email_va_directo_al_crm(self):
+        """Sin email no hay nada que validar, así que no se encadena nada."""
+        parches = {n: patch(RUTA + n) for n in SERVICIOS}
+        parches['process_crm_send'] = patch(RUTA + 'process_crm_send')
+        activos = {n: p.start() for n, p in parches.items()}
+        try:
+            Lead.objects.create(full_name='Ana', funnel='cb-lanzamiento11')
+            self.assertTrue(activos['process_crm_send'].delay.called)
+            self.assertFalse(activos['process_neverbounce'].delay.called)
+        finally:
+            for p in parches.values():
+                p.stop()
 
     def test_el_del_funnel_sigue_disparando_todo(self):
         llamadas = self._crear('cb-eu')
@@ -79,7 +100,8 @@ class AltaDesdeLaPantallaDeEventoTest(TestCase):
             'url': 'https://www.conquerblocks.com/evento/evento-online?utm_source=ActiveCampaign',
             'utm_source': 'ActiveCampaign', 'utm_campaign': 'cb-lanzamiento11',
         }
-        with patch(RUTA + 'process_crm_send') as crm:
+        # Se encola la validación, que es quien encadena el envío al CRM.
+        with patch(RUTA + 'process_neverbounce') as validacion:
             resp = self.client.post(reverse('funnels:register_lead'),
                                     data=json.dumps(cuerpo), content_type='application/json')
         self.assertEqual(resp.status_code, 200)
@@ -88,7 +110,7 @@ class AltaDesdeLaPantallaDeEventoTest(TestCase):
         self.assertEqual(lead.full_name, 'Ana Pérez')
         self.assertEqual(lead.lead_phone_prefix, '+34')
         self.assertEqual(lead.utm_campaign, 'cb-lanzamiento11')
-        self.assertTrue(crm.delay.called)
+        self.assertTrue(validacion.delay.called)
 
 
 class CodigoDeEdicionEnLaPantallaTest(TestCase):

@@ -170,7 +170,12 @@ def process_neverbounce(self, lead_id):
     # existe: cualquier duda (catch-all, timeout, proveedor que no nos habla)
     # deja pasar el lead, porque perder uno bueno cuesta más que colar uno malo.
     nb = lead.neverbounce_result or {}
-    if nb.get('is_rejected'):
+    if es_lead_de_lanzamiento(lead):
+        # De los de evento se encarga el CRM de punta a punta (etiquetas,
+        # conversiones y ActiveCampaign), igual que cuando los mandaba Make.
+        # Aquí solo se les añade el veredicto para que pueda decidir.
+        pass
+    elif nb.get('is_rejected'):
         lead.tags.add('activecampaign_skipped')
         logger.info(
             'Lead %s: ActiveCampaign OMITIDO — %s dice que el buzón no existe (%s)',
@@ -249,7 +254,15 @@ def dispatch_lead_tasks(lead_id):
     # ninguna ejecución por encima de 4. Tampoco pasan por NeverBounce: Make
     # postea directo al ingest y es el CRM quien valida el email.
     if es_lead_de_lanzamiento(lead):
-        process_crm_send.delay(lead_id)
+        # Van al CRM validados. El CRM decide con `neverbounce_result` si el
+        # lead entra en ActiveCampaign, y por sí solo no tiene forma de
+        # averiguarlo: su IP está vetada en Gmail, así que si no le llega el
+        # veredicto desde aquí se queda sin ninguno. `process_neverbounce`
+        # encadena el envío al CRM al terminar.
+        if lead.email:
+            process_neverbounce.delay(lead_id)
+        else:
+            process_crm_send.delay(lead_id)
         # La única excepción es FunnelChat, y solo en Languages: en Make cuelga
         # de la rama de Languages, que filtra `funnel` por 'cl'. Los de Blocks
         # no tienen módulo, y los de Finance tampoco entran porque esa rama
@@ -360,7 +373,8 @@ def sweep_incomplete_leads():
 
         if (lead.email and 'activecampaign_done' not in tag_names
                 and 'activecampaign_failed' not in tag_names
-                and 'activecampaign_skipped' not in tag_names):
+                and 'activecampaign_skipped' not in tag_names
+                and not es_lead_de_lanzamiento(lead)):
             # Se repite aquí la decisión de process_neverbounce en vez de exigir
             # que la validación haya terminado: si el verificador se atasca, un
             # lead sin veredicto entra en AC igualmente en la siguiente pasada.
