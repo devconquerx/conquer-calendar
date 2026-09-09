@@ -143,6 +143,11 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
   // El evento de arranque se manda una sola vez por montaje: `playing` se
   // dispara también al reanudar tras una pausa o un seek.
   const arranqueReportadoRef = useRef(false)
+  // Cortes (buffering) durante el primer minuto. Ver `reportarCortes`.
+  const cortesRef = useRef(0)
+  const esperaCortesRef = useRef(0)
+  const inicioCorteRef = useRef(null)
+  const resumenCortesRef = useRef(false)
 
   // Se evalúa UNA vez, al montar, y de ahí que viva en un ref: lo que importa es
   // cómo se llegó a esta página, no lo que pase después. `useRouter()` devuelve
@@ -268,8 +273,58 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
       // Ensure muted state after Plyr wraps the element
       player.muted = true
 
+      /* Cortes durante la reproducción.
+         Es la medida que dice si HLS mejora la EXPERIENCIA, no solo si el vídeo
+         arranca: un MP4 en conexión mala arranca igual, pero luego se para cada
+         pocos segundos. Se cuentan los `waiting` y se acumula cuánto tiempo pasó
+         el visitante esperando; el resumen se manda una sola vez, al primer
+         minuto reproducido.
+         Al minuto y no al final porque casi nadie llega al final de una VSL de
+         16 minutos: si se esperara al `ended`, el dato se perdería justo para
+         quien peor lo pasó. */
+      const media = videoRef.current
+      media?.addEventListener?.('waiting', () => {
+        cortesRef.current += 1
+        if (inicioCorteRef.current == null) inicioCorteRef.current = performance.now()
+      })
+      media?.addEventListener?.('playing', () => {
+        if (inicioCorteRef.current != null) {
+          esperaCortesRef.current += performance.now() - inicioCorteRef.current
+          inicioCorteRef.current = null
+        }
+      })
+
+      const reportarCortes = () => {
+        if (resumenCortesRef.current) return
+        resumenCortesRef.current = true
+        if (Math.random() > MUESTREO_ARRANQUE) return
+        const cortes = cortesRef.current
+        const esperaS = Math.round(esperaCortesRef.current / 100) / 10
+        import('@sentry/react')
+          .then(({ captureMessage }) => {
+            captureMessage('[VSL] primer minuto reproducido', {
+              level: 'info',
+              tags: {
+                id_video: idDelVideo(videoUrl),
+                entrega_video: esHls ? (hlsNativo ? 'hls-nativo' : 'hls-js') : 'mp4',
+                // En tramos porque lo que importa es "¿se le cortó mucho?",
+                // no el número exacto.
+                cortes_video: cortes === 0 ? 'ninguno' : cortes <= 2 ? '1-2' : cortes <= 5 ? '3-5' : '6+',
+              },
+              extra: {
+                cortes,
+                segundosEsperando: esperaS,
+                resolucion: media?.videoHeight ? `${media.videoHeight}p` : null,
+                muestreo: MUESTREO_ARRANQUE,
+              },
+            })
+          })
+          .catch(() => {})
+      }
+
       player.on('timeupdate', () => {
         if (!player.duration) return
+        if (player.currentTime >= 60) reportarCortes()
         const percent = (player.currentTime / player.duration) * 100
 
         // Only update progress_percent if higher (never decrease on replay/reload)
