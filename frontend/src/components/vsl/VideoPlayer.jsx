@@ -14,6 +14,14 @@ import { useRouter } from '../../lib/router'
 const STORAGE_KEY = 'vsl_progress'
 const LEGACY_STORAGE_KEY = 'videolitics'
 
+/* Qué fracción de las reproducciones correctas se reporta a Sentry.
+   Los fallos se mandan todos —son pocos y cada uno importa— pero los aciertos
+   son ~4.500 al día si esto acaba en todos los funnels, y Sentry cobra por
+   evento. Con una de cada cuatro sobra para calcular tasas por navegador, que
+   es para lo único que sirve el dato. Subir a 1 mientras el piloto esté en un
+   solo funnel es perfectamente asumible. */
+const MUESTREO_ARRANQUE = 0.25
+
 /* Qué motor de medios reportó el fallo, deducido del texto del MediaError.
    Hace falta porque el cubo de errores mezcla dos poblaciones distintas y en
    Sentry no había forma de separarlas: los mensajes con forma de Chromium
@@ -132,6 +140,9 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
   // Momento en que se le da la fuente al <video>, para medir cuánto tardó en
   // fallar. Ver `tramoDeEspera`.
   const inicioCargaRef = useRef(null)
+  // El evento de arranque se manda una sola vez por montaje: `playing` se
+  // dispara también al reanudar tras una pausa o un seek.
+  const arranqueReportadoRef = useRef(false)
 
   // Se evalúa UNA vez, al montar, y de ahí que viva en un ref: lo que importa es
   // cómo se llegó a esta página, no lo que pase después. `useRouter()` devuelve
@@ -300,6 +311,46 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
       player.on('ended', () => {
         if (onAgendarClick) onAgendarClick()
       })
+
+      /* Reproducciones que SÍ arrancan.
+         Hasta ahora solo se registraban los fallos, así que se contaban sin
+         denominador: "150 errores al día" no dice nada si no se sabe sobre
+         cuántas reproducciones. Con este evento se puede calcular la tasa real
+         por navegador, por dispositivo y por vídeo —Sentry ya adjunta navegador,
+         sistema y modelo por su cuenta—, que es lo único que dirá si servir HLS
+         mejora o empeora.
+         Se manda una sola vez por montaje, en el primer `playing`. */
+      const reportarArranque = () => {
+        if (arranqueReportadoRef.current) return
+        arranqueReportadoRef.current = true
+        if (Math.random() > MUESTREO_ARRANQUE) return
+        const media = videoRef.current
+        const ms = inicioCargaRef.current == null
+          ? null
+          : Math.round(performance.now() - inicioCargaRef.current)
+        import('@sentry/react')
+          .then(({ captureMessage }) => {
+            captureMessage('[VSL] reproducción iniciada', {
+              level: 'info',
+              tags: {
+                id_video: idDelVideo(videoUrl),
+                entrega_video: esHls ? (hlsNativo ? 'hls-nativo' : 'hls-js') : 'mp4',
+                espera_video: tramoDeEspera(ms),
+                resolucion_inicial: media?.videoHeight ? `${media.videoHeight}p` : 'desconocida',
+              },
+              extra: {
+                arranqueMs: ms,
+                ancho: media?.videoWidth ?? null,
+                alto: media?.videoHeight ?? null,
+                anchoElemento: Math.round(media?.getBoundingClientRect?.().width || 0),
+                dpr: window.devicePixelRatio || 1,
+                muestreo: MUESTREO_ARRANQUE,
+              },
+            })
+          })
+          .catch(() => {})
+      }
+      player.on('playing', reportarArranque)
 
       /* Errores del reproductor.
          Plyr los emite como un CustomEvent 'error' que burbujea hasta window, y
