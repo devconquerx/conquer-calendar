@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import uuid
 from urllib.parse import urlsplit
 from datetime import datetime, timezone as dt_timezone
@@ -70,6 +71,32 @@ _PRELLAMADA_MAX_LENGTHS = {
 }
 
 
+def _sanea_id(valor):
+    """Quita a un identificador la query string que se le haya pegado detrás.
+
+    `journey_id` y `event_id` viajan de etapa a etapa por la URL, y el primero va
+    siempre el último (`…&event_id=…&journey_id=jrn_…`). Cuando alguien vuelve al
+    funnel desde un anuncio, Facebook añade su `?fbclid=…` al final de la URL
+    entera y acaba dentro del valor:
+
+        journey_id = "jrn_1788885337291_tvn8i8?fbclid=IwVERFWAUNGOZwZG9mBWZk…"
+
+    237 caracteres para un identificador de 24. La columna lo recortaba a 120 y
+    el CRM rechazaba la prellamada entera con un 400 contra su varchar(100),
+    perdiéndola (FUNNELS-7T). Pero recortar no arregla lo importante:
+    `journey_id` es la CLAVE con la que el CRM hace el upsert, así que un valor
+    contaminado —quepa o no— rompe la trazabilidad de esa persona entre
+    lead_register, pre_schedule y schedule.
+
+    Se limpia aquí además de en el front porque este es el único punto por el que
+    pasan todas las escrituras, incluidas las de clientes con el JavaScript viejo
+    en caché.
+    """
+    if not valor:
+        return ''
+    return re.split(r'[?&#]', str(valor))[0].strip()
+
+
 def _recortar_a_columna(valores):
     """Recorta cada texto al tope de su columna.
 
@@ -98,6 +125,8 @@ def _upsert_prellamada(funnel, journey_id, prellamada_uuid, **fields):
     # Snapshot del tracking a columnas (además del JSON `tracking`).
     tr = fields.get('tracking') if isinstance(fields.get('tracking'), dict) else {}
     cols = {f: (tr.get(f) or '') for f in PRELLAMADA_TRACKING_FIELDS}
+    # `event_id` viaja por la URL igual que el journey_id y se contamina igual.
+    cols['event_id'] = _sanea_id(cols.get('event_id'))
     defaults = _recortar_a_columna(
         {'funnel': funnel, 'journey_id': journey_id, **fields, **cols}
     )
@@ -149,7 +178,7 @@ class ResolverView(View):
         nombre = respuestas.get('name', '') or respuestas.get('nombre', '')
         email = respuestas.get('email', '')
         telefono = respuestas.get('phone', '') or respuestas.get('telefono', '')
-        journey_id = (tracking.get('journey_id') or '').strip()
+        journey_id = _sanea_id(tracking.get('journey_id'))
         # uuid de cliente: clave de upsert (token). Se genera por montaje del
         # formulario (cambia en cada recarga), igual que conquerx-funnels-new.
         prellamada_uuid = (tracking.get('uuid') or '').strip()

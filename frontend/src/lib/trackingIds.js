@@ -7,6 +7,31 @@ function randomSuffix() {
   return Math.random().toString(36).substring(2, 8)
 }
 
+/**
+ * Limpia un identificador leído de la URL de la query string que se le haya
+ * pegado detrás.
+ *
+ * Los dos identificadores viajan de etapa a etapa por la URL, y `journey_id` va
+ * SIEMPRE el último (`?…&event_id=…&journey_id=jrn_…`). Cuando alguien vuelve
+ * al funnel desde un anuncio, Facebook añade su `?fbclid=…` al final de la URL
+ * entera, así que acaba dentro del valor del último parámetro:
+ *
+ *   journey_id = "jrn_1788885337291_tvn8i8?fbclid=IwVERFWAUNGOZwZG9mBWZk…"
+ *
+ * Eso son 237 caracteres para un identificador de 24. La columna del calendario
+ * lo recortaba a 120 y el CRM lo rechazaba entero con un 400 contra su
+ * varchar(100), tirando la prellamada (FUNNELS-7T). Pero el recorte no era la
+ * solución: `journey_id` es la CLAVE con la que el CRM hace el upsert, así que
+ * un valor contaminado —aunque quepa— rompe la trazabilidad de esa persona
+ * entre lead_register, pre_schedule y schedule.
+ *
+ * Se corta en el primer `?` o `&`, que ningún identificador legítimo contiene.
+ */
+export function saneaId(valor) {
+  if (!valor) return ''
+  return String(valor).split(/[?&#]/)[0].trim()
+}
+
 /** New event ID per significant action — format: "{timestamp}_{random6}" */
 export function generateEventId() {
   return `${Date.now()}_${randomSuffix()}`
@@ -29,7 +54,7 @@ export function getOrCreateEventId() {
   // el real al hidratar. Devolvemos uno desechable para no romper el render.
   if (typeof window === 'undefined') return generateEventId()
   const urlParams = new URLSearchParams(window.location.search)
-  const urlEventId = urlParams.get('event_id')
+  const urlEventId = saneaId(urlParams.get('event_id'))
   if (urlEventId) return urlEventId
   return generateEventId()
 }
@@ -49,13 +74,15 @@ export function getOrCreateJourneyId() {
   // recalcula/persiste al hidratar. No se renderiza al DOM.
   if (typeof window === 'undefined') return `jrn_${Date.now()}_${randomSuffix()}`
   const urlParams = new URLSearchParams(window.location.search)
-  const urlJourneyId = urlParams.get('journey_id')
+  const urlJourneyId = saneaId(urlParams.get('journey_id'))
   if (urlJourneyId) {
     guardar('cqx_journey_id', urlJourneyId)
     return urlJourneyId
   }
 
-  const stored = leer('cqx_journey_id')
+  // También al leer de localStorage: quien ya tenga guardado uno contaminado de
+  // antes seguiría arrastrándolo en cada visita.
+  const stored = saneaId(leer('cqx_journey_id'))
   if (stored) return stored
 
   const newId = `jrn_${Date.now()}_${randomSuffix()}`
