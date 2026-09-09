@@ -83,7 +83,10 @@ class LeadAdmin(admin.ModelAdmin):
     col_tiktok = _tag_check('tiktok_events_done', 'tiktok_events_failed', 'process_tiktok_events', 'TikTok', applies=is_from_tiktok)
     col_google = _tag_check('google_ads_done', 'google_ads_failed', 'process_google_ads', 'Google', applies=is_from_google)
     col_respondio = _tag_check('respondio_done', 'respondio_failed', 'process_respondio', 'Respondio', applies=lambda l: bool(l.lead_phone))
-    col_ac = _tag_check('activecampaign_done', 'activecampaign_failed', 'process_activecampaign', 'AC', applies=lambda l: bool(l.email))
+    # Un lead omitido a propósito (email inexistente) no está pendiente de nada,
+    # así que no debe salir como tarea fallida en el panel.
+    col_ac = _tag_check('activecampaign_done', 'activecampaign_failed', 'process_activecampaign', 'AC',
+                        applies=lambda l: bool(l.email) and 'activecampaign_skipped' not in {t.name for t in l.tags.all()})
     col_nb = _tag_check('neverbounce_done', 'neverbounce_failed', 'process_neverbounce', 'NB', applies=lambda l: bool(l.email))
     col_crm = _tag_check('crm_done', 'crm_failed', 'process_crm_send', 'CRM', applies=lambda l: bool(l.email))
     col_supabase = _tag_check('supabase_done', 'supabase_failed', 'process_supabase', 'SP')

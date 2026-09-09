@@ -165,6 +165,20 @@ def process_neverbounce(self, lead_id):
         lead.tags.add('neverbounce_skipped')
         logger.info('Lead %s: neverbounce_skipped (sin validación)', lead_id)
 
+    # Con el veredicto en la mano ya se puede decidir sobre ActiveCampaign.
+    # Solo se frena cuando el servidor de correo ha dicho que ese buzón no
+    # existe: cualquier duda (catch-all, timeout, proveedor que no nos habla)
+    # deja pasar el lead, porque perder uno bueno cuesta más que colar uno malo.
+    nb = lead.neverbounce_result or {}
+    if nb.get('is_rejected'):
+        lead.tags.add('activecampaign_skipped')
+        logger.info(
+            'Lead %s: ActiveCampaign OMITIDO — %s dice que el buzón no existe (%s)',
+            lead_id, nb.get('source', '?'), nb.get('reason', nb.get('result')),
+        )
+    else:
+        process_activecampaign.delay(lead_id)
+
     # El envío al CRM se dispara siempre (la validación viaja si está disponible).
     process_crm_send.delay(lead_id)
 
@@ -270,7 +284,9 @@ def dispatch_lead_tasks(lead_id):
     # crea por email y el número se reconcilia luego (prellamada/reserva).
     if lead.email:
         process_respondio.delay(lead_id)
-        process_activecampaign.delay(lead_id)
+        # ActiveCampaign ya no sale aquí: lo encadena process_neverbounce cuando
+        # sabe si el email existe. Meter una dirección inexistente en AC es un
+        # rebote duro asegurado, y el umbral que no se puede pasar es el 2%.
         process_neverbounce.delay(lead_id)
         process_funnelchat.delay(lead_id)
 
@@ -342,9 +358,19 @@ def sweep_incomplete_leads():
             process_respondio.delay(lead.pk)
             requeued += 1
 
-        if lead.email and 'activecampaign_done' not in tag_names and 'activecampaign_failed' not in tag_names:
-            process_activecampaign.delay(lead.pk)
-            requeued += 1
+        if (lead.email and 'activecampaign_done' not in tag_names
+                and 'activecampaign_failed' not in tag_names
+                and 'activecampaign_skipped' not in tag_names):
+            # Se repite aquí la decisión de process_neverbounce en vez de exigir
+            # que la validación haya terminado: si el verificador se atasca, un
+            # lead sin veredicto entra en AC igualmente en la siguiente pasada.
+            # El sweep es la red que impide que un fallo nuestro deje leads sin
+            # enviar, no otro sitio donde puedan quedarse atrapados.
+            if (lead.neverbounce_result or {}).get('is_rejected'):
+                lead.tags.add('activecampaign_skipped')
+            else:
+                process_activecampaign.delay(lead.pk)
+                requeued += 1
 
         if lead.email and 'funnelchat_done' not in tag_names and 'funnelchat_failed' not in tag_names:
             process_funnelchat.delay(lead.pk)
