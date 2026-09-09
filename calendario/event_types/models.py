@@ -120,6 +120,50 @@ class EventType(models.Model):
         ),
     )
 
+    # La academia lleva su propia gestión académica y necesita el histórico de
+    # las sesiones: cuántas da cada profesor al mes, cuál es su media, qué uso
+    # real tiene el servicio. Ese histórico no puede vivir aquí, porque las
+    # reservas antiguas se acabarán limpiando.
+    #
+    # Va aparte de `acceso` a propósito, y en los dos sentidos: hay eventos
+    # embebidos que no son gestión académica (un webinar), y hay sesiones que
+    # interesa registrar sin estar embebidas. Atarlo al embebido dejaría fuera
+    # justo lo segundo, que es la mayoría.
+    #
+    # Disponible en todos los tipos de evento; qué se marca es una decisión de
+    # negocio que se va tomando sobre la marcha (ver las acciones en lote del
+    # admin).
+    registrar_en_academia = models.BooleanField(
+        default=False,
+        verbose_name='Registrar las sesiones en la academia',
+        help_text=(
+            'Cada reserva de este tipo de evento se envía a la academia al '
+            'agendarse, y también al cancelarse o reagendarse. Es de donde salen '
+            'las métricas de los profesores.'
+        ),
+    )
+
+    # El LMS es multi-academia: sus cursos, sus matrículas y sus eventos de
+    # calendario cuelgan todos de una `Academy`, y sus mutaciones piden un
+    # `academy_id`. Desde aquí no hay forma de deducirlo —el `school_code` que
+    # usan las demás integraciones sale del funnel o del Lead, y una clase 1 a 1
+    # reservada desde la academia no tiene ninguno de los dos—, así que lo
+    # declara el tipo de evento, que es lo que sí es de una marca concreta.
+    #
+    # Opcional: si se deja vacío, la sesión viaja con `academyId: null` y le toca
+    # al LMS resolverla por el profesor. Así la integración no se queda parada
+    # esperando a que alguien averigüe un id interno del otro lado.
+    academia_lms_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='ID de la academia en el LMS',
+        help_text=(
+            'Id numérico de la academia (Academy) a la que pertenecen estas '
+            'sesiones. Lo da el equipo de la academia. Vacío = que lo resuelvan '
+            'ellos por el profesor.'
+        ),
+    )
+
     class ConfirmacionTipo(models.TextChoices):
         DEFAULT = 'default', 'Página de confirmación'
         URL = 'url', 'URL personalizada'

@@ -417,6 +417,37 @@
                             </select>
                         </div>
                     </div>
+
+                    <div class="et-switch mt-5">
+                        <div class="form-check form-check-custom form-check-solid form-switch mt-1">
+                            <input class="form-check-input" type="checkbox" name="registrar_en_academia" id="registrar_en_academia"
+                                   {% if form.registrar_en_academia.value %}checked{% endif %} />
+                        </div>
+                        <label class="cursor-pointer" for="registrar_en_academia">
+                            <span class="d-block fw-semibold fs-7 text-gray-900">Registrar las sesiones en la academia</span>
+                            <span class="d-block text-muted fs-8">
+                                Cada reserva se envía a la academia al agendarse, y también al cancelarse o
+                                reagendarse. De ahí salen las métricas de los profesores.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="row g-4 mt-1">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="academia_lms_id">
+                                ID de la academia en el LMS
+                                <i class="bi bi-info-circle u-info"
+                                   title="Id numérico de la academia a la que pertenecen estas sesiones. Lo da el equipo de la academia. Si lo dejas vacío, lo resuelven ellos por el profesor."></i>
+                            </label>
+                            <input type="number" min="1" name="academia_lms_id" id="academia_lms_id"
+                                   class="form-control{% if form.academia_lms_id.errors %} is-invalid{% endif %}"
+                                   value="{{ form.academia_lms_id.value|default:'' }}"
+                                   placeholder="Lo da el equipo de la academia" />
+                            {% if form.academia_lms_id.errors %}
+                            <div class="invalid-feedback">{{ form.academia_lms_id.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
             <!--end::Al reservar-->

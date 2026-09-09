@@ -89,7 +89,8 @@ class EventTypeForm(forms.ModelForm):
             'buffer_antes_minutos', 'buffer_despues_minutos',
             'aviso_minimo_minutos', 'aviso_maximo_dias',
             'rango_fecha_inicio', 'rango_fecha_fin', 'activo', 'acceso',
-            'crm_destino', 'unico_por_invitado', 'mostrar_caja_comentarios',
+            'crm_destino', 'registrar_en_academia', 'academia_lms_id',
+            'unico_por_invitado', 'mostrar_caja_comentarios',
             'confirmacion_tipo', 'confirmacion_url',
             'gcal_palabras_ignorar',
         ]
@@ -99,6 +100,8 @@ class EventTypeForm(forms.ModelForm):
         }
         labels = {
             'crm_destino': 'Destino en el CRM',
+            'registrar_en_academia': 'Registrar las sesiones en la academia',
+            'academia_lms_id': 'ID de la academia en el LMS',
             'unico_por_invitado': 'Solo una reserva por invitado',
             'mostrar_caja_comentarios': 'Caja de comentarios',
         }
