@@ -202,7 +202,16 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
     // Asignar `src` arranca ya la carga del recurso, así que este es el momento
     // desde el que se cuenta lo que tarde en fallar.
     inicioCargaRef.current = performance.now()
-    videoRef.current.src = videoUrl
+    const esHls = /\.m3u8(\?|$)/i.test(videoUrl)
+    const hlsNativo = !!videoRef.current.canPlayType('application/vnd.apple.mpegurl')
+    /* El `src` NO se asigna cuando va a encargarse hls.js.
+       Antes se asignaba siempre, y en los navegadores sin HLS nativo el <video>
+       lanzaba un SRC_NOT_SUPPORTED en cuanto lo intentaba, justo antes de que
+       hls.js tomara el control. El vídeo acababa reproduciéndose —de ahí los
+       "se recuperó tras el error" que llegaban de Firefox y Edge— pero cada
+       visita dejaba un fallo falso en Sentry, contaminando exactamente la
+       métrica que este piloto quiere medir. */
+    if (!esHls || hlsNativo) videoRef.current.src = videoUrl
     videoRef.current.muted = true
 
     /* HLS: solo para quien no lo entienda de nacimiento.
@@ -215,8 +224,6 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
        el SSR, donde hls.js no debe entrar; y así el 98% restante no se descarga
        una librería que no va a usar. Mismo criterio que Plyr, aquí abajo. */
     let hls = null
-    const esHls = /\.m3u8(\?|$)/i.test(videoUrl)
-    const hlsNativo = !!videoRef.current.canPlayType('application/vnd.apple.mpegurl')
     if (esHls && !hlsNativo) {
       import('hls.js').then(({ default: Hls }) => {
         if (!videoRef.current || !Hls.isSupported()) return
