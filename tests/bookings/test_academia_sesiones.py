@@ -110,11 +110,21 @@ class PayloadSesionTest(TestCase):
         self.assertEqual(payload['professorEmail'], self.host.email.lower())
         self.assertEqual(payload['studentLmsId'], str(UID_ALUMNO))
         self.assertEqual(payload['studentEmail'], EMAIL_INVITADO.lower())
-        self.assertEqual(payload['studentName'], NOMBRE_INVITADO)
         self.assertEqual(payload['eventTypeName'], 'Clase 1 a 1 de inglés')
-        self.assertEqual(payload['durationMinutes'], 45)
         self.assertEqual(payload['startsAt'], reserva.inicio_utc.isoformat())
         self.assertEqual(payload['endsAt'], reserva.fin_utc.isoformat())
+
+    def test_no_se_manda_nada_mas(self):
+        """Lo acordado es el profesor, el evento y cuándo fue. Cada campo de más
+        es uno que hay que mantener sincronizado entre dos aplicaciones y que
+        alguien acabará usando; añadir uno más adelante cuesta menos que quitarlo
+        cuando ya se usa."""
+        payload = academia.construir_payload(self._reserva())
+        self.assertEqual(set(payload), {
+            'reservationId', 'status', 'academyId',
+            'professorEmail', 'studentLmsId', 'studentEmail',
+            'eventTypeName', 'startsAt', 'endsAt',
+        })
 
     def test_envio_va_al_endpoint_con_la_clave(self):
         reserva = self._reserva()

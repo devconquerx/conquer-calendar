@@ -73,16 +73,31 @@ def _config():
 def construir_payload(reserva):
     """Los datos de la sesión tal como los recibe la academia.
 
+    Se manda lo acordado y nada más: el profesor, el nombre del evento y cuándo
+    fue. Es lo justo para auditar el uso del servicio, que es para lo que se pidió
+    esto.
+
+    Lo que NO va, aunque el calendario lo tenga a mano:
+
+      * nombres del profesor y del alumno — la academia ya los tiene registrados,
+        y sus datos personales no tienen por qué viajar dos veces;
+      * el id del tipo de evento, el teléfono, la zona horaria del alumno, la URL
+        del Meet y la hora en que se reservó — nada de eso entra en el recuento;
+      * la duración, que se saca restando.
+
+    Cada campo de más es un campo que hay que mantener sincronizado entre dos
+    aplicaciones y que alguien acabará usando para algo. Añadir uno el día que
+    haga falta cuesta menos que quitarlo cuando ya se usa.
+
     Nombres en inglés y en snake_case: Strawberry los expone en camelCase, que es
     como están el resto de las mutaciones del LMS (`order_id`, `academy_id`,
-    `payment_status`…). Se manda poco y estable a propósito.
+    `payment_status`…).
     """
     et = reserva.event_type
-    host = reserva.host
-    duracion = int((reserva.fin_utc - reserva.inicio_utc).total_seconds() // 60)
 
     return {
-        # Identidad de la sesión. `reservationId` es la clave del upsert.
+        # Identidad de la sesión. `reservationId` es la clave del upsert, no un
+        # dato de negocio: sin él, cada reintento crearía una fila nueva.
         'reservationId': str(reserva.pk),
         'status': ESTADOS.get(reserva.estado, reserva.estado),  # confirmed | cancelled
         # A qué academia del LMS pertenece la sesión. Se configura en el tipo de
@@ -90,28 +105,21 @@ def construir_payload(reserva):
         # del resto de integraciones sale del funnel o del Lead, y una clase 1 a
         # 1 reservada desde la academia no tiene ninguno de los dos.
         'academyId': et.academia_lms_id if reserva.event_type_id else None,
-        # Profesor: es un usuario del calendario y un Professor en el LMS. El
+        # El profesor. Es un usuario del calendario y un Professor en el LMS; el
         # email es lo que tienen en común, vía `Professor.user`.
-        'professorEmail': (host.email or '').strip().lower(),
-        'professorName': host.get_full_name() or host.email,
-        # Alumno. `studentLmsId` sale del token que firma el LMS para el iframe;
-        # mientras la academia siga enlazando al calendario en vez de embeberlo,
-        # viene vacío y solo queda el email.
+        'professorEmail': (reserva.host.email or '').strip().lower(),
+        # El alumno. `studentLmsId` es su `UserProfile.id`, que viene firmado en
+        # el token del iframe; el email queda de respaldo para las reservas que no
+        # se hacen embebidas y por tanto nunca lo traen.
         'studentLmsId': reserva.alumno_lms_uid or '',
         'studentEmail': (reserva.email_invitado or '').strip().lower(),
-        'studentName': reserva.nombre_invitado or '',
-        # Evento.
-        'eventTypeId': str(et.pk) if reserva.event_type_id else '',
+        # El nombre del evento.
         'eventTypeName': et.nombre if reserva.event_type_id else '',
-        # Cuándo. Todo en UTC con ISO-8601 —el LMS ya guarda sus horas en UTC—;
-        # la zona en la que el alumno reservó va aparte, por si algún día hace
-        # falta pintarlo como él lo vio.
+        # Cuándo. UTC en ISO-8601, que es como el LMS ya guarda sus horas. El fin
+        # va porque de él cuelga el correo de feedback al alumno —a los pocos
+        # minutos de terminar—, no por el recuento.
         'startsAt': reserva.inicio_utc.isoformat() if reserva.inicio_utc else None,
         'endsAt': reserva.fin_utc.isoformat() if reserva.fin_utc else None,
-        'durationMinutes': duracion,
-        'studentTimezone': reserva.timezone_invitado or '',
-        'bookedAt': reserva.fecha_creacion.isoformat() if reserva.fecha_creacion else None,
-        'meetUrl': reserva.google_meet_url or '',
     }
 
 
