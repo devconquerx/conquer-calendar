@@ -179,6 +179,56 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
     videoRef.current.src = videoUrl
     videoRef.current.muted = true
 
+    /* HLS: solo para quien no lo entienda de nacimiento.
+       Safari, iOS, Chrome y Chrome de Android reproducen `.m3u8` directamente
+       —comprobado en los cuatro—, así que a ellos les basta el `src` de arriba.
+       El único navegador grande que no puede es Firefox (~2% del tráfico), y es
+       para ese para quien se carga hls.js.
+
+       La carga va diferida por dos razones: este módulo también se compila para
+       el SSR, donde hls.js no debe entrar; y así el 98% restante no se descarga
+       una librería que no va a usar. Mismo criterio que Plyr, aquí abajo. */
+    let hls = null
+    const esHls = /\.m3u8(\?|$)/i.test(videoUrl)
+    const hlsNativo = !!videoRef.current.canPlayType('application/vnd.apple.mpegurl')
+    if (esHls && !hlsNativo) {
+      import('hls.js').then(({ default: Hls }) => {
+        if (!videoRef.current || !Hls.isSupported()) return
+        hls = new Hls({ enableWorker: true })
+        hls.loadSource(videoUrl)
+        hls.attachMedia(videoRef.current)
+        // Los fallos de hls.js NO llegan al `error` del <video>, así que sin
+        // esto Firefox fallaría sin dejar rastro en Sentry. Solo se reportan los
+        // fatales: la librería se recupera sola de los transitorios.
+        hls.on(Hls.Events.ERROR, (_evt, data) => {
+          if (!data?.fatal) return
+          import('@sentry/react')
+            .then(({ captureMessage }) => {
+              captureMessage(`[VSL] hls.js falló: ${data.type}`, {
+                level: 'error',
+                tags: {
+                  motivo_video: `hls-${data.type}`,
+                  motor_video: 'hls.js',
+                  id_video: idDelVideo(videoUrl),
+                  espera_video: tramoDeEspera(
+                    inicioCargaRef.current == null
+                      ? null
+                      : Math.round(performance.now() - inicioCargaRef.current)
+                  ),
+                },
+                extra: {
+                  tipo: data.type,
+                  detalle: data.details,
+                  codigoHttp: data.response?.code ?? null,
+                  url: (data.url || '').slice(-60),
+                },
+              })
+            })
+            .catch(() => {})
+        })
+      }).catch(() => {})
+    }
+
     // Modo debug (?debug=1): controles completos del reproductor (barra de
     // progreso/seek, tiempos, etc.) para poder navegar el vídeo durante pruebas.
     const isDebug = new URLSearchParams(window.location.search).get('debug') === '1'
@@ -364,6 +414,9 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
 
     return () => {
       cancelled = true
+      // Antes que Plyr: hls.js mantiene sus propias peticiones y un worker, y si
+      // no se destruye sigue bajando trozos de un vídeo que ya nadie mira.
+      if (hls) hls.destroy()
       if (player) player.destroy()
     }
   }, [videoUrl])
