@@ -68,8 +68,18 @@ export function tramoDeEspera(ms) {
 export function idDelVideo(url) {
   if (!url) return 'sin-video'
   try {
-    const ruta = new URL(url, 'https://x.invalid').pathname
-    return decodeURIComponent(ruta.split('/').pop() || 'sin-video').slice(0, 80)
+    const partes = new URL(url, 'https://x.invalid').pathname.split('/').filter(Boolean)
+    const nombre = decodeURIComponent(partes.pop() || '')
+    // En HLS el fichero SIEMPRE se llama `playlist.m3u8`, así que el nombre no
+    // distingue un vídeo de otro: los ocho darían la misma etiqueta y la
+    // comparación por vídeo —el motivo de existir de esto— se perdería justo en
+    // el formato que queremos medir. Ahí identifica la carpeta, que es el id
+    // del vídeo en Bunny.
+    if (/\.m3u8$/i.test(nombre)) {
+      const carpeta = decodeURIComponent(partes.pop() || '')
+      return (carpeta || nombre || 'sin-video').slice(0, 80)
+    }
+    return (nombre || 'sin-video').slice(0, 80)
   } catch {
     return 'ilegible'
   }

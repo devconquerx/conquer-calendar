@@ -68,6 +68,19 @@ describe('idDelVideo', () => {
     expect(a).not.toBe(b)
   })
 
+  it('en HLS identifica por la carpeta, no por el nombre', () => {
+    // Todas las URLs de Bunny Stream acaban en `playlist.m3u8`: si se usara el
+    // nombre, los ocho vídeos compartirían etiqueta y no se podrían comparar.
+    const languages = idDelVideo('https://vz-fc5a9efc-2a2.b-cdn.net/a05bea53-6612-4e70-97b1-6fb909a74738/playlist.m3u8')
+    const finance = idDelVideo('https://vz-fc5a9efc-2a2.b-cdn.net/95f8113a-6260-4dae-982d-2cf3188c2b44/playlist.m3u8')
+    expect(languages).toBe('a05bea53-6612-4e70-97b1-6fb909a74738')
+    expect(finance).not.toBe(languages)
+  })
+
+  it('los MP4 por resolución de Stream sí se distinguen por el nombre', () => {
+    expect(idDelVideo('https://vz-fc5a9efc-2a2.b-cdn.net/95f8113a/play_720p.mp4')).toBe('play_720p.mp4')
+  })
+
   it('no revienta sin URL', () => {
     expect(idDelVideo('')).toBe('sin-video')
     expect(idDelVideo(undefined)).toBe('sin-video')
