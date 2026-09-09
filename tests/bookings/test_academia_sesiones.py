@@ -19,8 +19,10 @@ Lo que cubren estos tests, en orden:
   * y un endpoint que responde 200 con un error dentro NO se da por bueno, que
     es la forma silenciosa de perder justo el dato que se quiere medir.
 """
+from datetime import timedelta
 from unittest.mock import patch
 
+from django.core.management import CommandError, call_command
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
@@ -415,3 +417,39 @@ class MarcaEnElPanelTest(TestCase):
         self._post()
         self.et.refresh_from_db()
         self.assertFalse(self.et.registrar_en_academia)
+
+
+@override_settings(**CONFIG_ACADEMIA)
+class ReenvioManualTest(TestCase):
+    """El comando de reenvío tapa huecos de un rango concreto. El histórico
+    anterior a la integración no se sube: las sesiones se registran de aquí en
+    adelante."""
+
+    def setUp(self):
+        self.host = crear_host()
+        self.et = crear_event_type(self.host)
+        self.et.registrar_en_academia = True
+        self.et.save(update_fields=['registrar_en_academia'])
+        for dia in range(5):
+            crear_disponibilidad(self.host, dia=dia)
+        mocks = _mock_gcal()
+        with mocks[0], mocks[1], mocks[2]:
+            self.reserva = crear_reserva(self.et)
+
+    def test_sin_rango_no_manda_nada(self):
+        with patch('calendario.bookings.tasks.process_academia_sesion.delay') as mock_delay:
+            with self.assertRaises(CommandError):
+                call_command('enviar_sesiones_academia')
+        mock_delay.assert_not_called()
+
+    def test_con_rango_encola_lo_de_ese_rango(self):
+        desde = (self.reserva.inicio_utc - timedelta(days=1)).strftime('%Y-%m-%d')
+        with patch('calendario.bookings.tasks.process_academia_sesion.delay') as mock_delay:
+            call_command('enviar_sesiones_academia', desde=desde)
+        mock_delay.assert_called_once_with(self.reserva.pk)
+
+    def test_el_rango_deja_fuera_lo_anterior(self):
+        desde = (self.reserva.inicio_utc + timedelta(days=30)).strftime('%Y-%m-%d')
+        with patch('calendario.bookings.tasks.process_academia_sesion.delay') as mock_delay:
+            call_command('enviar_sesiones_academia', desde=desde)
+        mock_delay.assert_not_called()
