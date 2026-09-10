@@ -38,6 +38,10 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   const video = formConfig?.video || {}
   const urls = videoUrls && videoUrls.length ? videoUrls : (video.videoUrls || [])
   const pct = buttonPercent || video.buttonPercent || 75
+  // Barra de reproducción completa (progreso, tiempos, retroceder). Por defecto
+  // NO: una VSL se ve entera o no se ve. Se enciende por funnel desde la BD
+  // (`config.video.showControls`) para los vídeos que no son una VSL.
+  const conControles = !!video.showControls
   const landing = formConfig?.landing || formConfig?.welcome || {}
 
   // Email para el tracking de progreso (viene como query param desde la landing).
@@ -139,6 +143,7 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
           <VideoPlayer
             videoUrls={urls}
             buttonPercent={pct}
+            showControls={conControles}
             onAgendarClick={goToStepForm}
             onShowButton={handleShowButton}
             onProgress={handleProgress}
@@ -203,6 +208,7 @@ function HexVideoPage({ assets, video, urls, pct, showButton, onShowButton, onPr
           <VideoPlayer
             videoUrls={urls}
             buttonPercent={pct}
+            showControls={!!video.showControls}
             onAgendarClick={goToStepForm}
             onShowButton={onShowButton}
             onProgress={onProgress}
@@ -341,6 +347,7 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
               <VideoPlayer
                 videoUrls={urls}
                 buttonPercent={pct}
+                showControls={!!video.showControls}
                 onAgendarClick={goToStepForm}
                 onShowButton={onShowButton}
                 onProgress={onProgress}

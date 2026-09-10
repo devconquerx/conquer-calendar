@@ -139,7 +139,7 @@ function storeProgress(videoUrl, updates) {
   } catch {}
 }
 
-export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarClick, onShowButton, onProgress, theme }) {
+export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControls = false, onAgendarClick, onShowButton, onProgress, theme }) {
   const videoRef = useRef(null)
   const playerRef = useRef(null)
   const [showUnmute, setShowUnmute] = useState(false)
@@ -294,6 +294,15 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
     // progreso/seek, tiempos, etc.) para poder navegar el vídeo durante pruebas.
     const isDebug = new URLSearchParams(window.location.search).get('debug') === '1'
 
+    /* Barra completa también para quien la pida por configuración
+       (`video.showControls`). Una VSL de 15 minutos la esconde a propósito: sin
+       barra de progreso nadie adelanta, y el CTA aparece cuando toca. Pero hay
+       vídeos que no son una VSL —la masterclass de Conquer AI dura tres horas— y
+       ahí quitarle a la gente el poder pausar, retroceder o ver cuánto queda es
+       hostil, no persuasivo. OJO: con barra de progreso el visitante puede
+       arrastrar hasta el final y hacer aparecer el CTA sin ver el vídeo. */
+    const barraCompleta = isDebug || showControls
+
     // Plyr toca `document` al importarse, así que lo cargamos dinámicamente (solo
     // en cliente, dentro del efecto) para que este módulo sea SSR-safe. El setup
     // síncrono de arriba (overlays, src) ya corrió; solo se difiere el reproductor.
@@ -308,7 +317,7 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
         autoplay: true,
         muted: true,
         iconUrl: spriteDeIconos,
-        controls: isDebug
+        controls: barraCompleta
           ? ['play-large', 'restart', 'rewind', 'play', 'fast-forward', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen']
           : ['play', 'mute', 'volume', 'fullscreen'],
       })
