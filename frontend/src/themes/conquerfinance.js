@@ -41,6 +41,10 @@ import confPaso3Thumb from '../assets/img/finance/confirmation/paso3-thumb.avif'
 // Fondo hexagonal de página completa de la confirmación (Fondo hexagonos 2.avif
 // de producción, background del <body> con size contain).
 import confHexFondo from '../assets/img/finance/hex-fondo.avif'
+// Mockup de llamada entrante del Paso 2, ya con la marca Finance sobre su verde
+// (entregado por el usuario 2026-09-10): sustituye al de Blocks, que se usaba
+// prestado mientras no existía una versión propia.
+import confMockup from '../assets/img/finance/confirmation/conquer-mockup.webp'
 // Frames estáticos de los Lottie de producción (felicidades.json = confeti;
 // Animation-1713274047756.json = doble chevron), serializados a SVG con
 // lottie-web. Producción los anima; aquí frame fijo + CSS bounce en el chevron.
@@ -51,10 +55,6 @@ import confDoubleChevron from '../assets/img/finance/confirmation/double-chevron
 // los tokens/assets de Legal tal cual (colores incluidos); la paleta propia de
 // Finance llegará después.
 import legal from './conquerlegal'
-// Mockup de llamada entrante de la confirmación de Blocks: en el rediseño
-// paperboard, Finance lo usa tal cual en su Paso 2 (como los tokens de Legal,
-// hasta que exista una versión con la marca Finance).
-import confMockupBlocks from '../assets/img/cb/confirmation/conquer-mockup.png'
 // Conquie de fiesta (el "emoji de celebración" del hero de Blocks): decisión
 // del usuario 2026-08-10 — sustituye al apretón de manos de Legal.
 import confFiestaBlocks from '../assets/img/cb/confirmation/conquie-fiesta.svg'
@@ -287,10 +287,9 @@ export default {
       // PASO 2 — copy de Finance (el renderer paperboard pinta los párrafos como
       // texto plano, así que van sin <strong>; el titular de la tarjeta ya es
       // "Mantente al tanto de tu teléfono", heredado de Legal palabra a palabra).
-      // Mockup de llamada entrante de Blocks (decisión del usuario 2026-08-10):
-      // a sangre completa con la máscara pixelada, como en la confirmación de
-      // conquerblocks.com — sustituye al phone-52 del hex, que recortaba mal.
-      paso2Image: confMockupBlocks,
+      // Mockup de llamada entrante con la marca Finance, a sangre completa —
+      // sustituye al phone-52 del hex, que recortaba mal.
+      paso2Image: confMockup,
       paso2Paragraphs: [
         'Te contactaremos por llamada para confirmar la cita el día y la hora acordadas. Una vez confirmada la sesión con tu asesor te enviaremos el enlace de la videollamada.',
         'Es importante que contestes confirmando 👍 tu llamada, ya que estamos recibiendo muchísimas solicitudes y queremos hablar con personas que estén comprometidas en ser un caso de éxito.',
