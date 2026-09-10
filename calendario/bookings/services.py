@@ -1,5 +1,6 @@
 import logging
 import math
+import random
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
@@ -7,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from django.core.cache import cache
 from django.db import connections, transaction
-from django.db.models import Count, Q, Value
+from django.db.models import Max, Q, Value
 from django.db.models.functions import Replace
 from django.utils import timezone
 
@@ -439,16 +440,44 @@ def _candidatos_para_slot(event_type, inicio_utc):
     return candidatos
 
 
+# Centinela para quien todavía no ha recibido ninguna reserva de este tipo: se
+# comporta como "hace una eternidad que no le toca", así que entra el primero.
+_NUNCA_LE_TOCO = datetime.min.replace(tzinfo=UTC)
+
+
 def _seleccionar_host_round_robin(event_type, candidatos):
     """
     Selecciona el host al que se le asigna la reserva, por este orden:
 
       1. Mayor `prioridad` en el pool (3 manda sobre 1).
-      2. Menor número de reservas confirmadas para este event_type (reparto de carga).
-      3. Menor pivot.id (orden de añadido al pool).
+      2. Quien lleve más tiempo sin que le asignen una reserva de este tipo.
+      3. Azar entre los que sigan empatados.
 
-    Con todos los organizadores en la prioridad por defecto el primer criterio es
-    constante y la elección queda idéntica al reparto histórico por carga.
+    El criterio 2 es el de Calendly en su modo "maximize for availability", que es
+    el que replicamos: se ofrecen las horas de todo el pool y, a igualdad de
+    prioridad, "the one who hasn't had a recent meeting will be booked".
+
+    Antes aquí se contaban las reservas confirmadas de cada uno y ganaba el que
+    menos llevaba, pero era un contador ACUMULADO desde el origen de los tiempos,
+    y eso se descompensa solo: quien entra nuevo al pool arranca en cero y acapara
+    todo hasta alcanzar al resto, mientras que el veterano con más historial se
+    queda sin reservas durante semanas. Pasó de verdad —un
+    organizador con 117 reservas acumuladas se quedó a cero de agenda futura en
+    cuanto entró al pool un compañero con 28—, y no hay forma de arreglarlo desde
+    el panel: la única salida era subirle la prioridad, que descompensa al revés.
+    Calendly, que sí cuenta reuniones en su otro modo, necesita para sostenerlo
+    dos frenos que aquí no existían: nadie puede adelantarse más de tres, y el
+    contador se pone a cero para todos al tocar el pool.
+
+    La recencia no acumula estado: recibes una y pasas al final de la cola. Un
+    host nuevo no arrastra ventaja (entra sin fecha, se lleva una y rota), y el
+    veterano no arrastra castigo. Lo que sí queda como decisión explícita es la
+    `prioridad`: si alguien tiene que recibir más que el resto, se le sube, y eso
+    manda sobre el turno.
+
+    Manda la fecha en que se ASIGNÓ la reserva, no la de la reunión: el reparto
+    ocurre al reservar, así que es la que dice a quién le tocó por última vez.
+    Solo cuentan las confirmadas —si al host le cancelan, vuelve a la cola.
 
     Los excluidos (prioridad 0) no llegan aquí: `_obtener_hosts_pool` ya los quitó
     aguas arriba, así que ningún candidato puede tener prioridad 0.
@@ -457,30 +486,30 @@ def _seleccionar_host_round_robin(event_type, candidatos):
     if len(candidatos) == 1:
         return candidatos[0]
     host_ids = [h.id for h in candidatos]
-    counts_qs = (Reserva.objects
-                 .filter(event_type=event_type,
-                         estado=Reserva.Estado.CONFIRMADA,
-                         host_id__in=host_ids)
-                 .values('host_id')
-                 .annotate(c=Count('id')))
-    counts = {row['host_id']: row['c'] for row in counts_qs}
-    # {host_id: (pivot.id, prioridad)}. Un host sin fila en el pool (evento
-    # personal que llegase aquí) cae al valor por defecto y no se cuela delante.
-    pivots = {
-        host_id: (pivot_id, prioridad)
-        for host_id, pivot_id, prioridad in (
-            EventTypeXHost.objects
-            .filter(event_type=event_type, host_id__in=host_ids)
-            .values_list('host_id', 'id', 'prioridad')
-        )
+    ultimas = {
+        row['host_id']: row['ultima']
+        for row in (Reserva.objects
+                    .filter(event_type=event_type,
+                            estado=Reserva.Estado.CONFIRMADA,
+                            host_id__in=host_ids)
+                    .values('host_id')
+                    .annotate(ultima=Max('fecha_creacion')))
     }
-    defecto = (0, EventTypeXHost.PRIORIDAD_DEFECTO)
+    # Un host sin fila en el pool (evento personal que llegase aquí) cae a la
+    # prioridad por defecto y no se cuela delante de nadie.
+    prioridades = dict(
+        EventTypeXHost.objects
+        .filter(event_type=event_type, host_id__in=host_ids)
+        .values_list('host_id', 'prioridad')
+    )
 
     def _clave(h):
-        pivot_id, prioridad = pivots.get(h.id, defecto)
-        return (-prioridad, counts.get(h.id, 0), pivot_id)
+        prioridad = prioridades.get(h.id, EventTypeXHost.PRIORIDAD_DEFECTO)
+        return (-prioridad, ultimas.get(h.id) or _NUNCA_LE_TOCO)
 
-    return min(candidatos, key=_clave)
+    claves = [(_clave(h), h) for h in candidatos]
+    mejor = min(clave for clave, _ in claves)
+    return random.choice([h for clave, h in claves if clave == mejor])
 
 
 # Campos de tracking que la Reserva guarda como snapshot (del tracking de la

@@ -2,10 +2,13 @@
 Tests de la prioridad de organizadores en el reparto round-robin.
 
 `EventTypeXHost.prioridad` va de 1 a 3, donde 3 es la más alta. El orden de
-selección es: mayor prioridad -> menos reservas confirmadas -> orden de entrada
-al pool. Como todos los organizadores nacen en la prioridad por defecto, mientras
-nadie la toque el criterio es constante y el reparto se comporta exactamente como
-antes de existir el campo.
+selección es: mayor prioridad -> quien lleva más tiempo sin que le toque -> azar.
+Como todos los organizadores nacen en la prioridad por defecto, mientras nadie la
+toque el criterio es constante y el reparto lo decide el turno.
+
+El turno mira la fecha en que se asignó la última reserva de ese tipo, no cuántas
+lleva acumuladas: ver `_seleccionar_host_round_robin` para por qué el contador
+que había antes se descompensaba solo.
 
 El 0 es aparte: no es "la prioridad más baja" sino un centinela de exclusión. El
 organizador sigue en el pool pero no recibe reservas ni aporta sus horas a los
@@ -15,6 +18,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.test import TestCase
+from django.utils import timezone
 
 from calendario.bookings.models import Reserva
 from calendario.availability.models import BloqueHorarioSemanal
@@ -38,6 +42,21 @@ def _set_prioridad(et, host, valor):
     EventTypeXHost.objects.filter(event_type=et, host=host).update(prioridad=valor)
 
 
+def _reservar_seguidas(et, cuantas, dias=1):
+    """Reserva `cuantas` veces seguidas y devuelve a quién le tocó cada una.
+
+    Horas distintas del MISMO día, nunca días seguidos: `slot_futuro` empuja los
+    fines de semana al lunes, así que dias=2/3/4 colapsan en el mismo instante
+    según el día en que se ejecute la suite, las reservas chocan contra
+    uq_reserva_host_inicio_confirmada y el reparto que se está midiendo deja de
+    ser el que decide.
+    """
+    return [
+        _reservar(et, slot_futuro(dias=dias, hora=10 + i), f'x{dias}{i}@x.com').host
+        for i in range(cuantas)
+    ]
+
+
 @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
 @patch('calendario.bookings.services.crear_evento_google')
 class PrioridadRoundRobinTest(TestCase):
@@ -58,7 +77,6 @@ class PrioridadRoundRobinTest(TestCase):
             aviso_minimo_minutos=0, activo=True,
             unico_por_invitado=False,
         )
-        # El orden de creación fija el pivot.id, que es el último desempate.
         for h in (self.a, self.b, self.c):
             EventTypeXHost.objects.create(event_type=self.et, host=h)
 
@@ -70,17 +88,70 @@ class PrioridadRoundRobinTest(TestCase):
         )
         self.assertEqual(valores, [1, 1, 1])
 
-    def test_sin_prioridad_reparte_como_siempre(self, _ev, _conf):
-        # Todos en 1: gana el menos cargado y, a igualdad, el primero del pool.
-        r1 = _reservar(self.et, slot_futuro(dias=1), 'x1@x.com')
-        r2 = _reservar(self.et, slot_futuro(dias=2), 'x2@x.com')
-        r3 = _reservar(self.et, slot_futuro(dias=3), 'x3@x.com')
-        self.assertEqual([r1.host, r2.host, r3.host], [self.a, self.b, self.c])
+    def test_sin_prioridad_rota_entre_los_tres(self, _ev, _conf):
+        # Todos en 1: cada uno recibe una antes de que nadie repita. Quién abre
+        # la ronda es azar (los tres empatan a "nunca les tocó"), así que lo que
+        # se comprueba es el reparto, no el orden concreto.
+        hosts = _reservar_seguidas(self.et, 3)
+        self.assertEqual(set(hosts), {self.a, self.b, self.c})
 
-    def test_la_prioridad_alta_gana_aunque_tenga_mas_carga(self, _ev, _conf):
+    def test_al_que_le_acaba_de_tocar_pasa_al_final_de_la_cola(self, _ev, _conf):
+        primero, *siguientes = _reservar_seguidas(self.et, 4)
+        # No repite hasta que los otros dos han pasado.
+        self.assertNotIn(primero, siguientes[:2])
+        self.assertEqual(siguientes[2], primero)
+
+    def _reservas_previas(self, host, cuantas, hace):
+        """`cuantas` reservas ya asignadas a `host`, la última hace `hace`."""
+        for i in range(cuantas):
+            inicio = slot_futuro(dias=20, hora=10 + i)
+            Reserva.objects.create(
+                event_type=self.et, host=host, inicio_utc=inicio,
+                fin_utc=inicio + timedelta(minutes=30),
+                nombre_invitado='Previa', email_invitado=f'prev{host.pk}{i}@x.com',
+            )
+        # `fecha_creacion` es auto_now_add: solo se puede envejecer con un UPDATE.
+        (Reserva.objects
+         .filter(event_type=self.et, host=host)
+         .update(fecha_creacion=timezone.now() - hace))
+
+    def test_el_veterano_no_se_queda_fuera_por_lo_que_lleva_acumulado(self, _ev, _conf):
+        # El caso real que motivó el cambio: Ana lleva años en el pool con mucha
+        # agenda a la espalda y Caro acaba de entrar sin ninguna. Con el contador
+        # acumulado de antes, Caro se llevaba TODAS hasta alcanzar a Ana y Ana se
+        # quedaba semanas sin recibir nada. Con el turno se alternan desde la
+        # primera, que es lo único que Caro tiene de ventaja por ser nueva.
+        _set_prioridad(self.et, self.b, 0)
+        self._reservas_previas(self.a, 6, hace=timedelta(days=7))
+
+        hosts = _reservar_seguidas(self.et, 4)
+        self.assertEqual(hosts, [self.c, self.a, self.c, self.a])
+
+    def test_al_que_lleva_mas_sin_que_le_toque_le_da_igual_cuantas_lleve(self, _ev, _conf):
+        # Ana acumula seis y Caro una sola, pero la de Caro es de ayer y las de
+        # Ana de hace una semana: le toca a Ana. El contador de antes decía Caro.
+        _set_prioridad(self.et, self.b, 0)
+        self._reservas_previas(self.a, 6, hace=timedelta(days=7))
+        self._reservas_previas(self.c, 1, hace=timedelta(days=1))
+
+        r = _reservar(self.et, slot_futuro(dias=1), 'x1@x.com')
+        self.assertEqual(r.host, self.a)
+
+    def test_la_cancelada_devuelve_al_host_a_la_cola(self, _ev, _conf):
+        # Si al host le cancelan, esa reserva deja de contar como "le tocó": el
+        # queryset solo mira las confirmadas.
+        _set_prioridad(self.et, self.b, 0)
+        self._reservas_previas(self.a, 1, hace=timedelta(days=7))
+        self._reservas_previas(self.c, 1, hace=timedelta(days=1))
+        Reserva.objects.filter(host=self.c).update(estado=Reserva.Estado.CANCELADA)
+
+        r = _reservar(self.et, slot_futuro(dias=1), 'x1@x.com')
+        self.assertEqual(r.host, self.c)
+
+    def test_la_prioridad_alta_gana_aunque_le_acabe_de_tocar(self, _ev, _conf):
         _set_prioridad(self.et, self.c, 3)
-        # Caro arranca con carga y aun así se lleva las siguientes: la prioridad
-        # se evalúa antes que el reparto por carga.
+        # A Caro le acaba de tocar tres veces y aun así se lleva las siguientes:
+        # la prioridad se evalúa antes que el turno.
         # Horas distintas del MISMO día, no días seguidos: slot_futuro empuja
         # los fines de semana al lunes, así que dias=20/21/22 colapsan en el
         # mismo instante cuando hoy+20 cae en sábado y la segunda reserva choca
@@ -93,22 +164,17 @@ class PrioridadRoundRobinTest(TestCase):
                 fin_utc=inicio + timedelta(minutes=30),
                 nombre_invitado='Previa', email_invitado=f'prev{i}@x.com',
             )
-        r1 = _reservar(self.et, slot_futuro(dias=1), 'x1@x.com')
-        r2 = _reservar(self.et, slot_futuro(dias=2), 'x2@x.com')
-        self.assertEqual(r1.host, self.c)
-        self.assertEqual(r2.host, self.c)
+        self.assertEqual(_reservar_seguidas(self.et, 2), [self.c, self.c])
 
-    def test_entre_iguales_decide_la_carga(self, _ev, _conf):
+    def test_entre_iguales_decide_el_turno(self, _ev, _conf):
         # Dos en prioridad 3 y uno en 1: el de prioridad baja nunca entra, y
-        # entre los dos altos se alterna por carga.
+        # entre los dos altos se alterna. El primero lo decide el azar.
         _set_prioridad(self.et, self.b, 3)
         _set_prioridad(self.et, self.c, 3)
-        hosts = [
-            _reservar(self.et, slot_futuro(dias=d), f'x{d}@x.com').host
-            for d in (1, 2, 3, 4)
-        ]
+        hosts = _reservar_seguidas(self.et, 4)
         self.assertNotIn(self.a, hosts)
-        self.assertEqual(hosts, [self.b, self.c, self.b, self.c])
+        self.assertEqual(set(hosts), {self.b, self.c})
+        self.assertEqual(hosts, [hosts[0], hosts[1], hosts[0], hosts[1]])
 
     def test_prioridad_intermedia_se_ordena_entre_las_otras(self, _ev, _conf):
         _set_prioridad(self.et, self.a, 1)
@@ -122,26 +188,25 @@ class PrioridadRoundRobinTest(TestCase):
         self.assertEqual(r2.host, self.b)
 
     def test_bajar_la_prioridad_deja_al_host_de_ultimo(self, _ev, _conf):
-        # Ana es la primera del pool, así que sin tocar nada ganaría el desempate.
+        # Ana se queda sola en la prioridad de abajo: no entra mientras los otros
+        # dos estén libres, por mucho que a ella no le haya tocado nunca.
         _set_prioridad(self.et, self.b, 2)
         _set_prioridad(self.et, self.c, 2)
-        r = _reservar(self.et, slot_futuro(dias=1), 'x1@x.com')
-        self.assertEqual(r.host, self.b)
+        hosts = _reservar_seguidas(self.et, 4)
+        self.assertNotIn(self.a, hosts)
 
     # --- Prioridad 0: excluido del evento ---
 
     def test_el_excluido_no_recibe_reservas(self, _ev, _conf):
-        # Ana es la primera del pool y sin tocar nada se llevaría la primera.
+        # A Ana no le ha tocado nunca, así que sin el 0 abriría la ronda.
         _set_prioridad(self.et, self.a, 0)
-        hosts = [
-            _reservar(self.et, slot_futuro(dias=d), f'x{d}@x.com').host
-            for d in (1, 2, 3, 4)
-        ]
+        hosts = _reservar_seguidas(self.et, 4)
         self.assertNotIn(self.a, hosts)
-        self.assertEqual(hosts, [self.b, self.c, self.b, self.c])
+        self.assertEqual(set(hosts), {self.b, self.c})
 
-    def test_el_excluido_no_gana_ni_siendo_el_unico_con_carga_cero(self, _ev, _conf):
-        # Con carga 0 el reparto se lo daría a Ana; el 0 se evalúa antes.
+    def test_el_excluido_no_gana_ni_llevando_mas_tiempo_sin_que_le_toque(self, _ev, _conf):
+        # A Ana no le ha tocado nunca, así que el turno sería suyo; el 0 se
+        # evalúa antes.
         _set_prioridad(self.et, self.a, 0)
         # Horas distintas del mismo día; ver el comentario de más arriba.
         for i in range(3):
