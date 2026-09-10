@@ -9,7 +9,7 @@ from .models import EventType, EventTypeXHost
 @admin.register(EventType)
 class EventTypeAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'host', 'duracion_minutos', 'slug_equipo', 'activo', 'crm_destino', 'registrar_en_academia', 'fecha_actualizacion')
-    list_filter = ('activo', 'crm_destino', 'registrar_en_academia')
+    list_filter = ('activo', 'crm_destino', 'registrar_en_academia', 'academia_lms_id')
     search_fields = ('nombre', 'host__username', 'host__email')
     readonly_fields = ('id',)
     fields = ('id', 'host', 'nombre', 'slug', 'slug_equipo', 'descripcion', 'duracion_minutos',
