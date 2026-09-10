@@ -112,6 +112,49 @@ def get_gtm_config(escuela):
     return GTM_CONFIG.get(str(escuela).strip().lower(), {})
 
 
+# ---------------------------------------------------------------------------
+# Favicon por marca (ruta relativa a STATIC_URL; la plantilla le pone {% static %}).
+#
+# Las páginas que sirve Django tienen que declararlo igual que lo declaraban las
+# de Webflow, porque el navegador no tiene de dónde sacarlo si no: el
+# `/favicon.ico` de la raíz —su único recurso automático— responde 404 en los
+# cuatro dominios de marca. Sin este <link> la pestaña sale con el icono en
+# blanco del navegador, que es lo que llevaba pasando en todo el funnel salvo en
+# Conquer Legal (el único que lo inyectaba desde el tema de React).
+#
+# Los ficheros son los mismos iconos que sirve cada web, descargados del CDN de
+# Webflow a `static/img/favicons/`: servirlos nosotros los deja versionados con
+# el resto de estáticos y sin depender de un dominio del que estamos saliendo.
+# ---------------------------------------------------------------------------
+FAVICON_POR_ESCUELA = {
+    'conquer-blocks': 'img/favicons/conquer-blocks.png',
+    'conquer-finance': 'img/favicons/conquer-finance.png',
+    'conquer-languages': 'img/favicons/conquer-languages.png',
+    'conquer-legal': 'img/favicons/conquer-legal.png',
+}
+
+# Líneas que no son marca propia: llevan el icono de su marca madre, igual que
+# comparten dominio, píxeles y contenedor de GTM.
+FAVICON_POR_ESCUELA.update({
+    'conquer-ai': FAVICON_POR_ESCUELA['conquer-blocks'],
+    'conquer-blocks-esp': FAVICON_POR_ESCUELA['conquer-blocks'],
+    'conquer-languages-kids': FAVICON_POR_ESCUELA['conquer-languages'],
+    # Alias sin guion, como en los mapas de arriba.
+    'conquerblocks': FAVICON_POR_ESCUELA['conquer-blocks'],
+    'conquerai': FAVICON_POR_ESCUELA['conquer-blocks'],
+    'conquerfinance': FAVICON_POR_ESCUELA['conquer-finance'],
+    'conquerlanguages': FAVICON_POR_ESCUELA['conquer-languages'],
+    'conquerlegal': FAVICON_POR_ESCUELA['conquer-legal'],
+})
+
+
+def get_favicon(escuela):
+    """Ruta estática del favicon de una escuela, o '' si no se reconoce."""
+    if not escuela:
+        return ''
+    return FAVICON_POR_ESCUELA.get(str(escuela).strip().lower(), '')
+
+
 def pixel_ids(request):
     """Defaults para que las variables existan en todos los templates.
 

@@ -1,9 +1,16 @@
-{% load django_vite %}<!DOCTYPE html>
+{% load django_vite static %}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% if funnel %}{{ funnel.nombre }} — {% endif %}Conquer</title>
+
+  {% comment %}
+    Icono de la pestaña. Va aquí y no en JS para que llegue con el primer byte:
+    el navegador lo pide antes de montar el bundle, y su único recurso si no lo
+    encuentra es `/favicon.ico`, que da 404 en los cuatro dominios de marca.
+  {% endcomment %}
+  {% if favicon %}<link rel="icon" type="image/png" href="{% static favicon %}">{% endif %}
 
   {% comment %}
     Preload de la imagen LCP de la landing: la textura paperboard de la tarjeta

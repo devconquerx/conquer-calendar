@@ -666,7 +666,7 @@ def _spa_render(request, funnel, stage, escuela=None, region=None):
     se pasan aquí. `funnel` puede ser None (confirmación sin funnel activo).
     """
     from . import consentimiento
-    from .context_processors import get_gtm_config, get_pixel_ids
+    from .context_processors import get_favicon, get_gtm_config, get_pixel_ids
     escuela = escuela or (funnel.escuela if funnel else '')
     region = region or (funnel.region if funnel else '')
     base = _base_path(request)
@@ -721,6 +721,7 @@ def _spa_render(request, funnel, stage, escuela=None, region=None):
             'confirmation_url': confirmation_url,
             'pixel_ids': get_pixel_ids(escuela),
             'gtm': get_gtm_config(escuela),
+            'favicon': get_favicon(escuela),
             'consentimiento': consentimiento.contexto(request, escuela),
             'app_base_path': base,
             'ssr_html': ssr_html,
