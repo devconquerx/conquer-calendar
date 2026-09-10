@@ -435,14 +435,16 @@
                     <div class="row g-4 mt-1">
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="academia_lms_id">
-                                ID de la academia en el LMS
+                                Academia en el LMS
                                 <i class="bi bi-info-circle u-info"
-                                   title="Id numérico de la academia a la que pertenecen estas sesiones. Lo da el equipo de la academia. Si lo dejas vacío, lo resuelven ellos por el profesor."></i>
+                                   title="A qué academia pertenecen estas sesiones. Si lo dejas vacío se registran igual, pero quedan fuera de los recuentos por academia."></i>
                             </label>
-                            <input type="number" min="1" name="academia_lms_id" id="academia_lms_id"
-                                   class="form-control{% if form.academia_lms_id.errors %} is-invalid{% endif %}"
-                                   value="{{ form.academia_lms_id.value|default:'' }}"
-                                   placeholder="Lo da el equipo de la academia" />
+                            <select name="academia_lms_id" id="academia_lms_id"
+                                    class="form-select{% if form.academia_lms_id.errors %} is-invalid{% endif %}">
+                                {% for valor, etiqueta in form.fields.academia_lms_id.choices %}
+                                <option value="{{ valor }}" {% if valor|stringformat:"s" == form.academia_lms_id.value|default:""|stringformat:"s" %}selected{% endif %}>{% if valor %}{{ etiqueta }}{% else %}Sin especificar{% endif %}</option>
+                                {% endfor %}
+                            </select>
                             {% if form.academia_lms_id.errors %}
                             <div class="invalid-feedback">{{ form.academia_lms_id.errors|join:", " }}</div>
                             {% endif %}

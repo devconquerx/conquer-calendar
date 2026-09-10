@@ -101,7 +101,7 @@ class EventTypeForm(forms.ModelForm):
         labels = {
             'crm_destino': 'Destino en el CRM',
             'registrar_en_academia': 'Registrar las sesiones en la academia',
-            'academia_lms_id': 'ID de la academia en el LMS',
+            'academia_lms_id': 'Academia en el LMS',
             'unico_por_invitado': 'Solo una reserva por invitado',
             'mostrar_caja_comentarios': 'Caja de comentarios',
         }
