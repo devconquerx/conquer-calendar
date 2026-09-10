@@ -8,7 +8,7 @@
   * { box-sizing: border-box; }
   body {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 9.1pt; line-height: 1.38; color: #1a1a1a; margin: 0;
+    font-size: 9.1pt; line-height: 1.33; color: #1a1a1a; margin: 0;
     -webkit-font-smoothing: antialiased;
   }
   .kicker { font-size: 7.4pt; letter-spacing: 1.1pt; text-transform: uppercase;
@@ -16,19 +16,23 @@
   h1 { font-size: 16pt; margin: 0 0 1mm; letter-spacing: -0.2pt; }
   .sub { color: #6b6b6b; font-size: 8.4pt; margin: 0 0 4mm; padding-bottom: 3mm;
          border-bottom: 1.5pt solid #1a1a1a; }
-  h2 { font-size: 9.6pt; margin: 4.2mm 0 1.4mm; letter-spacing: -0.1pt; }
+  h2 { font-size: 9.6pt; margin: 3.4mm 0 1.2mm; letter-spacing: -0.1pt; }
   h2 .n { display: inline-block; width: 4.6mm; height: 4.6mm; line-height: 4.6mm;
           text-align: center; background: #1a1a1a; color: #fff; border-radius: 50%;
           font-size: 7.4pt; margin-right: 1.6mm; vertical-align: 1pt; }
-  h3 { font-size: 8.8pt; margin: 3mm 0 1.2mm; }
+  h3 { font-size: 8.8pt; margin: 2.4mm 0 1mm; }
+  .paso { margin: 2.6mm 0 1mm; font-size: 8.8pt; font-weight: bold; }
+  .paso .p { display: inline-block; background: #1a1a1a; color: #fff; font-size: 7.2pt;
+             padding: 0.5mm 1.8mm; border-radius: 1.4pt; margin-right: 2mm;
+             letter-spacing: 0.4pt; text-transform: uppercase; font-weight: bold; }
   p { margin: 0 0 1.4mm; }
   code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.2pt;
          background: #f0f0ee; padding: 0.3mm 1mm; border-radius: 1.4pt; }
-  pre { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 7.6pt;
-        line-height: 1.34; background: #f7f7f5; border-left: 1.6pt solid #c9c9c4;
+  pre { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 7.3pt;
+        line-height: 1.32; background: #f7f7f5; border-left: 1.6pt solid #c9c9c4;
         padding: 1.6mm 2.4mm; margin: 1.4mm 0; overflow: hidden; white-space: pre-wrap; }
   pre .c { color: #7a7a72; }
-  ul { margin: 0.8mm 0 1.4mm; padding-left: 4.6mm; }
+  ul, ol { margin: 0.8mm 0 1.4mm; padding-left: 4.6mm; }
   li { margin-bottom: 0.5mm; }
   .lead { background: #1a1a1a; color: #fff; padding: 2.2mm 3mm; border-radius: 1.6pt;
           margin-bottom: 3.4mm; font-size: 9.4pt; }
@@ -42,10 +46,15 @@
   th { border-bottom: 1pt solid #1a1a1a; font-size: 7.8pt; text-transform: uppercase;
        letter-spacing: 0.3pt; color: #555; }
   td:first-child { white-space: nowrap; }
+  .check { list-style: none; padding-left: 0; }
+  .check li { padding-left: 5.4mm; position: relative; margin-bottom: 0.7mm; }
+  .check li:before { content: ""; position: absolute; left: 0; top: 0.5mm;
+                     width: 3.2mm; height: 3.2mm; border: 0.8pt solid #1a1a1a;
+                     border-radius: 0.8pt; }
   .foot { margin-top: 4mm; padding-top: 2mm; border-top: 0.5pt solid #dedede;
           color: #7a7a72; font-size: 7.6pt; }
-  h2, h3 { break-after: avoid; page-break-after: avoid; }
-  .warn, pre, table { break-inside: avoid; page-break-inside: avoid; }
+  h2, h3, .paso { break-after: avoid; page-break-after: avoid; }
+  .warn, table { break-inside: avoid; page-break-inside: avoid; }
 </style>
 </head>
 <body>
@@ -55,196 +64,265 @@
 <p class="sub">Pasos a realizar en la academia para almacenar las sesiones que se agendan en el
 calendario. Documento técnico de implementación.</p>
 
-<div class="lead"><b>El calendario envía cada sesión; la academia la guarda.</b>
-Una sola mutación de GraphQL para todo el ciclo de vida &mdash; alta, cancelación y
-reagendamiento &mdash; con un <i>upsert</i> por <code style="background:#3a3a3a;color:#fff">reservationId</code>.</div>
+<h2><span class="n">1</span>Qué se va a montar</h2>
+<p>Cada vez que se agenda una sesión en el calendario, este la envía a la academia, que la
+guarda. También se envía cuando la sesión se cancela o se reagenda. Con eso la academia puede
+responder por su cuenta cuántas sesiones da cada profesor al mes, cuál es su media o qué uso real
+tiene el servicio, sin depender del calendario para nada.</p>
+<p>El transporte es el endpoint GraphQL que ya existe, con una mutación nueva autenticada por
+<code>X-API-Key</code>, igual que las de usuarios. El equivalente más parecido a lo que hay que
+montar es <code>syncBillingOrder</code>: mismo patrón de payload y misma idea de sincronizar algo
+que vive en otro sistema.</p>
 
-<h2><span class="n">1</span>Por qué se envía en vez de leerse</h2>
-<p>Las preguntas que hay que poder responder &mdash;cuántas sesiones da cada profesor al mes,
-cuál es su media, qué uso real tiene el servicio&mdash; son de gestión académica, y la gestión
-académica vive en la academia.</p>
-<p>La alternativa era que la academia leyera el dato del calendario y no guardarlo, para no
-duplicarlo. No sirve: el calendario mueve del orden de <b>500 agendas al día</b>, lleva dentro
-todos los embudos y en algún momento habrá que limpiar reservas viejas o la tabla no para de
-crecer. Un histórico académico no puede colgar de algo que está previsto borrar. Duplicar es el
-precio de que sobreviva a esa limpieza.</p>
+<div class="warn"><span class="t">Se envía en vez de leerse, y esto es lo que lo decide</span>
+La alternativa era que la academia leyera el dato del calendario y no lo guardara, para no
+duplicarlo. No sirve: el calendario mueve del orden de 500 agendas al día y en algún momento habrá
+que limpiar reservas viejas o la tabla no para de crecer. Un histórico académico no puede colgar de
+algo que está previsto borrar. Duplicar es el precio de que sobreviva a esa limpieza.</div>
 
-<h2><span class="n">2</span>Qué se manda</h2>
-<p>Lo acordado y nada más: el profesor, el nombre del evento y cuándo fue. Es lo justo para
-auditar el uso del servicio, que es para lo que se pidió.</p>
+<h2><span class="n">2</span>Datos acordados</h2>
+<p>Se manda el profesor, el nombre del evento y cuándo fue. Es lo justo para auditar el uso del
+servicio, que es para lo que se pidió.</p>
 
 <table>
 <tr><th>Campo</th><th>Tipo</th><th>Qué es</th></tr>
 <tr><td><code>reservation_id</code></td><td>String</td><td>Id de la reserva en el calendario. <b>Clave del upsert.</b></td></tr>
 <tr><td><code>status</code></td><td>String</td><td><code>confirmed</code> o <code>cancelled</code>.</td></tr>
-<tr><td><code>academy_id</code></td><td>Int?</td><td>La <code>Academy</code>. Puede llegar <code>null</code> &mdash; ver punto 6.</td></tr>
-<tr><td><code>professor_email</code></td><td>String</td><td>En minúsculas. Empareja con <code>Professor.user</code>.</td></tr>
+<tr><td><code>academy_id</code></td><td>Int?</td><td>La <code>Academy</code>. Puede llegar <code>null</code> &mdash; ver punto 4.</td></tr>
+<tr><td><code>professor_email</code></td><td>String</td><td>En minúsculas. Empareja con <code>Professor.user.email</code>.</td></tr>
 <tr><td><code>student_lms_id</code></td><td>String</td><td>El <code>UserProfile.id</code>, del token del iframe. Vacío si la reserva no vino embebida.</td></tr>
 <tr><td><code>student_email</code></td><td>String</td><td>En minúsculas. Respaldo del anterior.</td></tr>
 <tr><td><code>event_type_name</code></td><td>String</td><td>Ej. «Clase 1 a 1 de inglés».</td></tr>
 <tr><td><code>starts_at</code></td><td>DateTime</td><td>ISO-8601 en <b>UTC</b>.</td></tr>
-<tr><td><code>ends_at</code></td><td>DateTime</td><td>ISO-8601 en UTC. Va por el feedback (punto 8), no por el recuento.</td></tr>
+<tr><td><code>ends_at</code></td><td>DateTime</td><td>ISO-8601 en UTC. Va por el feedback (punto 4), no por el recuento.</td></tr>
 </table>
 
-<p><b>Lo que no se manda</b>, aunque el calendario lo tenga a mano: los nombres del profesor y
-del alumno &mdash;la academia ya los tiene registrados, y sus datos personales no tienen por qué
-viajar dos veces&mdash;; el id del tipo de evento, el teléfono, la zona horaria del alumno, la URL
-del Meet y la hora en que se reservó; y la duración, que se saca restando. Cada campo de más es
-uno que hay que mantener sincronizado entre dos aplicaciones y que alguien acabará usando para
-algo. Añadir uno el día que haga falta cuesta menos que quitarlo cuando ya se usa.</p>
+<p><b>Lo que no se manda</b>, aunque el calendario lo tenga: los nombres del profesor y del
+alumno &mdash;la academia ya los tiene registrados, y sus datos personales no tienen por qué estar
+en dos sitios&mdash;, el id del tipo de evento, el teléfono, la zona horaria, la URL del Meet, la
+hora en que se reservó y la duración, que se saca restando.</p>
 
-<h2><span class="n">3</span>La mutación</h2>
-<p>En <code>api/mutations/</code>, con <code>permission_classes=[IsAuthenticatedWithAPIKey]</code>
-como el resto. Autenticación por la cabecera <code>X-API-Key</code>, la que ya valida
-<code>api/authentication.py</code>. El equivalente más parecido que ya existe es
-<code>syncBillingOrder</code>: mismo patrón de payload y misma idea de sincronizar algo que
-vive en otro sistema.</p>
+<h2><span class="n">3</span>Pasos a realizar</h2>
 
-<pre>mutation SyncCalendarSession($input: SyncCalendarSessionInput!) {
-  syncCalendarSession(input: $input) {
-    success
-    created
-    errors
-  }
-}</pre>
+<p class="paso"><span class="p">Paso 1</span>El modelo</p>
+<p>Va en <code>calendars</code>, pero como modelo aparte de <code>CalendarEvent</code>: eso es la
+agenda propia de la academia &mdash;masterclases, recurrencias&mdash; y esto es el registro de una
+reserva que ya ocurrió en otro sistema. Mezclarlos obligaría a que todo lo que hoy consulta
+<code>CalendarEvent</code> aprendiera a distinguir entre las dos cosas.</p>
 
-<pre>@strawberry.type
+<pre><span class="c"># calendars/models.py</span>
+class CalendarSession(HasTimestamps):
+    """Sesión agendada en el calendario externo. Histórico, no agenda."""
+
+    class Status(models.TextChoices):
+        CONFIRMED = "confirmed", _("Confirmada")
+        CANCELLED = "cancelled", _("Cancelada")
+
+    reservation_id = models.CharField(max_length=64, unique=True, verbose_name=_("Id en el calendario"))
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.CONFIRMED,
+                              verbose_name=_("Estado"))
+
+    academy = models.ForeignKey(Academy, on_delete=models.PROTECT, null=True, blank=True,
+                                related_name="calendar_sessions", verbose_name=_("Academia"))
+    <span class="c"># SET_NULL y no CASCADE: dar de baja a un profesor no puede borrar el</span>
+    <span class="c"># histórico de las clases que dio. Lo mismo con el alumno.</span>
+    professor = models.ForeignKey(Professor, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name="calendar_sessions", verbose_name=_("Profesor"))
+    student = models.ForeignKey("accounts.UserProfile", on_delete=models.SET_NULL, null=True,
+                                blank=True, related_name="calendar_sessions", verbose_name=_("Alumno"))
+
+    <span class="c"># Se guardan tal como llegan aunque las FK resuelvan: si un emparejamiento</span>
+    <span class="c"># falla, sin esto no hay forma de saber de quién era la sesión.</span>
+    professor_email = models.EmailField(verbose_name=_("Email del profesor"))
+    student_email = models.EmailField(blank=True, verbose_name=_("Email del alumno"))
+
+    event_type_name = models.CharField(max_length=255, verbose_name=_("Nombre del evento"))
+    starts_at = models.DateTimeField(verbose_name=_("Inicio (UTC)"))
+    ends_at = models.DateTimeField(verbose_name=_("Fin (UTC)"))
+
+    class Meta:
+        verbose_name = _("Sesión del calendario")
+        verbose_name_plural = _("Sesiones del calendario")
+        ordering = ["-starts_at"]
+        indexes = [
+            <span class="c"># "sesiones de este profesor en este mes" es LA consulta del dashboard.</span>
+            <span class="c"># Sin índice escanea la tabla entera, y esta tabla solo crece.</span>
+            models.Index(fields=["professor", "starts_at"]),
+            models.Index(fields=["student", "starts_at"]),
+            models.Index(fields=["academy", "status", "starts_at"]),
+        ]</pre>
+
+<pre>kool run django makemigrations calendars
+kool run django migrate</pre>
+
+<p class="paso"><span class="p">Paso 2</span>El input y el payload</p>
+<p>Los campos se declaran en <code>snake_case</code>; Strawberry los expone en
+<code>camelCase</code> solo, igual que en <code>order_id</code> o <code>academy_id</code>.</p>
+
+<pre><span class="c"># api/types/calendar_session.py</span>
+@strawberry.input
+class SyncCalendarSessionInput:
+    reservation_id: str
+    status: str
+    professor_email: str
+    student_email: str
+    event_type_name: str
+    starts_at: datetime
+    ends_at: datetime
+    academy_id: Optional[int] = None
+    student_lms_id: str = ""
+
+
+@strawberry.type
 class SyncCalendarSessionPayload:
     success: bool
     created: bool = False
     errors: Optional[List[str]] = None</pre>
 
-<p>Los campos del input se declaran en <code>snake_case</code>; Strawberry los expone en
-<code>camelCase</code> solo, igual que en <code>order_id</code> o <code>academy_id</code>.</p>
+<p class="paso"><span class="p">Paso 3</span>La mutación</p>
+<p>Referencia, no receta: la decisión de qué hacer cuando el profesor no está registrado es de la
+academia (ver punto 4) y aquí va marcada.</p>
 
-<h2><span class="n">4</span>El modelo</h2>
-<p>Una tabla nueva. No encaja en <code>CalendarEvent</code>: eso es el calendario propio de la
-academia &mdash;masterclases, recurrencias&mdash; y esto es el registro de una reserva que ya
-ocurrió en otro sistema. Mezclarlas obligaría a que todo lo que hoy consulta
-<code>CalendarEvent</code> aprenda a distinguir entre las dos.</p>
-<p>Lo mínimo: <code>reservation_id</code> (<code>unique=True</code>), <code>status</code>,
-FK a <code>Academy</code>, FK nullable a <code>courses.Professor</code>, FK nullable a
-<code>accounts.UserProfile</code>, <code>event_type_name</code>, <code>starts_at</code> y
-<code>ends_at</code>.</p>
-<p>Conviene guardar también <code>professor_email</code> y <code>student_email</code> tal como
-llegan, aunque las FK resuelvan: si mañana falla un emparejamiento, sin eso no hay forma de
-saber de quién era la sesión.</p>
+<pre><span class="c"># api/mutations/calendar_session.py</span>
+@strawberry.type
+class CalendarSessionMutation:
+    @strawberry.mutation(permission_classes=[IsAuthenticatedWithAPIKey])
+    def sync_calendar_session(self, input: SyncCalendarSessionInput) -> SyncCalendarSessionPayload:
+        professor_email = normalize_email(input.professor_email)
+        professor = Professor.objects.filter(user__email=professor_email).first()
+        if not professor:
+            <span class="c"># DECISIÓN DE LA ACADEMIA. Con success=False el calendario reintenta y</span>
+            <span class="c"># avisa, y la sesión entra sola en cuanto se dé de alta al profesor.</span>
+            <span class="c"># La otra opción es guardarla con professor=None y el aviso en errors.</span>
+            return SyncCalendarSessionPayload(
+                success=False, errors=[f"Professor not registered: {professor_email}"]
+            )
 
-<h2><span class="n">5</span>Upsert por <code>reservation_id</code>, siempre</h2>
-<p>Nunca insertar a ciegas. El calendario reintenta &mdash;tres veces por tarea, más un barrido
-periódico, más un comando de reenvío manual&mdash;, así que el mismo <code>reservation_id</code>
-puede llegar varias veces. Con el upsert, repetir no duplica. Igual que
-<code>sync_billing_order</code>: <code>created=True</code> si era nueva, <code>False</code> si
-actualizó una que ya estaba.</p>
+        <span class="c"># Por id primero: es el UserProfile.id que la propia academia firmó en el</span>
+        <span class="c"># token del iframe. El email es el respaldo de lo que no viene embebido.</span>
+        student = None
+        if input.student_lms_id.isdigit():
+            student = UserProfile.objects.filter(pk=int(input.student_lms_id)).first()
+        if not student and input.student_email:
+            student = UserProfile.objects.filter(email=normalize_email(input.student_email)).first()
 
-<h3>Llegan altas y bajas</h3>
-<ul>
-  <li><b>Se agenda</b> &rarr; llega con <code>status: "confirmed"</code>.</li>
-  <li><b>Se cancela</b> &rarr; llega <b>la misma</b> <code>reservation_id</code> con <code>status: "cancelled"</code>.</li>
-  <li><b>Se reagenda</b> &rarr; llegan <b>dos</b>: la vieja como <code>cancelled</code> y una nueva, con otro id, como <code>confirmed</code>.</li>
-</ul>
+        academy = Academy.objects.filter(pk=input.academy_id).first() if input.academy_id else None
+
+        _, created = CalendarSession.objects.update_or_create(
+            reservation_id=input.reservation_id,   <span class="c"># upsert: reintentar no duplica</span>
+            defaults={
+                "status": input.status,
+                "academy": academy,
+                "professor": professor,
+                "student": student,
+                "professor_email": professor_email,
+                "student_email": normalize_email(input.student_email) or "",
+                "event_type_name": input.event_type_name,
+                "starts_at": input.starts_at,
+                "ends_at": input.ends_at,
+            },
+        )
+        return SyncCalendarSessionPayload(success=True, created=created)</pre>
+
+<p class="paso"><span class="p">Paso 4</span>Engancharla al esquema</p>
+<p>Una línea, y es la que se olvida: sin ella la mutación no existe y no da ningún error.</p>
+<pre><span class="c"># api/schema.py</span>
+from .mutations.calendar_session import CalendarSessionMutation
+
+@strawberry.type
+class Mutation(UserMutation, CalendarSessionMutation):
+    pass</pre>
+
+<p class="paso"><span class="p">Paso 5</span>Crear la API key</p>
+<p>Una <code>APIKey</code> nueva desde el admin, con un nombre que la identifique
+(«Calendario»). Se comparte con el equipo del calendario por gestor de contraseñas, nunca por
+mensajería. Conviene una distinta para pruebas y para producción.</p>
+
+<p class="paso"><span class="p">Paso 6</span>Comprobar de extremo a extremo</p>
+<p>Con la clave configurada en el calendario y un tipo de evento de prueba marcado:</p>
+<ol>
+  <li>Se agenda una sesión de mentira &rarr; aparece una fila con <code>status: confirmed</code>.</li>
+  <li>Se cancela &rarr; <b>la misma</b> fila pasa a <code>cancelled</code>. Si aparece una segunda fila, el upsert no está tomando <code>reservation_id</code> como clave.</li>
+  <li>Se reagenda &rarr; quedan dos filas: la vieja cancelada y una nueva confirmada.</li>
+</ol>
+
+<h2><span class="n">4</span>Detalles a tener en cuenta</h2>
+
 <div class="warn"><span class="t">Las canceladas se guardan, pero no cuentan</span>
-Hay que almacenarlas en vez de borrarlas, y dejarlas fuera del recuento de «cuántas sesiones
-dio este profesor en agosto». Si se cuentan, el número mide clases que nunca ocurrieron y deja
-de servir para nada.</div>
+Hay que almacenarlas en vez de borrarlas, y dejarlas fuera del recuento de «cuántas sesiones dio
+este profesor en agosto». Si se cuentan, el número mide clases que nunca ocurrieron y deja de
+servir para nada.</div>
 
 <div class="warn"><span class="t">Si algo falla, <code>success: false</code></span>
 GraphQL responde 200 aunque la mutación falle, y el error va en el cuerpo. El calendario mira el
 cuerpo justo para no dar por bueno un envío que no se guardó: un <code>success: true</code> de
-mentira es la forma silenciosa de perder el dato. Devolver el error no pierde la sesión, porque
-se reintenta.</div>
-
-<h2><span class="n">6</span>Tres puntos donde esto se puede torcer</h2>
+mentira es la forma silenciosa de perder el dato. Devolver el error no pierde la sesión, porque se
+reintenta.</div>
 
 <h3>El profesor puede no resolverse aunque esté registrado</h3>
-<p><code>Professor.user</code> es un <code>OneToOneField(null=True)</code>. Un
+<p><code>Professor.user</code> es un <code>OneToOneField(null=True)</code>: un
 <code>Professor</code> sin <code>user</code> no tiene email y no empareja con nada. Y aun
 teniéndolo, el email que manda el calendario es el corporativo con el que esa persona organiza
-allí, que no tiene por qué ser el mismo que el de su <code>UserProfile</code>.</p>
-<p>Hay dos salidas razonables y la elección corresponde a la academia, porque cambia lo que hace
-el calendario: guardar la sesión con <code>professor</code> a <code>null</code> y el aviso en
-<code>errors</code>, o devolver <code>success: false</code> para que se reintente hasta que el
-profesor esté dado de alta. Con <code>false</code> el calendario reintenta y encola alerta.
-Lo que conviene evitar es aceptarla con <code>success: true</code> y dejarla huérfana sin rastro.</p>
+allí, que no tiene por qué coincidir con el de su <code>UserProfile</code>.</p>
+<p>La elección entre devolver <code>success: false</code> o guardar con <code>professor=None</code>
+corresponde a la academia, porque cambia lo que hace el calendario. Lo que conviene evitar es
+aceptarla con <code>success: true</code> y dejarla huérfana sin rastro.</p>
 
-<h3>El alumno se empareja por <code>student_lms_id</code></h3>
-<p>Ese campo es el <code>UserProfile.id</code>: el mismo <code>uid</code> que la academia ya firma
-dentro del token del iframe. El emparejamiento es por tanto una búsqueda por clave primaria, no
-por email.</p>
-<p>El email queda de respaldo, y hace falta: <b>los tipos de evento que se registran no son solo
-los que se embeben</b>. La casilla que activa el envío está en todos los tipos de evento del
-calendario y se irá marcando lo que interese medir. En los que no se embeben nunca habrá
-<code>student_lms_id</code>, y en algunos ni siquiera habrá un alumno de la academia al otro lado.
-Esas sesiones hay que guardarlas igual: las métricas por profesor siguen valiendo, que son las
-que se pidieron.</p>
+<h3>El alumno se empareja por id, con el email de respaldo</h3>
+<p><code>student_lms_id</code> es el <code>UserProfile.id</code>: el mismo <code>uid</code> que la
+academia ya firma dentro del token del iframe, así que es una búsqueda por clave primaria.</p>
+<p>El respaldo por email hace falta porque <b>los tipos de evento que se registran no son solo los
+que se embeben</b>. La casilla que activa el envío está en todos los tipos de evento del calendario
+y se irá marcando lo que interese medir. En los que no se embeben nunca habrá
+<code>student_lms_id</code>, y en algunos no habrá ningún alumno de la academia al otro lado. Esas
+sesiones hay que guardarlas igual, con <code>student=None</code>: las métricas por profesor siguen
+valiendo, que son las que se pidieron.</p>
 
 <h3><code>academy_id</code> puede venir null</h3>
-<p>La academia es multi-tenant y sus mutaciones piden <code>academy_id</code>. Desde el calendario
-no siempre se puede deducir: el código de escuela que usan las demás integraciones sale del embudo
-o del lead, y una clase 1 a 1 reservada desde la academia no tiene ninguno de los dos. Se configura
-a mano en cada tipo de evento.</p>
-<p>En cuanto la academia facilite los ids de sus <code>Academy</code>, se rellenan y el campo viaja
-siempre puesto. Se deja opcional para que la integración no se quede parada esperando ese dato:
-con <code>null</code>, hay que resolverlo por el profesor.</p>
+<p>Desde el calendario no siempre se puede deducir a qué academia pertenece una sesión: el código
+de escuela que usan las demás integraciones sale del embudo o del lead, y una clase 1 a 1 no tiene
+ninguno de los dos. Se configura a mano en cada tipo de evento, y en cuanto la academia facilite
+los ids de sus <code>Academy</code> viajará siempre puesto.</p>
+<p>Hasta entonces, guardarlo a <code>null</code> es correcto. No conviene deducirlo del profesor:
+<code>Professor</code> no tiene relación directa con <code>Academy</code> &mdash;solo la indirecta
+por <code>masters</code>&mdash; y un profesor puede dar clase en más de una.</p>
 
-<h2><span class="n">7</span>Ejemplo completo</h2>
-<pre>POST /graphql/
-Content-Type: application/json
-X-API-Key: &lt;la clave&gt;
-
-{
-  "operationName": "SyncCalendarSession",
-  "query": "mutation SyncCalendarSession($input: SyncCalendarSessionInput!) { syncCalendarSession(input: $input) { success created errors } }",
-  "variables": {
-    "input": {
-      "reservationId": "48213",
-      "status": "confirmed",
-      "academyId": 7,
-      "professorEmail": "profesor@conquerx.com",
-      "studentLmsId": "4321",
-      "studentEmail": "alumna@example.com",
-      "eventTypeName": "Clase 1 a 1 de inglés",
-      "startsAt": "2026-09-15T14:00:00+00:00",
-      "endsAt": "2026-09-15T14:45:00+00:00"
-    }
-  }
-}</pre>
-
-<h2><span class="n">8</span>Lo que viene después: el feedback del alumno</h2>
-<p>La idea es que unos minutos después de terminar la sesión le llegue al alumno un correo
-pidiéndole su opinión del profesor. Eso se hace entero en la academia y no necesita nada más del
-calendario: con <code>ends_at</code>, el alumno y el profesor ya se puede programar el envío y
-colgar la puntuación de la sesión. Por eso <code>ends_at</code> va en el payload aunque para
-contar sesiones bastaría con <code>starts_at</code>.</p>
-
-<h2><span class="n">9</span>El lado del calendario, ya hecho</h2>
+<h3>Qué no hace falta hacer</h3>
 <ul>
-  <li>Envío asíncrono, con tres reintentos y espera creciente. Una academia caída <b>nunca</b>
-      impide que un alumno reserve su clase.</li>
-  <li>Un barrido periódico revisa las reservas de las últimas 24 h y reencola las que no llegaron,
-      distinguiendo el alta de la cancelación.</li>
-  <li>Para huecos más antiguos que eso &mdash;una caída larga&mdash; hay un comando que reenvía un
-      rango concreto. Exige el rango a propósito: es para tapar huecos, no para volcar histórico.</li>
-  <li>Estado por reserva visible en el admin, en una columna propia: enviada, fallida con enlace al
-      registro del error, pendiente, o no aplica.</li>
+  <li>No hay que exponer ninguna API de lectura para que el calendario consulte nada.</li>
+  <li>No hay que tocar <code>CalendarEvent</code> ni nada de lo que hoy lo consulta.</li>
+  <li>No hay que sincronizar profesores ni alumnos con el calendario.</li>
+  <li>No hay que deduplicar por fecha y profesor: el upsert por <code>reservation_id</code> ya lo resuelve.</li>
+  <li>No hay que subir el histórico anterior. El recuento arranca el día que se enciende.</li>
+  <li>No hay que borrar las sesiones canceladas.</li>
 </ul>
-<p>Configuración: <code>ACADEMIA_ENABLED</code>, <code>ACADEMIA_GRAPHQL_URL</code> y
-<code>ACADEMIA_API_KEY</code>. Sin ellas cada envío hace no-op y lo deja en el log, así que el
-calendario se puede desplegar antes de que la mutación exista.</p>
 
-<h2><span class="n">10</span>Cómo se comprueba que las dos partes se entienden</h2>
-<ol>
-  <li>Se monta la mutación y se crea una <code>APIKey</code> para el calendario.</li>
-  <li>Se configuran URL y clave en el entorno de pruebas y se marca un tipo de evento de prueba.</li>
-  <li>Se agenda una sesión de mentira: tiene que aparecer en la academia.</li>
-  <li>Se cancela: la misma fila tiene que pasar a <code>cancelled</code>.</li>
-  <li>Se reagenda: tienen que quedar dos filas, una cancelada y una confirmada.</li>
-  <li>Con eso en verde, se marcan los tipos de evento reales.</li>
-</ol>
-<div class="warn"><span class="t">El histórico anterior no se sube</span>
-Las reservas previas a la integración se quedan donde están; el recuento arranca el día que se
-enciende. Si más adelante hiciera falta alguna de antes, se puede reenviar un rango con el comando,
-pero no es el plan.</div>
+<h2><span class="n">5</span>Qué queda resuelto en el calendario</h2>
+<p>Ya está implementado y no requiere ninguna acción por parte de la academia. Se detalla para
+acotar el alcance del trabajo:</p>
+<ul>
+  <li>Interruptor por tipo de evento para decidir qué sesiones se registran, con acciones en lote.</li>
+  <li>Envío asíncrono con tres reintentos y espera creciente. Una academia caída <b>nunca</b> impide que un alumno reserve su clase.</li>
+  <li>Envío del ciclo completo: alta, cancelación, reagendamiento y borrado desde el panel.</li>
+  <li>Un barrido periódico que reencola lo que no llegó, distinguiendo el alta de la cancelación.</li>
+  <li>Un comando para reenviar un rango concreto, por si una caída dura más que el barrido.</li>
+  <li>Estado por reserva visible en el admin: enviada, fallida con enlace al error, pendiente o no aplica.</li>
+  <li>El <code>uid</code> del alumno, guardado desde el token del iframe en el momento de reservar.</li>
+</ul>
+
+<h2><span class="n">6</span>Comprobación final</h2>
+<ul class="check">
+  <li>Modelo creado y migrado, con los índices por profesor y por fecha.</li>
+  <li>Input y payload declarados, con <code>success</code>, <code>created</code> y <code>errors</code>.</li>
+  <li>Mutación protegida con <code>IsAuthenticatedWithAPIKey</code>.</li>
+  <li>Mutación añadida a <code>class Mutation</code> en <code>api/schema.py</code>.</li>
+  <li>El upsert usa <code>reservation_id</code> como clave, no la fecha ni el profesor.</li>
+  <li>Decidido y comunicado qué se devuelve cuando el profesor no está registrado.</li>
+  <li><code>APIKey</code> creada y compartida por canal seguro, una por entorno.</li>
+  <li>Comunicada la URL exacta del endpoint GraphQL de cada entorno.</li>
+  <li>Facilitados los ids de las <code>Academy</code>, para rellenar <code>academy_id</code>.</li>
+  <li>Prueba de extremo a extremo superada: alta, cancelación sobre la misma fila y reagendamiento.</li>
+</ul>
 
 <p class="foot">Integración academia ↔ calendario · documento técnico · el calendario envía, la academia almacena</p>
 
