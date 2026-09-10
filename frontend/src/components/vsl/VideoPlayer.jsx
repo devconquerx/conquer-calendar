@@ -203,7 +203,27 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
     // desde el que se cuenta lo que tarde en fallar.
     inicioCargaRef.current = performance.now()
     const esHls = /\.m3u8(\?|$)/i.test(videoUrl)
-    const hlsNativo = !!videoRef.current.canPlayType('application/vnd.apple.mpegurl')
+    /* ¿Reproduce este navegador el HLS con hls.js o se lo dejamos a él?
+
+       NO se puede preguntar con `canPlayType('application/vnd.apple.mpegurl')`,
+       que es lo que se hacía antes: Chrome devuelve 'maybe' a casi cualquier
+       cosa que le preguntes —también a `video/mp4` pelado—, así que ese check
+       daba SIEMPRE positivo y hls.js no llegaba a cargarse nunca fuera de
+       Firefox. Chrome se quedaba con el `.m3u8` en las manos, y que funcionara
+       o no dependía de hasta dónde llegue su HLS nativo, que es incompleto: con
+       las VSL viejas colaba (Bunny las codificó con el audio dentro de cada
+       calidad), pero en cuanto una trae el audio como pista aparte
+       —`EXT-X-MEDIA:TYPE=AUDIO`, que es lo que genera Bunny ahora— el vídeo se
+       queda en negro cargando para siempre, sin lanzar ni un error.
+
+       Se mira si hay MediaSource, que es lo que de verdad necesita hls.js
+       (`Hls.isSupported()` comprueba justo esto). Donde no lo hay —Safari de
+       iPhone y iPad— se cae al reproductor del sistema, que es además el mejor
+       ahí: HLS es de Apple y lo entiende entero. */
+    const MSE = typeof window !== 'undefined'
+      && (window.MediaSource || window.ManagedMediaSource)
+    const usaHlsJs = esHls && !!MSE && typeof MSE.isTypeSupported === 'function'
+      && MSE.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"')
     /* El `src` NO se asigna cuando va a encargarse hls.js.
        Antes se asignaba siempre, y en los navegadores sin HLS nativo el <video>
        lanzaba un SRC_NOT_SUPPORTED en cuanto lo intentaba, justo antes de que
@@ -211,22 +231,25 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
        "se recuperó tras el error" que llegaban de Firefox y Edge— pero cada
        visita dejaba un fallo falso en Sentry, contaminando exactamente la
        métrica que este piloto quiere medir. */
-    if (!esHls || hlsNativo) videoRef.current.src = videoUrl
+    if (!usaHlsJs) videoRef.current.src = videoUrl
     videoRef.current.muted = true
 
-    /* HLS: solo para quien no lo entienda de nacimiento.
-       Safari, iOS, Chrome y Chrome de Android reproducen `.m3u8` directamente
-       —comprobado en los cuatro—, así que a ellos les basta el `src` de arriba.
-       El único navegador grande que no puede es Firefox (~2% del tráfico), y es
-       para ese para quien se carga hls.js.
+    /* La carga de hls.js va diferida por dos razones: este módulo también se
+       compila para el SSR, donde no debe entrar; y quien no reproduzca HLS
+       (todas las VSL en MP4) no se descarga una librería que no va a usar.
+       Mismo criterio que Plyr, aquí abajo.
 
-       La carga va diferida por dos razones: este módulo también se compila para
-       el SSR, donde hls.js no debe entrar; y así el 98% restante no se descarga
-       una librería que no va a usar. Mismo criterio que Plyr, aquí abajo. */
+       Si el import falla o la librería se declara no soportada, se le pasa el
+       `.m3u8` al navegador: es peor que hls.js, pero es mejor que un vídeo que
+       no arranca. */
     let hls = null
-    if (esHls && !hlsNativo) {
+    if (usaHlsJs) {
       import('hls.js').then(({ default: Hls }) => {
-        if (!videoRef.current || !Hls.isSupported()) return
+        if (!videoRef.current) return
+        if (!Hls.isSupported()) {
+          videoRef.current.src = videoUrl
+          return
+        }
         hls = new Hls({ enableWorker: true })
         hls.loadSource(videoUrl)
         hls.attachMedia(videoRef.current)
@@ -259,7 +282,12 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
             })
             .catch(() => {})
         })
-      }).catch(() => {})
+      }).catch(() => {
+        // No se pudo bajar hls.js (red, bloqueador…). Se le pasa el `.m3u8` al
+        // navegador en vez de dejar el <video> sin fuente: si lo entiende,
+        // reproduce; y si no, al menos lanza un error que sí se reporta.
+        if (videoRef.current) videoRef.current.src = videoUrl
+      })
     }
 
     // Modo debug (?debug=1): controles completos del reproductor (barra de
@@ -323,7 +351,7 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
               level: 'info',
               tags: {
                 id_video: idDelVideo(videoUrl),
-                entrega_video: esHls ? (hlsNativo ? 'hls-nativo' : 'hls-js') : 'mp4',
+                entrega_video: esHls ? (usaHlsJs ? 'hls-js' : 'hls-nativo') : 'mp4',
                 // En tramos porque lo que importa es "¿se le cortó mucho?",
                 // no el número exacto.
                 cortes_video: cortes === 0 ? 'ninguno' : cortes <= 2 ? '1-2' : cortes <= 5 ? '3-5' : '6+',
@@ -406,7 +434,7 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, onAgendarCl
               level: 'info',
               tags: {
                 id_video: idDelVideo(videoUrl),
-                entrega_video: esHls ? (hlsNativo ? 'hls-nativo' : 'hls-js') : 'mp4',
+                entrega_video: esHls ? (usaHlsJs ? 'hls-js' : 'hls-nativo') : 'mp4',
                 espera_video: tramoDeEspera(ms),
                 resolucion_inicial: media?.videoHeight ? `${media.videoHeight}p` : 'desconocida',
               },
