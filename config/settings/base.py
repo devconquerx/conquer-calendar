@@ -74,6 +74,7 @@ LOCAL_APPS = [
     'calendario.funnels',
     'calendario.leads',
     'calendario.monitoring',
+    'calendario.video_backup',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -394,6 +395,19 @@ SUPABASE_TABLE_LEADS = env.str('SUPABASE_TABLE_LEADS', default='leads_backup')
 SUPABASE_TABLE_PRE_SCHEDULES = env.str('SUPABASE_TABLE_PRE_SCHEDULES', default='preschedules_backup')
 SUPABASE_TABLE_SCHEDULES = env.str('SUPABASE_TABLE_SCHEDULES', default='schedules_backup')
 
+# ──────────────────────────────────────────────────────────────────────
+# Respaldo del catálogo de vídeo: Bunny Stream → Cloudflare R2
+# Apagado por defecto; sin credenciales el barrido no hace nada. La API key es
+# la de CUENTA de Bunny (api.bunny.net): de ella salen las keys de cada
+# librería y las contraseñas de sus storage zones.
+# ──────────────────────────────────────────────────────────────────────
+VIDEO_BACKUP_ENABLED = env.bool('VIDEO_BACKUP_ENABLED', default=False)
+BUNNY_ACCOUNT_API_KEY = env.str('BUNNY_ACCOUNT_API_KEY', default='')
+R2_ENDPOINT = env.str('R2_ENDPOINT', default='')  # https://<account>.eu.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID = env.str('R2_ACCESS_KEY_ID', default='')
+R2_SECRET_ACCESS_KEY = env.str('R2_SECRET_ACCESS_KEY', default='')
+R2_BUCKET = env.str('R2_BUCKET', default='conquerx')
+
 # Monitoring / alertas de tasks
 MONITORING_ENABLED = env.bool('MONITORING_ENABLED', default=False)
 MONITORING_MAILGUN_DOMAIN = env.str('MONITORING_MAILGUN_DOMAIN', default='conquerblocks.com')
@@ -434,6 +448,10 @@ CELERY_BEAT_SCHEDULE = {
     'purge-old-supabase-backups': {
         'task': 'calendario.core.tasks.purge_old_supabase_backups',
         'schedule': 3600.0,  # cada hora; borra lo más viejo que SUPABASE_RETENTION_DAYS
+    },
+    'sincronizar-bunny-r2': {
+        'task': 'calendario.video_backup.tasks.sincronizar_bunny_r2',
+        'schedule': 1200.0,  # cada 20 min; un vídeo nuevo tarda eso en tener copia
     },
 }
 

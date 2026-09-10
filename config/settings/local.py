@@ -58,6 +58,12 @@ LOGGING = {
         "django": {"handlers": ["console", "file"], "level": "INFO", "propagate": True},
         "django.db.backends": {"handlers": [], "level": "WARNING", "propagate": False},
         "calendario": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": True},
+        # Subir un vídeo por multipart con el root en DEBUG escupe la firma de
+        # cada parte y sepulta la salida del comando de respaldo.
+        "botocore": {"level": "WARNING", "propagate": True},
+        "boto3": {"level": "WARNING", "propagate": True},
+        "s3transfer": {"level": "WARNING", "propagate": True},
+        "urllib3": {"level": "WARNING", "propagate": True},
     },
     "formatters": {
         "app": {
