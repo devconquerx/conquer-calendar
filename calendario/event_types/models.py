@@ -145,22 +145,40 @@ class EventType(models.Model):
 
     # El LMS es multi-academia: sus cursos, sus matrículas y sus eventos de
     # calendario cuelgan todos de una `Academy`, y sus mutaciones piden un
-    # `academy_id`. Desde aquí no hay forma de deducirlo —el `school_code` que
-    # usan las demás integraciones sale del funnel o del Lead, y una clase 1 a 1
-    # reservada desde la academia no tiene ninguno de los dos—, así que lo
-    # declara el tipo de evento, que es lo que sí es de una marca concreta.
+    # `academy_id`. Desde aquí no hay forma de deducirlo, y del otro lado tampoco:
+    # su `Professor` no tiene academia —solo la indirecta por `masters`, que falla
+    # si no tiene másters asignados y es ambigua si los tiene de dos—, y el
+    # `UserProfile` pertenece a varias a la vez. El dato que hace falta no es «la
+    # academia del profesor» sino «la academia de la sesión», y el único sitio
+    # donde existe sin ambigüedad es este: el tipo de evento sí es de una marca
+    # concreta.
     #
-    # Opcional: si se deja vacío, la sesión viaja con `academyId: null` y le toca
-    # al LMS resolverla por el profesor. Así la integración no se queda parada
-    # esperando a que alguien averigüe un id interno del otro lado.
+    # Se guarda el id numérico porque es la clave primaria de su `Academy` y el
+    # contrato de la mutación pide un entero, pero quien configura elige por
+    # nombre: el número es suyo y no significa nada de este lado.
+    #
+    # Opcional: si se deja vacío, la sesión viaja con `academyId: null`. Eso no la
+    # pierde —se guarda igual y cuenta para las métricas por profesor—, pero la
+    # deja fuera de cualquier recuento por academia hasta que se rellene y se
+    # reenvíe.
+    class AcademiaLms(models.IntegerChoices):
+        """Las `Academy` del LMS, con el id que tienen en su base de producción.
+
+        Conquer Business (id 4) existe allí pero está en desarrollo y todavía no
+        se usa, así que no se ofrece. Cuando arranque, se añade aquí y ya está.
+        """
+        BLOCKS = 1, 'Conquer Blocks'
+        FINANCE = 2, 'Conquer Finance'
+        LANGUAGES = 3, 'Conquer Languages'
+
     academia_lms_id = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name='ID de la academia en el LMS',
+        choices=AcademiaLms.choices,
+        verbose_name='Academia en el LMS',
         help_text=(
-            'Id numérico de la academia (Academy) a la que pertenecen estas '
-            'sesiones. Lo da el equipo de la academia. Vacío = que lo resuelvan '
-            'ellos por el profesor.'
+            'A qué academia pertenecen estas sesiones. Vacío = la sesión se '
+            'registra igual, pero no entra en los recuentos por academia.'
         ),
     )
 
