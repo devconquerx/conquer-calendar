@@ -65,6 +65,23 @@ import pxGreen5 from '../assets/img/finance/pixel-5x5-green.svg'
 import pxGreenLg8 from '../assets/img/finance/px-lg-8-green.svg'
 import pxGreenSm7 from '../assets/img/finance/px-sm-7-green.svg'
 
+// ═══════════════════════════════════════════════════════════════════════════
+// TEMPORAL — INTERRUPTOR GLOBAL del pixel-art de Conquer Finance.
+//
+// El mismo que ya tiene Conquer Languages (`CL_PIXEL_STYLE`). A `false`
+// (petición de negocio) desaparece TODO el pixelado de la marca, en las cuatro
+// etapas (landing, vídeo, stepform y confirmación):
+//   · racimos de píxeles decorativos del fondo (y los del footer)
+//   · borde pixelado del canto de las fotos (instructor y Paso 2)
+//   · borde pixelado de los botones (CTA de landing/vídeo y botones del form)
+//
+// Ponlo a `true` y vuelve todo tal cual estaba, sin tocar nada más: las
+// posiciones (heredadas de Legal: `landing.decoPixels`, `confirmation.heroDecos`,
+// `footerDecos`) y los assets siguen definidos, solo quedan inertes mientras
+// esté apagado.
+// ═══════════════════════════════════════════════════════════════════════════
+const FI_PIXEL_STYLE = false
+
 // ── Paleta propia de Finance (2026-08-10, Figma "Gradiente Conquer") ──
 // Cartuso #AED916 · Lima #74CD2D · Esmeralda #3AC043. El gradiente de marca va
 // de cartuso a esmeralda; en botones se añade lima como parada intermedia.
@@ -78,19 +95,36 @@ const paperAccent = {
   auroraGradient: 'linear-gradient(60deg,#AED916,#3AC043,#AED916,#3AC043)',
   buttonGradient: FI_GRADIENT,
   buttonWeight: '800',
+  // Canto del CTA: sin pixel-art se recorta a rectángulo plano.
+  ...(FI_PIXEL_STYLE ? {} : { buttonClip: 'none' }),
   linkGradient: 'linear-gradient(to right,#AED916,#3AC043)',
   ring: '#74CD2D',
   solid: '#3AC043',
 }
 
 // Mismo mapeo que los píxeles de Legal (deco/sm7 = cluster 6x6, deco2/lg8 = 5x5).
-const paperPixels = {
-  deco: pxGreen6,
-  deco2: pxGreen5,
-  sm7: pxGreen6,
-  lg8: pxGreen5,
-  pxLg8: pxGreenLg8,
-  pxSm7: pxGreenSm7,
+// Sin `pixels` no se pinta ningún racimo: todos los puntos de render (Landing,
+// VideoPage, Confirmation) están guardados por `assets.pixels`.
+const paperPixels = FI_PIXEL_STYLE
+  ? {
+      deco: pxGreen6,
+      deco2: pxGreen5,
+      sm7: pxGreen6,
+      lg8: pxGreen5,
+      pxLg8: pxGreenLg8,
+      pxSm7: pxGreenSm7,
+    }
+  : undefined
+
+// Assets comunes a las cuatro etapas paperboard: los de Legal con el logo y los
+// píxeles de Finance. Sin máscara el canto de las fotos queda recto — tanto la
+// landing como el Paso 2 de la confirmación sólo aplican `mask-image` si estas
+// existen.
+const paperAssets = {
+  ...legal.assets,
+  logo,
+  pixels: paperPixels,
+  ...(FI_PIXEL_STYLE ? {} : { instructorMask: undefined, instructorMaskBottom: undefined }),
 }
 
 // CSS vars del StepForm y del calendario de agendamiento: el paperboard neutro
@@ -103,6 +137,8 @@ const paperCssVars = {
   '--theme-accent-bg': '#EFF8DC',
   '--theme-accent-ring': 'rgba(116,205,45,0.3)',
   '--theme-btn-gradient': FI_GRADIENT,
+  // Botones del stepform (NavigationControls / WelcomeScreen).
+  ...(FI_PIXEL_STYLE ? {} : { '--theme-btn-clip': 'none' }),
 }
 
 // Copy por defecto de la página de vídeo (compartido entre el renderer hexboard
@@ -167,15 +203,17 @@ export default {
       },
     },
     assets: {
-      ...legal.assets,
-      logo,
+      ...paperAssets,
       instructorPhoto,
-      pixels: paperPixels,
       // La foto ya viene compuesta (fondo + icono decorativo propios): se
       // muestra completa, sin recorte de encuadre tipo headshot.
       instructorBgSize: 'cover',
       instructorBgPosition: 'center',
-      instructorBgPositionX: '-22px',
+      // La foto es cuadrada (900×900) y el cuadro también: con `cover` encaja
+      // justa. El desplazamiento horizontal solo compensaba lo que la máscara
+      // pixelada se comía del canto derecho; sin máscara dejaría una franja
+      // negra de 22px a la derecha.
+      ...(FI_PIXEL_STYLE ? { instructorBgPositionX: '-22px' } : {}),
     },
   },
 
@@ -183,17 +221,12 @@ export default {
   stepformPaper: {
     accent: paperAccent,
     // Fondo de página crema + tarjeta con textura/borde arena/sombra de Legal.
-    // Al tomar los cssVars completos desaparecen los overrides hex de botón
-    // (`--theme-btn-clip: none` / radio 10 negro) → los botones del form
-    // recuperan el clip pixelado, ahora con el gradiente verde de Finance.
+    // Los botones del form van con el gradiente verde de Finance; el clip
+    // pixelado lo decide `FI_PIXEL_STYLE` (apagado → rectángulo plano).
     // `paperCssVars` también tiñe el calendario de agendamiento (--bk-accent*).
     page: legal.page,
     cssVars: paperCssVars,
-    assets: {
-      ...legal.assets,
-      logo,
-      pixels: paperPixels,
-    },
+    assets: paperAssets,
   },
 
   videoVariant: 'paperboard',
@@ -213,11 +246,7 @@ export default {
       headerLogoWidthMobile: '140px',
       footerLogoWidth: '240px',
     },
-    assets: {
-      ...legal.assets,
-      logo,
-      pixels: paperPixels,
-    },
+    assets: paperAssets,
   },
 
   confirmationVariant: 'paperboard',
@@ -240,7 +269,10 @@ export default {
       // Marco de los vídeos: sin esto el VideoFrame caería al glow azul por
       // defecto (el borde ya sale de accent.ring = lima).
       videoGlow: '0 0 30px rgba(116,205,45,0.30)',
-      heroDecoImg: pxGreen6,
+      heroDecoImg: FI_PIXEL_STYLE ? pxGreen6 : undefined,
+      // Canto pixelado del mockup del Paso 2 y racimos del footer, heredados de
+      // Legal: sin pixel-art, fuera.
+      ...(FI_PIXEL_STYLE ? {} : { paso2MaskMobile: undefined, footerDecos: undefined }),
       importanteText: 'Completa estos 3 pasos ahora para poder aprovechar tu llamada al máximo.',
       // El logo de Finance es horizontal (~9.5:1): las alturas de Legal (39/88px,
       // pensadas para su lockup vertical) lo desbordarían. Anchos equivalentes a
@@ -274,11 +306,7 @@ export default {
       paso3Thumbnail: confPaso3Thumb,
       paso3Video: 'https://www.youtube.com/watch?v=8cGtPi7qnkQ',
     },
-    assets: {
-      ...legal.assets,
-      logo,
-      pixels: paperPixels,
-    },
+    assets: paperAssets,
   },
 
   favicon,
