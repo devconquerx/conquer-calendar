@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 _SCHOOL_CRM_CODE = {
     'conquer-blocks': 'cb', 'conquerblocks': 'cb', 'conquer-blocks-esp': 'cb',
     # Conquer AI cuelga de Blocks para el CRM (no hay escuela 'ai'): se
-    # distingue por el funnel, 'cb-ai'.
+    # distingue por el funnel, 'ai-eu'.
     'conquer-ai': 'cb', 'conquerai': 'cb',
     'conquer-finance': 'fi', 'conquerfinance': 'fi', 'cf': 'fi',
     # Kids no es una escuela aparte para el CRM: es una línea de Languages y va

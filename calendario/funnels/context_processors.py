@@ -33,7 +33,7 @@ PIXEL_CONFIG.update({
     # Conquer AI es una línea de Conquer Blocks bajo su propio prefijo de URL
     # (www.conquerblocks.com/conquer-ai/...): mismo dominio, misma cuenta de
     # anuncios y mismos píxeles. Lo que la distingue en los informes es el
-    # código de funnel (cb-ai), no un píxel aparte.
+    # código de funnel (ai-eu), no un píxel aparte.
     'conquer-ai': PIXEL_CONFIG['conquer-blocks'],
     'conquerai': PIXEL_CONFIG['conquer-blocks'],
     'conquerfinance': PIXEL_CONFIG['conquer-finance'],

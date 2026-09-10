@@ -9,21 +9,6 @@ CONVERSION_VALUES = {
 }
 
 FUNNEL_REGION_MAP = {'latam': 'LATAM', 'eu': 'EU', 'us': 'USA'}
-
-# Funnels cuyo código NO lleva la región dentro, porque lo que ocupa el sitio de
-# la región es una línea de producto. Sin declararla aquí caen al fallback de
-# `get_region_from_lead`, que es LATAM, y eso no se ve por ninguna parte: el
-# lead sigue entrando, pero se manda a Ads/Meta/TikTok con el valor de LATAM
-# (1 € en vez de 10 € el lead, 10 € en vez de 100 € la reserva), se etiqueta
-# LATAM en Respond.io y su % de VSL se escribe en el campo de otra región.
-#
-# 'cb-ge' (Conquer Blocks Germany) está en la misma situación y HOY se cuenta
-# como LATAM. No se toca aquí: lleva así desde que existe, es tráfico vivo y
-# cambiarlo movería sus valores de conversión sin haberlo pedido nadie.
-FUNNEL_REGION_EXPLICITA = {
-    # Conquer AI se anuncia solo en Europa (su única landing es la -eu).
-    'cb-ai': 'EU',
-}
 CAMPAIGN_REGION_MAP = {'LATAM': 'LATAM', 'Europe': 'EU', 'USA': 'USA'}
 
 SCHOOL_PIXEL_META = {
@@ -80,7 +65,7 @@ SCHOOL_SLUG_TO_CODE = {
     'conquerblocks': 'cb',
     # Conquer AI es otra línea de Conquer Blocks (mismo dominio, misma cuenta de
     # anuncios y misma lista de AC), igual que Especialización: va como 'cb'. Lo
-    # que la separa en los informes es su código de funnel, 'cb-ai'.
+    # que la separa en los informes es su código de funnel, 'ai-eu'.
     'conquer-ai': 'cb',
     'conquerai': 'cb',
     # Especialización es una variante de Conquer Blocks: usa las mismas tags (cb),
@@ -145,6 +130,13 @@ def get_school_code(lead):
         # El slug del funnel de Conquer Legal es 'legal-<region>'.
         if code == 'legal':
             return 'cg'
+        # Conquer AI ('ai-<region>') es una línea de Conquer Blocks: comparte
+        # píxeles, cuenta de anuncios y lista de AC con 'cb'. Normalmente esto
+        # ni se alcanza —`lead.school` llega como 'conquer-ai' y lo resuelve el
+        # mapa de arriba—, pero sin esta rama un lead sin escuela se quedaría
+        # sin ninguna de las tres.
+        if code == 'ai':
+            return 'cb'
 
     # Try mapping form keys to schools
     funnel_upper = lead.funnel or ''
@@ -163,8 +155,6 @@ def get_region_from_lead(lead):
     funnel = (lead.funnel or '').strip()
     if funnel:
         funnel_lower = funnel.lower()
-        if funnel_lower in FUNNEL_REGION_EXPLICITA:
-            return FUNNEL_REGION_EXPLICITA[funnel_lower]
         if '-' in funnel_lower:
             # La región puede no ser el último segmento: slugs de variante
             # como 'cb-eu-2' (segundo experimento EU de Blocks) llevan un

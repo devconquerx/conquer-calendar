@@ -28,7 +28,7 @@ FUNNEL_TAG_MAP = {
     # ActiveCampaign y `_resolve_tag_id` la crea la primera vez que entra un
     # lead (mismo mecanismo que las de Conquer Legal). Cuando se quiera fijar
     # su id numérico, basta con sustituirlo aquí.
-    'cb-ai': 'cb-ai',
+    'ai-eu': 'ai-eu',
     'fi-latam': '454', 'fi-eu': '456', 'fi-us': '457',
     'cf-latam': '454', 'cf-eu': '456', 'cf-us': '457',
     'cl-latam': '465', 'cl-eu': '466', 'cl-us': '468',

@@ -24,10 +24,10 @@ function detectBrand(value) {
   const n = normalize(value)
   if (!n) return null
   // Conquer AI no tiene tema propio: es una línea de Conquer Blocks, se sirve
-  // en su dominio y usa su mismo lenguaje visual. La escuela llega como
-  // 'conquer-ai' (el slug del funnel, 'blocks-ai-eu', ya casaría con 'blocks',
-  // pero la escuela es la primera pista que se consulta).
-  if (n.includes('conquerai')) return 'conquerblocks'
+  // en su dominio y usa su mismo lenguaje visual. Se reconoce por la escuela
+  // ('conquer-ai', la primera pista que consulta getTheme) y también por su
+  // slug pelado ('ai-eu'), que a diferencia del resto no lleva la marca dentro.
+  if (n.includes('conquerai') || n.startsWith('aieu')) return 'conquerblocks'
   if (n.includes('blocks')) return 'conquerblocks'
   if (n.includes('finance')) return 'conquerfinance'
   if (n.includes('languages')) return 'conquerlanguages'

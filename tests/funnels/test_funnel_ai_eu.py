@@ -6,14 +6,15 @@ marca nueva, hay dos cosas que tienen que cumplirse a la vez y que se rompen por
 sitios distintos:
 
   1. Es INDEPENDIENTE: sus cuatro páginas responden en su propio prefijo y el
-     funnel que sirven es el suyo (`blocks-ai-eu`), no el de Blocks EU.
+     funnel que sirven es el suyo (`ai-eu`), no el de Blocks EU.
   2. Es de BLOCKS: píxeles, contenedor de GTM, escuela del CRM y banner de
      consentimiento son los de Blocks. Un mapeo que falte aquí no rompe la
      página —sigue pintándose— pero deja los leads sin medición, que es
      precisamente el fallo que nadie ve hasta que cuadra los números.
 
-La fila la crea la migración 0030 copiando el `config` de Conquer Blocks EU, así
-que estos tests también comprueban que ese clonado ocurrió.
+La fila la crea la migración 0030 copiando el `config` de Conquer Blocks EU (y
+0031 la renombra a su slug definitivo), así que estos tests también comprueban
+que ese clonado ocurrió.
 """
 import json
 
@@ -23,7 +24,7 @@ from django.urls import reverse
 from calendario.funnels.models import FunnelForm
 from calendario.leads.models import Lead
 
-SLUG = 'blocks-ai-eu'
+SLUG = 'ai-eu'
 ESCUELA = 'conquer-ai'
 
 
@@ -112,7 +113,7 @@ class FunnelAiEuMarcaTest(TestCase):
 class FunnelAiEuLeadTest(TestCase):
     """El lead entra con el slug del funnel y sale con el código del CRM."""
 
-    def test_el_funnel_se_traduce_al_codigo_del_crm(self):
+    def test_el_slug_viaja_al_crm_sin_traducir(self):
         resp = self.client.post(
             reverse('funnels:register_lead'),
             data=json.dumps({
@@ -123,31 +124,40 @@ class FunnelAiEuLeadTest(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         lead = Lead.objects.get()
-        self.assertEqual(lead.funnel, 'cb-ai')
+        self.assertEqual(lead.funnel, 'ai-eu')
         self.assertEqual(lead.school, ESCUELA)
 
     def test_el_lead_cuenta_como_blocks_en_region_eu(self):
         """De este par salen el píxel, la cuenta de Ads y la lista de AC.
 
-        La región es lo delicado: 'cb-ai' NO la lleva dentro (donde el resto de
-        códigos pone latam/eu/us, este pone la línea de producto), así que sin
-        `FUNNEL_REGION_EXPLICITA` cae al fallback de LATAM y el lead europeo se
-        manda a Ads con 1 € en vez de 10 €. No falla nada visible: solo salen
-        mal los números.
+        La región importa más de lo que parece: si el funnel no la deja leer,
+        `get_region_from_lead` cae a su fallback de LATAM y el lead europeo sale
+        a Ads valorado a 1 € en vez de 10 € (y su reserva a 10 € en vez de
+        100 €), se etiqueta LATAM en Respond.io y su % de VSL se escribe en el
+        campo de otra región. No falla nada visible: solo salen mal los números.
         """
         from calendario.leads.services.utils import (
             get_conversion_value, get_region_from_lead, get_school_code,
         )
 
-        lead = Lead.objects.create(email='ai@ejemplo.com', school=ESCUELA, funnel='cb-ai')
+        lead = Lead.objects.create(email='ai@ejemplo.com', school=ESCUELA, funnel=SLUG)
         self.assertEqual(get_school_code(lead), 'cb')
         self.assertEqual(get_region_from_lead(lead), 'EU')
         self.assertEqual(get_conversion_value('EU', 'lead'), 10)
+
+    def test_sin_escuela_la_deduce_del_propio_funnel(self):
+        """'ai-eu' no empieza por ninguno de los códigos conocidos (cb/cf/cl/
+        fi/cg), así que sin su rama propia un lead sin escuela se quedaría sin
+        píxel, sin cuenta de Ads y sin lista — como le pasaba a 'legal-eu'."""
+        from calendario.leads.services.utils import get_school_code
+
+        lead = Lead.objects.create(email='ai2@ejemplo.com', school='', funnel=SLUG)
+        self.assertEqual(get_school_code(lead), 'cb')
 
     def test_tiene_etiqueta_propia_en_activecampaign(self):
         """Comparte lista con Blocks, pero no etiqueta: si cayera en la de
         cb-eu, sus leads serían indistinguibles de los de Blocks EU."""
         from calendario.leads.services.activecampaign import FUNNEL_TAG_MAP
 
-        self.assertIn('cb-ai', FUNNEL_TAG_MAP)
-        self.assertNotEqual(FUNNEL_TAG_MAP['cb-ai'], FUNNEL_TAG_MAP['cb-eu'])
+        self.assertIn(SLUG, FUNNEL_TAG_MAP)
+        self.assertNotEqual(FUNNEL_TAG_MAP[SLUG], FUNNEL_TAG_MAP['cb-eu'])

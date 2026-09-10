@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Crea el FunnelForm de Conquer AI EU (blocks-ai-eu), clon de Conquer Blocks EU.
+"""Crea el FunnelForm de Conquer AI EU (hoy `ai-eu`), clon de Conquer Blocks EU.
 
 Conquer AI es una línea más de Conquer Blocks —vive en su dominio
 (www.conquerblocks.com/conquer-ai/...) y comparte píxeles, contenedor de GTM,
@@ -10,14 +10,15 @@ De ahí el reparto de identificadores:
 
   escuela  conquer-ai      → resuelve las cuatro URLs por el patrón genérico
                              `/conquer-<marca>/...` (ver config/urls.py)
-  slug     blocks-ai-eu    → sigue siendo un funnel de Blocks (el tema y los
-                             mapeos de marca lo detectan por ahí)
+  slug     blocks-ai-eu    → RENOMBRADO a `ai-eu` en 0031 (esta migración ya
+                             había corrido en producción, así que el cambio
+                             tuvo que ir aparte). La marca se detecta por la
+                             escuela, no por el slug.
   key      FullAiEu        → el CRM deriva la escuela del prefijo `Full`
                              (ads_source_utils.derive_school_code), así que el
                              prefijo NO es decorativo
-  CRM      cb-ai           → una entrada más junto a cb-eu/cb-us/cb-ge; no
-                             lleva la región dentro, así que se la declara
-                             `FUNNEL_REGION_EXPLICITA` (leads/services/utils.py)
+  CRM      ai-eu           → el slug tal cual, sin traducir: es su propio
+                             funnel, como `legal-eu` → `cg-eu` lo es del suyo
 
 El contenido se copia de la fila VIVA de `FullEu` (Conquer Blocks EU) cuando
 existe, no del JSON de `seed_data/`: los seeds son la semilla inicial y llevan

@@ -45,7 +45,8 @@ for f in Lead._meta.get_fields():
 # FunnelForm.slug (canónico del calendario) → código de funnel del CRM
 # (vocabulario del proyecto viejo: cb/fi/cl/cg-<region>). Es lo que se guarda
 # en Lead.funnel y viaja al ingest del CRM, a AC y a Respond.io. Sin entrada
-# aquí (especialización) se conserva el slug tal cual.
+# aquí (especialización, y `ai-eu` de Conquer AI, cuyo slug YA es su código de
+# funnel) se conserva el slug tal cual.
 #
 # OJO con dejar un slug sin traducir: el ingest del CRM, en
 # `_normalize_lead_funnel`, SUSTITUYE por el utm_campaign cualquier funnel que
@@ -53,13 +54,6 @@ for f in Lead._meta.get_fields():
 # 'languages-kids-eu' y se guardaba con el nombre de la campaña como funnel.
 _FUNNEL_SLUG_TO_CRM_CODE = {
     'blocks-latam': 'cb-latam', 'blocks-eu': 'cb-eu', 'blocks-us': 'cb-us', 'blocks-eu-2': 'cb-eu-2',
-    # Conquer AI: una entrada más de Blocks, en la misma serie que cb-latam /
-    # cb-eu / cb-us / cb-ge. NO lleva la región dentro a propósito —es una línea
-    # de producto, no una región—, así que su región se declara aparte en
-    # `FUNNEL_REGION_EXPLICITA` (leads/services/utils.py); sin eso el lead
-    # europeo se contaría como LATAM. El slug sí la conserva porque el
-    # FunnelForm sí tiene región (eu) y de ahí salen sus URLs.
-    'blocks-ai-eu': 'cb-ai',
     'finance-latam': 'fi-latam', 'finance-eu': 'fi-eu', 'finance-us': 'fi-us',
     'languages-latam': 'cl-latam', 'languages-eu': 'cl-eu', 'languages-us': 'cl-us',
     'languages-kids-latam': 'cl-kids-latam', 'languages-kids-eu': 'cl-kids-eu',
