@@ -150,6 +150,11 @@ MARCAS = {
     },
 }
 
+# Conquer AI se sirve dentro de www.conquerblocks.com y usa su mismo lenguaje
+# visual, así que hereda el banner de Blocks entero — incluida su política de
+# privacidad, que es la que ampara el tratamiento de esos leads.
+MARCAS['conquer-ai'] = MARCAS['conquer-blocks']
+
 _POR_DEFECTO = {
     'politica_url': '/politica-de-privacidad',
     'acento': '#171717',

@@ -30,6 +30,12 @@ PIXEL_CONFIG = {
 # Alias sin guion (por si algún FunnelForm usa la forma de funnels).
 PIXEL_CONFIG.update({
     'conquerblocks': PIXEL_CONFIG['conquer-blocks'],
+    # Conquer AI es una línea de Conquer Blocks bajo su propio prefijo de URL
+    # (www.conquerblocks.com/conquer-ai/...): mismo dominio, misma cuenta de
+    # anuncios y mismos píxeles. Lo que la distingue en los informes es el
+    # código de funnel (cb-ai), no un píxel aparte.
+    'conquer-ai': PIXEL_CONFIG['conquer-blocks'],
+    'conquerai': PIXEL_CONFIG['conquer-blocks'],
     'conquerfinance': PIXEL_CONFIG['conquer-finance'],
     'conquerlanguages': PIXEL_CONFIG['conquer-languages'],
 })
@@ -88,6 +94,11 @@ GTM_CONFIG = {
 # Alias sin guion (por si algún FunnelForm usa la forma de funnels).
 GTM_CONFIG.update({
     'conquerblocks': GTM_CONFIG['conquer-blocks'],
+    # Conquer AI: mismo contenedor que Blocks. El loader del sGTM es
+    # first-party contra load.somos.conquerblocks.com, que es el dominio en el
+    # que se sirve — uno propio no existiría.
+    'conquer-ai': GTM_CONFIG['conquer-blocks'],
+    'conquerai': GTM_CONFIG['conquer-blocks'],
     'conquerfinance': GTM_CONFIG['conquer-finance'],
     'conquerlanguages': GTM_CONFIG['conquer-languages'],
     'conquerlegal': GTM_CONFIG['conquer-legal'],

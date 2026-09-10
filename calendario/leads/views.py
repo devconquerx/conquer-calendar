@@ -53,6 +53,13 @@ for f in Lead._meta.get_fields():
 # 'languages-kids-eu' y se guardaba con el nombre de la campaña como funnel.
 _FUNNEL_SLUG_TO_CRM_CODE = {
     'blocks-latam': 'cb-latam', 'blocks-eu': 'cb-eu', 'blocks-us': 'cb-us', 'blocks-eu-2': 'cb-eu-2',
+    # Conquer AI: una entrada más de Blocks, en la misma serie que cb-latam /
+    # cb-eu / cb-us / cb-ge. NO lleva la región dentro a propósito —es una línea
+    # de producto, no una región—, así que su región se declara aparte en
+    # `FUNNEL_REGION_EXPLICITA` (leads/services/utils.py); sin eso el lead
+    # europeo se contaría como LATAM. El slug sí la conserva porque el
+    # FunnelForm sí tiene región (eu) y de ahí salen sus URLs.
+    'blocks-ai-eu': 'cb-ai',
     'finance-latam': 'fi-latam', 'finance-eu': 'fi-eu', 'finance-us': 'fi-us',
     'languages-latam': 'cl-latam', 'languages-eu': 'cl-eu', 'languages-us': 'cl-us',
     'languages-kids-latam': 'cl-kids-latam', 'languages-kids-eu': 'cl-kids-eu',
@@ -141,6 +148,9 @@ def register_lead(request):
 _VSL_FIELD_POR_ESCUELA = {
     'conquer-blocks': 'vsl_percent_cb',
     'conquerblocks': 'vsl_percent_cb',
+    # Conquer AI comparte el campo de Blocks: en el CRM no hay uno 'ai'.
+    'conquer-ai': 'vsl_percent_cb',
+    'conquerai': 'vsl_percent_cb',
     'conquer-languages': 'vsl_percent_cl',
     'conquerlanguages': 'vsl_percent_cl',
     'conquer-finance': 'vsl_percent_cf',

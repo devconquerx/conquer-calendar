@@ -46,6 +46,9 @@ const PIXEL_IDS = {
 // 'conquerblocks'. Normalizamos a la clave canónica sin guion.
 const SCHOOL_ALIASES = {
   'conquer-blocks': 'conquerblocks',
+  // Conquer AI comparte píxeles y cuenta de anuncios con Blocks: vive en su
+  // dominio y es una línea suya, no una marca aparte.
+  'conquer-ai': 'conquerblocks',
   'conquer-finance': 'conquerfinance',
   'conquer-languages': 'conquerlanguages',
 }

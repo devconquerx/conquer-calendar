@@ -232,6 +232,9 @@ class LaMarcaDeCadaPaginaTest(TestCase):
         from calendario.funnels.consentimiento import MARCAS
         esperado = {
             'conquer-blocks': 'https://www.conquerblocks.com/legal/politica-de-privacidad',
+            # Conquer AI se sirve dentro del dominio de Blocks y hereda su
+            # banner entero, política incluida: es la que ampara esos leads.
+            'conquer-ai': 'https://www.conquerblocks.com/legal/politica-de-privacidad',
             'conquer-finance': 'https://www.conquerfinance.com/legal/politica-de-privacidad',
             'conquer-languages': 'https://www.conquerlanguages.com/politica-de-privacidad',
             'conquer-legal': 'https://www.conquerlegal.com/legal/politica-de-privacidad',

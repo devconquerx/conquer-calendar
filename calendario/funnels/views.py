@@ -424,6 +424,11 @@ PRODUCTO_A_ESCUELA = {
     'english': 'conquer-languages',
     'legal': 'conquer-legal',
     'kids': 'conquer-languages-kids',
+    # Conquer AI: línea nueva de Conquer Blocks con funnel propio (landing,
+    # vídeo, StepForm, calendario y confirmación suyos) bajo
+    # www.conquerblocks.com/conquer-ai/. Necesita su producto porque su
+    # FunnelForm es otro; sin esta entrada /agenda/ai/eu/ daría 404.
+    'ai': 'conquer-ai',
 }
 PRODUCTO_POR_ESCUELA = {v: k for k, v in PRODUCTO_A_ESCUELA.items()}
 
@@ -499,7 +504,7 @@ def _escuela_por_host(request):
 
 # Escuelas que llevan la escuela en el PATH (p.ej. /conquer-blocks/...). El resto
 # comparte la ruta raíz y se resuelve por dominio (Host).
-_ESCUELAS_RUTA_PATH = ('conquer-blocks', 'conquer-legal')
+_ESCUELAS_RUTA_PATH = ('conquer-blocks', 'conquer-ai', 'conquer-legal')
 
 
 # Líneas que SOLO tienen StepForm: no publican landing, vídeo ni confirmación
@@ -591,6 +596,11 @@ _VIDEO_DEFAULTS = {
         'buttonPercent': 75,
     },
 }
+
+# Conquer AI arranca con la misma VSL que Conquer Blocks (es un clon de su
+# funnel EU); cuando tenga la suya basta con cambiarla en el `config` de la fila,
+# que es lo que manda — esto solo es el fail-safe.
+_VIDEO_DEFAULTS['conquer-ai'] = _VIDEO_DEFAULTS['conquer-blocks']
 
 
 # Plantillas de landing por marca (las que no estén aquí usan la landing React).

@@ -24,6 +24,11 @@ CUSTOM_FIELD_MAP = {
 # gestiona por nombre en AC.
 FUNNEL_TAG_MAP = {
     'cb-latam': '449', 'cb-eu': '451', 'cb-us': '452', 'cb-ge': '459', 'cb-eu-2': '502',
+    # Conquer AI. Va por NOMBRE, no por id: la etiqueta todavía no existe en
+    # ActiveCampaign y `_resolve_tag_id` la crea la primera vez que entra un
+    # lead (mismo mecanismo que las de Conquer Legal). Cuando se quiera fijar
+    # su id numérico, basta con sustituirlo aquí.
+    'cb-ai': 'cb-ai',
     'fi-latam': '454', 'fi-eu': '456', 'fi-us': '457',
     'cf-latam': '454', 'cf-eu': '456', 'cf-us': '457',
     'cl-latam': '465', 'cl-eu': '466', 'cl-us': '468',

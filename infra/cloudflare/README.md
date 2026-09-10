@@ -139,3 +139,44 @@ www.conquerfinance.com/agenda/*
 (y opcionalmente quitar `/preview/*`). Sin cambios de código ni de URLs: Django
 ya sirve esos paths en la raíz. Para revertir cualquier fase, borrar las rutas —
 Webflow recupera el tráfico al instante.
+
+---
+
+# Conquer AI EU en www.conquerblocks.com
+
+Conquer AI es un funnel propio (landing, vídeo, StepForm, calendario y
+confirmación) clonado de Conquer Blocks EU, servido bajo su propio prefijo de
+path en el dominio de Blocks. Django ya resuelve sus cuatro URLs por convención
+—la escuela va en el path, como el resto de Blocks— así que del lado de
+Cloudflare **solo hace falta una ruta nueva** en el Worker que ya enruta
+conquerblocks.com:
+
+```
+www.conquerblocks.com/conquer-ai/*
+```
+
+`/agenda/*`, `/static/*`, `/f/*` y `/media/*` ya están dadas de alta para el
+funnel de Blocks y las comparte tal cual: el StepForm de Conquer AI vive en
+`/agenda/ai/eu/` y cae dentro de la primera.
+
+Mismo Worker (`preview-funnel-worker.js`), cero cambios de código: es un proxy
+que no toca el path. Las URLs que quedan servidas son
+
+```
+https://www.conquerblocks.com/conquer-ai/clase-online-gratuita-eu   (landing)
+https://www.conquerblocks.com/conquer-ai/video-clase-eu/            (vídeo)
+https://www.conquerblocks.com/agenda/ai/eu/                         (StepForm + calendario)
+https://www.conquerblocks.com/conquer-ai/confirmacion-llamada-eu/   (confirmación)
+```
+
+Antes de dar de alta la ruta, comprobar que el origen ya las sirve (o sea, que
+el deploy con la migración 0030 está hecho):
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" \
+  https://calendar.conquerx.com/conquer-ai/clase-online-gratuita-eu
+# Esperado: 200  (404 → falta el FunnelForm FullAiEu en la BD de prod)
+```
+
+Para revertir: borrar la ruta. Como hoy esos paths dan 404 en Webflow, darla de
+alta no toca ningún tráfico existente.

@@ -41,6 +41,8 @@ if not FUNNEL_PUBLIC_BASE:  # NOQA: F405 — viene de base.py, vacío salvo over
     FUNNEL_PUBLIC_BASE = {
         'conquer-blocks': 'https://www.conquerblocks.com',
         'conquer-blocks-esp': 'https://www.conquerblocks.com',
+        # Conquer AI vive bajo el dominio de Blocks, en /conquer-ai/.
+        'conquer-ai': 'https://www.conquerblocks.com',
         'conquer-finance': 'https://www.conquerfinance.com',
         'conquer-legal': 'https://www.conquerlegal.com',
         'conquer-languages': 'https://www.conquerlanguages.com/preview',

@@ -13,6 +13,7 @@ const FUNNELS = [
   { slug: 'blocks-eu', escuela: 'conquer-blocks', region: 'eu' },
   { slug: 'blocks-eu-2', escuela: 'conquer-blocks', region: 'eu' },
   { slug: 'blocks-us', escuela: 'conquer-blocks', region: 'us' },
+  { slug: 'blocks-ai-eu', escuela: 'conquer-ai', region: 'eu' },
   { slug: 'finance-latam', escuela: 'conquer-finance', region: 'latam' },
   { slug: 'finance-eu', escuela: 'conquer-finance', region: 'eu' },
   { slug: 'finance-us', escuela: 'conquer-finance', region: 'us' },
