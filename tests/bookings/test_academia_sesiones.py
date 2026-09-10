@@ -40,7 +40,7 @@ URL_ACADEMIA = 'https://academia.example.com/graphql/'
 API_KEY = 'clave-de-la-academia'
 
 UID_ALUMNO = 4321
-ID_ACADEMIA = 7
+ID_ACADEMIA = 3  # Conquer Languages, tal como está en el LMS
 
 
 CONFIG_ACADEMIA = dict(
@@ -139,9 +139,10 @@ class PayloadSesionTest(TestCase):
         self.assertEqual(kwargs['json']['variables']['input']['reservationId'], str(reserva.pk))
 
     def test_sin_id_de_academia_viaja_null(self):
-        """El id de la academia es opcional a propósito: sin él la sesión sigue
-        saliendo y la resuelve el LMS por el profesor. Bloquear el envío por un
-        id interno del otro lado dejaría la integración parada por nada."""
+        """La academia es opcional a propósito: sin ella la sesión sale igual y
+        cuenta para las métricas por profesor. Lo que se pierde es el recuento por
+        academia, no la sesión; bloquear el envío por un campo sin rellenar sería
+        peor remedio que la enfermedad."""
         self.et.academia_lms_id = None
         self.et.save(update_fields=['academia_lms_id'])
         reserva = self._reserva()
