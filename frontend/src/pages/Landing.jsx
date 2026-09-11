@@ -85,7 +85,17 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
     backgroundPosition: 'center',
     boxShadow: CB_CARD_SHADOW,
   }
-  const instructorPhoto = assets?.instructorPhoto || instructor?.imageUrl
+  /* Foto del instructor. El orden importa y no es el obvio:
+
+     - `instructor.photoUrl` (BD) gana a todo. Es la única forma de cambiarle la
+       cara a UN funnel: el resto de claves ya están ocupadas.
+     - `assets.instructorPhoto` (tema) va después porque es lo que se ve hoy en
+       Blocks, Legal y Languages: la foto viaja en el bundle, optimizada y sin
+       depender de un dominio ajeno.
+     - `instructor.imageUrl` (BD) queda de último y en la práctica no se usa:
+       todos los funnels de Blocks lo tienen apuntando al CDN de Webflow, y si
+       ganara, los tres pasarían a cargar la foto desde allí. */
+  const instructorPhoto = instructor?.photoUrl || assets?.instructorPhoto || instructor?.imageUrl
   // Borde pixelado: en móvil la tarjeta se apila (imagen arriba), así que el
   // borde va ABAJO; en desktop (md+) va a la DERECHA. Si el tema trae la máscara
   // inferior, `--imask` se conmuta por clases (`[--imask:bottom] md:[--imask:right]`
@@ -258,7 +268,7 @@ function HexLanding({ school, program, region, formConfig, theme, assets, instru
     ...(assets?.hexBackground ? { backgroundImage: `url(${assets.hexBackground})` } : {}),
     fontFamily: 'Poppins, sans-serif',
   }
-  const instructorPhoto = assets?.instructorPhoto || instructor?.imageUrl
+  const instructorPhoto = instructor?.photoUrl || assets?.instructorPhoto || instructor?.imageUrl
   const pressLogos = t.pressLogos || []
 
   return (
