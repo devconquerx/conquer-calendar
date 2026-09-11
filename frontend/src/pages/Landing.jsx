@@ -197,7 +197,18 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
               )}
             </div>
             <div className="flex-1 p-6 md:p-12 flex flex-col justify-center">
-              <h2 className="text-4xl md:text-[48px] font-semibold leading-[1.1] text-cb-ink2">
+              {/* El hueco está dimensionado para un nombre propio ("Bienvenido
+                  Sáez", "Ignacio Fernández"): a 48px caben de sobra en una
+                  línea. Conquer AI pone ahí una frase entera ("Saúl Gómez es
+                  Director de ConquerAI") y a ese cuerpo parte en dos renglones
+                  y se come la tarjeta. Se encoge por LONGITUD y no por funnel:
+                  el problema es el texto, no de quién sea la landing, y así
+                  ningún nombre corto cambia de tamaño. */}
+              <h2
+                className={`${(instructor.name || '').length > 22
+                  ? 'text-2xl md:text-[28px]'
+                  : 'text-4xl md:text-[48px]'} font-semibold leading-[1.1] text-cb-ink2`}
+              >
                 {instructor.name}
               </h2>
               <div className="mt-7 text-sm md:text-base font-light text-cb-ink2 leading-[1.25]">
