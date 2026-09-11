@@ -95,7 +95,7 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
           region={region}
           formConfig={formConfig}
           videoUrls={video.videoUrls || []}
-          buttonPercent={video.buttonPercent || 75}
+          buttonPercent={typeof video.buttonPercent === 'number' ? video.buttonPercent : 75}
           search={stageSearch}
           funnelSlug={slug}
         />

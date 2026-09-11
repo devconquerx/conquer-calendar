@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import VideoPlayer from '../components/vsl/VideoPlayer'
 import AgendarButton from '../components/vsl/AgendarButton'
 import { getTheme, useVariantTheme } from '../themes'
@@ -37,11 +37,20 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
 
   const video = formConfig?.video || {}
   const urls = videoUrls && videoUrls.length ? videoUrls : (video.videoUrls || [])
-  const pct = buttonPercent || video.buttonPercent || 75
+  /* Porcentaje del vídeo a partir del cual aparece el CTA. Ojo con el `??`: `0`
+     —"desde el primer segundo"— es un valor legítimo, y con `||` se tomaba por
+     ausente y caía al 75 por defecto, así que era imposible de configurar. */
+  const pctConfig = buttonPercent ?? video.buttonPercent
+  const pct = typeof pctConfig === 'number' ? pctConfig : 75
   // Barra de reproducción completa (progreso, tiempos, retroceder). Por defecto
   // NO: una VSL se ve entera o no se ve. Se enciende por funnel desde la BD
   // (`config.video.showControls`) para los vídeos que no son una VSL.
   const conControles = !!video.showControls
+  /* Texto y destino del CTA, configurables por funnel. Sin `buttonUrl` el botón
+     lleva al StepForm, que es lo que hacen todos los funnels; con él, se va a
+     donde diga la config y el recorrido termina ahí (no hay prellamada ni
+     reserva detrás). Sin `buttonText`, el rótulo de siempre. */
+  const ctaUrl = video.buttonUrl || ''
   const landing = formConfig?.landing || formConfig?.welcome || {}
 
   // Email para el tracking de progreso (viene como query param desde la landing).
@@ -53,6 +62,14 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   )
 
   const handleShowButton = useCallback(() => setShowButton(true), [])
+
+  /* Con el umbral en 0 el CTA no espera al vídeo. Si se dejara al gate del
+     reproductor tardaría en salir lo que tarde en llegar el primer
+     `timeupdate`, que con un manifiesto HLS de tres horas son varios segundos
+     de botón ausente. */
+  useEffect(() => {
+    if (pct <= 0) setShowButton(true)
+  }, [pct])
 
   const handleProgress = useCallback(
     (percent) => {
@@ -69,12 +86,19 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   // tracking). En la SPA navega con pushState; fuera de ella, recarga completa.
   const goToStepForm = useCallback(() => {
     const search = window.location.search || ''
+    // Destino externo (`config.video.buttonUrl`): se va tal cual, sin pegarle el
+    // query string del funnel — esas URLs traen sus propios parámetros y
+    // añadirle los nuestros es pedirle problemas a quien esté al otro lado.
+    if (ctaUrl) {
+      window.location.href = ctaUrl
+      return
+    }
     if (router) {
       router.navigate('stepform', { search })
       return
     }
     window.location.href = `${nextUrl}${search}`
-  }, [router, nextUrl])
+  }, [router, nextUrl, ctaUrl])
 
   if (isPaper) {
     return (
@@ -152,7 +176,7 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
         </div>
 
         {/* Botón CTA — aparece al alcanzar el buttonPercent */}
-        {showButton && <AgendarButton theme={theme} onClick={goToStepForm} />}
+        {showButton && <AgendarButton theme={theme} onClick={goToStepForm} text={video.buttonText || undefined} />}
       </main>
 
       <div className="py-10" />
@@ -217,7 +241,7 @@ function HexVideoPage({ assets, video, urls, pct, showButton, onShowButton, onPr
         </div>
 
         {/* Botón CTA — aparece al alcanzar el buttonPercent */}
-        {showButton && <AgendarButton theme={theme} onClick={goToStepForm} />}
+        {showButton && <AgendarButton theme={theme} onClick={goToStepForm} text={video.buttonText || undefined} />}
       </main>
     </div>
   )
@@ -356,7 +380,7 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
             </div>
 
             {/* Botón CTA — aparece al alcanzar el buttonPercent */}
-            {showButton && <AgendarButton theme={theme} onClick={goToStepForm} />}
+            {showButton && <AgendarButton theme={theme} onClick={goToStepForm} text={video.buttonText || undefined} />}
           </div>
         </main>
 
