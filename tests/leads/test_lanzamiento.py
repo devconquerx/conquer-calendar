@@ -339,33 +339,43 @@ class DeteccionDePaisTest(TestCase):
         self.assertNotIn("fetch('https://ipapi.co", js)
 
 
-class GtmEnLasPantallasTest(TestCase):
-    """Cada marca carga su contenedor en la pantalla del evento y en la de gracias.
+class MedicionEnLasPantallasTest(TestCase):
+    """Cada marca mide lo suyo en la pantalla del evento y en la de gracias.
 
-    Blocks y Languages son los que ya llevaba Webflow. Finance no llevaba
-    ninguno —sus lanzamientos estaban sin medir— y se le enchufa el suyo, que es
-    lo único que se aparta del original a propósito.
+    Llevaban el contenedor de la marca —Blocks y Languages ya desde Webflow;
+    Finance se le enchufó aquí, porque sus lanzamientos estaban sin medir—, pero
+    ese contenedor dispara el lead del funnel, así que cada registro de un
+    lanzamiento se contaba como un lead de venta. Ahora miden con los píxeles a
+    código de `_includes/_pixeles_evento.html`, que disparan una conversión
+    propia (ver tests/funnels/test_pixeles_evento.py).
     """
 
     CASOS = (
-        ('www.conquerblocks.com', '/evento/evento-online', '5PK5LTG'),
-        ('www.conquerblocks.com', '/evento/gracias-comunidad', '5PK5LTG'),
-        ('www.conquerlanguages.com', '/cl-evento', 'MPB7S5C7'),
-        ('www.conquerlanguages.com', '/grupos-comunidad', 'MPB7S5C7'),
-        ('www.conquerfinance.com', '/evento/evento-online', 'MXTDVVBG'),
-        ('www.conquerfinance.com', '/evento/gracias-comunidad', 'MXTDVVBG'),
+        ('www.conquerblocks.com', '/evento/evento-online', 'AW-725899560'),
+        ('www.conquerblocks.com', '/evento/gracias-comunidad', 'AW-725899560'),
+        ('www.conquerlanguages.com', '/cl-evento', 'AW-16956085244'),
+        ('www.conquerlanguages.com', '/grupos-comunidad', 'AW-16956085244'),
+        ('www.conquerfinance.com', '/evento/evento-online', 'AW-16625277654'),
+        ('www.conquerfinance.com', '/evento/gracias-comunidad', 'AW-16625277654'),
     )
 
-    def test_cada_marca_carga_su_contenedor(self):
-        for host, ruta, st in self.CASOS:
+    def test_cada_marca_carga_sus_pixeles(self):
+        for host, ruta, ads in self.CASOS:
             html = self.client.get(ruta, HTTP_HOST=host).content.decode()
-            self.assertIn(f"st = '{st}'", html, f'{host}{ruta}')
+            self.assertIn(f"ads: '{ads}'", html, f'{host}{ruta}')
 
-    def test_ninguna_carga_el_de_otra(self):
-        for host, ruta, st in self.CASOS:
+    def test_ninguna_carga_los_de_otra(self):
+        for host, ruta, ads in self.CASOS:
             html = self.client.get(ruta, HTTP_HOST=host).content.decode()
-            for otro in {c[2] for c in self.CASOS} - {st}:
+            for otro in {c[2] for c in self.CASOS} - {ads}:
                 self.assertNotIn(otro, html, f'{host}{ruta} carga {otro}')
+
+    def test_ninguna_carga_ya_el_contenedor(self):
+        # Es el trigger del contenedor lo que mandaba estos registros a la
+        # conversión del funnel.
+        for host, ruta, _ in self.CASOS:
+            html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+            self.assertNotIn('gtm.start', html, f'{host}{ruta}')
 
 
 class EmailEnMinusculasTest(TestCase):
@@ -555,8 +565,8 @@ class LaUrlQueDejaElPushStateSeAguantaTest(TestCase):
                                          'conquer-finance')
         self.assertIn('escuela=conquer-finance', url)
         html = self.client.get(url, HTTP_HOST='calendar.conquerx.com').content.decode()
-        # La de Finance, no la de Blocks: se distinguen por el contenedor GTM.
-        self.assertIn("st = 'MXTDVVBG'", html)
+        # La de Finance, no la de Blocks: se distinguen por sus píxeles.
+        self.assertIn("ads: 'AW-16625277654'", html)
 
 
 class ElSaltoAlGrupoNoSeCancelaTest(TestCase):

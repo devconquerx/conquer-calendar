@@ -113,6 +113,74 @@ def get_gtm_config(escuela):
 
 
 # ---------------------------------------------------------------------------
+# Píxeles a código para las pantallas de evento (lanzamientos).
+#
+# Estas páginas NO cargan el contenedor de GTM: su trigger de lead es el mismo
+# que el del funnel y mandaba los registros de lanzamiento a la conversión de
+# venta, que es justo lo que había que separar. En su lugar cargan aquí los tres
+# píxeles y disparan su PROPIO evento al registrarse, contra acciones y eventos
+# creados solo para esto.
+#
+#   ads            → ID de conversiones de la cuenta de Google Ads (AW-…)
+#   ads_conversion → send_to completo de la acción "Lead Lanzamiento <XX> Web"
+#   ga4            → measurement ID, para no perder la medición que daba GTM
+#   meta / tiktok  → los mismos píxeles de siempre; cambia el evento, no el píxel
+#   evento_meta / evento_tiktok → nombre del evento propio de lanzamiento
+#
+# Los eventos de Meta y TikTok van con nombre propio para que no caigan en la
+# conversión de Lead del funnel. El de Google no necesita nombre: la acción de
+# conversión es la que separa la señal.
+# ---------------------------------------------------------------------------
+PIXELES_EVENTO = {
+    'conquer-blocks': {
+        'ads': 'AW-725899560',
+        'ads_conversion': 'AW-725899560/2YIZCL-Iz_QcEKiykdoC',
+        'ga4': 'G-LNCT8EQRDT',
+        'meta': '921361326426436',
+        'tiktok': 'CTMK2ORC77U1LI1DFAD0',
+    },
+    'conquer-languages': {
+        'ads': 'AW-16956085244',
+        'ads_conversion': 'AW-16956085244/kERXCMKIz_QcEPynpZU_',
+        'ga4': 'G-FJBW5107MW',
+        'meta': '627205843180202',
+        'tiktok': 'CVIQE0JC77U02UO7SEC0',
+    },
+    'conquer-finance': {
+        'ads': 'AW-16625277654',
+        'ads_conversion': 'AW-16625277654/bJU2CPmU0_QcENa1xvc9',
+        'ga4': 'G-9PGHQW52XM',
+        'meta': '1011283009921986',
+        'tiktok': 'D03U523C77U9QS83BBI0',
+    },
+}
+
+PIXELES_EVENTO.update({
+    'conquerblocks': PIXELES_EVENTO['conquer-blocks'],
+    'conquerlanguages': PIXELES_EVENTO['conquer-languages'],
+    'conquerfinance': PIXELES_EVENTO['conquer-finance'],
+})
+
+# Nombre del evento de lanzamiento en Meta y en TikTok. Es el mismo para las
+# tres marcas: cada una tiene su píxel, así que no hay forma de confundirlos, y
+# un solo nombre deja el informe comparable entre escuelas.
+EVENTO_META_LANZAMIENTO = 'LeadLanzamiento'
+EVENTO_TIKTOK_LANZAMIENTO = 'LeadLanzamiento'
+
+
+def get_pixeles_evento(escuela):
+    """Píxeles a código de las pantallas de evento, o {} si no se reconoce."""
+    if not escuela:
+        return {}
+    cfg = PIXELES_EVENTO.get(str(escuela).strip().lower())
+    if not cfg:
+        return {}
+    return dict(cfg,
+                evento_meta=EVENTO_META_LANZAMIENTO,
+                evento_tiktok=EVENTO_TIKTOK_LANZAMIENTO)
+
+
+# ---------------------------------------------------------------------------
 # Favicon por marca (ruta relativa a STATIC_URL; la plantilla le pone {% static %}).
 #
 # Las páginas que sirve Django tienen que declararlo igual que lo declaraban las
@@ -166,6 +234,8 @@ def pixel_ids(request):
     return {
         'pixel_ids': {},
         'gtm': {},
+        # Solo las pantallas de evento lo rellenan (ver funnels.evento_views).
+        'pixeles': {},
         # Por defecto sin marca; las vistas que saben de qué escuela es lo
         # sobrescriben con su paleta.
         'consentimiento': consent.contexto(request),

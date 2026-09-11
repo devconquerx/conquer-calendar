@@ -19,7 +19,7 @@ from django.views.generic import TemplateView
 
 from . import consentimiento as consent
 from .contenido import con_textos, puede_ver_borrador
-from .context_processors import get_gtm_config
+from .context_processors import get_pixeles_evento
 from .views import _base_path, _escuela_por_host
 
 
@@ -379,14 +379,22 @@ def plantilla_de(ficha, request):
     return ficha['plantilla']
 
 
-def _gtm(escuela):
-    """Contenedor de GTM de la marca para estas pantallas.
+def _medicion(escuela):
+    """Medición de las páginas de evento: píxeles a código, nunca el contenedor.
 
-    Las tres lo llevan, incluida Finance. Su página de Webflow no cargaba
-    ninguno, así que esto es lo único que se aparta del original a propósito:
-    sus lanzamientos estaban sin medir y ahora miden como los demás.
+    El contenedor de la marca dispara el lead del funnel, así que cada registro
+    de un lanzamiento se contaba como un lead de venta —en Google, en Meta y en
+    TikTok— y ensuciaba justo la señal por la que pujan las campañas de venta.
+
+    Ninguna de estas diez páginas lo lleva ya, tanto si recoge registros como si
+    no: el corte es "página de evento", no "página con formulario". Todas cargan
+    los píxeles de `_includes/_pixeles_evento.html` —que mantienen GA4, Meta y
+    TikTok midiendo el tráfico— y las que tienen formulario disparan además su
+    propia conversión de lead, contra acciones creadas solo para lanzamientos.
+
+    El resto del sitio (el funnel y todo lo demás) sigue con su contenedor.
     """
-    return get_gtm_config(escuela)
+    return {'gtm': {}, 'pixeles': get_pixeles_evento(escuela)}
 
 
 # Páginas de evento de campaña. A diferencia de `EVENTOS` —una por marca, la del
@@ -871,7 +879,7 @@ class EventoView(TemplateView):
         # volcarlas juntas al contexto se comería la mitad.
         ctx['gr'] = con_textos(GRACIAS[self.escuela],
                                borrador=puede_ver_borrador(self.request))
-        ctx['gtm'] = _gtm(self.escuela)
+        ctx.update(_medicion(self.escuela))
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         # País del selector según Cloudflare. Se manda VACÍO si la cabecera no
         # viene, en vez de caer aquí a 'ES': si el servidor rellena España, el
@@ -921,7 +929,9 @@ class GraciasView(TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['gr'] = self.gracias
-        ctx['gtm'] = _gtm(self.escuela)
+        # La de gracias es el destino del registro y comparte su medición: el
+        # visitante llega aquí sin recargar, con los píxeles ya cargados.
+        ctx.update(_medicion(self.escuela))
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         ctx['version'] = version(self.request)
         ctx['marca_v2'] = MARCAS_V2.get(self.escuela)
@@ -976,7 +986,7 @@ class PaginaDeCampanaView(TemplateView):
             ctx['variante'] = variante
             if ctx.get('funnel'):
                 ctx['funnel'] = f"{ctx['funnel']}-{variante['codigo']}"
-        ctx['gtm'] = _gtm(self.escuela)
+        ctx.update(_medicion(self.escuela))
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         ctx['version'] = version(self.request)
         ctx['marca_v2'] = MARCAS_V2.get(self.escuela)

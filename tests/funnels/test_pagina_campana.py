@@ -43,9 +43,12 @@ class LaPaginaSeSirveTest(TestCase):
         self.assertIn('no-store', r.headers.get('Cache-Control', ''))
         self.assertIn('CF-IPCountry', r.headers.get('Vary', ''))
 
-    def test_lleva_el_gtm_de_blocks_y_su_consentimiento(self):
+    def test_lleva_los_pixeles_de_blocks_y_su_consentimiento(self):
+        # Recoge datos, así que mide con los píxeles propios de lanzamiento y no
+        # con el contenedor: su trigger de lead es el del funnel.
         html = self._html()
-        self.assertIn("st = '5PK5LTG'", html)
+        self.assertNotIn("st = '5PK5LTG'", html)
+        self.assertIn("ads: 'AW-725899560'", html)
         self.assertIn('id="cqx-consent"', html)
 
     def test_el_registro_pasa_a_la_de_gracias_sin_recargar(self):
@@ -258,13 +261,15 @@ class LasPaginasSinFormularioTest(TestCase):
                       'pildoras-evento-1', 'pildoras-evento-2', 'pildoras-evento-3'):
             self.assertIsNone(PAGINAS_DE_CAMPANA[clave]['funnel'], clave)
 
-    def test_llevan_su_gtm_y_su_consentimiento(self):
-        # Que no recojan datos no las exime de medir ni de pedir permiso.
-        for host, ruta, st in (('www.conquerblocks.com', '/evento/evento-testimonios', '5PK5LTG'),
-                               ('www.conquerlanguages.com', '/eventos/bitacora', 'MPB7S5C7'),
-                               ('www.conquerfinance.com', '/evento/pildoras-evento-2', 'MXTDVVBG')):
+    def test_llevan_sus_pixeles_y_su_consentimiento(self):
+        # Que no recojan datos no las exime de medir ni de pedir permiso. Miden
+        # con los píxeles a código, como el resto de páginas de evento.
+        for host, ruta, ads in (('www.conquerblocks.com', '/evento/evento-testimonios', 'AW-725899560'),
+                                ('www.conquerlanguages.com', '/eventos/bitacora', 'AW-16956085244'),
+                                ('www.conquerfinance.com', '/evento/pildoras-evento-2', 'AW-16625277654')):
             html = self.client.get(ruta, HTTP_HOST=host, HTTP_CF_IPCOUNTRY='ES').content.decode()
-            self.assertIn(f"st = '{st}'", html, f'{host}{ruta}')
+            self.assertNotIn('gtm.start', html, f'{host}{ruta}')
+            self.assertIn(f"ads: '{ads}'", html, f'{host}{ruta}')
             self.assertIn('id="cqx-consent"', html, f'{host}{ruta}')
 
     def test_declaran_documento(self):
@@ -456,9 +461,10 @@ class LaTradingWeekTest(TestCase):
         self.assertNotIn('Nos has visto en', html)
         self.assertNotIn('twitch-logo', html)
 
-    def test_lleva_su_gtm_su_consentimiento_y_su_doctype(self):
+    def test_lleva_sus_pixeles_su_consentimiento_y_su_doctype(self):
         html = self._html(HTTP_CF_IPCOUNTRY='ES')
-        self.assertIn("st = 'MXTDVVBG'", html)
+        self.assertNotIn("st = 'MXTDVVBG'", html)
+        self.assertIn("ads: 'AW-16625277654'", html)
         self.assertIn('id="cqx-consent"', html)
         self.assertTrue(html.lstrip().lower().startswith('<!doctype html>'))
 
@@ -559,10 +565,11 @@ class LaGraciasDeLaTradingWeekTest(TestCase):
         self.assertIn('background-color:#000', html)
         self.assertIn('fondo-blur.avif', html)
 
-    def test_lleva_gtm_consentimiento_y_doctype(self):
+    def test_lleva_pixeles_consentimiento_y_doctype(self):
         html = self.client.get('/grupos-comunidad', HTTP_HOST='www.conquerfinance.com',
                                HTTP_CF_IPCOUNTRY='ES').content.decode()
-        self.assertIn("st = 'MXTDVVBG'", html)
+        self.assertNotIn("st = 'MXTDVVBG'", html)
+        self.assertIn("ads: 'AW-16625277654'", html)
         self.assertIn('id="cqx-consent"', html)
         self.assertTrue(html.lstrip().lower().startswith('<!doctype html>'))
 

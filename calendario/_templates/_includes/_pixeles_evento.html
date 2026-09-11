@@ -1,0 +1,39 @@
+{% load static %}{% comment %}
+  Píxeles a código de las pantallas de evento (lanzamientos).
+
+  Sustituye al contenedor de GTM en estas páginas — y por eso va en el mismo
+  sitio donde iría `_sgtm_head.html`, nunca junto a él. El motivo es el evento
+  de conversión: el trigger de lead del contenedor es el del funnel, así que los
+  registros de un lanzamiento acababan contados como leads de venta. Aquí se
+  cargan los tres píxeles directamente y el registro dispara su PROPIO evento:
+
+    Google Ads → acción "Lead Lanzamiento <XX> Web" (send_to de `ads_conversion`)
+    Meta       → evento propio (`evento_meta`), no el `Lead` del funnel
+    TikTok     → evento propio (`evento_tiktok`), no el `SubmitForm` del funnel
+
+  Se mantiene GA4 con el mismo measurement ID que disparaba el contenedor, para
+  que estas páginas no desaparezcan de los informes al quitarle el GTM.
+
+  La config viene de funnels.context_processors.get_pixeles_evento(escuela), que
+  las vistas de evento ponen en `pixeles`. Sin `pixeles` no se emite nada, así
+  que el include es inofensivo en las páginas que siguen con GTM.
+
+  Va DESPUÉS de `_consentimiento.html`: los valores por defecto de Consent Mode
+  tienen que estar puestos antes de que exista ninguna etiqueta de Google, y
+  Meta y TikTok esperan al permiso de marketing (ver pixeles-evento.js).
+{% endcomment %}{% if pixeles.ads %}
+<!-- Píxeles de lanzamiento (sin GTM) -->
+<script>
+  window.__PIXELES__ = {
+    ads: '{{ pixeles.ads }}',
+    ads_conversion: '{{ pixeles.ads_conversion }}',
+    ga4: '{{ pixeles.ga4 }}',
+    meta: '{{ pixeles.meta }}',
+    tiktok: '{{ pixeles.tiktok }}',
+    evento_meta: '{{ pixeles.evento_meta }}',
+    evento_tiktok: '{{ pixeles.evento_tiktok }}'
+  };
+</script>
+<script src="{% static 'js/pixeles-evento.js' %}" defer></script>
+<!-- Fin píxeles de lanzamiento -->
+{% endif %}

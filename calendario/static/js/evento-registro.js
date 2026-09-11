@@ -23,6 +23,14 @@
     aviso.textContent = texto;
   }
 
+  /* Identificador del registro. Mismo formato que el del funnel
+     (frontend/src/lib/trackingIds.js): viaja al CRM en el propio lead y se usa
+     como eventID en los píxeles, que es lo que deduplica este registro contra
+     el que manda la API de conversiones desde el servidor. */
+  function nuevoEventId() {
+    return Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+  }
+
   function cookie(nombre) {
     var m = document.cookie.match('(^|;)\\s*' + nombre + '\\s*=\\s*([^;]+)');
     return m ? decodeURIComponent(m[2]) : '';
@@ -54,7 +62,13 @@
      cambios de etapa (frontend/src/lib/pixelEvents.js), con los mismos campos
      `page_location` y `page_path`, de modo que el trigger del contenedor sirve
      para los dos sitios. Se empuja DESPUÉS del pushState, para que la URL que
-     lea el trigger sea la de gracias y no la del evento. */
+     lea el trigger sea la de gracias y no la del evento.
+
+     Desde que estas pantallas miden con píxeles propios (pixeles-evento.js) ya
+     no hay contenedor que lo lea, pero se mantiene: cuesta nada y deja la
+     señal puesta para quien vuelva a enchufar GTM aquí. La conversión del
+     registro NO depende de esto — se dispara al recibir la respuesta del
+     servidor, no al cambiar de pantalla. */
   function alDataLayer(datos) {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push(datos);
@@ -145,9 +159,11 @@
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { decir('Revisa el correo, no parece válido.', 'error'); form.email.focus(); return; }
     if (campoTel && !tel) { decir('Escribe tu número de WhatsApp.', 'error'); campoTel.focus(); return; }
 
+    var eventId = nuevoEventId();
     var cuerpo = Object.assign(atribucion(), {
       name: nombre,
       email: email,
+      event_id: eventId,
       funnel: window.__EVENTO__.funnel,
       url: location.href,
       user_agent: navigator.userAgent,
@@ -171,6 +187,19 @@
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function () {
         decir('¡Listo! Te llevamos al último paso…', 'ok');
+        /* Conversión de lanzamiento, contra las acciones y eventos propios de
+           estas pantallas (pixeles-evento.js). Va ANTES de cambiar de pantalla:
+           si algo fallara al pintar la de gracias, el registro ya está contado.
+           En las páginas que siguen con GTM no existe `cqxPixeles` y aquí no
+           pasa nada. */
+        if (window.cqxPixeles) {
+          window.cqxPixeles.lead({
+            event_id: eventId,
+            email: email,
+            telefono: campoTel ? (prefijo + tel).replace(/\D/g, '') : '',
+            nombre: nombre,
+          });
+        }
         form.reset();
         irAGracias();
       })

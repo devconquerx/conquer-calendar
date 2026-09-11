@@ -65,6 +65,13 @@
       if (c[k]) w.dataLayer.push({ event: 'cookie_consent_' + k });
     });
     w.dataLayer.push({ event: 'cookie_consent_update' });
+    /* Para el código que no pasa por GTM —los píxeles de las pantallas de
+       evento, que se cargan a mano (pixeles-evento.js)—: Consent Mode solo lo
+       entienden las etiquetas de Google, así que Meta y TikTok necesitan que
+       alguien les diga que ya hay permiso. */
+    try {
+      w.dispatchEvent(new CustomEvent('cqx:consent', { detail: c }));
+    } catch (e) { /* navegador sin CustomEvent: se queda sin píxeles, no rompe */ }
   }
 
   // -------------------------------------------------------------- interfaz

@@ -14,7 +14,10 @@ from calendario.funnels import consentimiento
 
 JS = Path(__file__).resolve().parents[2] / 'calendario' / 'static' / 'js' / 'consentimiento.js'
 
-# Las 5 páginas que sirve Django con GTM dentro.
+# Las 5 páginas de evento que sirve Django. Ninguna lleva ya el contenedor de
+# GTM —desde que el registro de un lanzamiento dispara su propia conversión,
+# cargan los píxeles a código (ver test_pixeles_evento.py)—, pero siguen
+# midiendo, y el permiso manda igual sobre lo uno que sobre lo otro.
 PAGINAS = (
     ('www.conquerblocks.com', '/evento/evento-online'),
     ('www.conquerblocks.com', '/evento/gracias-comunidad'),
@@ -150,12 +153,15 @@ class LoQueSeLeDiceAGoogleTest(TestCase):
         self.assertIn('var aplica = true', html)
         self.assertIn('Al continuar navegando, aceptas su uso', html)
 
-    def test_el_bloque_va_antes_que_gtm(self):
-        # Si GTM cargara primero, esa primera medición se escaparía sin permiso.
+    def test_el_bloque_va_antes_que_la_medicion(self):
+        # Si las etiquetas cargaran primero, esa primera medición se escaparía
+        # sin permiso. Da igual que la medición sea el contenedor de GTM o los
+        # píxeles a código de las pantallas de evento: el orden es el mismo.
         for host, ruta in PAGINAS:
             html = self.client.get(ruta, HTTP_HOST=host, HTTP_CF_IPCOUNTRY='ES').content.decode()
-            self.assertLess(html.index("gtag('consent', 'default'"), html.index('gtm.start'),
+            self.assertLess(html.index("gtag('consent', 'default'"), html.index('__PIXELES__'),
                             f'{host}{ruta}')
+
 
     def test_estan_las_cinco_claves_de_consent_mode_v2(self):
         html = self._html('ES')
