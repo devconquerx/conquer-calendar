@@ -86,11 +86,19 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   // tracking). En la SPA navega con pushState; fuera de ella, recarga completa.
   const goToStepForm = useCallback(() => {
     const search = window.location.search || ''
-    // Destino externo (`config.video.buttonUrl`): se va tal cual, sin pegarle el
-    // query string del funnel — esas URLs traen sus propios parámetros y
-    // añadirle los nuestros es pedirle problemas a quien esté al otro lado.
+    /* Destino externo (`config.video.buttonUrl`): se abre en una pestaña nueva
+       para no sacar a nadie del vídeo —puede volver a la pestaña de atrás y
+       seguir donde lo dejó— y se va tal cual, sin pegarle el query string del
+       funnel: esas URLs traen sus propios parámetros y añadirles los nuestros
+       es pedirle problemas a quien esté al otro lado.
+
+       `noopener` porque la página destino no tiene por qué poder tocar la
+       nuestra por `window.opener`. Si el navegador bloquea la pestaña (algún
+       bloqueador agresivo devuelve null), se navega en la misma antes que
+       dejar el botón sin hacer nada. */
     if (ctaUrl) {
-      window.location.href = ctaUrl
+      const nueva = window.open(ctaUrl, '_blank', 'noopener')
+      if (!nueva) window.location.href = ctaUrl
       return
     }
     if (router) {
