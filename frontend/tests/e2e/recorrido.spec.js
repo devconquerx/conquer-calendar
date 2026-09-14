@@ -76,6 +76,26 @@ test.describe('A/B de fondo blanco (landing)', () => {
     await expect(fondo(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)')
   })
 
+  /* Blocks US cerró el A/B de fondo el 14/09/2026 —gana el papel— y estrena el
+     de captura de teléfono. Se comprueban las dos cosas: que ya no blanquea y
+     que el checkbox aparece solo en su rama. */
+  test('Blocks US se queda en papel y estrena el A/B de teléfono', async ({ page }) => {
+    const base = { slug: 'blocks-us', escuela: 'conquer-blocks', region: 'us' }
+
+    await forzarVariante(page, 'form_variant_cb_us_tel', '74')
+    await page.goto(urlEtapa(base))
+    await expect(fondo(page)).toHaveCSS('background-color', 'rgb(250, 250, 250)')
+    await expect(page.locator('input[type="checkbox"]').first()).toBeVisible()
+
+    await forzarVariante(page, 'form_variant_cb_us_tel', '73')
+    await page.goto(urlEtapa(base))
+    await expect(fondo(page)).toHaveCSS('background-color', 'rgb(250, 250, 250)')
+    await expect(page.locator('input[type="checkbox"]')).toHaveCount(0)
+    const pedidos = await page.evaluate(() => [...document.querySelectorAll('input[type="tel"]')]
+      .filter((i) => !i.closest('[aria-hidden="true"]')).length)
+    expect(pedidos).toBe(0)
+  })
+
   /* El fondo blanco cubre el funnel ENTERO, así que hay que comprobarlo etapa
      por etapa: cada una resuelve su propio tema y la que se olvide de aplicar
      la variante deja al visitante viendo papel en mitad del recorrido. Corren

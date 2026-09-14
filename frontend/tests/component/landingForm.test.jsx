@@ -114,6 +114,12 @@ describe('A/B de teléfono/WhatsApp (EU)', () => {
      menciona WhatsApp en las DOS variantes y haría ambigua la búsqueda. */
   const hayCheckbox = (container) => !!container.querySelector('input[type="checkbox"]')
 
+  /* El honeypot es un input[type=tel] dentro de un contenedor aria-hidden
+     colocado a -10000px, así que «pedir el teléfono» = tener un tel FUERA de
+     esa caja. */
+  const telefonoVisible = (container) => [...container.querySelectorAll('input[type="tel"]')]
+    .some((i) => !i.closest('[aria-hidden="true"]'))
+
   /* Blocks EU ya NO prueba el checkbox: ganó la rama que lo lleva y quedó fija
      por config (`landing.whatsappOptin`, migración 0027), así que sale en las
      DOS ramas del test de fondo que corre ahora en su lugar. */
@@ -127,6 +133,33 @@ describe('A/B de teléfono/WhatsApp (EU)', () => {
       expect(hayCheckbox(container)).toBe(true)
       expect(screen.getByText(/repetición por WhatsApp/i)).toBeInTheDocument()
     })
+
+  /* US estrena el 14/09/2026 su propio A/B de captura de teléfono: control sin
+     pedirlo (solo honeypot) frente a la rama con el checkbox de WhatsApp. Es el
+     mismo mecanismo que corrió en EU, con códigos propios. */
+  for (const c of [
+    { marca: 'Blocks US', slug: 'blocks-us', escuela: 'conquer-blocks', storageKey: 'form_variant_cb_us_tel', sinTelefono: '73', conCheckbox: '74' },
+    { marca: 'Languages US', slug: 'languages-us', escuela: 'conquer-languages', storageKey: 'form_variant_cl_us_tel', sinTelefono: '75', conCheckbox: '76' },
+  ]) {
+    it(`${c.marca} ${c.sinTelefono} (control): no se pide el teléfono`, () => {
+      const { container } = montar({ slug: c.slug, escuela: c.escuela, region: 'us', storageKey: c.storageKey, variante: c.sinTelefono })
+      expect(hayCheckbox(container)).toBe(false)
+      // El honeypot sí existe (capta el autofill del navegador), pero va
+      // escondido fuera de pantalla: lo que no debe haber es un campo visible.
+      expect(telefonoVisible(container)).toBe(false)
+    })
+
+    it(`${c.marca} ${c.conCheckbox} (test): sale el checkbox de WhatsApp`, () => {
+      const { container } = montar({ slug: c.slug, escuela: c.escuela, region: 'us', storageKey: c.storageKey, variante: c.conCheckbox })
+      expect(hayCheckbox(container)).toBe(true)
+      expect(screen.getByText(/repetición por WhatsApp/i)).toBeInTheDocument()
+    })
+
+    it(`${c.marca}: la variante viaja en el lead`, async () => {
+      const { container } = montar({ slug: c.slug, escuela: c.escuela, region: 'us', storageKey: c.storageKey, variante: c.conCheckbox })
+      expect((await enviar(container)).utm_form_variant).toBe(c.conCheckbox)
+    })
+  }
 
   it('Blocks EU sin la bandera de config se queda sin checkbox', () => {
     // Fija que el checkbox depende SOLO de la config: si la migración no llega

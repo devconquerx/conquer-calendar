@@ -17,14 +17,17 @@ PRELLAMADA = 'Prellamada'
 TESTS_AB = [
     # ── Landing: la variante viaja en el Lead (LeadRegister.utm_form_variant)
     ('cb-latam', LEAD, 'Fondo de la landing', ('papel', '57'), ('blanco', '58')),
-    ('cb-us', LEAD, 'Fondo de la landing', ('papel', '59'), ('blanco', '60')),
     ('fi-latam', LEAD, 'Fondo de la landing', ('papel', '61'), ('blanco', '62')),
     ('cl-latam', LEAD, 'Fondo de la landing', ('papel', '63'), ('blanco', '64')),
     ('cl-eu', LEAD, 'Fondo de la landing', ('papel', '65'), ('blanco', '66')),
-    ('cl-us', LEAD, 'Fondo de la landing', ('papel', '67'), ('blanco', '68')),
     ('cb-eu', LEAD, 'Fondo de la landing', ('papel', '69'), ('blanco', '70')),
     ('cb-eu-2', LEAD, 'Fondo de la landing', ('papel', '71'), ('blanco', '72')),
     ('fi-eu', LEAD, 'Captura de teléfono', ('checkbox de WhatsApp', '55'), ('campo obligatorio', '56')),
+    ('cb-us', LEAD, 'Captura de teléfono', ('no se pide', '73'), ('checkbox de WhatsApp', '74')),
+    ('cl-us', LEAD, 'Captura de teléfono', ('no se pide', '75'), ('checkbox de WhatsApp', '76')),
+    # Las dos landings de US cerraron el A/B de fondo el 14/09/2026 con el PAPEL
+    # como ganador (59/60 y 67/68) y pasaron al del teléfono. Sus códigos de
+    # fondo no se reciclan.
     # El A/B del checkbox de WhatsApp de Blocks EU (51/52 y 53/54) se apagó el
     # 27/08/2026: ganó la rama CON checkbox, que queda fija por config
     # (`landing.whatsappOptin`) en los dos funnels. Sus códigos NO se reciclan.

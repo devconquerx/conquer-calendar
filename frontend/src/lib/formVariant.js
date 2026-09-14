@@ -137,16 +137,24 @@ const FORM_VARIANT_EXPERIMENTS = [
     variants: ['57', '58'],
     whiteBackgroundVariant: '58',
   },
-  // Blocks US (cb-us, slug `blocks-us`): 59 (control) / 60 (fondo blanco).
+  // Blocks US (cb-us, slug `blocks-us`): 73 (control: no se pide el teléfono,
+  // solo lo captura el honeypot) / 74 (test: checkbox de WhatsApp, que al
+  // marcarse revela el campo de teléfono y lo hace obligatorio).
+  //
+  // Antes corría aquí el A/B de fondo (59/60). Se apagó el 14/09/2026 con el
+  // PAPEL como ganador: al no declarar `whiteBackgroundVariant`, el funnel
+  // vuelve al papel para todo el mundo, que es el comportamiento por defecto
+  // del tema. Los códigos 59/60 no se reciclan —significan papel/blanco en los
+  // leads históricos— y por eso cambia también la `storageKey`.
   {
     match: ({ funnelSlug }) => funnelSlug === 'blocks-us',
-    storageKey: 'form_variant_cb_us',
-    themeId: 'conquerblocks',
-    variants: ['59', '60'],
-    whiteBackgroundVariant: '60',
+    storageKey: 'form_variant_cb_us_tel',
+    variants: ['73', '74'],
+    whatsappOptinVariant: '74',
   },
-  // Languages, las tres regiones (cl-latam / cl-eu / cl-us): mismo test de
-  // fondo blanco. Su landing usa el mismo renderer paperboard que Blocks.
+  // Languages LATAM y EU: test de fondo blanco. Su landing usa el mismo
+  // renderer paperboard que Blocks. US ya no está aquí: cerró el de fondo el
+  // 14/09/2026 y corre el del teléfono, más abajo.
   {
     match: ({ funnelSlug }) => funnelSlug === 'languages-latam',
     storageKey: 'form_variant_cl_latam',
@@ -162,11 +170,13 @@ const FORM_VARIANT_EXPERIMENTS = [
     whiteBackgroundVariant: '66',
   },
   {
+    // Languages US (cl-us): mismo cambio y por el mismo motivo que Blocks US
+    // —fuera el A/B de fondo (67/68), gana el papel; entra el del teléfono—,
+    // con su propio par de códigos para no mezclar los dos funnels.
     match: ({ funnelSlug }) => funnelSlug === 'languages-us',
-    storageKey: 'form_variant_cl_us',
-    themeId: 'conquerlanguages',
-    variants: ['67', '68'],
-    whiteBackgroundVariant: '68',
+    storageKey: 'form_variant_cl_us_tel',
+    variants: ['75', '76'],
+    whatsappOptinVariant: '76',
   },
 ]
 

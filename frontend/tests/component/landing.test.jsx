@@ -28,16 +28,15 @@ const fondoDe = (container) => {
   return { clases: raiz.className, estilo: raiz.getAttribute('style') || '' }
 }
 
-/* A/B de fondo blanco: Blocks LATAM/US y Finance LATAM. Cambia SOLO la landing;
-   el resto del funnel conserva su papel (eso se comprueba en ssr.smoke y e2e). */
+/* A/B de fondo blanco. Las dos landings de US salieron el 14/09/2026 (ganó el
+   papel y pasaron al A/B de teléfono), así que aquí ya no están: su caso vive
+   más abajo, comprobando que se quedan en papel pase lo que pase. */
 describe('landing — A/B de fondo blanco', () => {
   const CASOS = [
     { marca: 'Blocks LATAM', slug: 'blocks-latam', escuela: 'conquer-blocks', storageKey: 'form_variant_cb_latam', control: '57', blanco: '58' },
-    { marca: 'Blocks US', slug: 'blocks-us', escuela: 'conquer-blocks', region: 'us', storageKey: 'form_variant_cb_us', control: '59', blanco: '60' },
     { marca: 'Finance LATAM', slug: 'finance-latam', escuela: 'conquer-finance', storageKey: 'form_variant_cf_latam', control: '61', blanco: '62' },
     { marca: 'Languages LATAM', slug: 'languages-latam', escuela: 'conquer-languages', storageKey: 'form_variant_cl_latam', control: '63', blanco: '64' },
     { marca: 'Languages EU', slug: 'languages-eu', escuela: 'conquer-languages', region: 'eu', storageKey: 'form_variant_cl_eu', control: '65', blanco: '66' },
-    { marca: 'Languages US', slug: 'languages-us', escuela: 'conquer-languages', region: 'us', storageKey: 'form_variant_cl_us', control: '67', blanco: '68' },
   ]
 
   for (const c of CASOS) {
@@ -79,6 +78,20 @@ describe('landing — A/B de fondo blanco', () => {
     })
     expect(fondoDe(container).clases).not.toContain('bg-white')
   })
+
+  for (const c of [
+    { marca: 'Blocks US', slug: 'blocks-us', escuela: 'conquer-blocks', storageKey: 'form_variant_cb_us_tel', checkbox: '74' },
+    { marca: 'Languages US', slug: 'languages-us', escuela: 'conquer-languages', storageKey: 'form_variant_cl_us_tel', checkbox: '76' },
+  ])
+    it(`${c.marca}: cerró el test de fondo, se queda en papel en las dos ramas`, () => {
+      // Ni la rama de checkbox ni un código de fondo viejo que quedara en
+      // localStorage pueden volver a blanquear la landing.
+      localStorage.setItem('form_variant_cb_us', '60')
+      localStorage.setItem('form_variant_cl_us', '68')
+      const { container } = montar({ ...c, region: 'us', variante: c.checkbox })
+      expect(fondoDe(container).clases).toContain('bg-cb-bg')
+      expect(fondoDe(container).clases).not.toContain('bg-white')
+    })
 
   it('Blocks EU entra en el test de fondo con sus códigos nuevos', () => {
     const { container } = montar({
