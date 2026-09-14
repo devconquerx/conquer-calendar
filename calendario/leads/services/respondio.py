@@ -122,9 +122,15 @@ def push_lead(lead):
             'enlace_video_clase': video_url,
             'pais_lead': lead.lead_country or lead.country_name or '',
         }
+        # Respond.io espera `custom_fields` como lista de {name, value}. Con un
+        # diccionario bajo `customFields` responde 200 y no escribe nada: el
+        # registro llegaba con la academia, el vídeo y el país vacíos (las
+        # etiquetas sí, que van por otro endpoint). Verificado contra la API.
         requests.put(
             f'{API_BASE}/contact/{identifier}',
-            json={'customFields': custom_fields},
+            json={'custom_fields': [
+                {'name': k, 'value': v} for k, v in custom_fields.items()
+            ]},
             headers=hdrs,
             timeout=10,
         )
