@@ -3,7 +3,9 @@ import logging
 import requests
 from django.conf import settings
 
-from calendario.leads.services.utils import SCHOOL_NAMES, SCHOOL_VIDEO_URLS
+from calendario.leads.services.utils import (
+    get_school_display_name, get_school_tag_abbr, SCHOOL_VIDEO_URLS,
+)
 from calendario.leads.services.respondio import _headers, _ensure_contact
 from .utils import build_schedule_ctx
 
@@ -36,8 +38,8 @@ def push_schedule(reserva):
         return
 
     school_code = s.school_code
-    school_name = SCHOOL_NAMES.get(school_code, '')
-    school_abbr = (school_code or '').upper()
+    school_name = get_school_display_name(school_code, s.escuela, s.form)
+    school_abbr = get_school_tag_abbr(school_code, s.escuela, s.form)
     video_url = SCHOOL_VIDEO_URLS.get(school_code, '')
 
     call_date = ''

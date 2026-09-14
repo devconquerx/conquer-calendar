@@ -4,7 +4,10 @@ import time
 import requests
 from django.conf import settings
 
-from .utils import get_school_code, get_region_from_lead, SCHOOL_NAMES, SCHOOL_VIDEO_URLS
+from .utils import (
+    get_school_code, get_region_from_lead, get_school_display_name,
+    get_school_tag_abbr, SCHOOL_VIDEO_URLS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -89,10 +92,10 @@ def push_lead(lead):
         return
 
     school_code = get_school_code(lead)
-    school_name = SCHOOL_NAMES.get(school_code, 'Blocks')
+    school_name = get_school_display_name(school_code, lead.school, lead.funnel) or 'Blocks'
     video_url = SCHOOL_VIDEO_URLS.get(school_code, '')
     region = get_region_from_lead(lead)
-    school_abbr = (school_code or 'cb').upper()
+    school_abbr = get_school_tag_abbr(school_code or 'cb', lead.school, lead.funnel)
 
     phone = None
     if lead.lead_phone:

@@ -67,6 +67,9 @@ def build_schedule_ctx(reserva):
     s.pk = reserva.pk
     s.lead = lead
     s.school_code = school_code
+    # Slug largo de la escuela ('conquer-ai', 'conquer-blocks'...): el código de
+    # dos letras no distingue Conquer AI de Blocks y el nombre que se anuncia sí.
+    s.escuela = (escuela or '')
     s.region = region
 
     s.lead_email = reserva.email_invitado or ''

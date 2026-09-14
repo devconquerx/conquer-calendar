@@ -14,18 +14,20 @@ import logging
 import requests
 from django.conf import settings
 
-from calendario.leads.services.utils import SCHOOL_SLUG_TO_CODE
+from calendario.leads.services.utils import SCHOOL_SLUG_TO_CODE, get_school_tag_abbr
 from calendario.leads.services.respondio import API_BASE, _headers, _ensure_contact
 
 logger = logging.getLogger(__name__)
 
 
 def _school_abbr(prellamada):
-    """Deriva la abreviatura (CB/CL/CF/CG) desde la escuela del funnel."""
+    """Deriva la abreviatura (CB/CL/CF/CG, o AI) desde la escuela del funnel."""
     funnel = prellamada.funnel
     escuela = (funnel.escuela if funnel else '') or ''
     code = SCHOOL_SLUG_TO_CODE.get(escuela.lower().strip())
-    return (code or '').upper()
+    if not code:
+        return ''
+    return get_school_tag_abbr(code, escuela, funnel.key if funnel else '')
 
 
 def push_pre_schedule(prellamada):

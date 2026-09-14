@@ -161,3 +161,71 @@ class FunnelAiEuLeadTest(TestCase):
 
         self.assertIn(SLUG, FUNNEL_TAG_MAP)
         self.assertNotEqual(FUNNEL_TAG_MAP[SLUG], FUNNEL_TAG_MAP['cb-eu'])
+
+
+class FunnelAiEuNombreAcademiaTest(TestCase):
+    """El nombre con el que se anuncia en Respond.io.
+
+    Es lo único que NO comparte con Blocks: las plantillas de WhatsApp dicen
+    "Conquer {{nombre_academia}}", así que un lead de Conquer AI que llegue como
+    "Blocks" se presenta con la marca equivocada. Etiquetas, closers, píxeles y
+    vídeo siguen siendo los de cb.
+    """
+
+    def test_el_registro_se_anuncia_como_ai(self):
+        from calendario.leads.services.utils import get_school_code, get_school_display_name
+
+        lead = Lead.objects.create(email='ai3@ejemplo.com', school=ESCUELA, funnel=SLUG)
+        self.assertEqual(
+            get_school_display_name(get_school_code(lead), lead.school, lead.funnel),
+            'AI',
+        )
+
+    def test_la_reserva_lo_deduce_de_la_key_del_formulario(self):
+        """La reserva no lleva escuela: al CRM y a Respond.io viaja `FullAiEu`."""
+        from calendario.leads.services.utils import get_school_display_name
+
+        self.assertEqual(get_school_display_name('cb', '', 'FullAiEu'), 'AI')
+
+    def test_blocks_sigue_diciendo_blocks(self):
+        from calendario.leads.services.utils import get_school_display_name
+
+        self.assertEqual(get_school_display_name('cb', 'conquer-blocks', 'cb-eu'), 'Blocks')
+        self.assertEqual(get_school_display_name('cb', '', 'FullEu'), 'Blocks')
+        # 'ai' suelto dentro de otro código no convierte el funnel en Conquer AI.
+        self.assertEqual(get_school_display_name('cb', '', 'cb-trainingweek'), 'Blocks')
+
+
+class FunnelAiEuEtiquetasTest(TestCase):
+    """Las etiquetas de Respond.io también son suyas: 'AI', 'lead-AI',
+    'preschedule-AI', 'schedule-AI'. Sus flujos de WhatsApp se separan así de los
+    de Blocks, aunque el lead lo trabaje el mismo equipo."""
+
+    def test_el_registro_se_etiqueta_como_ai(self):
+        from calendario.leads.services.utils import get_school_code, get_school_tag_abbr
+
+        lead = Lead.objects.create(email='ai4@ejemplo.com', school=ESCUELA, funnel=SLUG)
+        self.assertEqual(get_school_tag_abbr(get_school_code(lead), lead.school, lead.funnel), 'AI')
+
+    def test_la_reserva_lo_deduce_de_la_key_del_formulario(self):
+        from calendario.leads.services.utils import get_school_tag_abbr
+
+        self.assertEqual(get_school_tag_abbr('cb', '', 'FullAiEu'), 'AI')
+
+    def test_la_prellamada_lo_deduce_de_la_escuela_del_funnel(self):
+        from types import SimpleNamespace
+
+        from calendario.funnels.respondio_preschedule import _school_abbr
+
+        funnel = SimpleNamespace(escuela=ESCUELA, key='FullAiEu')
+        self.assertEqual(_school_abbr(SimpleNamespace(funnel=funnel)), 'AI')
+
+    def test_blocks_sigue_etiquetandose_como_cb(self):
+        from types import SimpleNamespace
+
+        from calendario.funnels.respondio_preschedule import _school_abbr
+        from calendario.leads.services.utils import get_school_tag_abbr
+
+        self.assertEqual(get_school_tag_abbr('cb', 'conquer-blocks', 'cb-eu'), 'CB')
+        funnel = SimpleNamespace(escuela='conquer-blocks', key='FullEu')
+        self.assertEqual(_school_abbr(SimpleNamespace(funnel=funnel)), 'CB')

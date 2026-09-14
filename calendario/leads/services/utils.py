@@ -50,6 +50,18 @@ SCHOOL_NAMES = {
     'cg': 'Legal',
 }
 
+# Conquer AI no es una escuela: cuelga de Blocks —código 'cb', mismos píxeles,
+# misma cuenta de Ads, misma lista de AC y el mismo vídeo— y lo suyo es solo la
+# identidad con la que llega a Respond.io: el nombre que anuncian las plantillas
+# ("Conquer {{nombre_academia}}") y sus propias etiquetas, para poder separar sus
+# flujos de WhatsApp de los de cb. Por eso no está en SCHOOL_NAMES: no se
+# resuelve por código de escuela, sino por el slug de su escuela ('conquer-ai'),
+# por su código de funnel ('ai-eu', antes 'cb-ai') o por la key de su formulario
+# ('FullAiEu').
+ESCUELAS_CONQUER_AI = ('conquer-ai', 'conquerai')
+NOMBRE_ACADEMIA_CONQUER_AI = 'AI'
+ABREVIATURA_CONQUER_AI = 'AI'
+
 SCHOOL_VIDEO_URLS = {
     'cb': 'https://video.conquerblocks.com/',
     'cl': 'https://video.conquerlanguages.com/',
@@ -148,6 +160,38 @@ def get_school_code(lead):
         return 'cl'
 
     return None
+
+
+def es_conquer_ai(escuela='', funnel=''):
+    """¿El registro/la reserva viene del funnel de Conquer AI?"""
+    if (escuela or '').lower().strip() in ESCUELAS_CONQUER_AI:
+        return True
+    codigo = (funnel or '').lower().strip()
+    # 'ai-eu'/'cb-ai' (código de funnel) o 'FullAiEu' (key del formulario).
+    return 'ai' in codigo.split('-') or codigo.startswith('fullai')
+
+
+def get_school_display_name(school_code, escuela='', funnel=''):
+    """Nombre de academia para Respond.io ('Conquer {{nombre_academia}}').
+
+    Casi siempre es el de la escuela; Conquer AI es la excepción: opera como
+    Blocks pero se anuncia con su marca.
+    """
+    if es_conquer_ai(escuela, funnel):
+        return NOMBRE_ACADEMIA_CONQUER_AI
+    return SCHOOL_NAMES.get(school_code, '')
+
+
+def get_school_tag_abbr(school_code, escuela='', funnel=''):
+    """Abreviatura con la que se etiqueta el contacto en Respond.io ('CB',
+    'lead-CB', 'preschedule-CB', 'schedule-CB'...).
+
+    Conquer AI lleva las suyas ('AI', 'lead-AI'...): sus flujos de WhatsApp se
+    separan de los de Blocks, aunque comparta escuela con cb en todo lo demás.
+    """
+    if es_conquer_ai(escuela, funnel):
+        return ABREVIATURA_CONQUER_AI
+    return (school_code or '').upper()
 
 
 def get_region_from_lead(lead):
