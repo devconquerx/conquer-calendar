@@ -52,10 +52,10 @@ describe('registro de experimentos', () => {
       'languages-ge': null,
       'languages-kids-latam': null,
       'legal-eu': null,
-      // Conquer AI corre su propio test de teléfono (77/78). Cuelga de la marca
-      // Blocks y de la región EU, así que si el experimento se anclara a
-      // marca+región heredaría además el de blocks-eu.
-      'ai-eu': 'form_variant_ai_eu_tel',
+      // Conquer AI no corre ninguno: su teléfono es fijo por config. Cuelga de la
+      // marca Blocks y de la región EU, así que si los experimentos se anclaran
+      // a marca+región heredaría el de blocks-eu sin quererlo.
+      'ai-eu': null,
       // Comparten marca y región con blocks-*, pero son funnels propios y NO
       // deben entrar en sus tests.
       'especializacion-latam': null,
@@ -81,8 +81,6 @@ describe('registro de experimentos', () => {
       'languages-eu': '13/14',
       'languages-us': '15/16',
       'legal-eu': null,
-      // Conquer AI todavía no tiene test de vídeo: el de la landing viaja en el
-      // Lead y este en la prellamada, así que podrá añadirse sin chocar.
       'ai-eu': null,
       'especializacion-latam': null,
     })

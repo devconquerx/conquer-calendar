@@ -183,39 +183,17 @@ describe('A/B de teléfono/WhatsApp (EU)', () => {
     expect(registerLead).not.toHaveBeenCalled()
   })
 
-  /* Conquer AI corre el MISMO test que las dos landings de US —no pedir el
-     teléfono frente al checkbox de WhatsApp—, con códigos propios (77/78).
-     Su landing clonó de Blocks EU la bandera de config `whatsappOptin: true`,
-     así que el control solo queda sin checkbox (y por tanto sin campo de
-     teléfono) si el experimento manda sobre la config: eso es lo que fijan
-     estos tests, y es el motivo de que se rompiera el patrón la primera vez. */
-  it('Conquer AI 77 (control): ni checkbox ni campo de teléfono', () => {
+  /* Conquer AI no corre ningún A/B: pide el teléfono siempre y obligatorio, sin
+     checkbox, fijo por config (`landing.phoneRequired`, migración 0032). Su
+     landing clonó de Blocks EU la bandera `whatsappOptin`, que la migración
+     quita; estos tests fijan que el campo no dependa de ninguna variante. */
+  it('Conquer AI: teléfono visible y obligatorio, sin checkbox', async () => {
     const { container } = montar({
-      slug: 'ai-eu', region: 'eu', storageKey: 'form_variant_ai_eu_tel', variante: '77',
-      landing: { whatsappOptin: true },
+      slug: 'ai-eu', region: 'eu', landing: { phoneRequired: true },
     })
     expect(hayCheckbox(container)).toBe(false)
-    expect(telefonoVisible(container)).toBe(false)
-  })
-
-  it('Conquer AI 78 (test): sale el checkbox de WhatsApp y el campo llega oculto', () => {
-    const { container } = montar({
-      slug: 'ai-eu', region: 'eu', storageKey: 'form_variant_ai_eu_tel', variante: '78',
-      landing: { whatsappOptin: true },
-    })
-    expect(hayCheckbox(container)).toBe(true)
-    expect(screen.getByText(/repetición por WhatsApp/i)).toBeInTheDocument()
-    // El campo solo aparece al marcar el check, igual que en US.
-    expect(telefonoVisible(container)).toBe(false)
-  })
-
-  it('Conquer AI 78: al marcar el check aparece el teléfono y es obligatorio', async () => {
-    const { container } = montar({
-      slug: 'ai-eu', region: 'eu', storageKey: 'form_variant_ai_eu_tel', variante: '78',
-      landing: { whatsappOptin: true },
-    })
-    fireEvent.click(container.querySelector('input[type="checkbox"]'))
     expect(telefonoVisible(container)).toBe(true)
+    expect(screen.getByPlaceholderText(/número de whatsapp \*/i)).toBeInTheDocument()
 
     fireEvent.change(screen.getByPlaceholderText(/nombre/i), { target: { value: 'Ana' } })
     fireEvent.change(screen.getByPlaceholderText(/email/i), { target: { value: 'ana@ejemplo.com' } })
@@ -224,12 +202,14 @@ describe('A/B de teléfono/WhatsApp (EU)', () => {
     expect(registerLead).not.toHaveBeenCalled()
   })
 
-  it('Conquer AI: la variante viaja en el lead', async () => {
+  it('el teléfono obligatorio manda sobre el checkbox de la config', () => {
+    // Si una fila conserva las dos banderas (la migración se aplica sobre una
+    // config clonada), no puede salir el check: no hay nada que revelar.
     const { container } = montar({
-      slug: 'ai-eu', region: 'eu', storageKey: 'form_variant_ai_eu_tel', variante: '77',
-      landing: { whatsappOptin: true },
+      slug: 'ai-eu', region: 'eu', landing: { phoneRequired: true, whatsappOptin: true },
     })
-    expect((await enviar(container)).utm_form_variant).toBe('77')
+    expect(hayCheckbox(container)).toBe(false)
+    expect(telefonoVisible(container)).toBe(true)
   })
 
   it('Blocks LATAM no hereda el checkbox de EU', () => {

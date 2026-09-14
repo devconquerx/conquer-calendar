@@ -25,7 +25,9 @@ TESTS_AB = [
     ('fi-eu', LEAD, 'Captura de teléfono', ('checkbox de WhatsApp', '55'), ('campo obligatorio', '56')),
     ('cb-us', LEAD, 'Captura de teléfono', ('no se pide', '73'), ('checkbox de WhatsApp', '74')),
     ('cl-us', LEAD, 'Captura de teléfono', ('no se pide', '75'), ('checkbox de WhatsApp', '76')),
-    ('ai-eu', LEAD, 'Captura de teléfono', ('no se pide', '77'), ('checkbox de WhatsApp', '78')),
+    # Conquer AI no está en ninguno: pide el teléfono siempre y obligatorio, fijo
+    # por config (`landing.phoneRequired`). Tuvo un test el 14/09/2026 con los
+    # códigos 77/78, retirado el mismo día; NO se reciclan.
     # Las dos landings de US cerraron el A/B de fondo el 14/09/2026 con el PAPEL
     # como ganador (59/60 y 67/68) y pasaron al del teléfono. Sus códigos de
     # fondo no se reciclan.

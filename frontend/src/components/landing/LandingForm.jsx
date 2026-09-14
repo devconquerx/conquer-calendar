@@ -94,21 +94,23 @@ export default function LandingForm({ program, region, formConfig, school, theme
   // estado que depende de localStorage/geo (país, etc).
   const { variant: formVariant, experiment } = useFormVariant()
 
-  const isAlwaysPhoneVariant = !!experiment?.alwaysPhoneVariant
-    && formVariant === experiment.alwaysPhoneVariant
+  // Teléfono siempre visible y OBLIGATORIO. Puede venir de un experimento
+  // (Finance EU, variante 56) o fijo por config (`landing.phoneRequired`, que
+  // usa Conquer AI). En los dos casos es "sin checkbox" por definición: el
+  // número se pide de entrada y no hay nada que marcar para revelarlo.
+  const alwaysPhone = landing.phoneRequired === true
+    || (!!experiment?.alwaysPhoneVariant && formVariant === experiment.alwaysPhoneVariant)
 
-  // Quién decide el checkbox: si el funnel corre un experimento de captura de
-  // teléfono, manda el experimento; si no, la config del funnel (y en Legal, la
-  // marca). La config es el valor fijo de los funnels que NO están en ningún
-  // test: sin esta precedencia, Conquer AI —que heredó `whatsappOptin: true` al
-  // clonar la config de Blocks EU— enseñaría el check en las DOS ramas.
-  const experimentoDecideElCheckbox = !!experiment?.whatsappOptinVariant || isAlwaysPhoneVariant
-
-  const showWhatsappOptin = experimentoDecideElCheckbox
-    ? (!!experiment.whatsappOptinVariant && formVariant === experiment.whatsappOptinVariant)
-    : (landing.whatsappOptin != null
-        ? !!landing.whatsappOptin
-        : theme.id === 'conquerlegal')
+  // Quién decide el checkbox: manda el teléfono obligatorio; después el
+  // experimento de captura de teléfono, si el funnel corre uno; y si no, la
+  // config del funnel (y en Legal, la marca).
+  const showWhatsappOptin = alwaysPhone
+    ? false
+    : (experiment?.whatsappOptinVariant
+        ? formVariant === experiment.whatsappOptinVariant
+        : (landing.whatsappOptin != null
+            ? !!landing.whatsappOptin
+            : theme.id === 'conquerlegal'))
 
   // Texto de consentimiento comercial ("aceptas recibir comunicaciones
   // comerciales"). Se puede ocultar por funnel desde la config
@@ -131,10 +133,9 @@ export default function LandingForm({ program, region, formConfig, school, theme
   const phEmail = landing.emailPlaceholder || 'Tu mejor email *'
 
   // Mostrar campo de teléfono visible: por config (showPhone), al marcar el
-  // check de WhatsApp, o por la variante de teléfono siempre obligatorio (56 en
-  // Finance EU, 78 en Conquer AI). Si no es visible, el teléfono se captura por
-  // honeypot/autofill.
-  const showPhone = !!landing.showPhone || isAlwaysPhoneVariant
+  // check de WhatsApp, o porque el teléfono sea obligatorio. Si no es visible,
+  // se captura por honeypot/autofill.
+  const showPhone = !!landing.showPhone || alwaysPhone
   const phoneVisible = showPhone || (showWhatsappOptin && wantsWhatsapp)
   // Honeypot de teléfono: campo oculto con autocomplete="tel" que captura el
   // número si el navegador lo autorrellena. Se puede apagar por funnel desde la
@@ -169,7 +170,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
     // Variante 55 (checkbox) Y 56 (siempre visible) de Finance EU son ambas un
     // campo de WhatsApp, no de teléfono genérico — solo la 55 pasaba por
     // showWhatsappOptin; la 56 caía al placeholder de ejemplo numérico.
-    if (isAlwaysPhoneVariant) return 'Número de WhatsApp *'
+    if (alwaysPhone) return 'Número de WhatsApp *'
     if (showWhatsappOptin) return 'Número de WhatsApp'
     if (!selectedCountry?.iso2) return 'Teléfono *'
     try {
@@ -177,7 +178,7 @@ export default function LandingForm({ program, region, formConfig, school, theme
       if (ex) return ex.format('NATIONAL')
     } catch {}
     return 'Teléfono *'
-  }, [selectedCountry, showWhatsappOptin, isAlwaysPhoneVariant])
+  }, [selectedCountry, showWhatsappOptin, alwaysPhone])
 
   const filteredCountries = useMemo(() => {
     if (!search) return countries
@@ -221,9 +222,9 @@ export default function LandingForm({ program, region, formConfig, school, theme
     }
     if (phoneVisible) {
       const digits = phone.replace(/\D/g, '')
-      // En la variante 56 de Finance EU el teléfono es obligatorio (igual que en
-      // conquerx-funnels-new, donde el campo era visible y required desde el inicio).
-      const phoneRequired = wantsWhatsapp || isAlwaysPhoneVariant
+      // Obligatorio al marcar el check, en la variante 56 de Finance EU y en los
+      // funnels que lo piden siempre (landing.phoneRequired, hoy Conquer AI).
+      const phoneRequired = wantsWhatsapp || alwaysPhone
       if (phoneRequired && !digits) {
         newErrors.phone = 'Ingresa tu número de WhatsApp'
       } else if (digits) {
