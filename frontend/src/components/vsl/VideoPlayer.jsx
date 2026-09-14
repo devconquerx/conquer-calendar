@@ -294,14 +294,25 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
     // progreso/seek, tiempos, etc.) para poder navegar el vídeo durante pruebas.
     const isDebug = new URLSearchParams(window.location.search).get('debug') === '1'
 
-    /* Barra completa también para quien la pida por configuración
-       (`video.showControls`). Una VSL de 15 minutos la esconde a propósito: sin
-       barra de progreso nadie adelanta, y el CTA aparece cuando toca. Pero hay
-       vídeos que no son una VSL —la masterclass de Conquer AI dura tres horas— y
-       ahí quitarle a la gente el poder pausar, retroceder o ver cuánto queda es
-       hostil, no persuasivo. OJO: con barra de progreso el visitante puede
-       arrastrar hasta el final y hacer aparecer el CTA sin ver el vídeo. */
-    const barraCompleta = isDebug || showControls
+    /* Barra completa para quien la pida por configuración (`video.showControls`).
+       Una VSL de 15 minutos la esconde a propósito: sin barra de progreso nadie
+       adelanta, y el CTA aparece cuando toca. Pero hay vídeos que no son una VSL
+       —la masterclass de Conquer AI dura tres horas— y ahí quitarle a la gente el
+       poder pausar o ver cuánto queda es hostil, no persuasivo. OJO: con barra de
+       progreso el visitante puede arrastrar hasta el final y hacer aparecer el
+       CTA sin ver el vídeo.
+
+       Sin los saltos de ±10s: con la barra de progreso delante son redundantes,
+       y en un vídeo de tres horas saltar de diez en diez no lleva a ninguna
+       parte. En depuración sí se dejan, que ahí el objetivo es justo moverse por
+       el vídeo a mano. */
+    const controles = isDebug
+      ? ['play-large', 'restart', 'rewind', 'play', 'fast-forward', 'progress',
+         'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen']
+      : showControls
+        ? ['play-large', 'restart', 'play', 'progress', 'current-time',
+           'duration', 'mute', 'volume', 'settings', 'fullscreen']
+        : ['play', 'mute', 'volume', 'fullscreen']
 
     // Plyr toca `document` al importarse, así que lo cargamos dinámicamente (solo
     // en cliente, dentro del efecto) para que este módulo sea SSR-safe. El setup
@@ -317,9 +328,7 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
         autoplay: true,
         muted: true,
         iconUrl: spriteDeIconos,
-        controls: barraCompleta
-          ? ['play-large', 'restart', 'rewind', 'play', 'fast-forward', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'fullscreen']
-          : ['play', 'mute', 'volume', 'fullscreen'],
+        controls: controles,
       })
 
       playerRef.current = player
