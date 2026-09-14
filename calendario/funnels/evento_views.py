@@ -19,7 +19,7 @@ from django.views.generic import TemplateView
 
 from . import consentimiento as consent
 from .contenido import con_textos, puede_ver_borrador
-from .context_processors import get_pixeles_evento
+from .context_processors import get_gtm_config, get_pixeles_evento
 from .views import _base_path, _escuela_por_host
 
 
@@ -393,8 +393,16 @@ def _medicion(escuela):
     propia conversión de lead, contra acciones creadas solo para lanzamientos.
 
     El resto del sitio (el funnel y todo lo demás) sigue con su contenedor.
+
+    Una escuela sin píxeles declarados se queda con el contenedor: es peor
+    dejarla sin medir que dejarla como estaba. Hoy no pasa —las tres marcas que
+    tienen pantallas de evento están en `PIXELES_EVENTO`—, pero una página nueva
+    de otra marca se quedaría muda sin avisar.
     """
-    return {'gtm': {}, 'pixeles': get_pixeles_evento(escuela)}
+    pixeles = get_pixeles_evento(escuela)
+    if not pixeles:
+        return {'gtm': get_gtm_config(escuela), 'pixeles': {}}
+    return {'gtm': {}, 'pixeles': pixeles}
 
 
 # Páginas de evento de campaña. A diferencia de `EVENTOS` —una por marca, la del

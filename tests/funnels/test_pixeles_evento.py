@@ -72,6 +72,14 @@ class LasQueRecogenDatosNoLlevanContenedorTest(TestCase):
             self.assertNotIn('gtm.start', html, f'{host}{ruta}')
             self.assertIn(f"ads_conversion: '{CONVERSIONES[escuela][1]}'", html, f'{host}{ruta}')
 
+    def test_una_escuela_sin_pixeles_se_queda_con_el_contenedor(self):
+        # Mejor medir con GTM que no medir: una marca nueva sin píxeles
+        # declarados se quedaría muda sin avisar.
+        from calendario.funnels.evento_views import _medicion
+        medicion = _medicion('conquer-legal')
+        self.assertEqual(medicion['pixeles'], {})
+        self.assertEqual(medicion['gtm'].get('id'), 'GTM-P3QS7P4F')
+
     def test_el_funnel_conserva_su_contenedor(self):
         # Fuera de las páginas de evento no cambia nada: el corte es solo este.
         from calendario.funnels.context_processors import get_gtm_config
