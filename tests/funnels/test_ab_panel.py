@@ -22,6 +22,8 @@ SLUG_A_CODIGO = {
     'finance-latam': 'fi-latam', 'finance-eu': 'fi-eu', 'finance-us': 'fi-us',
     'languages-latam': 'cl-latam', 'languages-eu': 'cl-eu', 'languages-us': 'cl-us',
     'languages-ge': 'cl-ge', 'legal-eu': 'cg-eu',
+    # Conquer AI no traduce: su slug ya ES el código con el que lo indexa el CRM.
+    'ai-eu': 'ai-eu',
 }
 
 
