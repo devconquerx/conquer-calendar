@@ -15,14 +15,16 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-TAMANO_PARTE = 16 * 1024 * 1024
+TAMANO_PARTE = 8 * 1024 * 1024
 
-# 4 hilos por vídeo es suficiente: el cuello de botella es la lectura desde
-# Bunny, no la escritura en R2.
+# Partes de 8 MB y 2 hilos: unos 16 MB de pico por vídeo. Con 16 MB y 4 hilos
+# el proceso rondaba los 64 MB y el portátil desde el que se lanzó la carga
+# inicial acabó matándolo por memoria. El cuello de botella es la lectura desde
+# Bunny, así que subir la concurrencia tampoco compraba velocidad.
 TRANSFERENCIA = TransferConfig(
     multipart_threshold=TAMANO_PARTE,
     multipart_chunksize=TAMANO_PARTE,
-    max_concurrency=4,
+    max_concurrency=2,
     use_threads=True,
 )
 
