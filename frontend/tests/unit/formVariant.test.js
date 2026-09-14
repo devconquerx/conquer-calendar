@@ -23,6 +23,7 @@ const FUNNELS = [
   { slug: 'languages-ge', themeId: 'conquerlanguages', region: 'ge' },
   { slug: 'languages-kids-latam', themeId: 'conquerlanguages', region: 'latam' },
   { slug: 'legal-eu', themeId: 'conquerlegal', region: 'eu' },
+  { slug: 'ai-eu', themeId: 'conquerblocks', region: 'eu' },
   { slug: 'especializacion-latam', themeId: 'conquerblocks', region: 'latam' },
   { slug: 'especializacion-eu', themeId: 'conquerblocks', region: 'eu' },
   { slug: 'especializacion-us', themeId: 'conquerblocks', region: 'us' },
@@ -51,6 +52,10 @@ describe('registro de experimentos', () => {
       'languages-ge': null,
       'languages-kids-latam': null,
       'legal-eu': null,
+      // Conquer AI corre su propio test de teléfono (77/78). Cuelga de la marca
+      // Blocks y de la región EU, así que si el experimento se anclara a
+      // marca+región heredaría además el de blocks-eu.
+      'ai-eu': 'form_variant_ai_eu_tel',
       // Comparten marca y región con blocks-*, pero son funnels propios y NO
       // deben entrar en sus tests.
       'especializacion-latam': null,
@@ -76,6 +81,9 @@ describe('registro de experimentos', () => {
       'languages-eu': '13/14',
       'languages-us': '15/16',
       'legal-eu': null,
+      // Conquer AI todavía no tiene test de vídeo: el de la landing viaja en el
+      // Lead y este en la prellamada, así que podrá añadirse sin chocar.
+      'ai-eu': null,
       'especializacion-latam': null,
     })
   })

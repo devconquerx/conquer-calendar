@@ -183,6 +183,43 @@ describe('A/B de teléfono/WhatsApp (EU)', () => {
     expect(registerLead).not.toHaveBeenCalled()
   })
 
+  /* Conquer AI estrena el 14/09/2026 el mismo test que Finance EU, con códigos
+     propios (77/78). Su landing clonó de Blocks EU la bandera de config
+     `whatsappOptin: true`, así que la rama 78 solo queda «sin checkbox» si el
+     experimento manda sobre la config: es justo lo que fijan estos tests. */
+  it('Conquer AI 77 (control): checkbox de WhatsApp, como hoy', () => {
+    const { container } = montar({
+      slug: 'ai-eu', region: 'eu', storageKey: 'form_variant_ai_eu_tel', variante: '77',
+      landing: { whatsappOptin: true },
+    })
+    expect(hayCheckbox(container)).toBe(true)
+    expect(telefonoVisible(container)).toBe(false)
+  })
+
+  it('Conquer AI 78 (test): teléfono visible y obligatorio, sin checkbox', async () => {
+    const { container } = montar({
+      slug: 'ai-eu', region: 'eu', storageKey: 'form_variant_ai_eu_tel', variante: '78',
+      landing: { whatsappOptin: true },
+    })
+    expect(hayCheckbox(container)).toBe(false)
+    expect(telefonoVisible(container)).toBe(true)
+    expect(screen.getByPlaceholderText(/número de whatsapp \*/i)).toBeInTheDocument()
+
+    fireEvent.change(screen.getByPlaceholderText(/nombre/i), { target: { value: 'Ana' } })
+    fireEvent.change(screen.getByPlaceholderText(/email/i), { target: { value: 'ana@ejemplo.com' } })
+    enviarForm(container)
+    await waitFor(() => expect(screen.getByText(/ingresa tu número de whatsapp/i)).toBeInTheDocument())
+    expect(registerLead).not.toHaveBeenCalled()
+  })
+
+  it('Conquer AI: la variante viaja en el lead', async () => {
+    const { container } = montar({
+      slug: 'ai-eu', region: 'eu', storageKey: 'form_variant_ai_eu_tel', variante: '77',
+      landing: { whatsappOptin: true },
+    })
+    expect((await enviar(container)).utm_form_variant).toBe('77')
+  })
+
   it('Blocks LATAM no hereda el checkbox de EU', () => {
     const { container } = montar({ slug: 'blocks-latam', storageKey: 'form_variant_cb_latam', variante: '58' })
     expect(hayCheckbox(container)).toBe(false)

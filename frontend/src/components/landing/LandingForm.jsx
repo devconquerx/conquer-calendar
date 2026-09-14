@@ -94,10 +94,19 @@ export default function LandingForm({ program, region, formConfig, school, theme
   // estado que depende de localStorage/geo (país, etc).
   const { variant: formVariant, experiment } = useFormVariant()
 
-  const showWhatsappOptin = landing.whatsappOptin != null
-    ? !!landing.whatsappOptin
-    : (theme.id === 'conquerlegal'
-        || (!!experiment?.whatsappOptinVariant && formVariant === experiment.whatsappOptinVariant))
+  // La rama de teléfono siempre obligatorio manda sobre todo lo demás: es "sin
+  // checkbox" por definición, y si no ganara, la landing de Conquer AI —que trae
+  // `whatsappOptin: true` heredado de Blocks EU— enseñaría el check Y el campo
+  // visible a la vez en la misma variante.
+  const isAlwaysPhoneVariant = !!experiment?.alwaysPhoneVariant
+    && formVariant === experiment.alwaysPhoneVariant
+
+  const showWhatsappOptin = isAlwaysPhoneVariant
+    ? false
+    : (landing.whatsappOptin != null
+        ? !!landing.whatsappOptin
+        : (theme.id === 'conquerlegal'
+            || (!!experiment?.whatsappOptinVariant && formVariant === experiment.whatsappOptinVariant)))
 
   // Texto de consentimiento comercial ("aceptas recibir comunicaciones
   // comerciales"). Se puede ocultar por funnel desde la config
@@ -120,10 +129,9 @@ export default function LandingForm({ program, region, formConfig, school, theme
   const phEmail = landing.emailPlaceholder || 'Tu mejor email *'
 
   // Mostrar campo de teléfono visible: por config (showPhone), al marcar el
-  // check de WhatsApp, o por la variante A/B 56 de Finance EU (siempre visible,
-  // obligatorio). Si no es visible, el teléfono se captura por honeypot/autofill.
-  const isAlwaysPhoneVariant = !!experiment?.alwaysPhoneVariant
-    && formVariant === experiment.alwaysPhoneVariant
+  // check de WhatsApp, o por la variante de teléfono siempre obligatorio (56 en
+  // Finance EU, 78 en Conquer AI). Si no es visible, el teléfono se captura por
+  // honeypot/autofill.
   const showPhone = !!landing.showPhone || isAlwaysPhoneVariant
   const phoneVisible = showPhone || (showWhatsappOptin && wantsWhatsapp)
   // Honeypot de teléfono: campo oculto con autocomplete="tel" que captura el
