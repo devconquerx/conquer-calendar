@@ -23,9 +23,9 @@ TESTS_AB = [
     ('cb-eu', LEAD, 'Fondo de la landing', ('papel', '69'), ('blanco', '70')),
     ('cb-eu-2', LEAD, 'Fondo de la landing', ('papel', '71'), ('blanco', '72')),
     ('fi-eu', LEAD, 'Captura de teléfono', ('checkbox de WhatsApp', '55'), ('campo obligatorio', '56')),
-    ('ai-eu', LEAD, 'Captura de teléfono', ('checkbox de WhatsApp', '77'), ('campo obligatorio', '78')),
     ('cb-us', LEAD, 'Captura de teléfono', ('no se pide', '73'), ('checkbox de WhatsApp', '74')),
     ('cl-us', LEAD, 'Captura de teléfono', ('no se pide', '75'), ('checkbox de WhatsApp', '76')),
+    ('ai-eu', LEAD, 'Captura de teléfono', ('no se pide', '77'), ('checkbox de WhatsApp', '78')),
     # Las dos landings de US cerraron el A/B de fondo el 14/09/2026 con el PAPEL
     # como ganador (59/60 y 67/68) y pasaron al del teléfono. Sus códigos de
     # fondo no se reciclan.

@@ -80,22 +80,21 @@ const FORM_VARIANT_EXPERIMENTS = [
     alwaysPhoneVariant: '56',
     whatsappComplianceText: true,
   },
-  // Conquer AI EU (ai-eu): 77 (control: el checkbox de WhatsApp, que es lo que
-  // sirve hoy la landing) / 78 (test: el campo de teléfono siempre visible y
-  // OBLIGATORIO, sin checkbox). Mismo test que corre Finance EU con 55/56, con
-  // códigos propios: `utm_form_variant` es un único campo por lead y reciclar
-  // los de otro funnel mezclaría las dos series en el informe del CRM.
+  // Conquer AI EU (ai-eu): 77 (control: no se pide el teléfono, solo lo capta el
+  // honeypot) / 78 (test: checkbox de WhatsApp, que al marcarse revela el campo
+  // y lo hace obligatorio). El MISMO test que corren Blocks US y Languages US,
+  // con códigos propios: `utm_form_variant` es un único campo por lead y
+  // reciclar los de otro funnel mezclaría las series en el informe del CRM.
   //
-  // Su landing trae `landing.whatsappOptin: true` en la config (la heredó de
-  // Blocks EU al clonarla), así que la rama de test lo apaga desde el propio
-  // experimento: ver `isAlwaysPhoneVariant` en LandingForm.
+  // Su landing trae `landing.whatsappOptin: true` en la config (lo heredó de
+  // Blocks EU al clonarla). En un funnel que corre este test manda el
+  // experimento y no la config; si no, el check saldría en las dos ramas y no
+  // habría test: ver `experimentoDecideElCheckbox` en LandingForm.
   {
     match: ({ funnelSlug }) => funnelSlug === 'ai-eu',
     storageKey: 'form_variant_ai_eu_tel',
     variants: ['77', '78'],
-    whatsappOptinVariant: '77',
-    alwaysPhoneVariant: '78',
-    whatsappComplianceText: true,
+    whatsappOptinVariant: '78',
   },
   // Finance LATAM (fi-latam, slug `finance-latam`): 61 (control: la landing tal
   // cual) / 62 (test: fondo blanco). Mismo test de diseño que Blocks LATAM.

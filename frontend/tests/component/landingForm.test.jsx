@@ -183,27 +183,39 @@ describe('A/B de teléfono/WhatsApp (EU)', () => {
     expect(registerLead).not.toHaveBeenCalled()
   })
 
-  /* Conquer AI estrena el 14/09/2026 el mismo test que Finance EU, con códigos
-     propios (77/78). Su landing clonó de Blocks EU la bandera de config
-     `whatsappOptin: true`, así que la rama 78 solo queda «sin checkbox» si el
-     experimento manda sobre la config: es justo lo que fijan estos tests. */
-  it('Conquer AI 77 (control): checkbox de WhatsApp, como hoy', () => {
+  /* Conquer AI corre el MISMO test que las dos landings de US —no pedir el
+     teléfono frente al checkbox de WhatsApp—, con códigos propios (77/78).
+     Su landing clonó de Blocks EU la bandera de config `whatsappOptin: true`,
+     así que el control solo queda sin checkbox (y por tanto sin campo de
+     teléfono) si el experimento manda sobre la config: eso es lo que fijan
+     estos tests, y es el motivo de que se rompiera el patrón la primera vez. */
+  it('Conquer AI 77 (control): ni checkbox ni campo de teléfono', () => {
     const { container } = montar({
       slug: 'ai-eu', region: 'eu', storageKey: 'form_variant_ai_eu_tel', variante: '77',
       landing: { whatsappOptin: true },
     })
-    expect(hayCheckbox(container)).toBe(true)
+    expect(hayCheckbox(container)).toBe(false)
     expect(telefonoVisible(container)).toBe(false)
   })
 
-  it('Conquer AI 78 (test): teléfono visible y obligatorio, sin checkbox', async () => {
+  it('Conquer AI 78 (test): sale el checkbox de WhatsApp y el campo llega oculto', () => {
     const { container } = montar({
       slug: 'ai-eu', region: 'eu', storageKey: 'form_variant_ai_eu_tel', variante: '78',
       landing: { whatsappOptin: true },
     })
-    expect(hayCheckbox(container)).toBe(false)
+    expect(hayCheckbox(container)).toBe(true)
+    expect(screen.getByText(/repetición por WhatsApp/i)).toBeInTheDocument()
+    // El campo solo aparece al marcar el check, igual que en US.
+    expect(telefonoVisible(container)).toBe(false)
+  })
+
+  it('Conquer AI 78: al marcar el check aparece el teléfono y es obligatorio', async () => {
+    const { container } = montar({
+      slug: 'ai-eu', region: 'eu', storageKey: 'form_variant_ai_eu_tel', variante: '78',
+      landing: { whatsappOptin: true },
+    })
+    fireEvent.click(container.querySelector('input[type="checkbox"]'))
     expect(telefonoVisible(container)).toBe(true)
-    expect(screen.getByPlaceholderText(/número de whatsapp \*/i)).toBeInTheDocument()
 
     fireEvent.change(screen.getByPlaceholderText(/nombre/i), { target: { value: 'Ana' } })
     fireEvent.change(screen.getByPlaceholderText(/email/i), { target: { value: 'ana@ejemplo.com' } })

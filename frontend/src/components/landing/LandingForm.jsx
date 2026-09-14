@@ -94,19 +94,21 @@ export default function LandingForm({ program, region, formConfig, school, theme
   // estado que depende de localStorage/geo (país, etc).
   const { variant: formVariant, experiment } = useFormVariant()
 
-  // La rama de teléfono siempre obligatorio manda sobre todo lo demás: es "sin
-  // checkbox" por definición, y si no ganara, la landing de Conquer AI —que trae
-  // `whatsappOptin: true` heredado de Blocks EU— enseñaría el check Y el campo
-  // visible a la vez en la misma variante.
   const isAlwaysPhoneVariant = !!experiment?.alwaysPhoneVariant
     && formVariant === experiment.alwaysPhoneVariant
 
-  const showWhatsappOptin = isAlwaysPhoneVariant
-    ? false
+  // Quién decide el checkbox: si el funnel corre un experimento de captura de
+  // teléfono, manda el experimento; si no, la config del funnel (y en Legal, la
+  // marca). La config es el valor fijo de los funnels que NO están en ningún
+  // test: sin esta precedencia, Conquer AI —que heredó `whatsappOptin: true` al
+  // clonar la config de Blocks EU— enseñaría el check en las DOS ramas.
+  const experimentoDecideElCheckbox = !!experiment?.whatsappOptinVariant || isAlwaysPhoneVariant
+
+  const showWhatsappOptin = experimentoDecideElCheckbox
+    ? (!!experiment.whatsappOptinVariant && formVariant === experiment.whatsappOptinVariant)
     : (landing.whatsappOptin != null
         ? !!landing.whatsappOptin
-        : (theme.id === 'conquerlegal'
-            || (!!experiment?.whatsappOptinVariant && formVariant === experiment.whatsappOptinVariant)))
+        : theme.id === 'conquerlegal')
 
   // Texto de consentimiento comercial ("aceptas recibir comunicaciones
   // comerciales"). Se puede ocultar por funnel desde la config
