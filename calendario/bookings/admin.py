@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.urls import path, reverse
 from django.utils.html import format_html, mark_safe
 
-from .models import (ConfigCorreoDefault, ConfigCorreoEvento, ConfigCorreoGrupo, DominioRemitente,
+from .models import (BloqueoInvitado, ConfigBloqueos, ConfigCorreoDefault, ConfigCorreoEvento, ConfigCorreoGrupo, DominioRemitente,
                      LogCorreo, PlantillaCorreo, Reserva)
 from calendario.event_types.models import EventType
 from calendario.leads.admin import _tag_check
@@ -335,6 +335,51 @@ class ConfigCorreoDefaultAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(BloqueoInvitado)
+class BloqueoInvitadoAdmin(admin.ModelAdmin):
+    list_display = ('valor', 'tipo', 'activo', 'motivo', 'intentos', 'ultimo_intento', 'creado_en')
+    list_filter = ('tipo', 'activo')
+    list_editable = ('activo',)
+    search_fields = ('valor', 'motivo')
+    readonly_fields = ('intentos', 'ultimo_intento', 'creado_en')
+    fieldsets = (
+        (None, {
+            'description': (
+                'Quien reserve con un email o un dominio de esta lista no llega a crear la reserva: '
+                'se le manda a la URL de la <a href="../configbloqueos/">configuración de bloqueos</a>. '
+                'Aplica a todas las páginas de reserva y a los funnels. '
+                'Las reservas que ya tuviera hechas no se tocan.'
+            ),
+            'fields': ('tipo', 'valor', 'motivo', 'activo'),
+        }),
+        ('Actividad', {
+            'fields': ('intentos', 'ultimo_intento', 'creado_en'),
+        }),
+    )
+
+
+@admin.register(ConfigBloqueos)
+class ConfigBloqueosAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {
+            'description': 'Aplica a todos los bloqueos de invitados.',
+            'fields': ('url_redireccion',),
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return not ConfigBloqueos.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        # Es un único registro: se entra directo a editarlo.
+        from django.shortcuts import redirect
+        obj = ConfigBloqueos.get()
+        return redirect(reverse('admin:bookings_configbloqueos_change', args=[obj.pk]))
 
 
 @admin.register(LogCorreo)
