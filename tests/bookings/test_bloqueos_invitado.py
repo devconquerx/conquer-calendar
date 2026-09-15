@@ -5,6 +5,7 @@ Se bloquea un email concreto (el resto de su proveedor sigue reservando) o un
 dominio entero. Quien está bloqueado no crea la reserva y sale redirigido a la
 URL global de `ConfigBloqueos`, o a la página propia si no hay ninguna.
 """
+import json
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
@@ -15,6 +16,7 @@ from calendario.bookings.bloqueos import buscar_bloqueo
 from calendario.bookings.exceptions import InvitadoBloqueadoError
 from calendario.bookings.models import BloqueoInvitado, ConfigBloqueos, Reserva
 from calendario.bookings.services import crear_reserva, reemplazar_reserva
+from calendario.funnels.models import FunnelForm, Prellamada
 from tests.factories import (
     NOMBRE_INVITADO, crear_disponibilidad, crear_event_type, crear_host, slot_futuro,
 )
@@ -162,3 +164,41 @@ class VistaPublicaTest(TestCase):
     def test_la_pagina_propia_se_muestra(self, *_):
         resp = self.client.get(reverse('public_token:reserva_no_procesada'))
         self.assertContains(resp, 'Lo sentimos, tu reserva no pudo ser procesada')
+
+
+@patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+@patch('calendario.bookings.services.crear_evento_google')
+class FunnelTest(TestCase):
+
+    def setUp(self):
+        self.host = crear_host()
+        self.et = crear_event_type(self.host)
+        for dia in range(5):
+            crear_disponibilidad(self.host, dia=dia)
+        funnel = FunnelForm.objects.create(
+            key='TestFunnel', slug='test-funnel', escuela='conquer-blocks',
+            region='latam', nombre='Funnel de test', config={},
+        )
+        self.prellamada = Prellamada.objects.create(
+            funnel=funnel, nombre='Lead', email='loco@somoshackers.com',
+            resultado=Prellamada.Resultado.CALENDARIO, event_type=self.et,
+        )
+        self.url = reverse('funnels:reservar', kwargs={'slug': funnel.slug})
+
+    def test_devuelve_la_url_a_la_que_redirigir(self, *_):
+        ConfigBloqueos.objects.create(url_redireccion='https://otra-pagina.com/')
+        bloquear(DOMINIO, 'somoshackers.com')
+        resp = self.client.post(self.url, data=json.dumps({
+            'prellamada_token': str(self.prellamada.token),
+            'inicio_utc': slot_futuro().isoformat(),
+            'tz': 'Europe/Madrid',
+            'nombre': 'Lead',
+            'email': 'loco@somoshackers.com',
+        }), content_type='application/json')
+
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.json()['error'], 'bloqueado')
+        self.assertEqual(resp.json()['redirect_url'], 'https://otra-pagina.com/')
+        self.assertFalse(Reserva.objects.exists())
+        # El contador sobrevive a la transacción que deshace el intento.
+        self.assertEqual(BloqueoInvitado.objects.get().intentos, 1)

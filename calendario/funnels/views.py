@@ -17,7 +17,8 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
-from calendario.bookings.exceptions import ReservaDuplicadaError, SlotNoDisponibleError
+from calendario.bookings import bloqueos
+from calendario.bookings.exceptions import InvitadoBloqueadoError, ReservaDuplicadaError, SlotNoDisponibleError
 from calendario.bookings.models import Reserva
 from calendario.bookings.services import crear_reserva, mismo_invitado, reemplazar_reserva
 from calendario.bookings.views_public import _avisar_si_es_nueva
@@ -403,6 +404,16 @@ class ReservarView(View):
             }, status=409)
         except SlotNoDisponibleError as e:
             return JsonResponse({'ok': False, 'error': 'slot_no_disponible', 'mensaje': str(e)}, status=409)
+        except InvitadoBloqueadoError as e:
+            # El front no pinta nada: se va a `redirect_url`, igual que la página
+            # pública redirige. Mismo mensaje genérico por si no lo hiciera.
+            bloqueos.registrar_intento(e.bloqueo, e.email)
+            return JsonResponse({
+                'ok': False,
+                'error': 'bloqueado',
+                'mensaje': 'Lo sentimos, tu reserva no pudo ser procesada.',
+                'redirect_url': bloqueos.url_bloqueo(request),
+            }, status=403)
 
         return JsonResponse({
             'ok': True,
