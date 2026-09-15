@@ -20,7 +20,9 @@ from calendario.google_calendar.services import (
     obtener_busy_intervalos_local, titulo_libera_horario,
 )
 from .bloqueos import buscar_bloqueo
-from .exceptions import InvitadoBloqueadoError, ReservaDuplicadaError, SlotNoDisponibleError
+from .exceptions import (
+    InvitadoBloqueadoError, LimiteReservasError, ReservaDuplicadaError, SlotNoDisponibleError,
+)
 from .models import Reserva
 
 logger = logging.getLogger(__name__)
@@ -695,6 +697,68 @@ def _excede_limite(fechas, nueva, maximo, dias):
         if sum(1 for p in puntos if inicio <= p < inicio + ancho) > maximo:
             return True
     return False
+
+
+def comprobar_limite_reservas(event_type, inicio_utc, email_invitado,
+                              telefono_invitado='', excluir_pk=None):
+    """Lanza LimiteReservasError si esta cita supera el tope del tipo de evento.
+
+    El tope es «`limite_reservas` cada `limite_reservas_dias` días» por invitado
+    (mismo email O mismo teléfono, como el duplicado), en ventana móvil y por la
+    fecha de la cita en la zona del host: con 1 cada 30 días, quien tuvo cita el
+    10/09 puede volver a tenerla el 10/10. Cuentan las confirmadas, pasadas o
+    futuras; las canceladas no.
+
+    `excluir_pk` deja fuera una reserva que está a punto de sustituirse (el
+    modal de duplicado), para no contarla dos veces.
+    """
+    if not event_type.tiene_limite_reservas:
+        return
+    email_norm = (email_invitado or '').strip().lower()
+    tel_sufijo = _sufijo_telefono(telefono_invitado)
+    if not email_norm and not tel_sufijo:
+        return
+
+    maximo = event_type.limite_reservas
+    dias = event_type.limite_reservas_dias
+    tz = ZoneInfo(event_type.host.timezone)
+    hoy = timezone.now().astimezone(tz).date()
+    nueva = inicio_utc.astimezone(tz).date()
+    # Lo que empezó antes de hoy - días ya no cabe en ninguna ventana que
+    # contenga hoy o un día posterior.
+    desde = min(hoy, nueva) - timedelta(days=dias)
+
+    coincide = Q()
+    if email_norm:
+        coincide |= Q(email_invitado__iexact=email_norm)
+    if tel_sufijo:
+        coincide |= Q(telefono_norm__endswith=tel_sufijo)
+    qs = Reserva.objects.filter(
+        event_type=event_type,
+        estado=Reserva.Estado.CONFIRMADA,
+        inicio_utc__gte=datetime.combine(desde, datetime.min.time(), tzinfo=tz),
+    )
+    if excluir_pk:
+        qs = qs.exclude(pk=excluir_pk)
+    fechas = [
+        i.astimezone(tz).date()
+        for i in _annotate_telefono_normalizado(qs).filter(coincide).values_list('inicio_utc', flat=True)
+    ]
+    if not _excede_limite(fechas, nueva, maximo, dias):
+        return
+
+    # Primer día desde hoy en el que sí cabría, para decírselo. Las citas
+    # futuras pueden cerrar huecos por delante, así que se busca día a día; si en
+    # un año largo no aparece ninguno, la página no da fecha.
+    disponible_desde = None
+    tope = max(fechas + [hoy]) + timedelta(days=dias)
+    dia = hoy
+    while dia <= tope:
+        if not _excede_limite(fechas, dia, maximo, dias):
+            disponible_desde = dia
+            break
+        dia += timedelta(days=1)
+    raise LimiteReservasError(event_type, disponible_desde)
 
 
 def _comprobar_bloqueo(email_invitado):
