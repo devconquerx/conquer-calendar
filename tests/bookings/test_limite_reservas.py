@@ -6,6 +6,7 @@ cada 30 días, quien tuvo cita el 10/09 puede volver a tenerla el 10/10. Con una
 reserva futura y «Solo una reserva por invitado» se sigue ofreciendo cambiarla;
 superado el tope, se manda a la página de máximo alcanzado.
 """
+import json
 from datetime import date, timedelta
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -18,6 +19,7 @@ from django.utils import timezone
 from calendario.bookings.exceptions import LimiteReservasError, ReservaDuplicadaError
 from calendario.bookings.models import Reserva
 from calendario.bookings.services import _excede_limite, crear_reserva, reemplazar_reserva
+from calendario.funnels.models import FunnelForm, Prellamada
 from tests.factories import (
     EMAIL_INVITADO, NOMBRE_INVITADO,
     crear_disponibilidad, crear_event_type, crear_host, slot_futuro,
@@ -205,3 +207,27 @@ class VistasTest(TestCase):
     def test_la_pagina_aguanta_una_url_a_mano(self, *_):
         resp = self.client.get(reverse('public_token:limite_reservas') + '?evento=abc&desde=ayer')
         self.assertContains(resp, 'Inténtalo más adelante')
+
+    def test_funnel_devuelve_la_url_de_maximo_alcanzado(self, *_):
+        funnel = FunnelForm.objects.create(
+            key='TestFunnel', slug='test-funnel', escuela='conquer-blocks',
+            region='latam', nombre='Funnel de test', config={},
+        )
+        prellamada = Prellamada.objects.create(
+            funnel=funnel, nombre='Lead', email=EMAIL_INVITADO,
+            resultado=Prellamada.Resultado.CALENDARIO, event_type=self.et,
+        )
+        resp = self.client.post(
+            reverse('funnels:reservar', kwargs={'slug': funnel.slug}),
+            data=json.dumps({
+                'prellamada_token': str(prellamada.token),
+                'inicio_utc': slot_futuro(dias=1).isoformat(),
+                'tz': 'Europe/Madrid',
+                'nombre': 'Lead',
+                'email': EMAIL_INVITADO,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.json()['error'], 'limite_reservas')
+        self.assertIn(reverse('public_token:limite_reservas'), resp.json()['redirect_url'])

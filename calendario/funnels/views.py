@@ -18,10 +18,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
 from calendario.bookings import bloqueos
-from calendario.bookings.exceptions import InvitadoBloqueadoError, ReservaDuplicadaError, SlotNoDisponibleError
+from calendario.bookings.exceptions import (
+    InvitadoBloqueadoError, LimiteReservasError, ReservaDuplicadaError, SlotNoDisponibleError,
+)
 from calendario.bookings.models import Reserva
 from calendario.bookings.services import crear_reserva, mismo_invitado, reemplazar_reserva
-from calendario.bookings.views_public import _avisar_si_es_nueva
+from calendario.bookings.views_public import _avisar_si_es_nueva, url_limite_reservas
 from .ab_tests import tests_para_panel
 from .models import FunnelForm, Prellamada
 from .scoring import resolver_outcome
@@ -414,6 +416,13 @@ class ReservarView(View):
                 'mensaje': 'Lo sentimos, tu reserva no pudo ser procesada.',
                 'redirect_url': bloqueos.url_bloqueo(request),
             }, status=403)
+        except LimiteReservasError as e:
+            return JsonResponse({
+                'ok': False,
+                'error': 'limite_reservas',
+                'mensaje': 'Has alcanzado el número máximo de reservas para este evento.',
+                'redirect_url': url_limite_reservas(request, e),
+            }, status=409)
 
         return JsonResponse({
             'ok': True,
