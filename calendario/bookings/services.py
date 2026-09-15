@@ -823,7 +823,15 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         if et.unico_por_invitado:
             existente = buscar_reserva_duplicada(et, email_invitado, telefono_invitado)
             if existente:
+                # El modal de duplicado ofrece cambiar la reserva vieja por esta.
+                # Si ni cambiándola cabe en el límite, no tiene sentido ofrecerlo:
+                # aceptaría para chocar después con la página de máximo alcanzado.
+                comprobar_limite_reservas(
+                    et, inicio_utc, email_invitado, telefono_invitado, excluir_pk=existente.pk,
+                )
                 raise ReservaDuplicadaError(existente)
+
+        comprobar_limite_reservas(et, inicio_utc, email_invitado, telefono_invitado)
 
         candidatos = _candidatos_para_slot(et, inicio_utc)
         if not candidatos:
