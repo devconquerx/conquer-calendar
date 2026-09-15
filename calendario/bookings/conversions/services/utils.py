@@ -95,6 +95,7 @@ def build_schedule_ctx(reserva):
     s.closer = closer
     s.closer_from_make = closer
     s.meet_join_url = reserva.google_meet_url or ''
+    s.google_calendar_event_id = reserva.google_event_id or ''
     s.timezone_string = reserva.timezone_invitado or ''
     s.confirmation = None  # Reserva no tiene estados de confirmación de setter
 
