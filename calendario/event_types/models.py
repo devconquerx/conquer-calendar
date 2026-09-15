@@ -206,6 +206,23 @@ class EventType(models.Model):
         help_text="Si está activo, un mismo email (o un mismo teléfono) no puede reservar este evento dos veces mientras tenga una reserva futura confirmada.",
     )
 
+    # Tope de reservas por invitado en una ventana móvil de días, contada por la
+    # fecha de la cita (ver `bookings.services.comprobar_limite_reservas`). Los
+    # dos vacíos = sin límite; o los dos o ninguno.
+    limite_reservas = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1)],
+        verbose_name='Máximo de reservas por invitado',
+        help_text='Cuántas reservas puede tener un mismo invitado cada «días del límite». Vacío: sin límite.',
+    )
+    limite_reservas_dias = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1)],
+        verbose_name='Días del límite',
+        help_text='Tamaño de la ventana, contada por la fecha de la cita. Con 1 reserva cada 30 días, '
+                  'quien tuvo cita el 10/09 no puede tener otra hasta el 10/10.',
+    )
+
     mostrar_caja_comentarios = models.BooleanField(
         default=True,
         verbose_name='Caja de comentarios',
@@ -310,6 +327,15 @@ class EventType(models.Model):
                 errores['rango_fecha_fin'] = 'La fecha final no puede ser anterior a la inicial.'
             if errores:
                 raise ValidationError(errores)
+        if (self.limite_reservas is None) != (self.limite_reservas_dias is None):
+            campo = 'limite_reservas_dias' if self.limite_reservas_dias is None else 'limite_reservas'
+            raise ValidationError({
+                campo: 'Para limitar las reservas hacen falta los dos datos: cuántas y cada cuántos días.',
+            })
+
+    @property
+    def tiene_limite_reservas(self):
+        return bool(self.limite_reservas and self.limite_reservas_dias)
 
     @property
     def solo_alumnos(self):
