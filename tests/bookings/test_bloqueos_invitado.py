@@ -9,10 +9,11 @@ from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
 
 from calendario.bookings.bloqueos import buscar_bloqueo
 from calendario.bookings.exceptions import InvitadoBloqueadoError
-from calendario.bookings.models import BloqueoInvitado, Reserva
+from calendario.bookings.models import BloqueoInvitado, ConfigBloqueos, Reserva
 from calendario.bookings.services import crear_reserva, reemplazar_reserva
 from tests.factories import (
     NOMBRE_INVITADO, crear_disponibilidad, crear_event_type, crear_host, slot_futuro,
@@ -111,3 +112,53 @@ class ServicioTest(TestCase):
         vieja.refresh_from_db()
         self.assertEqual(vieja.estado, Reserva.Estado.CONFIRMADA)
         self.assertEqual(Reserva.objects.count(), 1)
+
+
+@patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+@patch('calendario.bookings.services.crear_evento_google')
+class VistaPublicaTest(TestCase):
+
+    def setUp(self):
+        self.host = crear_host()
+        self.et = crear_event_type(self.host)
+        for dia in range(5):
+            crear_disponibilidad(self.host, dia=dia)
+        self.url = reverse('public_booking:booking_submit', kwargs={
+            'user_slug': self.host.slug, 'event_type_slug': self.et.slug,
+        })
+
+    def _post(self, email):
+        return self.client.post(self.url, {
+            'inicio_utc': slot_futuro().isoformat(),
+            'nombre_invitado': NOMBRE_INVITADO,
+            'email_invitado': email,
+            'telefono_invitado': '+34 600123456',
+        })
+
+    def test_sin_url_configurada_va_a_la_pagina_propia(self, *_):
+        bloqueo = bloquear(EMAIL, 'pepito@gmail.com')
+        resp = self._post('pepito@gmail.com')
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(resp.url.endswith(reverse('public_token:reserva_no_procesada')))
+        self.assertFalse(Reserva.objects.exists())
+        bloqueo.refresh_from_db()
+        self.assertEqual(bloqueo.intentos, 1)
+        self.assertIsNotNone(bloqueo.ultimo_intento)
+
+    def test_con_url_configurada_va_a_esa(self, *_):
+        ConfigBloqueos.objects.create(url_redireccion='https://otra-pagina.com/lo-sentimos')
+        bloquear(DOMINIO, 'somoshackers')
+        resp = self._post('loco@somoshackers.com')
+        self.assertRedirects(resp, 'https://otra-pagina.com/lo-sentimos', fetch_redirect_response=False)
+
+    @patch('calendario.bookings.views_public._enviar_correos_confirmacion')
+    def test_el_resto_del_proveedor_reserva_normal(self, *_):
+        bloquear(EMAIL, 'pepito@gmail.com')
+        resp = self._post('juanito@gmail.com')
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(Reserva.objects.count(), 1)
+
+    def test_la_pagina_propia_se_muestra(self, *_):
+        resp = self.client.get(reverse('public_token:reserva_no_procesada'))
+        self.assertContains(resp, 'Lo sentimos, tu reserva no pudo ser procesada')

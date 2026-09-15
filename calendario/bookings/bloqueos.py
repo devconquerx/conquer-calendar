@@ -7,6 +7,14 @@ duplicado y funnel. Quien está bloqueado no ve un error: se le redirige a la UR
 de `ConfigBloqueos`, sin explicarle el motivo para no darle pistas de cómo
 saltárselo.
 """
+import logging
+
+from django.db.models import F
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 # Proveedores que ignoran los puntos de la parte local: pepito@gmail.com y
 # pe.pi.to@gmail.com son el mismo buzón.
@@ -70,3 +78,37 @@ def buscar_bloqueo(email):
         elif bloqueo.valor and _dominio_coincide(dominio, bloqueo.valor):
             return bloqueo
     return None
+
+
+def registrar_intento(bloqueo, email=''):
+    """Suma el intento al contador del bloqueo.
+
+    Va aparte de `crear_reserva` a propósito: la excepción deshace la
+    transacción en la que se lanza, y con ella se perdería este UPDATE.
+    """
+    from .models import BloqueoInvitado
+
+    BloqueoInvitado.objects.filter(pk=bloqueo.pk).update(
+        intentos=F('intentos') + 1, ultimo_intento=timezone.now(),
+    )
+    logger.warning('Reserva frenada por bloqueo %s (%s): email=%s', bloqueo.pk, bloqueo, email)
+
+
+def url_bloqueo(request):
+    """URL absoluta a la que se manda a quien está bloqueado.
+
+    Absoluta porque el funnel puede estar servido desde el dominio de la
+    escuela, y una ruta relativa acabaría en ese dominio y no en el nuestro.
+    """
+    from .models import ConfigBloqueos
+
+    url = ConfigBloqueos.get().url_redireccion
+    if url:
+        return url
+    return request.build_absolute_uri(reverse('public_token:reserva_no_procesada'))
+
+
+def redirigir(request, error):
+    """Respuesta de las vistas HTML cuando `crear_reserva` lanza el bloqueo."""
+    registrar_intento(error.bloqueo, error.email)
+    return redirect(url_bloqueo(request))

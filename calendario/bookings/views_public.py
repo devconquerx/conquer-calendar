@@ -13,9 +13,9 @@ from django.urls import reverse
 
 from calendario.event_types.models import EventType, EnlaceUnico
 from calendario.users.models import User
-from . import embed
+from . import bloqueos, embed
 from .correos import enviar_confirmacion_host, enviar_confirmacion_invitado
-from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
+from .exceptions import InvitadoBloqueadoError, ReservaDuplicadaError, SlotNoDisponibleError
 from .forms import BookingForm
 from .models import Reserva
 from .services import calcular_slots, calcular_slots_cacheado, cancelar_reserva, crear_reserva, reemplazar_reserva
@@ -403,6 +403,8 @@ class BookingFormView(View):
                 tracking={'url': form.cleaned_data.get('url', '')},
                 alumno_lms_uid=_uid_alumno(invitado),
             )
+        except InvitadoBloqueadoError as e:
+            return bloqueos.redirigir(request, e)
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, host, event_type, form, duplicado=e.reserva_existente)
         except SlotNoDisponibleError as e:
@@ -566,6 +568,8 @@ class TeamBookingFormView(View):
                 },
                 alumno_lms_uid=_uid_alumno(invitado),
             )
+        except InvitadoBloqueadoError as e:
+            return bloqueos.redirigir(request, e)
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, event_type, form, duplicado=e.reserva_existente)
         except SlotNoDisponibleError as e:
@@ -783,6 +787,8 @@ class ReemplazarPublicaView(View):
                 notas=form.cleaned_data.get('notas', ''),
                 timezone_invitado=str(tz_visitante),
             )
+        except InvitadoBloqueadoError as e:
+            return bloqueos.redirigir(request, e)
         except SlotNoDisponibleError:
             # El slot nuevo se llenó entre que vio el modal y aceptó. Volvemos al confirmation
             # de la vieja para que pruebe otro horario.
@@ -899,6 +905,8 @@ class EnlaceUnicoFormView(View):
                 tracking={'url': form.cleaned_data.get('url', '')},
                 alumno_lms_uid=_uid_alumno(invitado),
             )
+        except InvitadoBloqueadoError as e:
+            return bloqueos.redirigir(request, e)
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, enlace, event_type, form, duplicado=e.reserva_existente)
         except SlotNoDisponibleError as e:
