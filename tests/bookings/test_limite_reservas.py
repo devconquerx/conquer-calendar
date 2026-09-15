@@ -231,3 +231,63 @@ class VistasTest(TestCase):
         self.assertEqual(resp.status_code, 409)
         self.assertEqual(resp.json()['error'], 'limite_reservas')
         self.assertIn(reverse('public_token:limite_reservas'), resp.json()['redirect_url'])
+
+
+class FormularioPanelTest(TestCase):
+    """El límite se configura desde el formulario del tipo de evento del panel."""
+
+    def _datos(self, **extra):
+        datos = dict(
+            nombre='Clase 1 a 1', duracion_minutos=45, incremento_inicio_minutos=15,
+            aviso_minimo_minutos=0, aviso_maximo_dias=60, confirmacion_tipo='default',
+            crm_destino='none',
+        )
+        datos.update(extra)
+        return datos
+
+    def test_guarda_el_limite(self):
+        from calendario.event_types.forms import EventTypeForm
+        form = EventTypeForm(data=self._datos(limite_reservas=2, limite_reservas_dias=30))
+        form.instance.host = crear_host()
+        self.assertTrue(form.is_valid(), form.errors)
+        et = form.save()
+        self.assertEqual((et.limite_reservas, et.limite_reservas_dias), (2, 30))
+
+    def test_vacio_es_sin_limite(self):
+        from calendario.event_types.forms import EventTypeForm
+        form = EventTypeForm(data=self._datos())
+        form.instance.host = crear_host()
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertFalse(form.save().tiene_limite_reservas)
+
+    def test_un_dato_suelto_no_vale(self):
+        from calendario.event_types.forms import EventTypeForm
+        form = EventTypeForm(data=self._datos(limite_reservas=2))
+        form.instance.host = crear_host()
+        self.assertFalse(form.is_valid())
+        self.assertIn('limite_reservas_dias', form.errors)
+
+    def test_la_pantalla_del_panel_lo_pinta_y_lo_guarda(self):
+        from django.test import Client
+        from calendario.users.models import User
+        admin = User.objects.create_user(
+            email='limite.admin@test.com', username='limite_admin',
+            password='test1234', is_active=True, is_superuser=True,
+        )
+        et = crear_event_type(admin, nombre='Evento con límite')
+        url = reverse('panel_event_types:event_type_update', args=[et.pk])
+        c = Client()
+        c.force_login(admin)
+
+        html = c.get(url).content.decode()
+        self.assertIn('name="limite_reservas"', html)
+        self.assertIn('name="limite_reservas_dias"', html)
+
+        c.post(url, {
+            **self._datos(nombre=et.nombre), 'descripcion': '', 'buffer_antes_minutos': 0,
+            'buffer_despues_minutos': 0, 'confirmacion_url': '', 'gcal_palabras_ignorar': '',
+            'activo': 'on', 'limite_reservas': 3, 'limite_reservas_dias': 30,
+        })
+        et.refresh_from_db()
+        self.assertEqual((et.limite_reservas, et.limite_reservas_dias), (3, 30))
+        self.assertIn('value="3"', c.get(url).content.decode())
