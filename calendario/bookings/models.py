@@ -557,3 +557,108 @@ class CancelacionReserva(models.Model):
 
     def __str__(self):
         return f'{self.reserva_id} — {self.get_origen_display()} ({self.creada_en:%Y-%m-%d %H:%M})'
+
+
+class BloqueoInvitado(models.Model):
+    """Email o dominio que no puede reservar.
+
+    Se comprueba al crear la reserva (ver `bookings/bloqueos.py`), no al pintar
+    el calendario: el email solo se conoce cuando la persona envía el
+    formulario. Quien está bloqueado sale redirigido a la URL de
+    `ConfigBloqueos`, sin decirle por qué.
+    """
+
+    class Tipo(models.TextChoices):
+        EMAIL = 'email', 'Email concreto'
+        DOMINIO = 'dominio', 'Dominio entero'
+
+    tipo = models.CharField(max_length=10, choices=Tipo.choices, default=Tipo.EMAIL)
+    valor = models.CharField(
+        max_length=254,
+        help_text=(
+            'Email concreto: <code>pepito@gmail.com</code> (el resto de gmail sigue pudiendo reservar).<br>'
+            'Dominio: <code>somoshackers.com</code> bloquea ese dominio y sus subdominios; '
+            'sin extensión, <code>somoshackers</code> bloquea cualquier terminación '
+            '(.com, .net, .es…). La arroba del principio da igual.'
+        ),
+    )
+    motivo = models.CharField(
+        max_length=255, blank=True, default='',
+        help_text='Nota interna: por qué se bloqueó. No lo ve el invitado.',
+    )
+    activo = models.BooleanField(
+        default=True,
+        help_text='Desmárcalo para dejar de bloquear sin perder el registro.',
+    )
+    intentos = models.PositiveIntegerField(
+        default=0,
+        help_text='Reservas que ha frenado este bloqueo.',
+    )
+    ultimo_intento = models.DateTimeField(null=True, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'bloqueos_invitado'
+        verbose_name = 'bloqueo de invitado'
+        verbose_name_plural = 'bloqueos de invitados'
+        ordering = ['-creado_en']
+        constraints = [
+            models.UniqueConstraint(fields=['tipo', 'valor'], name='uq_bloqueo_tipo_valor'),
+        ]
+
+    def __str__(self):
+        return f'{self.get_tipo_display()}: {self.valor}'
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        from django.core.validators import validate_email
+        from .bloqueos import normalizar_valor
+
+        self.valor = normalizar_valor(self.tipo, self.valor)
+        if not self.valor:
+            raise ValidationError({'valor': 'Escribe el email o el dominio a bloquear.'})
+        if self.tipo == self.Tipo.EMAIL:
+            try:
+                validate_email(self.valor)
+            except ValidationError:
+                raise ValidationError({'valor': 'Eso no es un email válido.'})
+        elif '@' in self.valor:
+            raise ValidationError({
+                'valor': 'Un dominio no lleva nada delante de la arroba. '
+                         'Para bloquear a una persona elige «Email concreto».',
+            })
+
+    def save(self, *args, **kwargs):
+        from .bloqueos import normalizar_valor
+        self.valor = normalizar_valor(self.tipo, self.valor)
+        super().save(*args, **kwargs)
+
+
+class ConfigBloqueos(models.Model):
+    """Config global de los bloqueos (singleton, pk=1)."""
+
+    url_redireccion = models.URLField(
+        max_length=500, blank=True, default='',
+        verbose_name='URL de redirección',
+        help_text=(
+            'A dónde se manda a quien intenta reservar estando bloqueado. '
+            'Vacío: a la página propia «Lo sentimos, tu reserva no pudo ser procesada».'
+        ),
+    )
+
+    class Meta:
+        db_table = 'config_bloqueos'
+        verbose_name = 'Configuración de bloqueos'
+        verbose_name_plural = 'Configuración de bloqueos'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return 'Configuración de bloqueos'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
