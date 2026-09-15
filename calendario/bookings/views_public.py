@@ -16,7 +16,9 @@ from calendario.event_types.models import EventType, EnlaceUnico
 from calendario.users.models import User
 from . import bloqueos, embed
 from .correos import enviar_confirmacion_host, enviar_confirmacion_invitado
-from .exceptions import InvitadoBloqueadoError, ReservaDuplicadaError, SlotNoDisponibleError
+from .exceptions import (
+    InvitadoBloqueadoError, LimiteReservasError, ReservaDuplicadaError, SlotNoDisponibleError,
+)
 from .forms import BookingForm
 from .models import Reserva
 from .services import calcular_slots, calcular_slots_cacheado, cancelar_reserva, crear_reserva, reemplazar_reserva
@@ -406,6 +408,8 @@ class BookingFormView(View):
             )
         except InvitadoBloqueadoError as e:
             return bloqueos.redirigir(request, e)
+        except LimiteReservasError as e:
+            return redirect(url_limite_reservas(request, e))
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, host, event_type, form, duplicado=e.reserva_existente)
         except SlotNoDisponibleError as e:
@@ -571,6 +575,8 @@ class TeamBookingFormView(View):
             )
         except InvitadoBloqueadoError as e:
             return bloqueos.redirigir(request, e)
+        except LimiteReservasError as e:
+            return redirect(url_limite_reservas(request, e))
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, event_type, form, duplicado=e.reserva_existente)
         except SlotNoDisponibleError as e:
@@ -790,6 +796,8 @@ class ReemplazarPublicaView(View):
             )
         except InvitadoBloqueadoError as e:
             return bloqueos.redirigir(request, e)
+        except LimiteReservasError as e:
+            return redirect(url_limite_reservas(request, e))
         except SlotNoDisponibleError:
             # El slot nuevo se llenó entre que vio el modal y aceptó. Volvemos al confirmation
             # de la vieja para que pruebe otro horario.
@@ -940,6 +948,8 @@ class EnlaceUnicoFormView(View):
             )
         except InvitadoBloqueadoError as e:
             return bloqueos.redirigir(request, e)
+        except LimiteReservasError as e:
+            return redirect(url_limite_reservas(request, e))
         except ReservaDuplicadaError as e:
             return self._render_with_errors(request, enlace, event_type, form, duplicado=e.reserva_existente)
         except SlotNoDisponibleError as e:

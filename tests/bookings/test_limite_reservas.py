@@ -180,6 +180,28 @@ class VistasTest(TestCase):
             nombre_invitado=NOMBRE_INVITADO, email_invitado=EMAIL_INVITADO,
         )
 
+    def test_pagina_publica_redirige_a_maximo_alcanzado(self, *_):
+        resp = self.client.post(
+            reverse('public_booking:booking_submit', kwargs={
+                'user_slug': self.host.slug, 'event_type_slug': self.et.slug,
+            }),
+            {
+                'inicio_utc': slot_futuro(dias=1).isoformat(),
+                'nombre_invitado': NOMBRE_INVITADO,
+                'email_invitado': EMAIL_INVITADO,
+                'telefono_invitado': '+34 600123456',
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('public_token:limite_reservas'), resp.url)
+        self.assertIn(f'evento={self.et.pk}', resp.url)
+        self.assertIn('desde=', resp.url)
+
+        pagina = self.client.get(resp.url)
+        self.assertContains(pagina, 'has alcanzado el número máximo de reservas')
+        self.assertContains(pagina, 'como máximo')
+        self.assertContains(pagina, 'Podrás volver a reservar a partir del')
+
     def test_la_pagina_aguanta_una_url_a_mano(self, *_):
         resp = self.client.get(reverse('public_token:limite_reservas') + '?evento=abc&desde=ayer')
         self.assertContains(resp, 'Inténtalo más adelante')
