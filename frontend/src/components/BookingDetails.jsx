@@ -111,9 +111,9 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
             window.location.href = apiUrl(`/r/${result.confirmacion_token}/`)
           }
         }
-      } else if (result.error === 'bloqueado' && result.redirect_url) {
-        // Email o dominio bloqueado en el admin: a la página que se haya
-        // configurado allí, igual que en la página pública de reserva.
+      } else if (['bloqueado', 'limite_reservas'].includes(result.error) && result.redirect_url) {
+        // Email o dominio bloqueado en el admin, o máximo de reservas del evento
+        // alcanzado: a su página, igual que en la página pública de reserva.
         window.location.href = result.redirect_url
       } else if (result.error === 'duplicado' && result.reserva_existente) {
         // No es un error: se le ofrece cancelar la vieja y quedarse con esta,
