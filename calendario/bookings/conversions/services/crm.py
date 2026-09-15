@@ -40,6 +40,10 @@ def push_schedule(reserva):
         'specialisation': s.specialisation,
         'timezone_string': s.timezone_string,
         'meet_join_url': s.meet_join_url,
+        # ID del evento en Google Calendar, para que el CRM pueda localizarlo
+        # (double booking, transferir la llamada a otro closer). Vacío si Google
+        # falló al crear el evento: no se manda en vez de mandar ''.
+        'google_calendar_event_id': s.google_calendar_event_id or None,
         # Scoring
         'lead_scoring_score': float(s.lead_scoring_score) if s.lead_scoring_score is not None else None,
         'lead_scoring_text': s.lead_scoring_text,
