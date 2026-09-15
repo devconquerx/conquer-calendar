@@ -10,6 +10,7 @@ from django.views import View
 
 from django.utils import timezone as dj_timezone
 from django.urls import reverse
+from django.utils.http import urlencode
 
 from calendario.event_types.models import EventType, EnlaceUnico
 from calendario.users.models import User
@@ -796,6 +797,38 @@ class ReemplazarPublicaView(View):
 
         _avisar_si_es_nueva(nueva)
         return _redirect_confirmacion(vieja.event_type, nueva)
+
+
+def url_limite_reservas(request, error):
+    """URL absoluta de la página de máximo alcanzado para este error.
+
+    Absoluta por lo mismo que la del bloqueo: el funnel puede estar servido
+    desde el dominio de la escuela.
+    """
+    params = {'evento': error.event_type.pk}
+    if error.disponible_desde:
+        params['desde'] = error.disponible_desde.isoformat()
+    return request.build_absolute_uri(
+        f"{reverse('public_token:limite_reservas')}?{urlencode(params)}"
+    )
+
+
+class LimiteReservasView(View):
+    """Adonde va quien ya tiene el máximo de reservas del tipo de evento en su
+    ventana de días. Lee el evento y la fecha de la URL: no hay nada que
+    proteger, son el nombre del evento y su regla."""
+
+    def get(self, request):
+        evento = request.GET.get('evento', '')
+        event_type = EventType.objects.filter(pk=evento).first() if evento.isdigit() else None
+        try:
+            desde = date.fromisoformat(request.GET.get('desde', ''))
+        except ValueError:
+            desde = None
+        return render(request, 'pages/public/booking/limite_reservas.html', {
+            'event_type': event_type,
+            'desde': date_format(desde, r'j \d\e F \d\e Y') if desde else '',
+        })
 
 
 class ReservaNoProcesadaView(View):

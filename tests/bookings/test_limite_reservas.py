@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from calendario.bookings.exceptions import LimiteReservasError, ReservaDuplicadaError
@@ -158,3 +159,27 @@ class ServicioTest(TestCase):
         self.et.limite_reservas_dias = None
         with self.assertRaises(ValidationError):
             self.et.full_clean()
+
+
+@patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+@patch('calendario.bookings.services.crear_evento_google')
+class VistasTest(TestCase):
+
+    def setUp(self):
+        self.host = crear_host()
+        self.et = crear_event_type(self.host)
+        self.et.limite_reservas = 1
+        self.et.limite_reservas_dias = 30
+        self.et.save()
+        for dia in range(5):
+            crear_disponibilidad(self.host, dia=dia)
+        inicio = timezone.now() - timedelta(days=10)
+        Reserva.objects.create(
+            event_type=self.et, host=self.host, inicio_utc=inicio,
+            fin_utc=inicio + timedelta(minutes=30),
+            nombre_invitado=NOMBRE_INVITADO, email_invitado=EMAIL_INVITADO,
+        )
+
+    def test_la_pagina_aguanta_una_url_a_mano(self, *_):
+        resp = self.client.get(reverse('public_token:limite_reservas') + '?evento=abc&desde=ayer')
+        self.assertContains(resp, 'Inténtalo más adelante')

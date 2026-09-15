@@ -3,6 +3,7 @@ from . import views_public as v
 
 app_name = 'public_token'
 urlpatterns = [
+    path('limite-reservas/', v.LimiteReservasView.as_view(), name='limite_reservas'),
     path('no-procesada/', v.ReservaNoProcesadaView.as_view(), name='reserva_no_procesada'),
     path('<uuid:token>/', v.ConfirmacionView.as_view(), name='confirmacion'),
     path('<uuid:token>/cancelar/', v.CancelarPublicaView.as_view(), name='cancelar_publica'),
