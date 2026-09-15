@@ -16,6 +16,7 @@ class EventTypeAdmin(admin.ModelAdmin):
               'buffer_antes_minutos', 'buffer_despues_minutos', 'aviso_minimo_minutos',
               'aviso_maximo_dias', 'precio', 'activo', 'crm_destino',
               'registrar_en_academia', 'academia_lms_id',
+              'unico_por_invitado', 'limite_reservas', 'limite_reservas_dias',
               'confirmacion_tipo', 'confirmacion_url')
     inlines = [ConfigCorreoEventoInline]
     actions = ('activar_registro_academia', 'desactivar_registro_academia')
