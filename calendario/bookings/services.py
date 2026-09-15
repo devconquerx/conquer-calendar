@@ -19,7 +19,8 @@ from calendario.google_calendar.services import (
     eliminar_evento_google, hay_conflicto_calendario, obtener_busy_intervalos,
     obtener_busy_intervalos_local, titulo_libera_horario,
 )
-from .exceptions import ReservaDuplicadaError, SlotNoDisponibleError
+from .bloqueos import buscar_bloqueo
+from .exceptions import InvitadoBloqueadoError, ReservaDuplicadaError, SlotNoDisponibleError
 from .models import Reserva
 
 logger = logging.getLogger(__name__)
@@ -676,6 +677,12 @@ def mismo_invitado(reserva, email_invitado, telefono_invitado=''):
     return bool(tel_sufijo) and _sufijo_telefono(reserva.telefono_invitado) == tel_sufijo
 
 
+def _comprobar_bloqueo(email_invitado):
+    bloqueo = buscar_bloqueo(email_invitado)
+    if bloqueo is not None:
+        raise InvitadoBloqueadoError(bloqueo, email_invitado)
+
+
 def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
                   telefono_invitado='', notas='', timezone_invitado='', tracking=None,
                   alumno_lms_uid=''):
@@ -696,7 +703,11 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
     del token que el LMS firmó para el iframe. Solo lo traen las reservas hechas
     desde dentro de la academia; es con lo que ella empareja después la sesión
     con su alumno.
+
+    Lanza InvitadoBloqueadoError si el email o su dominio están bloqueados en
+    el admin (ver `bloqueos.py`).
     """
+    _comprobar_bloqueo(email_invitado)
     with transaction.atomic():
         et = EventType.objects.select_for_update().get(pk=event_type.pk)
         if not et.activo:
@@ -830,6 +841,9 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
     del mismo recorrido que la original y lleva su schedule_event_id vivo, que
     es contra el que deduplican el píxel y el CAPI.
     """
+    # Antes de tocar la vieja: si no, quedaría cancelada —con su aviso a la
+    # academia y a Google— para una nueva que nunca se va a crear.
+    _comprobar_bloqueo(email_invitado)
     with transaction.atomic():
         try:
             vieja = Reserva.objects.select_for_update().get(pk=reserva_vieja_pk)

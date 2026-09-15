@@ -5,11 +5,18 @@ Se bloquea un email concreto (el resto de su proveedor sigue reservando) o un
 dominio entero. Quien está bloqueado no crea la reserva y sale redirigido a la
 URL global de `ConfigBloqueos`, o a la página propia si no hay ninguna.
 """
+from unittest.mock import patch
+
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from calendario.bookings.bloqueos import buscar_bloqueo
-from calendario.bookings.models import BloqueoInvitado
+from calendario.bookings.exceptions import InvitadoBloqueadoError
+from calendario.bookings.models import BloqueoInvitado, Reserva
+from calendario.bookings.services import crear_reserva, reemplazar_reserva
+from tests.factories import (
+    NOMBRE_INVITADO, crear_disponibilidad, crear_event_type, crear_host, slot_futuro,
+)
 
 EMAIL = BloqueoInvitado.Tipo.EMAIL
 DOMINIO = BloqueoInvitado.Tipo.DOMINIO
@@ -68,3 +75,39 @@ class CoincidenciaTest(TestCase):
         with self.assertRaises(ValidationError):
             BloqueoInvitado(tipo=DOMINIO, valor='pepito@gmail.com').full_clean()
         BloqueoInvitado(tipo=DOMINIO, valor='@somoshackers').full_clean()
+
+
+@patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+@patch('calendario.bookings.services.crear_evento_google')
+class ServicioTest(TestCase):
+
+    def setUp(self):
+        self.host = crear_host()
+        self.et = crear_event_type(self.host)
+        for dia in range(5):
+            crear_disponibilidad(self.host, dia=dia)
+
+    def _reservar(self, email, inicio=None):
+        return crear_reserva(
+            event_type=self.et, inicio_utc=inicio or slot_futuro(),
+            nombre_invitado=NOMBRE_INVITADO, email_invitado=email,
+        )
+
+    def test_bloqueado_no_crea_la_reserva(self, *_):
+        bloquear(DOMINIO, 'somoshackers')
+        with self.assertRaises(InvitadoBloqueadoError):
+            self._reservar('loco@somoshackers.com')
+        self.assertFalse(Reserva.objects.exists())
+
+    def test_reagendar_bloqueado_no_cancela_la_reserva_vieja(self, *_):
+        vieja = self._reservar('pepito@gmail.com')
+        bloquear(EMAIL, 'pepito@gmail.com')
+        with self.assertRaises(InvitadoBloqueadoError):
+            reemplazar_reserva(
+                reserva_vieja_pk=vieja.pk, event_type=self.et,
+                inicio_utc=slot_futuro(hora=12),
+                nombre_invitado=NOMBRE_INVITADO, email_invitado='pepito@gmail.com',
+            )
+        vieja.refresh_from_db()
+        self.assertEqual(vieja.estado, Reserva.Estado.CONFIRMADA)
+        self.assertEqual(Reserva.objects.count(), 1)
