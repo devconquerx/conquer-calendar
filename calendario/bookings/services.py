@@ -677,6 +677,26 @@ def mismo_invitado(reserva, email_invitado, telefono_invitado=''):
     return bool(tel_sufijo) and _sufijo_telefono(reserva.telefono_invitado) == tel_sufijo
 
 
+def _excede_limite(fechas, nueva, maximo, dias):
+    """¿Añadir una cita el día `nueva` deja alguna ventana de `dias` días con más
+    de `maximo` citas?
+
+    Solo importan las ventanas que contienen `nueva`, y basta con mirar las que
+    empiezan justo en una cita: cualquier otra se puede correr a la derecha hasta
+    la primera cita que contiene sin perder ninguna.
+    """
+    puntos = sorted([*fechas, nueva])
+    ancho = timedelta(days=dias)
+    for inicio in puntos:
+        if inicio > nueva:
+            break
+        if inicio + ancho <= nueva:
+            continue
+        if sum(1 for p in puntos if inicio <= p < inicio + ancho) > maximo:
+            return True
+    return False
+
+
 def _comprobar_bloqueo(email_invitado):
     bloqueo = buscar_bloqueo(email_invitado)
     if bloqueo is not None:
