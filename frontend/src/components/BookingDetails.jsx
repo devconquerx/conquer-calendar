@@ -111,6 +111,10 @@ export default function BookingDetails({ slot, prefill, eventoInfo, prellamadaTo
             window.location.href = apiUrl(`/r/${result.confirmacion_token}/`)
           }
         }
+      } else if (result.error === 'bloqueado' && result.redirect_url) {
+        // Email o dominio bloqueado en el admin: a la página que se haya
+        // configurado allí, igual que en la página pública de reserva.
+        window.location.href = result.redirect_url
       } else if (result.error === 'duplicado' && result.reserva_existente) {
         // No es un error: se le ofrece cancelar la vieja y quedarse con esta,
         // que es justo lo que necesita quien se equivocó de hora.
