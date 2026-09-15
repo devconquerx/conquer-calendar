@@ -792,6 +792,14 @@ class ReemplazarPublicaView(View):
         return _redirect_confirmacion(vieja.event_type, nueva)
 
 
+class ReservaNoProcesadaView(View):
+    """Adonde se manda por defecto a quien intenta reservar estando bloqueado
+    (ver `bloqueos.py`). Se puede cambiar por otra URL en el admin."""
+
+    def get(self, request):
+        return render(request, 'pages/public/booking/reserva_no_procesada.html')
+
+
 # ── Enlace único de un solo uso ───────────────────────────────────────────────
 
 class EnlaceUnicoPageView(View):
