@@ -15,10 +15,34 @@
         <h3 class="fw-medium mb-0">Tipos de evento</h3>
 
         <form method="get" id="et-filter-form" class="d-flex gap-2 align-items-center">
-            <div class="position-relative">
-                <i class="bi bi-search position-absolute" style="left:10px; top:50%; transform:translateY(-50%); color:#9aa3af; font-size:12px;"></i>
-                <input type="search" name="q" class="form-control form-control-sm" placeholder="Buscar..." value="{{ filtro_q }}" style="padding-left:30px; width:220px;">
+            <div class="d-flex">
+                {# Por ID busca el número exacto; por nombre, cualquier trozo del nombre. #}
+                <select name="buscar_por" id="et-buscar-por" class="form-select form-select-sm" title="Buscar por"
+                        style="width:auto; border-top-right-radius:0; border-bottom-right-radius:0;">
+                    <option value="" {% if not filtro_buscar_por %}selected{% endif %}>Nombre</option>
+                    <option value="id" {% if filtro_buscar_por == 'id' %}selected{% endif %}>ID</option>
+                </select>
+                <div class="position-relative">
+                    <i class="bi bi-search position-absolute" style="left:10px; top:50%; transform:translateY(-50%); color:#9aa3af; font-size:12px;"></i>
+                    <input type="search" name="q" id="et-buscar-q" class="form-control form-control-sm"
+                           placeholder="{% if filtro_buscar_por == 'id' %}Buscar por ID...{% else %}Buscar...{% endif %}"
+                           {% if filtro_buscar_por == 'id' %}inputmode="numeric"{% endif %}
+                           value="{{ filtro_q }}"
+                           style="padding-left:30px; width:220px; border-left:0; border-top-left-radius:0; border-bottom-left-radius:0;">
+                </div>
             </div>
+            <script>
+            (function () {
+                var sel = document.getElementById('et-buscar-por');
+                var q = document.getElementById('et-buscar-q');
+                sel.addEventListener('change', function () {
+                    var porId = sel.value === 'id';
+                    q.placeholder = porId ? 'Buscar por ID...' : 'Buscar...';
+                    if (porId) { q.setAttribute('inputmode', 'numeric'); } else { q.removeAttribute('inputmode'); }
+                    q.focus();
+                });
+            })();
+            </script>
 
             {% if request.user.es_admin or es_supervisor %}
             <div class="dropdown">
@@ -82,7 +106,7 @@
                     </div>
 
                     <div class="d-flex justify-content-between p-3">
-                        <a href="{% url 'panel_event_types:event_type_list' %}{% if filtro_q %}?q={{ filtro_q|urlencode }}{% endif %}" class="btn btn-sm btn-light js-limpiar-filtros">Limpiar</a>
+                        <a href="{% url 'panel_event_types:event_type_list' %}{% if filtro_q %}?q={{ filtro_q|urlencode }}{% if filtro_buscar_por %}&buscar_por={{ filtro_buscar_por }}{% endif %}{% endif %}" class="btn btn-sm btn-light js-limpiar-filtros">Limpiar</a>
                         <button type="submit" class="btn btn-sm btn-primary">Aplicar</button>
                     </div>
                 </div>
@@ -232,10 +256,10 @@
     <span class="text-muted fs-7">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
     <div class="d-flex gap-2">
         {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if filtro_q %}&q={{ filtro_q }}{% endif %}{% for o in filtro_organizadores %}&organizador={{ o }}{% endfor %}{% for c in filtro_creadores %}&creador={{ c }}{% endfor %}{% if filtro_academia %}&academia={{ filtro_academia }}{% endif %}" class="btn btn-sm btn-light">Anterior</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if filtro_q %}&q={{ filtro_q|urlencode }}{% endif %}{% if filtro_buscar_por %}&buscar_por={{ filtro_buscar_por }}{% endif %}{% for o in filtro_organizadores %}&organizador={{ o }}{% endfor %}{% for c in filtro_creadores %}&creador={{ c }}{% endfor %}{% if filtro_academia %}&academia={{ filtro_academia }}{% endif %}" class="btn btn-sm btn-light">Anterior</a>
         {% endif %}
         {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if filtro_q %}&q={{ filtro_q }}{% endif %}{% for o in filtro_organizadores %}&organizador={{ o }}{% endfor %}{% for c in filtro_creadores %}&creador={{ c }}{% endfor %}{% if filtro_academia %}&academia={{ filtro_academia }}{% endif %}" class="btn btn-sm btn-light">Siguiente</a>
+        <a href="?page={{ page_obj.next_page_number }}{% if filtro_q %}&q={{ filtro_q|urlencode }}{% endif %}{% if filtro_buscar_por %}&buscar_por={{ filtro_buscar_por }}{% endif %}{% for o in filtro_organizadores %}&organizador={{ o }}{% endfor %}{% for c in filtro_creadores %}&creador={{ c }}{% endfor %}{% if filtro_academia %}&academia={{ filtro_academia }}{% endif %}" class="btn btn-sm btn-light">Siguiente</a>
         {% endif %}
     </div>
 </div>

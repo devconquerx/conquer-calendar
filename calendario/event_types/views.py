@@ -34,7 +34,12 @@ class EventTypeListView(RequierePermisoMixin, ListView):
         qs = event_types_visibles(self.request.user)
 
         q = self.request.GET.get('q', '').strip()
-        if q:
+        if q and self.request.GET.get('buscar_por') == 'id':
+            # Por ID se busca el número exacto, no un trozo del nombre: así un
+            # evento que se llame "Clase 83" no se cuela al buscar el 83.
+            pk = q.lstrip('#')
+            qs = qs.filter(pk=int(pk)) if pk.isdigit() else qs.none()
+        elif q:
             qs = qs.filter(nombre__icontains=q)
 
         organizadores = [v for v in self.request.GET.getlist('organizador') if v.isdigit()]
@@ -61,6 +66,7 @@ class EventTypeListView(RequierePermisoMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['filtro_q'] = self.request.GET.get('q', '')
+        ctx['filtro_buscar_por'] = 'id' if self.request.GET.get('buscar_por') == 'id' else ''
         ctx['filtro_organizadores'] = self.request.GET.getlist('organizador')
         ctx['filtro_creadores'] = self.request.GET.getlist('creador')
         ctx['filtro_academia'] = self.request.GET.get('academia', '')
