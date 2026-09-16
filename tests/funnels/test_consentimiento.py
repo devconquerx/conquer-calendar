@@ -340,7 +340,8 @@ class SacarloAManoParaVerloTest(TestCase):
 
 
 class CadaMarcaHablaSuIdiomaVisualTest(TestCase):
-    """Blocks y Finance van en cartón y con el CTA pixelado; Languages no.
+    """Blocks, Finance y Legal van en cartón; Blocks y Legal además con el CTA
+    pixelado; Finance con su degradado pero sin píxeles; Languages liso.
 
     Es lo que fallaba en Cookiebot: el mismo recuadro blanco genérico sobre tres
     marcas que no se parecen en nada.
@@ -369,14 +370,25 @@ class CadaMarcaHablaSuIdiomaVisualTest(TestCase):
         html = self._html('www.conquerlegal.com', '/hub/registro-eu')
         self.assertIn('linear-gradient(90deg,#3E76FF 0%,#1845D6 42%,#031464 100%)', html)
 
-    def test_y_su_cta_lleva_el_borde_pixelado_y_su_degradado(self):
-        for host, ruta, g1, g2 in (
-            ('www.conquerblocks.com', '/evento/evento-online', '#ff4000', '#ff9800'),
-            ('www.conquerfinance.com', '/evento/evento-online', '#aed916', '#3ac043'),
-        ):
-            html = self._html(host, ruta)
-            self.assertIn('clip-path:var(--pixel-clip)', html, f'{host}{ruta}')
-            self.assertIn(f'linear-gradient(135deg,{g1},{g2})', html, f'{host}{ruta}')
+    def test_el_cta_de_blocks_lleva_el_borde_pixelado_y_su_degradado(self):
+        html = self._html('www.conquerblocks.com', '/evento/evento-online')
+        self.assertIn('clip-path:var(--pixel-clip)', html)
+        self.assertIn('linear-gradient(135deg,#ff4000,#ff9800)', html)
+
+    def test_finance_lleva_su_degradado_pero_sin_pixeles(self):
+        # El funnel de Finance apagó el pixel-art entero (`FI_PIXEL_STYLE`), y
+        # el banner salía con el CTA recortado igualmente. Ahora es como el
+        # «Ver vídeo gratis» de al lado: degradado de tres paradas, esquinas
+        # rectas y sin recorte.
+        html = self._html('www.conquerfinance.com', '/evento/evento-online')
+        # Solo el CSS del banner: la página de evento recorta su propio CTA con
+        # la misma variable y ensuciaría la comprobación.
+        css = html.split('#cqx-consent{')[1].split('</style>')[0]
+        self.assertNotIn('clip-path:var(--pixel-clip)', css)
+        self.assertIn('linear-gradient(90deg,#AED916 0%,#74CD2D 50%,#3AC043 100%)', css)
+        self.assertIn('--radio:2px', css)
+        # Y sin recorte no hace falta el foco por dentro: vale el outline normal.
+        self.assertNotIn('button.principal:focus-visible{outline:none', css)
 
     def test_languages_se_queda_liso_y_cuadrado(self):
         html = self._html('www.conquerlanguages.com', '/cl-evento')
@@ -437,8 +449,10 @@ class ElIconoQueQuedaDespuesTest(TestCase):
     def test_en_las_marcas_pixeladas_no_es_un_circulo(self):
         # Un círculo desentonaría al lado de un CTA de esquina pixelada.
         self.assertIn('#cqx-consent-icono{border-radius:0', self._html())
-        self.assertNotIn('#cqx-consent-icono{border-radius:0',
-                         self._html('www.conquerlanguages.com', '/cl-evento'))
+        # Finance ya no tiene CTA pixelado: su icono vuelve a ser redondo.
+        for host, ruta in (('www.conquerlanguages.com', '/cl-evento'),
+                           ('www.conquerfinance.com', '/evento/evento-online')):
+            self.assertNotIn('#cqx-consent-icono{border-radius:0', self._html(host, ruta), host)
 
 
 class EsUnaBarraPegadaAbajoTest(TestCase):

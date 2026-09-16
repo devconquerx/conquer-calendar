@@ -71,18 +71,23 @@
 #cqx-consent button:hover{filter:brightness(.97)}
 #cqx-consent button.principal{background:var(--acento);color:var(--acento-texto);border-color:var(--acento)}
 #cqx-consent button.principal:hover{filter:brightness(1.06)}
-{% if consentimiento.marca.pixel %}
-/* CTA con borde pixelado y el degradado de marca, el mismo del «Ver vídeo
-   gratis». Casi todas lo arman con dos paradas a 135deg; la que no encaje ahí
-   —Legal, con tres en horizontal— lo declara entero en `gradiente`.
-   El recorte se come las esquinas, así que el borde y el redondeo sobran: se
-   quitan o asoman por debajo. Los secundarios van cuadrados para no mezclar
-   esquinas pixeladas con esquinas redondas en la misma fila. */
-#cqx-consent button{border-radius:0}
+{% if consentimiento.marca.gradiente or consentimiento.marca.grad_1 %}
+/* CTA con el degradado de marca, el mismo del «Ver vídeo gratis». Casi todas
+   lo arman con dos paradas a 135deg; las que no encajan ahí —Legal y Finance,
+   con tres en horizontal— lo declaran entero en `gradiente`. Sin borde: sobre
+   un degradado asomaría por debajo. */
 #cqx-consent button.principal{
   background-image:{% if consentimiento.marca.gradiente %}{{ consentimiento.marca.gradiente }}{% else %}linear-gradient(135deg,{{ consentimiento.marca.grad_1 }},{{ consentimiento.marca.grad_2 }}){% endif %};
-  border:0;border-radius:0;clip-path:var(--pixel-clip);padding:12px 18px;
+  border:0;
 }
+{% endif %}
+{% if consentimiento.marca.pixel %}
+/* Borde pixelado. El recorte se come las esquinas, así que el redondeo sobra.
+   Los secundarios van cuadrados para no mezclar esquinas pixeladas con esquinas
+   redondas en la misma fila. Va aparte del degradado porque no siempre van
+   juntos: Finance conserva el degradado pero apagó el pixel-art. */
+#cqx-consent button{border-radius:0}
+#cqx-consent button.principal{border:0;border-radius:0;clip-path:var(--pixel-clip);padding:12px 18px}
 /* Sin borde no hay dónde pintar el foco, y `outline` se recorta con el resto:
    se marca por dentro. */
 #cqx-consent button.principal:focus-visible{outline:none;box-shadow:inset 0 0 0 2px #fff}

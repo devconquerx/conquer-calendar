@@ -79,6 +79,10 @@ import pxGreenSm7 from '../assets/img/finance/px-sm-7-green.svg'
 // posiciones (heredadas de Legal: `landing.decoPixels`, `confirmation.heroDecos`,
 // `footerDecos`) y los assets siguen definidos, solo quedan inertes mientras
 // esté apagado.
+//
+// OJO: el banner de cookies NO lee este flag. Lo pinta Django con la paleta de
+// `MARCAS['conquer-finance']` en calendario/funnels/consentimiento.py, que hoy
+// va sin `pixel`. Si esto vuelve a `true`, hay que volver a ponerlo allí.
 // ═══════════════════════════════════════════════════════════════════════════
 const FI_PIXEL_STYLE = false
 

@@ -68,13 +68,16 @@ VERSION = 1
 # tiene su propio lenguaje visual y hay que hablarlo, o vuelve a parecer —como
 # el de Cookiebot— una pieza pegada de otro sitio:
 #
-#   papel → tarjeta de cartón con su textura, como el resto de tarjetas de
-#           Blocks y Finance
-#   pixel → CTA con el borde pixelado y el degradado de marca, el mismo del
-#           «Ver vídeo gratis» del funnel
+#   papel     → tarjeta de cartón con su textura, como el resto de tarjetas
+#               de Blocks, Finance y Legal
+#   gradiente → el CTA lleva el degradado de marca (el mismo del «Ver vídeo
+#   grad_1/2    gratis» del funnel) en vez del acento plano
+#   pixel     → además, el CTA se recorta con el borde pixelado
 #
-# Languages no usa ninguna de las dos: sus tarjetas son blancas y sus botones
-# píldoras verdes, así que ahí el componente va liso y redondeado.
+# Las tres van por separado: Finance tiene cartón y degradado pero apagó el
+# pixel-art en todo el funnel (`FI_PIXEL_STYLE` en su tema), y el banner tiene
+# que seguirle. Languages no usa ninguna: sus tarjetas son blancas y sus
+# botones píldoras verdes, así que ahí el componente va liso y redondeado.
 MARCAS = {
     'conquer-blocks': {
         'politica_url': 'https://www.conquerblocks.com/legal/politica-de-privacidad',
@@ -87,16 +90,20 @@ MARCAS = {
         'grad_1': '#ff4000',
         'grad_2': '#ff9800',
     },
+    # Finance apagó el pixel-art de todo el funnel (`FI_PIXEL_STYLE = false` en
+    # frontend/src/themes/conquerfinance.js): su CTA es un rectángulo plano de
+    # esquinas rectas con el degradado de tres paradas de la paleta 2026-08
+    # (Cartuso → Lima → Esmeralda). Sin `pixel`, y con el radio a 2px para que
+    # los botones salgan a 0, como el del funnel. Si el flag del tema vuelve a
+    # `true`, aquí hay que volver a poner `pixel`.
     'conquer-finance': {
         'politica_url': 'https://www.conquerfinance.com/legal/politica-de-privacidad',
         'acento': '#3ac043',
         'acento_texto': '#ffffff',
         'fuente': "'Funnel Display',Arial,sans-serif",
-        'radio': '10px',
+        'radio': '2px',
         'papel': True,
-        'pixel': True,
-        'grad_1': '#aed916',
-        'grad_2': '#3ac043',
+        'gradiente': 'linear-gradient(90deg,#AED916 0%,#74CD2D 50%,#3AC043 100%)',
     },
     # Languages es TEAL, no verde. El verde que había aquí no coincidía con
     # ninguno de los dos sitios donde sale el banner: su CTA del embudo («Ver
