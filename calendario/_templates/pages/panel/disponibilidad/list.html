@@ -1430,6 +1430,8 @@
 }
 .horario-row:hover .horario-editar { color:#6b7280; }
 .horario-editar:hover { background:#eef0f4; color:#009ef7; }
+.horario-form-borrar { display:flex; margin:0; }
+.horario-borrar:hover { background:#fdecee; color:#f1416c; }
 .horario-form-rename { display:flex; gap:4px; padding:2px 2px 6px; }
 .horario-form-rename.d-none { display:none; }
 .horario-form-rename input {
@@ -1492,6 +1494,15 @@
                           data-horario="{{ h.pk }}" title="Cambiar el nombre">
                     <i class="bi bi-pencil"></i>
                   </button>
+                  <form method="post" class="horario-form-borrar"
+                        action="{% url 'panel_disponibilidad:horario_delete' h.pk %}"
+                        onsubmit="return confirm('¿Eliminar el horario «{{ h.nombre|escapejs }}»? Los eventos que lo usen volverán al horario por defecto.')">
+                    {% csrf_token %}
+                    {% include "pages/panel/disponibilidad/_contexto.html" %}
+                    <button type="submit" class="horario-editar horario-borrar" title="Eliminar este horario">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </form>
                   {% endif %}
                 </div>
                 {% if not h.es_default and 'availability.editar' in PERMISOS_USUARIO %}
