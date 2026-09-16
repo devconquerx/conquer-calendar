@@ -551,6 +551,24 @@ class PantallaDisponibilidadPorHorarioTest(TestCase):
             reverse('panel_disponibilidad:horario_rename', kwargs={'pk': self.default.pk}), html
         )
 
+    def test_cada_horario_lleva_su_x_menos_el_default(self, _sync):
+        html = self._cliente().get(self.url).content.decode()
+        self.assertIn(
+            reverse('panel_disponibilidad:horario_delete', kwargs={'pk': self.usa.pk}), html
+        )
+        self.assertNotIn(
+            reverse('panel_disponibilidad:horario_delete', kwargs={'pk': self.default.pk}), html
+        )
+
+    def test_borrar_otro_horario_desde_el_desplegable_deja_abierto_el_actual(self, _sync):
+        otro = Horario.objects.create(host=self.host, nombre='Otro')
+        r = self._cliente().post(
+            reverse('panel_disponibilidad:horario_delete', kwargs={'pk': otro.pk}),
+            {'horario': self.usa.pk},
+        )
+        self.assertFalse(Horario.objects.filter(pk=otro.pk).exists())
+        self.assertIn(f'horario={self.usa.pk}', r['Location'])
+
     def test_renombrar_desde_el_desplegable_deja_el_nombre_nuevo(self, _sync):
         self._cliente().post(
             reverse('panel_disponibilidad:horario_rename', kwargs={'pk': self.usa.pk}),
