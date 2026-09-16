@@ -495,6 +495,56 @@ class PanelHorariosTest(TestCase):
         etxh_ajeno.refresh_from_db()
         self.assertIsNone(etxh_ajeno.horario_id)
 
+    def test_el_default_sale_marcado_en_lo_que_no_tiene_horario(self, _sync):
+        # Sin horario asignado el evento usa el default: en su modal tiene que
+        # salir marcado, y fijo, aunque nadie lo haya elegido a mano.
+        suelto = EventType.objects.create(
+            host=self.host, nombre='Evento suelto', duracion_minutos=30, activo=True,
+        )
+        EventTypeXHost.objects.filter(event_type=suelto).delete()
+        b = Horario.objects.create(host=self.host, nombre='B')
+        self.otro_etxh.horario = b
+        self.otro_etxh.save(update_fields=['horario'])
+
+        datos = self._cliente().get(self._url('horario_eventos', pk=self.default.pk)).json()
+        por_nombre = {e['nombre']: e for e in datos['eventos']}
+        for nombre in ('Evento panel', 'Evento suelto'):
+            self.assertTrue(por_nombre[nombre]['usa_este'], nombre)
+            self.assertTrue(por_nombre[nombre]['fijo'], nombre)
+            self.assertIsNone(por_nombre[nombre]['otro_horario'], nombre)
+        self.assertFalse(por_nombre['Otro panel']['usa_este'])
+        self.assertFalse(por_nombre['Otro panel']['fijo'])
+        self.assertEqual(por_nombre['Otro panel']['otro_horario'], 'B')
+
+    def test_marcar_en_el_default_suelta_el_otro_horario(self, _sync):
+        b = Horario.objects.create(host=self.host, nombre='B')
+        EventTypeXHost.objects.filter(host=self.host).update(horario=b)
+
+        self._cliente().post(
+            self._url('horario_eventos', pk=self.default.pk),
+            data={'event_type_ids': [self.et.pk]},
+            content_type='application/json',
+        )
+
+        self.etxh.refresh_from_db()
+        self.otro_etxh.refresh_from_db()
+        self.assertIsNone(self.etxh.horario_id)
+        self.assertEqual(self.otro_etxh.horario_id, b.pk)
+
+    def test_guardar_el_default_no_crea_filas_en_el_pool(self, _sync):
+        suelto = EventType.objects.create(
+            host=self.host, nombre='Evento suelto', duracion_minutos=30, activo=True,
+        )
+        EventTypeXHost.objects.filter(event_type=suelto).delete()
+
+        self._cliente().post(
+            self._url('horario_eventos', pk=self.default.pk),
+            data={'event_type_ids': [suelto.pk]},
+            content_type='application/json',
+        )
+
+        self.assertFalse(EventTypeXHost.objects.filter(event_type=suelto).exists())
+
     def test_payload_invalido_devuelve_400(self, _sync):
         h = Horario.objects.create(host=self.host, nombre='Horario USA')
         r = self._cliente().post(
