@@ -778,6 +778,17 @@ class HorarioEventosView(_HorarioMixin, View):
         permitidos = set(self._eventos_del_host().values_list('pk', flat=True))
         marcados &= permitidos
 
+        if horario.es_default:
+            # Marcar en el default es devolver el evento al default: se suelta el
+            # horario que tuviera. Desmarcar no hace nada, porque un evento sin
+            # otro horario sigue cayendo aquí; y no se crean filas en el pool,
+            # que sin fila el evento ya usa el default.
+            (EventTypeXHost.objects
+             .filter(host=self.host_objetivo, event_type_id__in=marcados)
+             .exclude(horario=None)
+             .update(horario=None))
+            return JsonResponse({'ok': True, 'asignados': len(marcados)})
+
         with transaction.atomic():
             for event_type_id in marcados:
                 etxh, _ = EventTypeXHost.objects.get_or_create(

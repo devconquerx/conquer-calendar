@@ -750,14 +750,18 @@ class HorarioDeOtraPersonaTest(TestCase):
         self.assertEqual(self._cliente().get(self.url).status_code, 404)
 
     def test_post_con_host_asigna_el_horario_de_esa_persona(self, _sync):
+        # Con un horario con nombre: guardar en el default no deja rastro en la
+        # fila (el evento sin horario ya usa el default).
+        usa = Horario.objects.create(host=self.otro, nombre='Horario USA')
         r = self._cliente().post(
-            f'{self.url}?host={self.otro.pk}',
+            reverse('panel_disponibilidad:horario_eventos', kwargs={'pk': usa.pk})
+            + f'?host={self.otro.pk}',
             data={'event_type_ids': [self.et.pk]},
             content_type='application/json',
         )
         self.assertEqual(r.status_code, 200)
         etxh = EventTypeXHost.objects.get(event_type=self.et, host=self.otro)
-        self.assertEqual(etxh.horario_id, self.horario.pk)
+        self.assertEqual(etxh.horario_id, usa.pk)
 
     def test_la_pantalla_pasa_el_host_en_la_url_del_boton(self, _sync):
         html = self._cliente().get(
