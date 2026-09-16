@@ -31,6 +31,11 @@
   font-family:{{ consentimiento.marca.fuente|safe }};
 }
 #cqx-consent[hidden]{display:none}
+/* Al abrirse recibe el foco el diálogo entero (tabindex=-1), no su primer
+   botón: enfocar el botón le pintaba el anillo de foco nada más aparecer y
+   parecía más grande que el principal. El diálogo no necesita anillo; el
+   siguiente Tab ya cae en el primer botón, con el suyo. */
+#cqx-consent:focus{outline:none}
 #cqx-consent .tarjeta{
   width:100%;background:#fff;color:var(--tinta);
   /* Solo el borde de arriba: los otros tres caen fuera de la pantalla. */
@@ -74,11 +79,13 @@
 {% if consentimiento.marca.gradiente or consentimiento.marca.grad_1 %}
 /* CTA con el degradado de marca, el mismo del «Ver vídeo gratis». Casi todas
    lo arman con dos paradas a 135deg; las que no encajan ahí —Legal y Finance,
-   con tres en horizontal— lo declaran entero en `gradiente`. Sin borde: sobre
-   un degradado asomaría por debajo. */
+   con tres en horizontal— lo declaran entero en `gradiente`. El borde se
+   vuelve transparente, no se quita: el degradado lo cubre igual (el fondo
+   llega hasta el borde) y el botón conserva el mismo alto que los
+   secundarios, que sí llevan su 1px. Con `border:0` quedaba 2px más bajo. */
 #cqx-consent button.principal{
   background-image:{% if consentimiento.marca.gradiente %}{{ consentimiento.marca.gradiente }}{% else %}linear-gradient(135deg,{{ consentimiento.marca.grad_1 }},{{ consentimiento.marca.grad_2 }}){% endif %};
-  border:0;
+  border-color:transparent;
 }
 {% endif %}
 {% if consentimiento.marca.pixel %}

@@ -389,6 +389,21 @@ class CadaMarcaHablaSuIdiomaVisualTest(TestCase):
         self.assertIn('--radio:2px', css)
         # Y sin recorte no hace falta el foco por dentro: vale el outline normal.
         self.assertNotIn('button.principal:focus-visible{outline:none', css)
+        # El borde se vuelve transparente en vez de quitarse: con `border:0` el
+        # principal quedaba 2px más bajo que «Configurar», que lleva su 1px.
+        self.assertIn('border-color:transparent', css)
+        self.assertNotIn('border:0;\n}', css)
+
+    def test_al_abrirse_el_foco_va_al_dialogo_y_no_al_primer_boton(self):
+        # Enfocar el primer botón le pintaba el anillo de foco nada más
+        # aparecer, y parecía más grande que el principal de al lado.
+        html = self._html('www.conquerfinance.com', '/evento/evento-online')
+        marca = html[html.index('id="cqx-consent"'):]
+        self.assertIn('tabindex="-1"', marca[:marca.index('>')])
+        self.assertIn('#cqx-consent:focus{outline:none}', html)
+        js = JS.read_text(encoding='utf-8')
+        self.assertIn('caja.focus({ preventScroll: true });', js)
+        self.assertNotIn("caja.querySelector('button')", js)
 
     def test_languages_se_queda_liso_y_cuadrado(self):
         html = self._html('www.conquerlanguages.com', '/cl-evento')

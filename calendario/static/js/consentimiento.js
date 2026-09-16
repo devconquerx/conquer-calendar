@@ -98,8 +98,13 @@
     ultimoFoco = d.activeElement;
     caja.hidden = false;
     pintarIcono();
-    var primero = caja.querySelector('button');
-    if (primero) primero.focus();
+    // El foco entra al diálogo, no a su primer botón: enfocar el botón le
+    // pintaba el anillo de foco nada más abrirse, sin que nadie lo pulsara.
+    // Desde aquí, un Tab lleva al primer botón; quien navega con teclado no
+    // pierde nada.
+    // `preventScroll` por si algún navegador intentara desplazar la página
+    // hasta un elemento que ya está fijo en pantalla.
+    caja.focus({ preventScroll: true });
   }
 
   function ocultar() {
