@@ -3020,6 +3020,12 @@ window.tzHoraEn = (function () {
       cb.value = String(ev.event_type_id);
       cb.id = 'hev-cb-' + ev.event_type_id;
       cb.className = 'hev-cb';
+      // En el default, lo que ya lo usa no se desmarca: sale de aquí
+      // asignándole otro horario desde ese horario.
+      if (ev.fijo) {
+        cb.disabled = true;
+        row.title = 'Para quitarlo del horario por defecto, asígnale otro horario';
+      }
 
       var label = document.createElement('label');
       label.setAttribute('for', cb.id);

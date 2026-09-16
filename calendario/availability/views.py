@@ -736,27 +736,32 @@ class HorarioEventosView(_HorarioMixin, View):
         }
         return JsonResponse({
             'horario': {'pk': horario.pk, 'nombre': horario.nombre},
-            'eventos': [
-                {
-                    'event_type_id': et.pk,
-                    'nombre': et.nombre,
-                    'activo': et.activo,
-                    'usa_este': (
-                        et.pk in por_evento and por_evento[et.pk].horario_id == horario.pk
-                    ),
-                    # Un evento puede estar usando OTRO horario con nombre: se
-                    # avisa para que no se le quite sin querer.
-                    'otro_horario': (
-                        por_evento[et.pk].horario.nombre
-                        if et.pk in por_evento
-                        and por_evento[et.pk].horario_id
-                        and por_evento[et.pk].horario_id != horario.pk
-                        else None
-                    ),
-                }
-                for et in eventos
-            ],
+            'eventos': [self._estado_evento(et, por_evento.get(et.pk), horario) for et in eventos],
         })
+
+    @staticmethod
+    def _estado_evento(et, fila, horario):
+        """
+        Cómo sale un evento en la lista. Un evento sin horario asignado (o sin
+        fila en el pool) usa el default, así que en el modal del default tiene
+        que salir marcado aunque nadie lo haya elegido. Ahí además va fijo: no
+        se puede "quitar" del default sin decir a qué otro horario pasa.
+        """
+        asignado = fila.horario if fila else None
+        if horario.es_default:
+            usa_este = asignado is None or asignado.pk == horario.pk
+        else:
+            usa_este = asignado is not None and asignado.pk == horario.pk
+        return {
+            'event_type_id': et.pk,
+            'nombre': et.nombre,
+            'activo': et.activo,
+            'usa_este': usa_este,
+            'fijo': horario.es_default and usa_este,
+            # Un evento puede estar usando OTRO horario con nombre: se avisa
+            # para que no se le quite sin querer.
+            'otro_horario': asignado.nombre if asignado and not usa_este else None,
+        }
 
     def post(self, request, pk):
         import json
