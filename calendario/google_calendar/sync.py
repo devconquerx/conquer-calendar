@@ -53,6 +53,153 @@ def _invitados_que_declinaron(item):
     }
 
 
+def _evento_movido(item):
+    """
+    True si el evento se fue a otro calendario con `events.move`.
+
+    Visto desde el calendario de origen, un evento movido y uno borrado llegan
+    igual en el sync incremental: `{id, status: 'cancelled'}` y nada más. Hay
+    que pedirlo con `events().get` para distinguirlos, y ahí sí se separan:
+
+    - Borrado o cancelado por su dueño: Google lo devuelve `cancelled` pero
+      conserva `organizer` y `attendees`.
+    - Movido: `cancelled` y sin `organizer` ni `attendees`, porque ese
+      calendario ya no pinta nada en él. El evento sigue vivo, con el mismo ID,
+      en el calendario al que se movió.
+
+    Comprobado en producción el 17/09/2026 contra 40 cancelaciones del sync: 9
+    borrados (todos con organizador) y 5 movimientos del botón SOS del CRM
+    (todos sin él, y con el evento ya en el calendario de otro host).
+    """
+    return item.get('status') == 'cancelled' and not item.get('organizer')
+
+
+def _organizo_yo(item):
+    """True si el dueño del calendario es el organizador del evento."""
+    return bool((item.get('organizer') or {}).get('self'))
+
+
+def _reasignar_reserva(reserva, nuevo_host):
+    """
+    Pasa una reserva confirmada al host al que se movió su evento.
+
+    Es lo que hace el botón SOS del CRM: la llamada cambia de closer y el
+    evento de calendario con ella. La reserva tiene que seguirle, o el hueco
+    queda bloqueado en quien ya no la atiende, libre en quien sí, y cancelar o
+    reagendar desde la app tocaría el calendario equivocado.
+
+    Devuelve False si no se pudo: la restricción de unicidad no deja dos
+    reservas exclusivas del mismo host a la misma hora. En ese caso la reserva
+    se queda donde estaba —confirmada, no cancelada— para que lo mire alguien.
+    """
+    from calendario.bookings.models import Reserva
+    from calendario.bookings.services import invalidar_slots_por_host
+
+    host_anterior = reserva.host
+    try:
+        with transaction.atomic():
+            actualizadas = (
+                Reserva.objects
+                .filter(pk=reserva.pk, estado=Reserva.Estado.CONFIRMADA,
+                        host_id=host_anterior.pk)
+                .update(host=nuevo_host, fecha_actualizacion=django_tz.now())
+            )
+    except IntegrityError:
+        logger.warning(
+            "sync: la reserva %s se movió en Google de %s a %s, pero %s ya tiene "
+            "otra reserva exclusiva a esa hora (%s). Se deja con %s.",
+            reserva.pk, host_anterior.email, nuevo_host.email, nuevo_host.email,
+            reserva.inicio_utc, host_anterior.email,
+        )
+        return False
+    if not actualizadas:
+        # Otra pasada del sync se adelantó, o la reserva ya no está confirmada.
+        return False
+
+    reserva.host = nuevo_host
+    for host_id in (host_anterior.pk, nuevo_host.pk):
+        transaction.on_commit(lambda h=host_id: invalidar_slots_por_host(h))
+    logger.info(
+        "sync: reserva %s reasignada de %s a %s porque su evento se movió en "
+        "Google Calendar (inicio=%s, invitado=%s)",
+        reserva.pk, host_anterior.email, nuevo_host.email,
+        reserva.inicio_utc, reserva.email_invitado,
+    )
+    return True
+
+
+def _pedir_evento(host_email, google_event_id):
+    """`events().get` sobre el calendario principal de `host_email`."""
+    return obtener_servicio_calendar(host_email).events().get(
+        calendarId='primary', eventId=google_event_id,
+    ).execute()
+
+
+def _resolver_evento_movido(reserva):
+    """
+    Si el evento de la reserva se movió a otro calendario, la reasigna y
+    devuelve True: la reserva NO debe cancelarse. Devuelve False si el evento
+    se canceló de verdad, que es cuando sí toca cancelar.
+
+    Se pregunta a Google por el evento desde el calendario del host de la
+    reserva (ver `_evento_movido`). Si la consulta falla se devuelve False: es
+    lo que se hacía antes de existir esta comprobación, y un fallo puntual de
+    red no debe dejar en pie cancelaciones reales.
+
+    Para saber adónde fue no basta con buscar el ID en la copia local de los
+    demás hosts: ahí también lo tiene cualquier host que estuviera invitado a
+    la cita (otro closer, un setter). Se pregunta a Google desde cada uno y
+    el destino es el que figura como organizador.
+
+    Movido pero sin destino entre los hosts de la app → no se cancela: o el
+    sync del destino todavía no ha recibido el evento, o se movió a alguien
+    que no es host, y la reserva se queda confirmada donde estaba.
+    """
+    from django.contrib.auth import get_user_model
+
+    try:
+        item = _pedir_evento(reserva.host.email, reserva.google_event_id)
+    except Exception:
+        logger.warning(
+            "sync: no se pudo comprobar si el evento de la reserva %s se movió "
+            "(host=%s); se trata como cancelado",
+            reserva.pk, reserva.host.email, exc_info=True,
+        )
+        return False
+
+    if not _evento_movido(item):
+        return False
+
+    candidatos = (
+        get_user_model().objects
+        .filter(
+            is_active=True,
+            eventos_gcal__google_event_id=reserva.google_event_id,
+        )
+        .exclude(pk=reserva.host_id)
+        .distinct()
+    )
+    for candidato in candidatos:
+        try:
+            item_candidato = _pedir_evento(candidato.email, reserva.google_event_id)
+        except Exception:
+            continue
+        if item_candidato.get('status') != 'cancelled' and _organizo_yo(item_candidato):
+            if not _reasignar_reserva(reserva, candidato):
+                logger.warning(
+                    "sync: reserva %s movida en Google a %s sin poder "
+                    "reasignarla; no se cancela", reserva.pk, candidato.email,
+                )
+            return True
+
+    logger.info(
+        "sync: el evento de la reserva %s (host=%s) se movió a un calendario "
+        "que todavía no conocemos; no se cancela",
+        reserva.pk, reserva.host.email,
+    )
+    return True
+
+
 def _parse_evento(item):
     """
     Extrae campos relevantes de un item de events.list.
@@ -224,7 +371,8 @@ def _fecha_corte_cancelacion_invitado():
     return _leer_fecha_corte('CANCELAR_RECHAZOS_INVITADO_DESDE')
 
 
-def _cancelar_reservas_rechazadas(host, google_event_ids, declinados_por_invitado=None):
+def _cancelar_reservas_rechazadas(host, google_event_ids, declinados_por_invitado=None,
+                                  cancelados=None):
     """
     Cancela las reservas que en Google Calendar figuran rechazadas.
 
@@ -240,6 +388,11 @@ def _cancelar_reservas_rechazadas(host, google_event_ids, declinados_por_invitad
       seguir. Llegan en `declinados_por_invitado` como {event_id: {emails}} y se
       cancelan solo si el email que dijo que no es el de la reserva.
 
+    `cancelados` son los IDs que llegaron como `status: cancelled`, un
+    subconjunto de `google_event_ids`. Entre ellos van también los eventos que
+    se movieron a otro calendario (el botón SOS del CRM): esos no se cancelan,
+    la reserva pasa al nuevo host. Ver `_resolver_evento_movido`.
+
     `cancelar_reserva` cierra las tres cosas de una: libera el hueco, saca la
     reserva del envío de recordatorios (filtran por confirmada) y avisa por
     correo, porque `cancelar_evento_google` hace el patch con sendUpdates='all'
@@ -249,6 +402,7 @@ def _cancelar_reservas_rechazadas(host, google_event_ids, declinados_por_invitad
     nada ni duplica avisos.
     """
     declinados_por_invitado = declinados_por_invitado or {}
+    cancelados = set(cancelados or [])
     rechazados_por_host = set(google_event_ids or [])
     ids = rechazados_por_host | set(declinados_por_invitado)
     if not ids:
@@ -285,6 +439,8 @@ def _cancelar_reservas_rechazadas(host, google_event_ids, declinados_por_invitad
     for r in reservas:
         if r.google_event_id in rechazados_por_host:
             if r.fecha_creacion < corte_host:
+                continue
+            if r.google_event_id in cancelados and _resolver_evento_movido(r):
                 continue
             # OJO con la autoría: `usuario` se deja vacío a propósito. Lo único
             # que sabemos es que la invitación del host FIGURA rechazada; quién
@@ -491,6 +647,7 @@ def sincronizar_host_incremental(host):
                 # El del invitado ni siquiera deja rastro en el evento parseado:
                 # no lo pone transparent porque la hora del host sigue ocupada.
                 rechazados_en_google = []
+                cancelados_en_google = []
                 declinados_por_invitado = {}
 
                 while request is not None:
@@ -499,7 +656,10 @@ def sincronizar_host_incremental(host):
                         google_event_id = item.get('id')
                         if not google_event_id:
                             continue
-                        if item.get('status') == 'cancelled' or _host_declino(item):
+                        if item.get('status') == 'cancelled':
+                            rechazados_en_google.append(google_event_id)
+                            cancelados_en_google.append(google_event_id)
+                        elif _host_declino(item):
                             rechazados_en_google.append(google_event_id)
                         else:
                             # El "No" del host manda: si ya rechazó él, da igual
@@ -534,7 +694,8 @@ def sincronizar_host_incremental(host):
                 # El corte por fecha de creación evita repetir el drenaje del
                 # histórico; ver `_fecha_corte_cancelacion`.
                 _cancelar_reservas_rechazadas(
-                    host, rechazados_en_google, declinados_por_invitado
+                    host, rechazados_en_google, declinados_por_invitado,
+                    cancelados=cancelados_en_google,
                 )
 
                 if hay_cambios:
