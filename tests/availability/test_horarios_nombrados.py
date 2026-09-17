@@ -361,6 +361,14 @@ class PanelHorariosTest(TestCase):
         self.assertEqual(nombres, {'Evento panel', 'Otro panel'})
         self.assertTrue(all(e['usa_este'] is False for e in datos['eventos']))
 
+    def test_get_eventos_trae_el_enlace_a_cada_tipo_de_evento(self, _sync):
+        h = Horario.objects.create(host=self.host, nombre='Horario USA')
+        datos = self._cliente().get(self._url('horario_eventos', pk=h.pk)).json()
+        for e in datos['eventos']:
+            self.assertEqual(
+                e['url'], reverse('panel_event_types:event_type_update', kwargs={'pk': e['event_type_id']})
+            )
+
     def test_get_lista_tambien_los_eventos_sin_fila_en_el_pool(self, _sync):
         # Un evento personal no tiene fila en EventTypeXHost —el motor cae al
         # dueño— pero tiene que poder recibir un horario igualmente.
