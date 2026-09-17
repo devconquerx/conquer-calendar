@@ -152,8 +152,9 @@ def _resolver_evento_movido(reserva):
     el destino es el que figura como organizador.
 
     Movido pero sin destino entre los hosts de la app → no se cancela: o el
-    sync del destino todavía no ha recibido el evento, o se movió a alguien
-    que no es host, y la reserva se queda confirmada donde estaba.
+    sync del destino todavía no ha recibido el evento, y lo reasignará él al
+    recibirlo (ver `_reasignar_reservas_recibidas`), o se movió a alguien que
+    no es host, y la reserva se queda confirmada donde estaba.
     """
     from django.contrib.auth import get_user_model
 
@@ -198,6 +199,38 @@ def _resolver_evento_movido(reserva):
         reserva.pk, reserva.host.email,
     )
     return True
+
+
+def _reasignar_reservas_recibidas(host, google_event_ids):
+    """
+    El otro lado de un `events.move`: al calendario de `host` le acaba de
+    llegar un evento que organiza él y que pertenece a una reserva de otro host.
+
+    Solo se reasigna cuando el host anterior ya no tiene el evento en su copia
+    local. Mientras lo tenga puede ser que su sync aún no haya pasado —y
+    entonces lo reasignará él, en `_resolver_evento_movido`— o que las dos
+    cuentas compartan buzón (alias como los de Raúl y Chema), y en ese caso no
+    hay nada que mover.
+    """
+    if not google_event_ids:
+        return
+    from calendario.bookings.models import Reserva
+
+    reservas = (
+        Reserva.objects
+        .filter(
+            estado=Reserva.Estado.CONFIRMADA,
+            google_event_id__in=list(google_event_ids),
+        )
+        .exclude(host=host)
+        .select_related('host')
+    )
+    for r in reservas:
+        if GoogleCalendarEvento.objects.filter(
+            host_id=r.host_id, google_event_id=r.google_event_id,
+        ).exists():
+            continue
+        _reasignar_reserva(r, host)
 
 
 def _parse_evento(item):
@@ -649,6 +682,7 @@ def sincronizar_host_incremental(host):
                 rechazados_en_google = []
                 cancelados_en_google = []
                 declinados_por_invitado = {}
+                organizados_por_el_host = []
 
                 while request is not None:
                     response = request.execute()
@@ -667,6 +701,8 @@ def sincronizar_host_incremental(host):
                             emails = _invitados_que_declinaron(item)
                             if emails:
                                 declinados_por_invitado[google_event_id] = emails
+                            if _organizo_yo(item):
+                                organizados_por_el_host.append(google_event_id)
                         campos = _parse_evento(item)
                         if campos is None:
                             continue
@@ -681,6 +717,12 @@ def sincronizar_host_incremental(host):
                 sync_estado.ultima_sync_utc = django_tz.now()
                 sync_estado.estado = GoogleCalendarSyncEstado.ACTIVO
                 sync_estado.save(update_fields=['sync_token', 'ultima_sync_utc', 'estado'])
+
+                # Eventos que le han llegado a este host con `events.move` (el
+                # botón SOS del CRM): la reserva viene con ellos. Va antes de
+                # reconciliar el overbooking para que esa reserva ya cuente
+                # como suya.
+                _reasignar_reservas_recibidas(host, organizados_por_el_host)
 
                 # Reglas free/busy: reconciliar el flag de overbooking de las
                 # reservas tocadas en este sync incremental.
