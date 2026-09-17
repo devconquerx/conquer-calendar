@@ -1396,6 +1396,11 @@
 .hev-row label { flex:1; font-size:13px; color:#374151; cursor:pointer; margin:0; }
 .hev-row .hev-nota { font-size:11px; color:#f1a11b; }
 .hev-row .hev-inactivo { font-size:11px; color:#9ca3af; }
+.hev-ir {
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:26px; height:26px; border-radius:6px; color:#9ca3af; font-size:13px; text-decoration:none;
+}
+.hev-ir:hover { background:#eef0f4; color:#009ef7; }
 .hev-foot { padding:12px 20px 18px; display:flex; justify-content:flex-end; gap:8px; }
 .hev-msg { font-size:12px; padding:0 20px 8px; }
 .hev-msg.is-error { color:#f1416c; }
@@ -3047,6 +3052,17 @@ window.tzHoraEn = (function () {
         nota.textContent = 'usa «' + ev.otro_horario + '»';
         row.appendChild(nota);
       }
+
+      // Pestaña nueva: así no se pierde lo marcado en el modal.
+      var ir = document.createElement('a');
+      ir.className = 'hev-ir';
+      ir.href = ev.url;
+      ir.target = '_blank';
+      ir.rel = 'noopener';
+      ir.title = 'Abrir el tipo de evento';
+      ir.innerHTML = '<i class="bi bi-box-arrow-up-right"></i>';
+      row.appendChild(ir);
+
       cuerpo.appendChild(row);
     });
   }

@@ -755,6 +755,7 @@ class HorarioEventosView(_HorarioMixin, View):
         return {
             'event_type_id': et.pk,
             'nombre': et.nombre,
+            'url': reverse('panel_event_types:event_type_update', kwargs={'pk': et.pk}),
             'activo': et.activo,
             'usa_este': usa_este,
             'fijo': horario.es_default and usa_este,
