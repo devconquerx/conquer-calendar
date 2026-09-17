@@ -658,3 +658,37 @@ class ElPrefijoDePruebaSeMantieneTest(TestCase):
     def test_sin_prefijo_sigue_yendo_a_la_raiz(self):
         self.assertEqual(self._destino('/evento/evento-online', 'www.conquerblocks.com'),
                          '/evento/gracias-comunidad')
+
+
+class AliasEventoOnlineTest(TestCase):
+    """`/evento-online` (sin `/evento/`) lleva a la pantalla del evento.
+
+    Es la URL que los closers de Finance reparten desde Webflow. La canónica
+    cuelga de `/evento/`, así que esta solo redirige, arrastrando la query: el
+    `utm_campaign` decide con qué edición se archiva el lead y perderlo por el
+    camino lo mandaría a la de reserva.
+    """
+
+    def test_redirige_a_la_canonica(self):
+        resp = self.client.get('/evento-online', HTTP_HOST='www.conquerfinance.com')
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp['Location'], '/evento/evento-online')
+
+    def test_con_barra_final_tambien(self):
+        resp = self.client.get('/evento-online/', HTTP_HOST='www.conquerfinance.com')
+        self.assertEqual(resp['Location'], '/evento/evento-online')
+
+    def test_conserva_la_query(self):
+        resp = self.client.get('/evento-online?utm_campaign=cf-lanzamiento12&utm_source=whatsapp',
+                               HTTP_HOST='www.conquerfinance.com')
+        self.assertEqual(resp['Location'],
+                         '/evento/evento-online?utm_campaign=cf-lanzamiento12&utm_source=whatsapp')
+
+    def test_bajo_preview_conserva_el_prefijo(self):
+        resp = self.client.get('/preview/evento-online', HTTP_HOST='www.conquerfinance.com')
+        self.assertEqual(resp['Location'], '/preview/evento/evento-online')
+
+    def test_y_el_destino_responde_la_pagina_de_finance(self):
+        resp = self.client.get('/evento/evento-online', HTTP_HOST='www.conquerfinance.com')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('Conquer Finance', resp.content.decode())

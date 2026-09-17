@@ -180,3 +180,42 @@ curl -s -o /dev/null -w "%{http_code}\n" \
 
 Para revertir: borrar la ruta. Como hoy esos paths dan 404 en Webflow, darla de
 alta no toca ningún tráfico existente.
+
+---
+
+# `conquerfinance.com/evento-online` (alias de la pantalla del evento)
+
+La pantalla del evento en directo vive en `/evento/evento-online` y ya se sirve
+desde Django en el dominio de Finance. Pero los closers reparten
+`https://www.conquerfinance.com/evento-online` —sin `/evento/`—, que es la que
+tienen guardada de siempre: hoy da 404 porque Cloudflare no la intercepta y en
+Webflow esa página no existe.
+
+Django ya sirve el alias (`config/urls.py` → `evento_online_alias`): redirige a
+`/evento/evento-online` conservando la query (los `utm_*` deciden la edición con
+la que el CRM archiva el lead). Falta **una ruta en el Worker de Finance**
+(`conquerfinance-preview-funnel`, el mismo que ya enruta `/evento/*`):
+
+```
+www.conquerfinance.com/evento-online*
+```
+
+Antes de darla de alta, comprobar que el origen ya la sirve (o sea, que el
+deploy está hecho):
+
+```bash
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" \
+  -H 'X-Forwarded-Host: www.conquerfinance.com' \
+  https://calendar.conquerx.com/evento-online
+# Esperado: 302 https://calendar.conquerx.com/evento/evento-online
+```
+
+Y después, en el dominio real:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -L https://www.conquerfinance.com/evento-online
+# Esperado: 200
+```
+
+Para revertir: borrar la ruta. Como ese path hoy da 404 en Webflow, darla de
+alta no toca ningún tráfico existente.

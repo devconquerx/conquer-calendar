@@ -14,6 +14,7 @@ import random
 
 from django.conf import settings
 from django.http import Http404
+from django.shortcuts import redirect
 from django.utils.cache import patch_vary_headers
 from django.views.generic import TemplateView
 
@@ -832,6 +833,30 @@ def _funnel_de_la_edicion(request, evento):
         # que llega al CRM.
         return campana[:255]
     return evento['funnel']
+
+
+def evento_online_alias(request):
+    """Alias en la raíz de la pantalla del evento: `/evento-online`.
+
+    Es la URL que los closers de Finance reparten desde siempre
+    (conquerfinance.com/evento-online, sin `/evento/`) y la que llevan pegada en
+    sus enlaces; la página canónica cuelga de `/evento/`, así que aquí solo se
+    redirige en lugar de servirla dos veces —una sola URL para la medición y
+    para el contenido—.
+
+    La query viaja entera: de ahí salen la campaña (`utm_campaign`, que fija la
+    edición con la que se archiva el lead) y el `?escuela=` con el que se
+    previsualiza desde calendar.conquerx.com. Y el destino lleva delante el
+    prefijo bajo el que se esté sirviendo (p.ej. /preview), que el redirect no
+    hereda solo.
+    """
+    destino = _base_path(request) + '/evento/evento-online'
+    query = request.META.get('QUERY_STRING', '')
+    if query:
+        destino += '?' + query
+    # Temporal a propósito: un 301 se queda grabado en el navegador y en
+    # Cloudflare, y este alias existe para poder moverlo.
+    return redirect(destino)
 
 
 class EventoView(TemplateView):

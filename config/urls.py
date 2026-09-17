@@ -10,7 +10,9 @@ from django.http import JsonResponse
 from django.views.generic import RedirectView
 
 from calendario.users.views import MagicLoginView, MagicLoginStopView
-from calendario.funnels.evento_views import EventoView, GraciasView, PaginaDeCampanaView
+from calendario.funnels.evento_views import (
+    EventoView, GraciasView, PaginaDeCampanaView, evento_online_alias,
+)
 from calendario.funnels.views import (
     FunnelAgendaView, FunnelClaseView, FunnelConfirmationView,
     FunnelVideoView, FunnelStatusView,
@@ -59,6 +61,13 @@ urlpatterns = [
     # cuelga de un FunnelForm. La escuela se resuelve por dominio; en local, con
     # ?escuela=conquer-blocks. Réplica de la página que servía Webflow.
     re_path(r'^evento/evento-online/?$', EventoView.as_view(), name='evento_online'),
+    # Los closers de Finance reparten la misma pantalla sin `/evento/`
+    # (conquerfinance.com/evento-online): es la que tienen guardada de siempre y
+    # la que siguen pegando en sus enlaces. Se redirige a la canónica en vez de
+    # servirla en dos URLs. En Cloudflare hay que dar de alta la ruta
+    # `www.conquerfinance.com/evento-online*` en el Worker de Finance, o el
+    # dominio ni siquiera llega hasta aquí (ver infra/cloudflare/README.md).
+    re_path(r'^evento-online/?$', evento_online_alias, name='evento_online_alias'),
     # Languages sirve la suya en otra ruta (así está en su Webflow), así que se
     # registra aparte y lleva la escuela fijada: su dominio no es ambiguo.
     re_path(r'^cl-evento/?$', EventoView.as_view(), {'escuela': 'conquer-languages'},
