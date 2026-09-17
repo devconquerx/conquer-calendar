@@ -9,7 +9,9 @@ from calendario.google_calendar.models import (
     GoogleCalendarEvento, GoogleCalendarSyncEstado,
 )
 from calendario.google_calendar.services import obtener_servicio_calendar
-from calendario.google_calendar.sync import _host_declino, _invitados_que_declinaron
+from calendario.google_calendar.sync import (
+    _evento_movido, _host_declino, _invitados_que_declinaron,
+)
 
 
 class Command(BaseCommand):
@@ -89,7 +91,11 @@ class Command(BaseCommand):
                 # reserva, no "todos los attendees". En estos eventos hay
                 # setters y cuentas del workspace cuyo "No" no cancela nada.
                 invitado_declino = (r.email_invitado or '').lower() in _invitados_que_declinaron(item)
-                if item.get('status') == 'cancelled':
+                if _evento_movido(item):
+                    # El botón SOS del CRM lo pasó a otro closer: la cita sigue
+                    # en pie en otro calendario. Eso lo resuelve el sync.
+                    descartadas.append((r, 'evento movido a otro calendario'))
+                elif item.get('status') == 'cancelled':
                     a_cancelar.append((r, 'evento cancelado en Google'))
                 elif _host_declino(item):
                     a_cancelar.append((r, 'el host rechazó la invitación'))
