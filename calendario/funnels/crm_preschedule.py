@@ -14,6 +14,19 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+# `PreSchedule.lead_name` es varchar(140) en el CRM y `Prellamada.nombre` es
+# varchar(160) aquí: un nombre de 141 a 160 caracteres se guarda sin problema en
+# el calendario y hace que el CRM conteste `400 value too long for type
+# character varying(140)`. Entonces la tarea agota sus reintentos y la
+# prellamada no llega NUNCA —pasó de verdad, con alguien que pegó un texto en la
+# casilla del nombre—, así que se pierde el lead entero por el exceso.
+#
+# Mismo criterio que con el tracking desmedido (FUNNELS-67): se manda lo que
+# cabe y el lead llega. Solo afecta a `lead_name`; las respuestas y el
+# `lead_scoring_text` son TextField en el CRM y no tienen este techo.
+LIMITE_NOMBRE_CRM = 140
+
+
 def push_pre_schedule(prellamada):
     """Envía los datos de la Prellamada al CRM ingest (upsert por journey_id)."""
     base_url = settings.CRM_BASE_URL.rstrip('/')
@@ -75,7 +88,7 @@ def push_pre_schedule(prellamada):
         'journey_id': journey_id,
         'event_id': _trk('event_id'),
         'lead_email': prellamada.email,
-        'lead_name': prellamada.nombre,
+        'lead_name': (prellamada.nombre or '')[:LIMITE_NOMBRE_CRM],
         'lead_phone_number': prellamada.telefono,
         'call_register': prellamada.creado_en.isoformat() if prellamada.creado_en else None,
         'token': str(prellamada.token),
