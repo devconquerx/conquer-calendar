@@ -821,6 +821,10 @@ PAGINAS_DE_CAMPANA = {
         'orden': 11,
         'clave': 'bitacora-coding-week',
         'escuela': 'conquer-blocks',
+        # Dada de alta en Cloudflare el 18/09/2026: su ruta real ya la servimos
+        # nosotros, así que el panel enlaza ahí y no al prefijo /preview. Es la
+        # primera de campaña que pasa de Webflow a esta app en su URL buena.
+        'publicada': True,
         'plantilla': 'pages/public/evento/bitacora-codingweek.html',
         # El título que le puso Webflow, con su errata y todo; es el nombre de
         # la pestaña, así que se deja como está hasta que alguien lo cambie

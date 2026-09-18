@@ -660,10 +660,11 @@ class ElPanelApuntaAlDominioDeCadaMarcaTest(TestCase):
             self.assertIn(esperado, enlaces, esperado)
 
     def test_las_que_aun_no_tienen_ruta_van_por_preview(self):
-        # De las de evento solo están dadas de alta en Cloudflare las tres
-        # pantallas de lanzamiento y sus pantallas de gracias. Al resto se llega
-        # únicamente por el prefijo del Worker: enlazar a su ruta buena antes de
-        # tiempo lleva a la página vieja de Webflow o a un 404.
+        # De las de evento están dadas de alta en Cloudflare las tres pantallas
+        # de lanzamiento, sus pantallas de gracias y la bitácora de la Coding
+        # Week. Al resto se llega únicamente por el prefijo del Worker: enlazar
+        # a su ruta buena antes de tiempo lleva a la página vieja de Webflow o a
+        # un 404.
         enlaces = self._enlaces()
         for esperado in ('https://www.conquerblocks.com/preview/evento/evento-coding-week-eu',
                          'https://www.conquerblocks.com/preview/evento/evento-testimonios',
@@ -679,6 +680,7 @@ class ElPanelApuntaAlDominioDeCadaMarcaTest(TestCase):
                          'https://www.conquerfinance.com/evento/evento-online',
                          'https://www.conquerlanguages.com/cl-evento',
                          'https://www.conquerblocks.com/evento/gracias-comunidad',
+                         'https://www.conquerblocks.com/evento/codingweek-evento-vitacora',
                          'https://www.conquerlanguages.com/grupos-comunidad'):
             self.assertIn(esperado, enlaces, esperado)
 

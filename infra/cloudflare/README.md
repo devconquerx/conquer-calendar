@@ -219,3 +219,48 @@ curl -s -o /dev/null -w "%{http_code}\n" -L https://www.conquerfinance.com/event
 
 Para revertir: borrar la ruta. Como ese path hoy da 404 en Webflow, darla de
 alta no toca ningún tráfico existente.
+
+---
+
+# `conquerblocks.com/evento/codingweek-evento-vitacora` (bitácora de la Coding Week)
+
+La clase previa a la Coding Week, migrada de Webflow a esta app. A diferencia de
+todo lo anterior, **esta ruta no estaba vacía**: Webflow la servía de verdad, así
+que darla de alta es un cutover y no una adición inocua.
+
+Una sola ruta en el Worker de Blocks (`preview-funnel-worker`, el mismo que ya
+enruta `/preview/*`, `/static/*`, `/f/*`, `/media/*` y `/conquer-ai/*`):
+
+```
+www.conquerblocks.com/evento/codingweek-evento-vitacora*
+```
+
+El `*` cubre la barra final y la query, que es por donde viajan los `utm_*` (el
+`?utm_campaign` no cambia nada aquí —la página no recoge datos— pero se conserva
+por si la campaña enlaza con ellos).
+
+Antes de darla de alta, la página ya se puede revisar en el dominio real bajo el
+prefijo del Worker, que es como se validó:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" \
+  https://www.conquerblocks.com/preview/evento/codingweek-evento-vitacora
+# Esperado: 200
+```
+
+Y después, para saber quién la sirve:
+
+```bash
+curl -sI https://www.conquerblocks.com/evento/codingweek-evento-vitacora \
+  | grep -iE "x-wf-region|cache-control"
+# Webflow  → x-wf-region: us-east-1
+# Nosotros → cache-control: no-store, no-cache, must-revalidate, max-age=0
+```
+
+Hecho el 18/09/2026. Con la ruta arriba, la ficha de la página lleva
+`'publicada': True` en `evento_views.py` para que el panel de /funnels/ enlace a
+la URL buena y no al prefijo.
+
+Para revertir: borrar la ruta. Webflow recupera esa URL al instante, con la
+página vieja intacta —no se ha tocado—; conviene entonces devolver `publicada` a
+False para que el panel no enlace a una página que ya no es la nuestra.
