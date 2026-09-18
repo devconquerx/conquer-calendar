@@ -173,3 +173,50 @@ class ElFormularioDelAdminTest(TestCase):
         })
         self.assertFalse(form.is_valid())
         self.assertIn('txt__titular', form.errors)
+
+
+class LaBitacoraDeLaCodingWeekSeEditaEnteraTest(TestCase):
+    """De la bitácora de la Coding Week no queda nada escrito a código.
+
+    Es la última página migrada, y la prueba de que una página nueva llega
+    entera al panel: se le cambia cada campo declarado y todos salen en la
+    página, incluidos el vídeo y las tres imágenes.
+    """
+
+    CLAVE = 'bitacora-coding-week'
+    RUTA = '/evento/codingweek-evento-vitacora'
+    HOST = 'www.conquerblocks.com'
+
+    # Un valor reconocible por campo y lo que tiene que aparecer en el HTML.
+    NUEVOS = {
+        'chapa': ('EVENTO <strong>NUEVO</strong>', 'EVENTO <strong>NUEVO</strong>'),
+        'antetitulo': ('LA CLASE 9', 'LA CLASE 9'),
+        'titular': ('OTRO TITULAR', 'OTRO TITULAR'),
+        'parrafos': (['Párrafo uno', 'Párrafo dos'], 'Párrafo uno<br><br>Párrafo dos'),
+        'titulo_pagina': ('Otra pestaña', '<title>Otra pestaña</title>'),
+        'video_principal': ('11111111-2222-3333-4444-555555555555',
+                            '11111111-2222-3333-4444-555555555555'),
+        'biblioteca': ('999999', 'embed/999999/'),
+        'logo': ('/media/eventos/logo-nuevo.png', '/media/eventos/logo-nuevo.png'),
+        'fondo': ('/media/eventos/fondo-nuevo.svg', '/media/eventos/fondo-nuevo.svg'),
+        'rejilla': ('/media/eventos/rejilla-nueva.avif', '/media/eventos/rejilla-nueva.avif'),
+    }
+
+    def test_el_esquema_no_declara_nada_que_no_se_pruebe_aqui(self):
+        """Si mañana se añade un campo, este test avisa en vez de mirar a otro lado."""
+        self.assertEqual(
+            {campo.clave for campo in contenido.campos_de(self.CLAVE)},
+            set(self.NUEVOS),
+        )
+
+    def test_cambiarlo_todo_desde_el_panel_cambia_la_pagina(self):
+        fila = ContenidoDeEvento.objects.get(clave=self.CLAVE)
+        fila.textos = {clave: valor for clave, (valor, _) in self.NUEVOS.items()}
+        fila.save()
+        html = self.client.get(self.RUTA, HTTP_HOST=self.HOST).content.decode()
+        for clave, (_, esperado) in self.NUEVOS.items():
+            with self.subTest(campo=clave):
+                self.assertIn(esperado, html)
+        # Y ya no queda nada de lo que traía el código.
+        self.assertNotIn('EL SENTIDO COMÚN', html)
+        self.assertNotIn('104554f0', html)
