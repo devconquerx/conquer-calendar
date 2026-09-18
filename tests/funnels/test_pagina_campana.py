@@ -266,6 +266,8 @@ class LasPaginasSinFormularioTest(TestCase):
         # Que no recojan datos no las exime de medir ni de pedir permiso. Miden
         # con los píxeles a código, como el resto de páginas de evento.
         for host, ruta, ads in (('www.conquerblocks.com', '/evento/evento-testimonios', 'AW-725899560'),
+                                ('www.conquerblocks.com', '/evento/codingweek-evento-vitacora',
+                                 'AW-725899560'),
                                 ('www.conquerlanguages.com', '/eventos/bitacora', 'AW-16956085244'),
                                 ('www.conquerfinance.com', '/evento/pildoras-evento-2', 'AW-16625277654')):
             html = self.client.get(ruta, HTTP_HOST=host, HTTP_CF_IPCOUNTRY='ES').content.decode()

@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 
+from calendario.funnels import contenido
 from calendario.funnels.models import ContenidoDeEvento
 from calendario.permisos.models import Permiso, PermisoXRol, Rol, RolXUsuario
 
@@ -237,3 +238,28 @@ class EnlaceDelGrupoTest(TestCase):
         self.assertNotIn('chat.whatsapp.com/borrador', html)
         previa = self.client.get(PAGINA_GRACIAS + '?borrador=1', HTTP_HOST=HOST).content.decode()
         self.assertIn('chat.whatsapp.com/borrador', previa)
+
+
+class TodasLasPaginasEstanEnElPanelTest(TestCase):
+    """Una página nueva no está terminada hasta que se puede editar desde aquí.
+
+    El editor busca la fila por clave, así que a una página sin fila —o sin
+    entrada en el registro— se llega desde la lista y se sale con un 404. Esto
+    recorre las que hay declaradas, que es lo que se olvida al dar de alta una.
+    """
+
+    def setUp(self):
+        self.client.force_login(_usuario('panel@test.com', 'contenido_eventos.ver'))
+
+    def test_la_lista_las_enseña_todas(self):
+        html = self.client.get(LISTA).content.decode()
+        for clave, pagina in contenido.PAGINAS.items():
+            with self.subTest(pagina=clave):
+                self.assertIn(pagina.nombre, html)
+                self.assertIn(f'/panel/contenido/{clave}/', html)
+
+    def test_el_editor_abre_en_todas(self):
+        for clave in contenido.PAGINAS:
+            with self.subTest(pagina=clave):
+                self.assertEqual(
+                    self.client.get(f'/panel/contenido/{clave}/').status_code, 200)
