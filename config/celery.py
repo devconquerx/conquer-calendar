@@ -102,10 +102,27 @@ def _log_task_failure(task_name, task_id, exception, args, einfo):
             'sentry_url': sentry_url,
         }
 
-        if 'leads.Lead' in model_path:
-            log_kwargs['lead_id'] = args[0]
-        elif 'bookings.Reserva' in model_path:
-            log_kwargs['reserva_id'] = args[0]
+        # El objeto puede haberse borrado entre que la tarea se encoló y falló
+        # —de hecho esa es una de las razones POR LAS QUE falla: la tarea busca
+        # su Reserva y ya no está—. Enlazarlo entonces revienta con un
+        # IntegrityError de clave ajena y se pierde el registro entero, que es
+        # justo lo que no puede pasar aquí (FUNNELS-DQ/DT).
+        #
+        # Ambos FK admiten null, así que sin objeto se guarda igual y el id se
+        # deja en el mensaje: sin él, un fallo suelto no se puede rastrear.
+        campo = 'lead_id' if 'leads.Lead' in model_path else (
+            'reserva_id' if 'bookings.Reserva' in model_path else None
+        )
+        if campo:
+            from django.apps import apps
+            Modelo = apps.get_model(*model_path.split('.'))
+            if Modelo.objects.filter(pk=args[0]).exists():
+                log_kwargs[campo] = args[0]
+            else:
+                log_kwargs['exception_message'] = (
+                    f'{log_kwargs["exception_message"]} '
+                    f'[{model_path} {args[0]} ya no existe: se registra sin enlace]'
+                )
 
         TaskFailureLog.objects.create(**log_kwargs)
         logger.info('TaskFailureLog created for %s (obj %s)', task_name, args[0])
