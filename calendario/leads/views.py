@@ -227,8 +227,15 @@ def video_progress(request):
             logger.exception('No se pudo re-encolar Supabase para lead %s (vsl)', lead.pk)
 
     # Reenvía el progreso del VSL al CRM ingest (mismo hito y campo que guardamos).
+    # Por la cola, como sus vecinas: salía aquí mismo con un timeout de 10s y
+    # dejaba al visitante —y a un worker de gunicorn— esperando a un CRM que a
+    # veces no contesta (FUNNELS-5C). Ver `process_vsl_crm`.
     if milestone_to_send:
-        _patch_vsl_progress_to_crm(email, brand_field, milestone_to_send)
+        try:
+            from .tasks import process_vsl_crm
+            process_vsl_crm.delay(email, brand_field, milestone_to_send)
+        except Exception:
+            logger.exception('No se pudo encolar el %% de VSL al CRM para lead %s', lead.pk)
 
     # ActiveCampaign, campo por marca+región. Sustituye al POST que la página de
     # vídeo hacía desde el navegador a video-progress-tracker.php: mismo destino
@@ -244,41 +251,3 @@ def video_progress(request):
     return JsonResponse({'status': 'ok'})
 
 
-def _patch_vsl_progress_to_crm(email, vsl_key, percent):
-    """PATCH del progreso de video al CRM ingest (fire-and-forget).
-
-    Fail-safe: si no hay CRM_API_KEY configurada, hace no-op y loguea (no rompe
-    el flujo). Réplica de funnels/apps/leads/views.py:_patch_vsl_progress_to_crm.
-    """
-    api_key = getattr(settings, 'CRM_API_KEY', '')
-    if not api_key:
-        logger.warning('[CRM] No API key configured, skipping vsl-progress PATCH')
-        return
-
-    base_url = getattr(settings, 'CRM_BASE_URL', '').rstrip('/')
-    url = f'{base_url}/api/v1/ingest/lead-register/vsl-progress/'
-
-    payload = {
-        'email': email,
-        'vsl_percent_cb': None,
-        'vsl_percent_cl': None,
-        'vsl_percent_cf': None,
-    }
-    payload[vsl_key] = percent
-
-    try:
-        response = requests.patch(
-            url,
-            json=payload,
-            headers={'X-API-Key': api_key, 'Content-Type': 'application/json'},
-            timeout=10,
-        )
-        if response.status_code in (200, 201):
-            logger.info('[CRM] vsl-progress PATCH ok for %s (%s=%s)', email, vsl_key, percent)
-        else:
-            logger.error(
-                '[CRM] vsl-progress PATCH failed — status=%d response=%s',
-                response.status_code, response.text[:500],
-            )
-    except requests.RequestException as exc:
-        logger.error('[CRM] vsl-progress PATCH error: %s', exc)

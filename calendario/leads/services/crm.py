@@ -140,3 +140,54 @@ def push_lead(lead):
         response.raise_for_status()
 
     return True
+
+
+def push_vsl_progress(email, vsl_key, percent):
+    """PATCH del progreso de vídeo al CRM ingest.
+
+    Vivía en `leads/views.py` y salía dentro del request de
+    `/f/api/video-progress/`. Ahora la llama `process_vsl_crm` desde la cola:
+    ver ahí por qué. Fail-safe: sin CRM_API_KEY hace no-op y lo registra, sin
+    romper el flujo.
+    """
+    api_key = getattr(settings, 'CRM_API_KEY', '')
+    if not api_key:
+        logger.warning('[CRM] No API key configured, skipping vsl-progress PATCH')
+        return
+
+    base_url = getattr(settings, 'CRM_BASE_URL', '').rstrip('/')
+    url = f'{base_url}/api/v1/ingest/lead-register/vsl-progress/'
+
+    payload = {
+        'email': email,
+        'vsl_percent_cb': None,
+        'vsl_percent_cl': None,
+        'vsl_percent_cf': None,
+    }
+    payload[vsl_key] = percent
+
+    try:
+        response = requests.patch(
+            url,
+            json=payload,
+            headers={'X-API-Key': api_key, 'Content-Type': 'application/json'},
+            timeout=10,
+        )
+        if response.status_code in (200, 201):
+            logger.info('[CRM] vsl-progress PATCH ok for %s (%s=%s)', email, vsl_key, percent)
+        elif response.status_code == 404:
+            # No es un fallo: es alguien viendo el vídeo cuyo correo no está en
+            # el CRM —tráfico que entra por un enlace directo, sin pasar por el
+            # formulario—. Se registraba como error y eran 87 eventos semanales
+            # en Sentry tapando los que sí importan. Queda como info por si
+            # algún día hace falta medir cuántos son.
+            logger.info(
+                '[CRM] vsl-progress: %s no tiene LeadRegister, no hay dónde anotarlo', email,
+            )
+        else:
+            logger.error(
+                '[CRM] vsl-progress PATCH failed — status=%d response=%s',
+                response.status_code, response.text[:500],
+            )
+    except requests.RequestException as exc:
+        logger.error('[CRM] vsl-progress PATCH error: %s', exc)

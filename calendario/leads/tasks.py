@@ -106,6 +106,27 @@ def process_vsl_activecampaign(self, lead_id, percent, region=None):
     activecampaign.push_vsl_percent(lead, percent, region)
 
 
+@shared_task(**RETRY_POLICY)
+def process_vsl_crm(self, email, vsl_key, percent):
+    """Reenvía el hito de VSL al CRM.
+
+    Salía con `requests.patch` dentro del request de `/f/api/video-progress/`,
+    que es un ping cada 10% de vídeo: cuando el CRM tardaba, la petición del
+    visitante se quedaba esperando hasta diez segundos y con ella uno de los
+    tres workers de gunicorn (FUNNELS-5C, 121 read timeout en una semana). Ese
+    dato no le urge a nadie, así que va por la cola como sus dos vecinos de la
+    misma vista: el respaldo en Supabase y el % a ActiveCampaign.
+
+    Ojo con `RETRY_POLICY`: aquí no reintenta nada. `push_vsl_progress` se traga
+    los fallos —captura `RequestException` y de un 5xx solo deja un log—, así
+    que la tarea nunca lanza y el reintento no llega a dispararse. Si algún día
+    interesa que lo haga, hay que empezar por que esa función levante el error.
+    """
+    from calendario.leads.services import crm
+
+    crm.push_vsl_progress(email, vsl_key, percent)
+
+
 # El sondeo SMTP pregunta a Gmail si el buzón existe, y Gmail corta la IP si se
 # le pregunta demasiado seguido (nos pasó: 421 tras ~1.500 sondeos en 20 min).
 # El caudal normal de leads son ~3/min, pero hay ráfagas de campaña de hasta 27
