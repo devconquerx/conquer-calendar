@@ -104,6 +104,30 @@ def _imagenes(*campos):
                  for clave, etiqueta, ayuda in campos)
 
 
+AYUDA_VIDEO = (
+    'El identificador del vídeo en Bunny, el que va en la URL del embed: '
+    '<code>iframe.mediadelivery.net/embed/<b>biblioteca</b>/<b>vídeo</b></code>. '
+    'Se copia del panel de Bunny; si te equivocas, el reproductor sale en negro.'
+)
+
+
+def _video(etiqueta='Vídeo de la página', biblioteca=True):
+    """El vídeo de una página: su id y el de su biblioteca.
+
+    Estaba escrito en el código, así que cambiar la clase de un lanzamiento
+    obligaba a desplegar. Es contenido como cualquier otro: cada edición trae su
+    vídeo nuevo y quien la prepara no tiene por qué pasar por un programador.
+    """
+    campos = [Campo('video_principal', etiqueta, ayuda=AYUDA_VIDEO, seccion='Vídeo')]
+    if biblioteca:
+        campos.append(Campo(
+            'biblioteca', 'Biblioteca de Bunny',
+            ayuda='El número de la biblioteca. Suele ser el mismo para toda una marca.',
+            seccion='Vídeo',
+        ))
+    return tuple(campos)
+
+
 def _pestana():
     return (
         Campo('titulo_pagina', 'Título de la pestaña del navegador',
@@ -186,7 +210,15 @@ CAMPOS_LANZAMIENTO = (
     ('logo', 'Logo de la cabecera', ''),
     ('foto', 'Foto junto a los bullets', ''),
     ('fondo', 'Fondo de la página', ''),
-) + _pestana()
+) + _pestana() + (
+    Campo('marca', 'Nombre de la marca', seccion='Maquetación'),
+    Campo('logo_ancho', 'Ancho del logo (px)', seccion='Maquetación',
+          ayuda='Solo el número. El alto se ajusta solo.'),
+    Campo('hueco', 'Separación entre el logo y el texto',
+          ayuda='Con su unidad: <code>1rem</code>, <code>28px</code>.', seccion='Maquetación'),
+    Campo('foto_borde', 'Borde de la foto',
+          ayuda='CSS del borde: <code>2px solid #3ac043</code>.', seccion='Maquetación'),
+)
 
 # Pantalla de lanzamiento de Languages: mismo contenido, pero el titular se
 # parte por el medio y el formulario va a la vista, sin ventana.
@@ -250,7 +282,12 @@ CAMPOS_TESTIMONIOS = (
     ('logo', 'Logo de la cabecera', ''),
     ('holografia', 'Imagen de la sección del sistema', ''),
     ('fondo_cierre', 'Fondo del cierre', ''),
-) + _pestana()
+) + _pestana() + _video('Vídeo de la cabecera', biblioteca=False) + (
+    Campo('videos_apaisados', 'Vídeos apaisados', LISTA,
+          'Un identificador de Bunny por línea. ' + AYUDA_VIDEO, 'Vídeo'),
+    Campo('videos_verticales', 'Vídeos verticales', LISTA,
+          'Un identificador de Bunny por línea. ' + AYUDA_VIDEO, 'Vídeo'),
+)
 
 CAMPOS_BITACORA = (
     Campo('chapa', 'Chapa de la cabecera', seccion='Cabecera'),
@@ -260,7 +297,7 @@ CAMPOS_BITACORA = (
 ) + _imagenes(
     ('logo', 'Logo de la cabecera', ''),
     ('fondo', 'Fondo de la página', ''),
-) + _pestana()
+) + _pestana() + _video('Vídeo de la clase 0')
 
 # La bitácora de Blocks lleva los mismos textos que la de Languages, pero su
 # chapa es media palabra en verde —«CODING **WEEK**»— y su fondo son dos
@@ -274,7 +311,7 @@ CAMPOS_BITACORA_CODING_WEEK = (
     ('logo', 'Logo de la cabecera', ''),
     ('fondo', 'Resplandor de la cabecera', ''),
     ('rejilla', 'Rejilla del fondo', ''),
-) + _pestana()
+) + _pestana() + _video('Vídeo de la clase 0')
 
 CAMPOS_PILDORA = (
     Campo('chapa', 'Chapa de la cabecera', seccion='Cabecera'),
@@ -291,7 +328,7 @@ CAMPOS_PILDORA = (
     ('fondo', 'Fondo de la página', ''),
     ('imagen_tarjeta', 'Imagen de la tarjeta que lleva a esta píldora',
      'La miniatura con la que las otras dos píldoras enlazan a esta. ' + AYUDA_IMAGEN),
-) + _pestana()
+) + _pestana() + _video('Vídeo de la píldora')
 
 CAMPOS_TRADING_WEEK = (
     Campo('aviso', 'Chapa · qué es', seccion='Cabecera'),

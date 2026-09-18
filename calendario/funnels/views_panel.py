@@ -139,7 +139,12 @@ class EditorView(RequierePermisoMixin, TemplateView):
 
     @staticmethod
     def _campo(nombre, etiqueta, campo, escritos, publicados, originales):
+        # A texto siempre: en las fichas hay valores que son números (el ancho
+        # de un logo, el id de una biblioteca) y el editor los mide para decidir
+        # el alto de la caja. Un int reventaba la página entera del panel.
         valor = escritos.get(nombre, '')
+        if not isinstance(valor, str):
+            valor = '' if valor is None else str(valor)
         return {
             'nombre': nombre,
             'etiqueta': etiqueta,
