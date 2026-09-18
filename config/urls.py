@@ -83,7 +83,7 @@ urlpatterns = [
             name='evento_gracias_languages'),
     # Páginas de evento de campaña (Coding Week…): una ruta por campaña, bajo
     # /evento/, tal como las servía Webflow.
-    re_path(r'^evento/(?P<pagina>evento-coding-week-eu|evento-testimonios|pildoras-evento-1|pildoras-evento-2|pildoras-evento-3)/?$', PaginaDeCampanaView.as_view(),
+    re_path(r'^evento/(?P<pagina>evento-coding-week-eu|evento-testimonios|codingweek-evento-vitacora|pildoras-evento-1|pildoras-evento-2|pildoras-evento-3)/?$', PaginaDeCampanaView.as_view(),
             name='evento_campana'),
     # Languages sirve la suya bajo /eventos/ (en plural), como en su Webflow.
     re_path(r'^eventos/(?P<pagina>bitacora)/?$', PaginaDeCampanaView.as_view(),

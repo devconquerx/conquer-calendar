@@ -1,0 +1,182 @@
+{% load static imagenes_evento %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>{{ pagina.titulo_pagina }}</title>
+  {% include '_includes/_consentimiento.html' %}
+  {% include '_includes/_sgtm_head.html' %}
+  {% include '_includes/_pixeles_evento.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300;400;600;700&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   Bitácora de la Coding Week (Blocks). Réplica de
+   conquerblocks.com/evento/codingweek-evento-vitacora (el nombre de la ruta
+   lleva la errata del original: «vitacora»).
+
+   Es la hermana de Blocks de /eventos/bitacora: la clase previa al evento, sin
+   formulario ni botones —un vídeo, un titular y cuatro párrafos—. La maqueta no
+   es la de Languages: es la de las píldoras de Finance (cabecera, vídeo y
+   texto), con el negro y el verde #bae0a3 de Blocks.
+
+   Los valores no están medidos a ojo sobre una captura: salen de lo que
+   resuelve el navegador en la página original en los cinco anchos de Webflow
+   (≥1920, 992-1919, ≤991, ≤767 y ≤479).
+
+   Dos cosas del original no se replican, por lo mismo que en sus hermanas:
+   - La franja de tarjetas del final («Desmontando los mitos sobre las
+     profesiones tecnológicas»), que su propio CSS deja en `display:none`: está
+     en el HTML pero no se ve.
+   - El grueso de la hoja de estilos de Webflow, de la que esta página solo usa
+     un puñado de clases.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root{
+  --verde:#bae0a3;
+  --titular:Oswald,Arial,sans-serif;
+  --cuerpo:'Funnel Display',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  /* Dos fondos, como el original: la rejilla del sitio en el <body> —solo
+     asoma si la pantalla es más alta que la página— y el resplandor de la
+     cabecera en `.main`, que la tapa con su negro. */
+  margin:0;min-height:100vh;background-color:#000;
+  background-image:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.15)),
+                   url("{% imagen pagina.rejilla %}");
+  background-position:0 0,50% 50%;
+  background-size:auto,cover;
+  background-repeat:repeat,repeat-y;
+  font-family:var(--cuerpo);font-size:16px;font-weight:300;line-height:1.25;color:#fff;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;height:auto;display:block}
+/* Como el reset del original. Sin esto, el navegador resuelve el `bolder` de
+   <strong> contra el 300 del cuerpo y se queda en 400: la negrita del párrafo
+   sale más estrecha y la línea, que va centrada, se descoloca. */
+strong{font-weight:700}
+
+.main{
+  display:flex;flex-direction:column;align-items:center;gap:50px;
+  background:#000 url("{% imagen pagina.fondo %}") 50% 0 no-repeat;
+}
+
+/* ─── Cabecera ─── */
+.cabecera-barra{
+  display:flex;justify-content:center;align-items:center;
+  width:100%;max-width:940px;padding-top:40px;
+}
+.cabecera{
+  display:flex;justify-content:space-between;align-items:center;
+  width:100%;max-width:1140px;padding:20px 40px;
+}
+.logo{width:auto;max-width:250px}
+/* No es una imagen: es texto, en el Oswald de la marca, con «WEEK» en verde. */
+.evento{
+  font-family:var(--titular);font-size:45px;font-weight:700;line-height:1.25;
+  text-transform:uppercase;color:#fff;
+}
+.evento strong{color:var(--verde);font-weight:700}
+
+/* ─── Vídeo ─── */
+.video{width:100%;max-width:940px;padding:0 40px}
+/* Caja de proporción 16:9 con el iframe encima. El original la calcula con un
+   padding-top de 56.2766%, que es lo que ocupa el vídeo de Bunny. */
+.video .marco{position:relative;width:100%;padding-top:56.2766%}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+/* ─── Texto ─── */
+.texto{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:25px;
+  width:100%;max-width:940px;padding:20px 40px 40px;
+}
+.titulo{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;
+  width:100%;text-align:center;
+}
+.antetitulo{
+  font-family:var(--cuerpo);font-size:30px;font-weight:200;line-height:1.25;
+  letter-spacing:3px;color:var(--verde);
+}
+/* El titular va dentro de un <strong> a propósito: en el original el <h2> pone
+   el color y el interlineado, y el <strong> —en Oswald y en bloque— el resto. */
+.titular{margin:0;font-family:var(--cuerpo);font-size:29px;font-weight:600;line-height:39px;color:#fff}
+.titular strong{
+  display:block;padding-top:10px;text-align:center;color:#fff;
+  font-family:var(--titular);font-size:28px;font-weight:600;line-height:37px;
+}
+.cuerpo{margin:0;font-family:var(--cuerpo);font-size:16px;font-weight:300;line-height:1.35;color:#fff;text-align:center}
+
+@media (min-width:1920px){
+  .main{gap:30px;background-size:1500px}
+  .logo{max-width:100%}
+  .titular strong{font-size:27px;font-weight:700}
+}
+@media (max-width:991px){
+  body{font-size:14px}
+  .cabecera-barra{padding-top:0}
+  /* En columna, el original suma un hueco arriba y otro abajo: su cabecera es
+     un `.w-container` de Webflow, y los pseudoelementos con los que limpia los
+     flotantes cuentan como dos cajas vacías más del flex. Aquí ese hueco va en
+     el padding, que es lo que acaba midiendo la cabecera (20 + 21 de hueco). */
+  .cabecera{flex-direction:column;gap:21px;padding:41px 20px}
+  .titular strong{padding-left:10px;padding-right:10px}
+}
+@media (max-width:767px){
+  .cabecera{padding:21px 10px 41px}
+  /* El logo no queda centrado del todo: en el original va dentro del enlace de
+     la marca, que aquí abajo lleva 10px de sangría a la izquierda. */
+  .logo{margin-left:10px}
+  .titular strong{padding-left:0;padding-right:0;line-height:37px}
+}
+@media (max-width:479px){
+  .main{gap:29px;background-size:500px}
+  .cabecera{gap:23px;padding:23px 10px}
+  .video{padding:0 15px}
+  .texto{align-items:flex-start;padding:20px 15px 10px}
+  .antetitulo{font-size:25px}
+  .titular{font-size:26px;line-height:40px}
+  .titular strong{font-size:21px;line-height:28px}
+  .cuerpo{margin-bottom:20px;padding-bottom:20px;font-size:13px;letter-spacing:0}
+}
+</style>
+</head>
+<body>
+
+<div class="main">
+
+  <header class="cabecera-barra">
+    <div class="cabecera">
+      <img class="logo" src="{% imagen pagina.logo %}" alt="Conquer Blocks" width="311" height="33">
+      <div class="evento">{{ pagina.chapa|safe }}</div>
+    </div>
+  </header>
+
+  <section class="video">
+    <div class="marco">
+      <iframe src="https://iframe.mediadelivery.net/embed/{{ pagina.biblioteca }}/{{ pagina.video_principal }}?autoplay=false&preload=false"
+              title="Bitácora — La Clase 0" loading="lazy" allowfullscreen
+              allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
+    </div>
+  </section>
+
+  <section class="texto">
+    <div class="titulo">
+      <div class="antetitulo">{{ pagina.antetitulo }}</div>
+      <h1 class="titular"><strong>{{ pagina.titular|safe }}</strong></h1>
+    </div>
+    {% comment %}
+      Un solo párrafo con saltos dobles, como el original: entre bloque y
+      bloque hay una línea en blanco, no un margen. El salto del final tampoco
+      es un descuido: es el que cierra el texto en la página de la que salió, y
+      con él el hueco hasta el pie sale igual.
+    {% endcomment %}
+    <p class="cuerpo">{% for parrafo in pagina.parrafos %}{{ parrafo|safe }}{% if not forloop.last %}<br><br>{% endif %}{% endfor %}<br></p>
+  </section>
+
+</div>
+
+</body>
+</html>

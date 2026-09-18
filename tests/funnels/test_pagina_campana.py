@@ -226,17 +226,18 @@ class ElRecorridoAcabaEnElGrupoTest(TestCase):
 
 
 class LasPaginasSinFormularioTest(TestCase):
-    """Testimonios y bitácora no recogen datos.
+    """Testimonios y las dos bitácoras no recogen datos.
 
     En el original, el único `<form>` de testimonios es un residuo de la
-    plantilla de Webflow —sin destino ni código de funnel— y bitácora no tiene
-    ninguno. Así que aquí no hay lead que crear, ni pantalla de gracias, ni
-    salto a WhatsApp: montar todo eso sería inventarse un comportamiento.
+    plantilla de Webflow —sin destino ni código de funnel— y las bitácoras no
+    tienen ninguno. Así que aquí no hay lead que crear, ni pantalla de gracias,
+    ni salto a WhatsApp: montar todo eso sería inventarse un comportamiento.
     """
 
     PAGINAS = (
         ('www.conquerblocks.com', '/evento/evento-testimonios'),
         ('www.conquerlanguages.com', '/eventos/bitacora'),
+        ('www.conquerblocks.com', '/evento/codingweek-evento-vitacora'),
         ('www.conquerfinance.com', '/evento/pildoras-evento-1'),
         ('www.conquerfinance.com', '/evento/pildoras-evento-2'),
         ('www.conquerfinance.com', '/evento/pildoras-evento-3'),
@@ -257,7 +258,7 @@ class LasPaginasSinFormularioTest(TestCase):
             self.assertNotIn('iniciarSaltoWhatsApp', html, f'{host}{ruta}')
 
     def test_no_declaran_funnel(self):
-        for clave in ('evento-testimonios', 'bitacora',
+        for clave in ('evento-testimonios', 'bitacora', 'codingweek-evento-vitacora',
                       'pildoras-evento-1', 'pildoras-evento-2', 'pildoras-evento-3'):
             self.assertIsNone(PAGINAS_DE_CAMPANA[clave]['funnel'], clave)
 
@@ -323,6 +324,48 @@ class BitacoraTest(TestCase):
         self.assertEqual(self.client.get('/evento/bitacora',
                                          HTTP_HOST='www.conquerlanguages.com',
                                          follow=True).status_code, 404)
+
+
+class BitacoraDeLaCodingWeekTest(TestCase):
+    """La clase previa a la Coding Week, la bitácora de Blocks.
+
+    Réplica de conquerblocks.com/evento/codingweek-evento-vitacora, medida
+    contra el original en los cinco anchos de Webflow.
+    """
+
+    RUTA = '/evento/codingweek-evento-vitacora'
+
+    def _html(self):
+        return self.client.get(self.RUTA, HTTP_HOST='www.conquerblocks.com').content.decode()
+
+    def test_lleva_su_video_de_la_biblioteca_de_blocks(self):
+        self.assertIn('iframe.mediadelivery.net/embed/135359/104554f0-ef25-4940-8433-996f728f54b1',
+                      self._html())
+
+    def test_esta_su_copia(self):
+        html = self._html()
+        self.assertIn('LA CLASE 0', html)
+        self.assertIn('EL SENTIDO COMÚN DETRÁS DE LAS PROFESIONES', html)
+        # La mitad verde de la chapa.
+        self.assertIn('CODING <strong>WEEK</strong>', html)
+
+    def test_los_parrafos_van_en_uno_solo_con_saltos_dobles(self):
+        # Es lo que separa los bloques en el original: una línea en blanco, no
+        # un margen. Con un <p> por párrafo el texto se descoloca.
+        html = self._html()
+        self.assertEqual(html.count('class="cuerpo"'), 1)
+        self.assertEqual(html.count('<br><br>'), 3)
+
+    def test_la_ruta_lleva_la_errata_del_original(self):
+        # «vitacora», tal cual la escribió Webflow: es la URL que reparte la
+        # campaña. La bien escrita no existe.
+        self.assertEqual(
+            self.client.get('/evento/codingweek-evento-bitacora',
+                            HTTP_HOST='www.conquerblocks.com', follow=True).status_code, 404)
+
+    def test_no_pisa_la_bitacora_de_languages(self):
+        # Son dos páginas distintas: misma idea, marcas y plantillas distintas.
+        self.assertNotIn('English Week', self._html())
 
 
 class LasTresPildorasTest(TestCase):

@@ -806,6 +806,46 @@ PAGINAS_DE_CAMPANA = {
                    'Inversión institucional.'),
         'politica_url': 'https://www.conquerfinance.com/legal/politica-de-privacidad',
     },
+    # La clase previa a la Coding Week: lo que la bitácora de Languages es a la
+    # English Week. Tampoco recoge datos —un vídeo y cuatro párrafos— y comparte
+    # maqueta con las píldoras de Finance, no con la bitácora de Languages.
+    #
+    # La ruta lleva la errata del original («vitacora»). Se replica tal cual:
+    # es la URL que reparte la campaña, y corregirla la rompería.
+    'codingweek-evento-vitacora': {
+        'orden': 11,
+        'clave': 'bitacora-coding-week',
+        'escuela': 'conquer-blocks',
+        'plantilla': 'pages/public/evento/bitacora-codingweek.html',
+        # El título que le puso Webflow, con su errata y todo; es el nombre de
+        # la pestaña, así que se deja como está hasta que alguien lo cambie
+        # desde el panel.
+        'titulo_pagina': 'Codingweek Evento Vitacora',
+        'funnel': None,
+        'biblioteca': '135359',
+        'video_principal': '104554f0-ef25-4940-8433-996f728f54b1',
+        'logo': 'img/eventos/codingweek/logo-blanco.png',
+        # El resplandor verde de la cabecera. Es el SVG del original, con sus
+        # tres manchas en mapa de bits dentro.
+        'fondo': 'img/eventos/codingweek/aurora.svg',
+        'rejilla': 'img/eventos/cb-grid-background.avif',
+        'chapa': 'CODING <strong>WEEK</strong>',
+        'antetitulo': 'LA CLASE 0',
+        'titular': 'EL SENTIDO COMÚN DETRÁS DE LAS PROFESIONES',
+        'parrafos': [
+            'Estamos a punto de dar inicio a la <strong>Coding Week</strong>, pero antes '
+            'queremos prepararte con una clase previa que le dará sentido a todo.',
+            'Hoy, más que nunca, todos buscamos mejorar nuestra calidad de vida: un trabajo '
+            'mejor, libertad para trabajar desde cualquier sitio, salarios más altos y, por '
+            'supuesto, más tiempo ¿Pero realmente nos sentamos a pensar como podríamos '
+            'conseguir esto?',
+            'La realidad es que conseguir un buen trabajo con buenas condiciones a día de hoy, '
+            'no es cuestión de suerte, es cuestión de entender que habilidad nos puede abrir la '
+            'puerta a ello.',
+            'Y en este evento de 2 días lo vas a descubrir. Recuerda que nos vemos los días 24 '
+            'y 25 de noviembre a las 19:00h (Madrid), 15:00h (Buenos Aires), 13:00h (Miami).',
+        ],
+    },
 }
 
 

@@ -262,6 +262,20 @@ CAMPOS_BITACORA = (
     ('fondo', 'Fondo de la página', ''),
 ) + _pestana()
 
+# La bitácora de Blocks lleva los mismos textos que la de Languages, pero su
+# chapa es media palabra en verde —«CODING **WEEK**»— y su fondo son dos
+# imágenes, así que tiene esquema propio.
+CAMPOS_BITACORA_CODING_WEEK = (
+    Campo('chapa', 'Chapa de la cabecera', HTML, AYUDA_RESALTE, 'Cabecera'),
+    Campo('antetitulo', 'Antetítulo', seccion='Cabecera'),
+    Campo('titular', 'Titular', HTML, AYUDA_HTML, 'Cabecera'),
+    Campo('parrafos', 'Párrafos', LISTA, 'Uno por línea. ' + AYUDA_HTML, 'Cuerpo'),
+) + _imagenes(
+    ('logo', 'Logo de la cabecera', ''),
+    ('fondo', 'Resplandor de la cabecera', ''),
+    ('rejilla', 'Rejilla del fondo', ''),
+) + _pestana()
+
 CAMPOS_PILDORA = (
     Campo('chapa', 'Chapa de la cabecera', seccion='Cabecera'),
     Campo('numero', 'Número de la píldora', seccion='Cabecera'),
@@ -350,6 +364,8 @@ PAGINAS = {
                CAMPOS_PILDORA, '/evento/pildoras-evento-3', tiene_v2=True),
         Pagina('trading-week', 'Registro Trading Week', 'conquer-finance', 'campana',
                CAMPOS_TRADING_WEEK, '/trading-week-2025', tiene_v2=True),
+        Pagina('bitacora-coding-week', 'Bitácora · Coding Week', 'conquer-blocks', 'campana',
+               CAMPOS_BITACORA_CODING_WEEK, '/evento/codingweek-evento-vitacora'),
     )
 }
 
