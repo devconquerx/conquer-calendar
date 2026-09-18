@@ -7,10 +7,11 @@
  * fuente de entrada, o que se pase medio minuto tragando datos hasta rendirse.
  * Estos tres datos son los que permiten separarlo en Sentry.
  */
+import Hls from 'hls.js'
 import { describe, expect, it } from 'vitest'
 
 import {
-  idDelVideo, motorDelFallo, segundosBuffereados, tramoDeEspera,
+  idDelVideo, motorDelFallo, planDeRecuperacionHls, segundosBuffereados, tramoDeEspera,
 } from '../../src/components/vsl/VideoPlayer'
 
 describe('motorDelFallo', () => {
@@ -109,5 +110,73 @@ describe('segundosBuffereados', () => {
   it('no revienta si el navegador prohíbe leer buffered', () => {
     const hostil = { get buffered() { throw new Error('InvalidStateError') } }
     expect(segundosBuffereados(hostil)).toBeNull()
+  })
+})
+
+describe('planDeRecuperacionHls', () => {
+  it('reanuda la carga tras un fallo de red, esperando cada vez más', () => {
+    /* Las esperas son cortas a propósito: para cuando hls.js declara el fatal,
+       el visitante ya lleva medio minuto mirando un fotograma quieto. */
+    // El caso de FUNNELS-CY: `fragLoadTimeOut` en Android, red que se va y
+    // vuelve. hls.js ya se rindió; reanudar es cosa nuestra.
+    expect(planDeRecuperacionHls('networkError', { red: 0 }))
+      .toEqual({ accion: 'reanudar-carga', esperaMs: 1000 })
+    expect(planDeRecuperacionHls('networkError', { red: 1 }))
+      .toEqual({ accion: 'reanudar-carga', esperaMs: 2000 })
+    expect(planDeRecuperacionHls('networkError', { red: 2 }))
+      .toEqual({ accion: 'reanudar-carga', esperaMs: 4000 })
+  })
+
+  it('al cuarto fallo de red se rinde, en vez de alargar la espera', () => {
+    const plan = planDeRecuperacionHls('networkError', { red: 3 })
+    expect(plan.accion).toBe('rendirse')
+    expect(plan.motivo).toBe('reintentos agotados')
+  })
+
+  it('en el segundo fallo de medios cambia el códec de audio', () => {
+    // Receta del propio hls.js para los MP4 con la pista de audio separada,
+    // que es justo lo que genera Bunny ahora.
+    expect(planDeRecuperacionHls('mediaError', { media: 0 }))
+      .toEqual({ accion: 'recuperar-media', cambiarCodecDeAudio: false })
+    expect(planDeRecuperacionHls('mediaError', { media: 1 }))
+      .toEqual({ accion: 'recuperar-media', cambiarCodecDeAudio: true })
+    expect(planDeRecuperacionHls('mediaError', { media: 2 }).accion).toBe('rendirse')
+  })
+
+  it('los fallos sin recuperación conocida no se reintentan', () => {
+    expect(planDeRecuperacionHls('otherError')).toEqual({
+      accion: 'rendirse', motivo: 'irrecuperable',
+    })
+    expect(planDeRecuperacionHls('keySystemError').accion).toBe('rendirse')
+  })
+
+  it('cuenta la red y los medios por separado', () => {
+    // Agotar los reintentos de red no puede dejar sin recuperación a un fallo
+    // de medios posterior, que se arregla de otra manera.
+    expect(planDeRecuperacionHls('mediaError', { red: 3, media: 0 }).accion)
+      .toBe('recuperar-media')
+  })
+})
+
+/* Contrato con hls.js. `planDeRecuperacionHls` compara `data.type` con cadenas
+   literales para poder ser una función pura; eso solo vale mientras esas cadenas
+   sigan siendo las de la librería. Si una subida de versión las cambia, el
+   reproductor dejaría de recuperarse en silencio —los fatales caerían todos en
+   'irrecuperable'— y nadie se enteraría hasta ver el pico en Sentry. Aquí sí se
+   carga la librería de verdad, para que ese día falle el test y no la VSL. */
+describe('planDeRecuperacionHls — contrato con hls.js', () => {
+  it('las cadenas de ErrorTypes son las que el plan reconoce', () => {
+    expect(Hls.ErrorTypes.NETWORK_ERROR).toBe('networkError')
+    expect(Hls.ErrorTypes.MEDIA_ERROR).toBe('mediaError')
+    expect(planDeRecuperacionHls(Hls.ErrorTypes.NETWORK_ERROR, { red: 0 }).accion)
+      .toBe('reanudar-carga')
+    expect(planDeRecuperacionHls(Hls.ErrorTypes.MEDIA_ERROR, { media: 0 }).accion)
+      .toBe('recuperar-media')
+  })
+
+  it('los métodos de recuperación que invocamos siguen existiendo', () => {
+    for (const metodo of ['startLoad', 'recoverMediaError', 'swapAudioCodec']) {
+      expect(typeof Hls.prototype[metodo]).toBe('function')
+    }
   })
 })

@@ -10,6 +10,7 @@ import spriteDeIconos from '../../assets/vendor/plyr-3.8.4.svg?url'
 import UnmuteOverlay from './UnmuteOverlay'
 import ReturningOverlay from './ReturningOverlay'
 import { useRouter } from '../../lib/router'
+import { importarConReintento } from '../../lib/lazyConReintento'
 
 const STORAGE_KEY = 'vsl_progress'
 const LEGACY_STORAGE_KEY = 'videolitics'
@@ -83,6 +84,48 @@ export function idDelVideo(url) {
   } catch {
     return 'ilegible'
   }
+}
+
+/* Cuántas veces se intenta resucitar a hls.js y cuánto se espera entre intentos.
+   La espera crece para no machacar una red que sigue sin estar, pero es corta a
+   propósito: cuando llegamos aquí el visitante YA lleva medio minuto esperando
+   —hls.js reintenta el fragmento seis veces con espera creciente antes de darlo
+   por fatal, 33 segundos medidos en el e2e— y sumarle otros ocho es perderlo.
+   Las esperas largas de la primera versión se cambiaron al ver en el e2e que la
+   red volvía a los 6 s y el vídeo no revivía hasta los 13,7 s: siete segundos
+   de fotograma congelado con la conexión ya buena. Por eso, además, el evento
+   `online` adelanta el reintento pendiente en vez de esperar a que venza. */
+const ESPERAS_DE_RED_MS = [1000, 2000, 4000]
+const MAX_REINTENTOS_DE_MEDIA = 2
+
+/* Qué hacer cuando hls.js se declara vencido.
+
+   El detalle que hace falta conocer: los errores `fatal` de hls.js NO son el
+   final del camino, son la librería avisando de que ha agotado SUS reintentos
+   internos (cuatro por timeout de fragmento) y ha llamado a `stopLoad()`. La
+   reanudación tiene que pedirla quien la usa. Sin eso, un `fragLoadTimeOut` en
+   una red móvil mala deja el vídeo congelado para siempre aunque la cobertura
+   vuelva un segundo después: era el 100% de FUNNELS-CY, 259 fallos en siete
+   días y subiendo, casi todos Android en LATAM.
+
+   Los `tipo` son las cadenas de `Hls.ErrorTypes`, comparadas por valor para que
+   esto sea una función pura y no haya que cargar la librería para probarla.
+   Las acciones son las del patrón que documenta el propio hls.js: reanudar la
+   carga en los fallos de red, recuperar el buffer en los de medios —la segunda
+   vez cambiando el códec de audio, que es su receta para los MP4 con la pista
+   separada— y rendirse en lo demás, que no tiene recuperación conocida. */
+export function planDeRecuperacionHls(tipo, intentos = {}) {
+  const red = intentos.red || 0
+  const media = intentos.media || 0
+  if (tipo === 'networkError') {
+    if (red >= ESPERAS_DE_RED_MS.length) return { accion: 'rendirse', motivo: 'reintentos agotados' }
+    return { accion: 'reanudar-carga', esperaMs: ESPERAS_DE_RED_MS[red] }
+  }
+  if (tipo === 'mediaError') {
+    if (media >= MAX_REINTENTOS_DE_MEDIA) return { accion: 'rendirse', motivo: 'reintentos agotados' }
+    return { accion: 'recuperar-media', cambiarCodecDeAudio: media >= 1 }
+  }
+  return { accion: 'rendirse', motivo: 'irrecuperable' }
 }
 
 /* Segundos de vídeo que llegaron a bufferearse. Complementa lo anterior: si el
@@ -243,21 +286,77 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
        `.m3u8` al navegador: es peor que hls.js, pero es mejor que un vídeo que
        no arranca. */
     let hls = null
+    // Los intentos se cuentan por montaje del reproductor, no por fallo: tres
+    // baches de red seguidos en la misma reproducción son la señal de que esa
+    // conexión no da para el vídeo, y seguir reintentando solo alarga la espera.
+    const intentosDeHls = { red: 0, media: 0 }
+    // Deshace el reintento pendiente (temporizador + escucha de `online`).
+    let cancelarReintento = null
     if (usaHlsJs) {
-      import('hls.js').then(({ default: Hls }) => {
+      importarConReintento(() => import('hls.js')).then(({ default: Hls }) => {
         if (!videoRef.current) return
-        if (!Hls.isSupported()) {
-          videoRef.current.src = videoUrl
-          return
-        }
-        hls = new Hls({ enableWorker: true })
+        // Se descarta a mano para que caiga en el `.catch()` de abajo: la
+        // librería cargó pero se declara inservible, y acaba igual que si no
+        // hubiera cargado. Mismo desenlace, mismo informe.
+        if (!Hls.isSupported()) throw new Error('Hls.isSupported() === false')
+        /* `__CQX_HLS_CONFIG__` es un resquicio para las pruebas, y no lo define
+           nadie en producción. Existe porque hls.js reintenta un fragmento seis
+           veces con espera creciente antes de rendirse: provocar un fallo fatal
+           de verdad cuesta 33 segundos, y un e2e que tarde eso no lo ejecuta
+           nadie. El test baja los reintentos y el mismo fallo llega en medio
+           segundo. La alternativa era no probar la recuperación en navegador. */
+        hls = new Hls({ enableWorker: true, ...(window.__CQX_HLS_CONFIG__ || {}) })
         hls.loadSource(videoUrl)
         hls.attachMedia(videoRef.current)
         // Los fallos de hls.js NO llegan al `error` del <video>, así que sin
-        // esto Firefox fallaría sin dejar rastro en Sentry. Solo se reportan los
-        // fatales: la librería se recupera sola de los transitorios.
+        // esto Firefox fallaría sin dejar rastro en Sentry. De los transitorios
+        // se recupera la librería sola; de los fatales, no: los da por perdidos
+        // y deja de cargar, y de ahí en adelante mandamos nosotros. Ver
+        // `planDeRecuperacionHls`.
         hls.on(Hls.Events.ERROR, (_evt, data) => {
           if (!data?.fatal) return
+          const plan = planDeRecuperacionHls(data.type, intentosDeHls)
+
+          if (plan.accion === 'reanudar-carga') {
+            intentosDeHls.red += 1
+            console.warn('[VSL] hls.js fatal, reanudando carga', data.details, plan)
+            /* La espera es un tope, no una cita: si el navegador avisa de que ha
+               vuelto la red antes de que venza, se reanuda ya. El caso típico
+               —salir del metro— devuelve la conexión de golpe, y sin esto el
+               vídeo seguiría congelado hasta agotar el temporizador.
+               `cancelarReintento` se guarda para poder deshacer las dos cosas al
+               desmontar: si no, el `startLoad()` caería sobre una instancia ya
+               destruida y el listener quedaría suelto. */
+            const reanudar = () => {
+              cancelarReintento?.()
+              try { hls?.startLoad() } catch { /* instancia ya destruida */ }
+            }
+            const temporizador = setTimeout(reanudar, plan.esperaMs)
+            window.addEventListener('online', reanudar)
+            cancelarReintento = () => {
+              clearTimeout(temporizador)
+              window.removeEventListener('online', reanudar)
+              cancelarReintento = null
+            }
+            return
+          }
+
+          if (plan.accion === 'recuperar-media') {
+            intentosDeHls.media += 1
+            console.warn('[VSL] hls.js fatal, recuperando el buffer', data.details, plan)
+            try {
+              if (plan.cambiarCodecDeAudio) hls.swapAudioCodec()
+              hls.recoverMediaError()
+            } catch { /* instancia ya destruida */ }
+            return
+          }
+
+          /* Aquí sí se acabó. Solo este caso llega a Sentry: reportar también
+             los fatales de los que nos recuperamos devolvería el ruido que
+             motivó esto —259 eventos que en su mayoría eran baches de red de
+             dos segundos— y taparía justo lo que queremos contar, que es la
+             gente que se quedó sin vídeo. Los intentos van en el contexto para
+             saber si nos rendimos pronto o después de pelearlo. */
           import('@sentry/react')
             .then(({ captureMessage }) => {
               captureMessage(`[VSL] hls.js falló: ${data.type}`, {
@@ -277,18 +376,163 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
                   detalle: data.details,
                   codigoHttp: data.response?.code ?? null,
                   url: (data.url || '').slice(-60),
+                  motivoDeRendirse: plan.motivo,
+                  intentosDeRed: intentosDeHls.red,
+                  intentosDeMedia: intentosDeHls.media,
+                  // Con qué calidad se estaba peleando. Si los `fragLoadTimeOut`
+                  // se concentran en los niveles altos, el arreglo siguiente es
+                  // capar la calidad en redes lentas, no reintentar más.
+                  nivel: hls.currentLevel,
+                  niveles: hls.levels?.length ?? null,
                 },
               })
             })
             .catch(() => {})
         })
-      }).catch(() => {
-        // No se pudo bajar hls.js (red, bloqueador…). Se le pasa el `.m3u8` al
-        // navegador en vez de dejar el <video> sin fuente: si lo entiende,
-        // reproduce; y si no, al menos lanza un error que sí se reporta.
+      }).catch((error) => {
+        /* Ni con el reintento se pudo bajar hls.js (red, bloqueador, chunk que
+           ya no existe tras un despliegue…). Se le pasa el `.m3u8` al navegador
+           porque es lo único que queda por probar, pero sin hacerse ilusiones:
+           aquí estamos en la rama con MediaSource, o sea Chrome, Firefox o Edge,
+           y ninguno reproduce HLS.
+
+           Lo que cambia es el informe. Antes esto se manifestaba como un
+           SRC_NOT_SUPPORTED del <video> —el grueso de FUNNELS-77: ~59 eventos
+           semanales con `motor_video: chromium`, achacados al vídeo o al códec
+           cuando el vídeo estaba perfectamente— y la causa de verdad, que la
+           librería no llegó a cargarse, no aparecía por ningún lado. Se reporta
+           aquí, con su motivo, y el error del <video> que venga después ya es
+           una consecuencia conocida. */
         if (videoRef.current) videoRef.current.src = videoUrl
+        import('@sentry/react')
+          .then(({ captureMessage }) => {
+            captureMessage('[VSL] no se pudo cargar hls.js', {
+              level: 'error',
+              tags: {
+                motivo_video: 'hls-no-cargado',
+                motor_video: 'sin-hls-js',
+                id_video: idDelVideo(videoUrl),
+                espera_video: tramoDeEspera(
+                  inicioCargaRef.current == null
+                    ? null
+                    : Math.round(performance.now() - inicioCargaRef.current)
+                ),
+              },
+              extra: { detalle: String(error?.message || error).slice(0, 300) },
+            })
+          })
+          .catch(() => {})
       })
     }
+
+    /* Errores del reproductor.
+
+       Vive aquí, y no dentro del `.then()` de Plyr, porque el <video> falla
+       ANTES de que Plyr llegue: el manejador se registraba al montar el
+       reproductor y para entonces el evento ya había pasado, sin nadie
+       escuchando. Comprobado: retrasando su chunk tres segundos, el fallo no se
+       reporta NUNCA. Y eso sesga justo lo que se quiere medir, porque Plyr
+       tarda más precisamente en los móviles lentos y las redes malas, que es
+       donde el vídeo falla. Se veía como un e2e que fallaba de vez en cuando.
+
+       Plyr emite además su propio CustomEvent 'error', que burbujea hasta
+       window y acababa en Sentry como "<unknown>", sin mensaje ni forma de
+       saber qué pasó (FUNNELS-69, ~100 al día, el 80% desde el navegador de
+       TikTok en iPhone). Ese se sigue atajando abajo, para cortarle la
+       propagación; el informe con el motivo lo hace esta función. */
+    let falloYaReportado = false
+    const reportarFallo = () => {
+      // Un mismo fallo llega por dos vías —el <video> y el CustomEvent de
+      // Plyr— y es un solo suceso: se cuenta una vez por montaje.
+      if (falloYaReportado) return
+      falloYaReportado = true
+      const media = videoRef.current
+      const fallo = media?.error
+      const MOTIVOS = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' }
+      const detalle = fallo?.message || ''
+      const esperaMs = inicioCargaRef.current == null
+        ? null
+        : Math.round(performance.now() - inicioCargaRef.current)
+      const contexto = {
+        motivo: MOTIVOS[fallo?.code] || 'sin MediaError',
+        codigo: fallo?.code ?? null,
+        detalle,
+        silenciado: !!media?.muted,
+        pausado: !!media?.paused,
+        segundo: Math.round(media?.currentTime || 0),
+        readyState: media?.readyState ?? null,
+        networkState: media?.networkState ?? null,
+        pantallaCompleta: !!(document.fullscreenElement || document.webkitFullscreenElement || media?.webkitDisplayingFullscreen),
+        fuente: (media?.currentSrc || '').slice(-60),
+        esperaMs,
+        segundosBuffereados: segundosBuffereados(media),
+        // Sólo lo tiene WebKit, que es justo el motor bajo sospecha. Cuando
+        // está, dice los bytes que llegó a decodificar de verdad.
+        bytesDecodificados: media?.webkitVideoDecodedByteCount ?? null,
+      }
+
+      /* Historial de este visitante con este vídeo. Si los fallos se
+         concentran en los mismos dispositivos el problema es del dispositivo;
+         si están repartidos, es del fichero. El contador se guarda junto al
+         progreso, que ya vive en localStorage. */
+      const previo = getStoredProgress(videoUrl) || {}
+      const fallosPrevios = previo.fallos || 0
+      contexto.falloNumero = fallosPrevios + 1
+      contexto.visitaNumero = previo.visit_number || 1
+      contexto.esRecurrente = !!previo.is_returning
+      storeProgress(videoUrl, { fallos: contexto.falloNumero })
+      console.warn('[VSL] error del reproductor', contexto)
+      // Import perezoso: este módulo también se compila para el SSR, donde
+      // @sentry/react no debe cargarse.
+      import('@sentry/react')
+        .then(({ captureMessage }) => {
+          captureMessage(`[VSL] error del reproductor: ${contexto.motivo}`, {
+            level: 'error',
+            // Como etiquetas y no sólo como datos sueltos: `extra` no se puede
+            // agregar en Sentry, y la pregunta que hay que responder ("¿falla
+            // al instante o después de tragar datos?") es precisamente un
+            // recuento por tramos.
+            tags: {
+              motivo_video: contexto.motivo,
+              motor_video: motorDelFallo(detalle),
+              espera_video: tramoDeEspera(esperaMs),
+              id_video: idDelVideo(videoUrl),
+            },
+            extra: contexto,
+          })
+        })
+        .catch(() => {})
+
+      /* ¿Se recupera solo? Un rectángulo negro definitivo y uno que arranca
+         tres segundos tarde cuentan hoy exactamente igual, y el daño real es
+         muy distinto. Si el vídeo acaba reproduciéndose se manda un segundo
+         aviso —sólo en ese caso, que es el minoritario— con lo que tardó en
+         recuperarse. Errores partido por recuperaciones da la proporción de
+         fallos que de verdad dejan al visitante sin vídeo.
+         `once` para no encadenar avisos si el vídeo va y viene. */
+      media?.addEventListener?.('playing', () => {
+        const tardanza = esperaMs == null
+          ? null
+          : Math.round(performance.now() - inicioCargaRef.current)
+        import('@sentry/react')
+          .then(({ captureMessage }) => {
+            captureMessage('[VSL] el reproductor se recuperó tras el error', {
+              level: 'info',
+              tags: {
+                motivo_video: contexto.motivo,
+                id_video: idDelVideo(videoUrl),
+                espera_video: tramoDeEspera(tardanza),
+              },
+              extra: { ...contexto, recuperadoEnMs: tardanza },
+            })
+          })
+          .catch(() => {})
+      }, { once: true })
+    }
+
+    // El <video> existe desde el primer render, así que a partir de aquí ya no
+    // hay ventana ciega: falle cuando falle, hay alguien escuchando.
+    videoRef.current.addEventListener('error', reportarFallo)
 
     // Modo debug (?debug=1): controles completos del reproductor (barra de
     // progreso/seek, tiempos, etc.) para poder navegar el vídeo durante pruebas.
@@ -320,7 +564,13 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
     let player = null
     let cancelled = false
 
-    import('plyr').then(({ default: Plyr }) => {
+    /* Con reintento, igual que hls.js: este import es el que más falla de todo
+       el funnel —`plyr-*.js` encabeza FUNNELS-47, y FUNNELS-5E es el mismo
+       fallo contado por Safari, otros ~54 semanales, todos en páginas de
+       vídeo— y se caía a la primera porque el navegador memoriza el fallo del
+       import y no vuelve a pedir nada. El chunk existe: lo delata que el mismo
+       hash se sirva bien desde los otros dominios. Es red, no despliegue. */
+    importarConReintento(() => import('plyr')).then(({ default: Plyr }) => {
       if (cancelled || !videoRef.current) return
 
       player = new Plyr(videoRef.current, {
@@ -470,97 +720,13 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
       }
       player.on('playing', reportarArranque)
 
-      /* Errores del reproductor.
-         Plyr los emite como un CustomEvent 'error' que burbujea hasta window, y
-         ahí el manejador global del navegador lo recoge: en Sentry llegaban como
-         "<unknown>", sin mensaje ni forma de saber qué había pasado (FUNNELS-69,
-         ~100 al día, el 80% desde el navegador de TikTok en iPhone).
-         Se captura aquí, con el estado real del <video> —que es donde vive el
-         motivo—, y se corta la propagación para que deje de reportarse a ciegas. */
+      /* El CustomEvent de Plyr: se le corta la propagación para que el
+         manejador global del navegador deje de reportarlo a ciegas, y se
+         delega en el informe de arriba, que ya habrá salido si el <video>
+         falló antes. */
       player.on('error', (evento) => {
         evento?.stopPropagation?.()
-        const media = videoRef.current
-        const fallo = media?.error
-        const MOTIVOS = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' }
-        const detalle = fallo?.message || ''
-        const esperaMs = inicioCargaRef.current == null
-          ? null
-          : Math.round(performance.now() - inicioCargaRef.current)
-        const contexto = {
-          motivo: MOTIVOS[fallo?.code] || 'sin MediaError',
-          codigo: fallo?.code ?? null,
-          detalle,
-          silenciado: !!media?.muted,
-          pausado: !!media?.paused,
-          segundo: Math.round(media?.currentTime || 0),
-          readyState: media?.readyState ?? null,
-          networkState: media?.networkState ?? null,
-          pantallaCompleta: !!(document.fullscreenElement || document.webkitFullscreenElement || media?.webkitDisplayingFullscreen),
-          fuente: (media?.currentSrc || '').slice(-60),
-          esperaMs,
-          segundosBuffereados: segundosBuffereados(media),
-          // Sólo lo tiene WebKit, que es justo el motor bajo sospecha. Cuando
-          // está, dice los bytes que llegó a decodificar de verdad.
-          bytesDecodificados: media?.webkitVideoDecodedByteCount ?? null,
-        }
-
-        /* Historial de este visitante con este vídeo. Si los fallos se
-           concentran en los mismos dispositivos el problema es del dispositivo;
-           si están repartidos, es del fichero. El contador se guarda junto al
-           progreso, que ya vive en localStorage. */
-        const previo = getStoredProgress(videoUrl) || {}
-        const fallosPrevios = previo.fallos || 0
-        contexto.falloNumero = fallosPrevios + 1
-        contexto.visitaNumero = previo.visit_number || 1
-        contexto.esRecurrente = !!previo.is_returning
-        storeProgress(videoUrl, { fallos: contexto.falloNumero })
-        console.warn('[VSL] error del reproductor', contexto)
-        // Import perezoso: este módulo también se compila para el SSR, donde
-        // @sentry/react no debe cargarse.
-        import('@sentry/react')
-          .then(({ captureMessage }) => {
-            captureMessage(`[VSL] error del reproductor: ${contexto.motivo}`, {
-              level: 'error',
-              // Como etiquetas y no sólo como datos sueltos: `extra` no se puede
-              // agregar en Sentry, y la pregunta que hay que responder ("¿falla
-              // al instante o después de tragar datos?") es precisamente un
-              // recuento por tramos.
-              tags: {
-                motivo_video: contexto.motivo,
-                motor_video: motorDelFallo(detalle),
-                espera_video: tramoDeEspera(esperaMs),
-                id_video: idDelVideo(videoUrl),
-              },
-              extra: contexto,
-            })
-          })
-          .catch(() => {})
-
-        /* ¿Se recupera solo? Un rectángulo negro definitivo y uno que arranca
-           tres segundos tarde cuentan hoy exactamente igual, y el daño real es
-           muy distinto. Si el vídeo acaba reproduciéndose se manda un segundo
-           aviso —sólo en ese caso, que es el minoritario— con lo que tardó en
-           recuperarse. Errores partido por recuperaciones da la proporción de
-           fallos que de verdad dejan al visitante sin vídeo.
-           `once` para no encadenar avisos si el vídeo va y viene. */
-        media?.addEventListener?.('playing', () => {
-          const tardanza = esperaMs == null
-            ? null
-            : Math.round(performance.now() - inicioCargaRef.current)
-          import('@sentry/react')
-            .then(({ captureMessage }) => {
-              captureMessage('[VSL] el reproductor se recuperó tras el error', {
-                level: 'info',
-                tags: {
-                  motivo_video: contexto.motivo,
-                  id_video: idDelVideo(videoUrl),
-                  espera_video: tramoDeEspera(tardanza),
-                },
-                extra: { ...contexto, recuperadoEnMs: tardanza },
-              })
-            })
-            .catch(() => {})
-        }, { once: true })
+        reportarFallo()
       })
 
       if (tryUnmuted) {
@@ -581,8 +747,17 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
       }
     })
 
+    const video = videoRef.current
+
     return () => {
       cancelled = true
+      // El <video> puede sobrevivir al efecto si cambia `videoUrl` sin
+      // desmontar: sin esto se acumularía un manejador por cada pasada y el
+      // mismo fallo se reportaría tantas veces como pasadas hubiera.
+      video?.removeEventListener('error', reportarFallo)
+      // Antes de destruir hls.js: un reintento pendiente llamaría a `startLoad()`
+      // sobre la instancia ya destruida, y dejaría su listener puesto.
+      cancelarReintento?.()
       // Antes que Plyr: hls.js mantiene sus propias peticiones y un worker, y si
       // no se destruye sigue bajando trozos de un vídeo que ya nadie mira.
       if (hls) hls.destroy()
