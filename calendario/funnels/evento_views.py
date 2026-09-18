@@ -20,7 +20,7 @@ from django.views.generic import TemplateView
 
 from . import consentimiento as consent
 from .contenido import con_textos, puede_ver_borrador
-from .context_processors import get_gtm_config, get_pixeles_evento
+from .context_processors import get_favicon, get_gtm_config, get_pixeles_evento
 from .views import _base_path, _escuela_por_host
 
 
@@ -378,6 +378,11 @@ def plantilla_de(ficha, request):
     if version(request) == 2 and ficha.get('plantilla_v2'):
         return ficha['plantilla_v2']
     return ficha['plantilla']
+
+
+def _marca(escuela):
+    """Lo que toda página de evento necesita de su marca: medición e icono."""
+    return {**_medicion(escuela), 'favicon': get_favicon(escuela)}
 
 
 def _medicion(escuela):
@@ -952,7 +957,7 @@ class EventoView(TemplateView):
         # volcarlas juntas al contexto se comería la mitad.
         ctx['gr'] = con_textos(GRACIAS[self.escuela],
                                borrador=puede_ver_borrador(self.request))
-        ctx.update(_medicion(self.escuela))
+        ctx.update(_marca(self.escuela))
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         # País del selector según Cloudflare. Se manda VACÍO si la cabecera no
         # viene, en vez de caer aquí a 'ES': si el servidor rellena España, el
@@ -1004,7 +1009,7 @@ class GraciasView(TemplateView):
         ctx['gr'] = self.gracias
         # La de gracias es el destino del registro y comparte su medición: el
         # visitante llega aquí sin recargar, con los píxeles ya cargados.
-        ctx.update(_medicion(self.escuela))
+        ctx.update(_marca(self.escuela))
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         ctx['version'] = version(self.request)
         ctx['marca_v2'] = MARCAS_V2.get(self.escuela)
@@ -1059,7 +1064,7 @@ class PaginaDeCampanaView(TemplateView):
             ctx['variante'] = variante
             if ctx.get('funnel'):
                 ctx['funnel'] = f"{ctx['funnel']}-{variante['codigo']}"
-        ctx.update(_medicion(self.escuela))
+        ctx.update(_marca(self.escuela))
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
         ctx['version'] = version(self.request)
         ctx['marca_v2'] = MARCAS_V2.get(self.escuela)

@@ -1,0 +1,9 @@
+{% load static %}{% comment %}
+  El icono de la pestaña. Sin este <link> el navegador solo sabe pedir
+  /favicon.ico en la raíz del dominio, y eso da 404 en conquerblocks.com,
+  conquerfinance.com y conquerlanguages.com: la pestaña sale en blanco.
+
+  Las páginas de Webflow que replicamos sí lo declaran en su propio head, así
+  que sin esto la réplica se distingue del original justo en la pestaña.
+  El fichero es el mismo icono de cada marca, ya descargado a static/img/favicons.
+{% endcomment %}{% if favicon %}<link rel="icon" type="image/png" href="{% static favicon %}">{% endif %}

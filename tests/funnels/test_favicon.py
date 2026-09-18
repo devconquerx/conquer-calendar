@@ -55,6 +55,21 @@ class FaviconDelFunnelTest(TestCase):
             with self.subTest(url=url):
                 self.assertIn('img/favicons/conquer-blocks', self._icono(url))
 
+    def test_las_paginas_de_evento_tambien(self):
+        """Las réplicas de Webflow se distinguían del original en la pestaña.
+
+        El original declara su favicon en su propio head; la réplica no lo hacía
+        en ninguna de sus quince páginas, así que salía con el icono en blanco.
+        """
+        # La escuela va en la query igual que arriba: sin el dominio de marca,
+        # `testserver` no la resuelve por Host y la ruta responde 404.
+        for url, fichero in (
+            ('/evento/codingweek-evento-vitacora', 'conquer-blocks'),
+            ('/evento/evento-online?escuela=conquer-finance', 'conquer-finance'),
+        ):
+            with self.subTest(url=url):
+                self.assertIn(f'img/favicons/{fichero}', self._icono(url))
+
     def test_una_escuela_desconocida_no_pinta_un_link_roto(self):
         """Mejor sin icono que con un <link> que apunte a un 404."""
         FunnelForm.objects.create(
