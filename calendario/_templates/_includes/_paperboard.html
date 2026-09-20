@@ -18,6 +18,13 @@
     acento          → color plano de apoyo (subrayados, iconos)
     logo            → logo negro sobre papel
     px_lg, px_sm    → racimos de píxeles decorativos de la marca
+
+  La textura va en su versión grande (1400x989, la misma que sirve la
+  landing) y no en la recortada de `img/eventos/`: aquí se estira con
+  `cover` hasta cubrir la ventana, y la pequeña —433px— se ve pixelada en
+  cuanto la pantalla pasa de 1024. La recortada se queda donde se repite a
+  tamaño fijo (el banner de cookies y las páginas de la primera versión),
+  que es donde sí llega y pesa quince veces menos.
 {% endcomment %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,7 +53,7 @@ body{
   margin:0;min-height:100vh;color:var(--tinta);
   background-color:var(--papel);
   background-image:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.55)),
-                   url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
+                   url("{% static 'img/eventos/v2/paperboard-texture.avif' %}");
   background-size:cover;background-position:center;background-attachment:fixed;
   font-family:var(--cuerpo);font-size:16px;line-height:1.4;
   -webkit-font-smoothing:antialiased;
@@ -104,7 +111,7 @@ a{text-decoration:none;color:inherit}
   position:relative;
   background-color:var(--tarjeta);
   background-image:linear-gradient(rgba(255,255,255,.6),rgba(255,255,255,.6)),
-                   url("{% static 'img/eventos/cb-paperboard-texture.avif' %}");
+                   url("{% static 'img/eventos/v2/paperboard-texture.avif' %}");
   background-size:cover;background-position:center;
   border:1px solid var(--linea);border-radius:16px;box-shadow:var(--sombra);
   overflow:hidden;
