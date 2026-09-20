@@ -402,7 +402,8 @@ PAGINAS = {
         Pagina('trading-week', 'Registro Trading Week', 'conquer-finance', 'campana',
                CAMPOS_TRADING_WEEK, '/trading-week-2025', tiene_v2=True),
         Pagina('bitacora-coding-week', 'Bitácora · Coding Week', 'conquer-blocks', 'campana',
-               CAMPOS_BITACORA_CODING_WEEK, '/evento/codingweek-evento-vitacora'),
+               CAMPOS_BITACORA_CODING_WEEK, '/evento/codingweek-evento-vitacora',
+               tiene_v2=True),
     )
 }
 

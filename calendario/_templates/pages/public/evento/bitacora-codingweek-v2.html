@@ -1,0 +1,94 @@
+{% load static imagenes_evento %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>{{ pagina.titulo_pagina }}</title>
+  {% include '_includes/_favicon_evento.html' %}
+  {% include '_includes/_consentimiento.html' %}
+  {% include '_includes/_sgtm_head.html' %}
+  {% include '_includes/_pixeles_evento.html' %}
+  {% include '_includes/_paperboard.html' %}
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   Bitácora de la Coding Week (Blocks), segunda versión sobre el sistema
+   paperboard. Mismo contenido que la primera —mismo vídeo, mismo titular, mismos
+   párrafos, todos desde el panel—; lo que cambia es el envoltorio. La primera
+   es la réplica del Webflow viejo (negro con verde lima) y desentona al lado de
+   conquerblocks.com, que se rehizo con el papel crema.
+
+   Su hermana de maqueta es `pildoras-v2.html`: la misma página de una sola
+   columna —chapa, titular, vídeo y texto— sin formulario ni botones.
+   ─────────────────────────────────────────────────────────────────────────── */
+.cabeza{display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px 20px 0;text-align:center}
+/* En la chapa, el resalte se pinta con el degradado de la marca, igual que en
+   los titulares: es «CODING **WEEK**», la misma palabra que en la primera
+   versión iba en verde. */
+.cabeza .pb-pildora strong{
+  font-weight:600;background-image:var(--degradado);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.antetitulo{
+  margin:0;color:var(--acento);font-family:var(--cuerpo);
+  font-size:clamp(18px,2vw,24px);font-weight:300;letter-spacing:2px;
+}
+
+.video{margin-top:26px}
+.video .pb-tarjeta{padding:0}
+.video .marco{position:relative;width:100%;padding-top:56.2766%;background:#000}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+.texto{margin:30px auto 70px;max-width:780px;text-align:center}
+.texto p{margin:0;color:var(--tinta-suave);font-size:15px;font-weight:300;line-height:1.6}
+.texto p + p{margin-top:18px}
+.texto strong{font-weight:600;color:var(--tinta)}
+</style>
+</head>
+<body>
+
+<div class="pb-envoltorio">
+  <header class="pb-cabecera">
+    <img src="{% static marca_v2.logo %}" alt="Conquer Blocks" height="34">
+  </header>
+
+  <img class="pb-px" src="{% static marca_v2.px_lg %}" alt="" aria-hidden="true" style="top:70px;left:1.5%">
+  <img class="pb-px" src="{% static marca_v2.px_sm %}" alt="" aria-hidden="true" style="top:470px;right:2%;width:110px">
+
+  <section class="pb-ancho cabeza">
+    <span class="pb-pildora">
+      <svg viewBox="0 0 24 24" data-relleno aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+      {{ pagina.chapa|safe }}
+    </span>
+    <p class="antetitulo">{{ pagina.antetitulo }}</p>
+    <h1 class="pb-titular">{{ pagina.titular|safe }}</h1>
+  </section>
+
+  <section class="pb-ancho video">
+    <div class="pb-tarjeta">
+      <div class="marco">
+        {% comment %} El `referrerpolicy` no es decorativo: Bunny valida por Referer quién
+           embebe el vídeo y Django manda `Referrer-Policy: same-origin`, así que sin
+           él la petición cross-origin va sin referer, la CDN responde 403 y el
+           reproductor sale en negro en iOS. {% endcomment %}
+        <iframe src="https://iframe.mediadelivery.net/embed/{{ pagina.biblioteca }}/{{ pagina.video_principal }}?autoplay=false&preload=false"
+                title="{{ pagina.antetitulo }}" loading="lazy" allowfullscreen
+                referrerpolicy="strict-origin-when-cross-origin"
+                allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
+      </div>
+    </div>
+  </section>
+
+  {% comment %}
+    Aquí sí van como párrafos sueltos, y no en uno solo con saltos dobles como
+    en la primera versión: allí el doble salto era lo que replicaba el espaciado
+    del Webflow original, y este diseño separa con margen.
+  {% endcomment %}
+  <section class="pb-ancho texto">
+    {% for parrafo in pagina.parrafos %}<p>{{ parrafo|safe }}</p>
+    {% endfor %}
+  </section>
+</div>
+
+</body>
+</html>

@@ -707,6 +707,7 @@ class LaSegundaVersionTest(TestCase):
     CON_SEGUNDA = (
         ('www.conquerblocks.com', '/evento/evento-coding-week-eu'),
         ('www.conquerblocks.com', '/evento/evento-testimonios'),
+        ('www.conquerblocks.com', '/evento/codingweek-evento-vitacora'),
         ('www.conquerfinance.com', '/evento/pildoras-evento-1'),
         ('www.conquerfinance.com', '/evento/pildoras-evento-2'),
         ('www.conquerfinance.com', '/evento/pildoras-evento-3'),
@@ -729,6 +730,7 @@ class LaSegundaVersionTest(TestCase):
         # chocaba con la web nueva.
         for host, ruta, viejo in (
                 ('www.conquerblocks.com', '/evento/evento-testimonios', '#c8f169'),
+                ('www.conquerblocks.com', '/evento/codingweek-evento-vitacora', '#bae0a3'),
                 ('www.conquerfinance.com', '/evento/pildoras-evento-2', '#02bdf8'),
                 ('www.conquerfinance.com', '/trading-week-2025', '#2827d6')):
             html = self.client.get(ruta + '?v=2', HTTP_HOST=host).content.decode()

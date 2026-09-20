@@ -826,6 +826,7 @@ PAGINAS_DE_CAMPANA = {
         # primera de campaña que pasa de Webflow a esta app en su URL buena.
         'publicada': True,
         'plantilla': 'pages/public/evento/bitacora-codingweek.html',
+        'plantilla_v2': 'pages/public/evento/bitacora-codingweek-v2.html',
         # El título que le puso Webflow, con su errata y todo; es el nombre de
         # la pestaña, así que se deja como está hasta que alguien lo cambie
         # desde el panel.
