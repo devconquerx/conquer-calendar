@@ -12,6 +12,7 @@ Se comprueba en el HTML servido, no en el tema: el fallo estaba justo en que el
 tema lo tenía y la página no.
 """
 import re
+from pathlib import Path
 
 from django.test import TestCase
 
@@ -80,3 +81,37 @@ class FaviconDelFunnelTest(TestCase):
         resp = self.client.get('/conquer-lo-que-sea/clase-online-gratuita-latam')
         self.assertEqual(resp.status_code, 200)
         self.assertIsNone(LINK_ICON.search(resp.content.decode()))
+
+
+class ElIconoVaDentroDelHeadTest(TestCase):
+    """No basta con que el `<link>` esté en el HTML: tiene que estar en el head.
+
+    Iba justo después del include del consentimiento, que pinta su banner —un
+    `<div>`— ahí mismo. Al primer elemento de cuerpo el navegador cierra `<head>`
+    y abre `<body>`, así que el `<link rel="icon">` acababa dentro del cuerpo,
+    donde se ignora: la pestaña seguía en blanco con el link en el HTML.
+
+    Se comprueba por orden en el texto, que es justo lo que decide el parser.
+    """
+
+    PLANTILLAS = (Path(__file__).resolve().parents[2] / 'calendario' / '_templates'
+                  / 'pages' / 'public' / 'evento')
+
+    def test_en_todas_las_plantillas_el_icono_va_antes_del_consentimiento(self):
+        plantillas = [f for f in sorted(self.PLANTILLAS.glob('*.html'))
+                      if '_favicon_evento.html' in f.read_text(encoding='utf-8')]
+        self.assertTrue(plantillas, 'ninguna plantilla incluye el favicon')
+        for f in plantillas:
+            texto = f.read_text(encoding='utf-8')
+            with self.subTest(plantilla=f.name):
+                self.assertLess(texto.index('_favicon_evento.html'),
+                                texto.index('_consentimiento.html'),
+                                f'{f.name}: el favicon va después del banner y cae fuera del head')
+
+    def test_y_en_la_pagina_servida_el_link_sale_antes_del_banner(self):
+        for url in ('/evento/codingweek-evento-vitacora',
+                    '/evento/evento-online?escuela=conquer-blocks',
+                    '/eventos/bitacora?escuela=conquer-languages'):
+            with self.subTest(url=url):
+                html = self.client.get(url).content.decode()
+                self.assertLess(html.index('rel="icon"'), html.index('id="cqx-consent"'), url)
