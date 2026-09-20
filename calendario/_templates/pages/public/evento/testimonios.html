@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ pagina.titulo_pagina }}</title>
+  {% include '_includes/_favicon_evento.html' %}
   {% include '_includes/_consentimiento.html' %}
   {% include '_includes/_sgtm_head.html' %}
-  {% include '_includes/_favicon_evento.html' %}
   {% include '_includes/_pixeles_evento.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -150,8 +150,13 @@ img{max-width:100%;height:auto;display:block}
   <p class="subtitular">{{ pagina.subtitular|safe }}</p>
 
   <div class="video apaisado video-principal">
+    {% comment %} El `referrerpolicy` no es decorativo: Bunny valida por Referer quién
+       embebe el vídeo y Django manda `Referrer-Policy: same-origin`, así que sin
+       él la petición cross-origin va sin referer, la CDN responde 403 y el
+       reproductor sale en negro en iOS. {% endcomment %}
     <iframe src="https://iframe.mediadelivery.net/embed/135359/{{ pagina.video_principal }}?autoplay=false&preload=false"
             title="Coding Week" loading="lazy" allowfullscreen
+              referrerpolicy="strict-origin-when-cross-origin"
             allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
   </div>
 
@@ -164,8 +169,13 @@ img{max-width:100%;height:auto;display:block}
   <div class="rejilla tres">
     {% for v in pagina.videos_apaisados %}
     <div class="video apaisado">
+      {% comment %} El `referrerpolicy` no es decorativo: Bunny valida por Referer quién
+         embebe el vídeo y Django manda `Referrer-Policy: same-origin`, así que sin
+         él la petición cross-origin va sin referer, la CDN responde 403 y el
+         reproductor sale en negro en iOS. {% endcomment %}
       <iframe src="https://iframe.mediadelivery.net/embed/135359/{{ v }}?autoplay=false&preload=false"
               title="Testimonio de alumno" loading="lazy" allowfullscreen
+              referrerpolicy="strict-origin-when-cross-origin"
               allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
     </div>
     {% endfor %}
@@ -174,8 +184,13 @@ img{max-width:100%;height:auto;display:block}
   <div class="rejilla tres">
     {% for v in pagina.videos_verticales %}
     <div class="video vertical">
+      {% comment %} El `referrerpolicy` no es decorativo: Bunny valida por Referer quién
+         embebe el vídeo y Django manda `Referrer-Policy: same-origin`, así que sin
+         él la petición cross-origin va sin referer, la CDN responde 403 y el
+         reproductor sale en negro en iOS. {% endcomment %}
       <iframe src="https://iframe.mediadelivery.net/embed/135359/{{ v }}?autoplay=false&preload=false"
               title="Testimonio de alumno" loading="lazy" allowfullscreen
+              referrerpolicy="strict-origin-when-cross-origin"
               allow="accelerometer;gyroscope;encrypted-media;picture-in-picture;"></iframe>
     </div>
     {% endfor %}

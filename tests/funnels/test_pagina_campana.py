@@ -860,3 +860,38 @@ class NingunGrupoDeWhatsappRoto(TestCase):
             if not url:
                 continue  # sin grupo configurado: la pantalla ya lo aguanta
             self.assertRegex(url, r'^https://(cb|cl|cf|cg)\.conquerx\.com/', nombre)
+
+
+class LosVideosDeBunnyMandanReferrerTest(TestCase):
+    """Sin `referrerpolicy` el vídeo no se ve en iOS.
+
+    Bunny valida por Referer quién embebe el vídeo (`BlockNoneReferrer`), y
+    Django manda `Referrer-Policy: same-origin`. En Chrome el iframe usa su
+    propia política y la CDN recibe referer; en WebKit —Safari, todo iPhone— la
+    hereda de la página, la petición cross-origin sale sin referer y la CDN
+    responde 403: reproductor en negro.
+
+    El atributo pone al iframe una política propia, así que el referer viaja y
+    la CDN sirve. El funnel ya lo llevaba (ver `Confirmation.jsx`); las páginas
+    de evento se migraron sin él.
+    """
+
+    def test_todas_las_plantillas_con_video_lo_declaran(self):
+        con_video = [f for f in sorted(PLANTILLAS.glob('*.html'))
+                     if 'iframe.mediadelivery.net' in f.read_text(encoding='utf-8')]
+        self.assertTrue(con_video, 'ninguna plantilla embebe vídeo de Bunny')
+        for f in con_video:
+            with self.subTest(plantilla=f.name):
+                self.assertIn('referrerpolicy="strict-origin-when-cross-origin"',
+                              f.read_text(encoding='utf-8'),
+                              f'{f.name}: el vídeo saldrá en negro en iPhone')
+
+    def test_y_la_pagina_servida_tambien(self):
+        for host, ruta in (('www.conquerblocks.com', '/evento/codingweek-evento-vitacora'),
+                           ('www.conquerlanguages.com', '/eventos/bitacora'),
+                           ('www.conquerfinance.com', '/evento/pildoras-evento-1')):
+            with self.subTest(ruta=ruta):
+                html = self.client.get(ruta, HTTP_HOST=host).content.decode()
+                self.assertEqual(html.count('iframe.mediadelivery.net'),
+                                 html.count('referrerpolicy="strict-origin-when-cross-origin"'),
+                                 f'{ruta}: algún iframe de Bunny se quedó sin referrerpolicy')
