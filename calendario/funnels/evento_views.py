@@ -359,14 +359,21 @@ MARCAS_V2 = {
 }
 
 
-def version(request):
-    """Qué versión de la página se pide: 1 (la de siempre) o 2.
+def version(request, ficha=None):
+    """Qué versión de la página se pide: 1 (la de la migración) o 2.
 
-    Se elige con `?v=2` y nada más: la vieja sigue siendo la que se sirve por
-    defecto, y ninguna se borra. Cuando se decida cuál queda, basta con darle la
-    vuelta al valor por defecto aquí.
+    `?v=` manda, en los dos sentidos: `?v=2` enseña la nueva y `?v=1` la vieja,
+    así que ninguna se pierde y las dos se pueden comparar sin desplegar.
+
+    Sin parámetro se sirve la que la página declare. Por defecto es la primera
+    —la réplica del Webflow del que salió—; las que ya se dieron por buenas
+    ponen `v2_por_defecto` en su ficha y sirven la nueva, que es entonces la que
+    ve el tráfico.
     """
-    return 2 if request.GET.get('v') == '2' else 1
+    pedida = request.GET.get('v')
+    if pedida in ('1', '2'):
+        return int(pedida)
+    return 2 if (ficha or {}).get('v2_por_defecto') else 1
 
 
 def plantilla_de(ficha, request):
@@ -375,7 +382,7 @@ def plantilla_de(ficha, request):
     Solo las páginas que declaran `plantilla_v2` tienen segunda versión; el
     resto ignora el parámetro y sirve la suya.
     """
-    if version(request) == 2 and ficha.get('plantilla_v2'):
+    if version(request, ficha) == 2 and ficha.get('plantilla_v2'):
         return ficha['plantilla_v2']
     return ficha['plantilla']
 
@@ -827,6 +834,9 @@ PAGINAS_DE_CAMPANA = {
         'publicada': True,
         'plantilla': 'pages/public/evento/bitacora-codingweek.html',
         'plantilla_v2': 'pages/public/evento/bitacora-codingweek-v2.html',
+        # Aprobada la segunda: es la que ve el tráfico. La primera —la réplica
+        # del Webflow— se sigue sirviendo en `?v=1`, que es como se comparan.
+        'v2_por_defecto': True,
         # El título que le puso Webflow, con su errata y todo; es el nombre de
         # la pestaña, así que se deja como está hasta que alguien lo cambie
         # desde el panel.
@@ -1016,7 +1026,7 @@ class GraciasView(TemplateView):
         # visitante llega aquí sin recargar, con los píxeles ya cargados.
         ctx.update(_marca(self.escuela))
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
-        ctx['version'] = version(self.request)
+        ctx['version'] = version(self.request, self.gracias)
         ctx['marca_v2'] = MARCAS_V2.get(self.escuela)
         return ctx
 
@@ -1071,6 +1081,6 @@ class PaginaDeCampanaView(TemplateView):
                 ctx['funnel'] = f"{ctx['funnel']}-{variante['codigo']}"
         ctx.update(_marca(self.escuela))
         ctx['consentimiento'] = consent.contexto(self.request, self.escuela)
-        ctx['version'] = version(self.request)
+        ctx['version'] = version(self.request, self.pagina)
         ctx['marca_v2'] = MARCAS_V2.get(self.escuela)
         return ctx

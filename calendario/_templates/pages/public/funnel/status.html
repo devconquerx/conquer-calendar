@@ -93,7 +93,7 @@
           <td>
             <a href="{{ p.url }}">{{ p.titulo }}</a><br>
             <span class="reg">{{ p.tipo }}</span>
-            {% if p.url_v2 %}<br><span class="ver"><a class="link" href="{{ p.url }}">v1</a> · <a class="link" href="{{ p.url_v2 }}">v2</a></span>{% endif %}
+            {% if p.url_v2 %}<br><span class="ver"><a class="link" href="{{ p.url_v1 }}">v1</a> · <a class="link" href="{{ p.url_v2 }}">v2</a></span>{% endif %}
           </td>
           <td class="muted">
             {% if p.funnel %}<code>{{ p.funnel }}</code>{% if p.variantes %}<br><span class="reg">+ variante {% for v in p.variantes %}<code>-{{ v }}</code>{% if not forloop.last %} · {% endif %}{% endfor %}</span>{% endif %}
@@ -101,7 +101,7 @@
           </td>
           <td>
             {% if p.gracias %}<a class="link" href="{{ p.gracias.url }}" target="_blank" rel="noopener">{{ p.gracias.titulo }}</a>
-              {% if p.gracias.url_v2 %}<br><span class="ver"><a class="link" href="{{ p.gracias.url }}" target="_blank" rel="noopener">v1</a> · <a class="link" href="{{ p.gracias.url_v2 }}" target="_blank" rel="noopener">v2</a></span>{% endif %}
+              {% if p.gracias.url_v2 %}<br><span class="ver"><a class="link" href="{{ p.gracias.url_v1 }}" target="_blank" rel="noopener">v1</a> · <a class="link" href="{{ p.gracias.url_v2 }}" target="_blank" rel="noopener">v2</a></span>{% endif %}
             {% else %}<span class="muted">—</span>{% endif %}
           </td>
           <td class="muted">{{ p.barra }}</td>

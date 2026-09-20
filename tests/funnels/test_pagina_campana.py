@@ -353,8 +353,11 @@ class BitacoraDeLaCodingWeekTest(TestCase):
 
     def test_los_parrafos_van_en_uno_solo_con_saltos_dobles(self):
         # Es lo que separa los bloques en el original: una línea en blanco, no
-        # un margen. Con un <p> por párrafo el texto se descoloca.
-        html = self._html()
+        # un margen. Con un <p> por párrafo el texto se descoloca. Va contra
+        # `?v=1`, que es donde se sirve la réplica desde que la nueva pasó a ser
+        # la de por defecto; la nueva separa con margen, como su diseño.
+        html = self.client.get(self.RUTA + '?v=1',
+                               HTTP_HOST='www.conquerblocks.com').content.decode()
         self.assertEqual(html.count('class="cuerpo"'), 1)
         self.assertEqual(html.count('<br><br>'), 3)
 
@@ -715,10 +718,28 @@ class LaSegundaVersionTest(TestCase):
         ('www.conquerfinance.com', '/grupos-comunidad'),
     )
 
+    # Las que ya se dieron por buenas: sirven la nueva sin pedir nada, y la
+    # primera se queda en `?v=1`.
+    POR_DEFECTO_LA_NUEVA = {'/evento/codingweek-evento-vitacora'}
+
     def test_sin_el_parametro_se_sirve_la_de_siempre(self):
         for host, ruta in self.CON_SEGUNDA:
+            if ruta in self.POR_DEFECTO_LA_NUEVA:
+                continue
             html = self.client.get(ruta, HTTP_HOST=host).content.decode()
             self.assertNotIn('--papel:#fafafa', html, f'{host}{ruta}')
+
+    def test_las_aprobadas_sirven_la_nueva_sin_pedir_nada(self):
+        """Y la primera no se borra: sigue respondiendo en `?v=1`."""
+        for ruta in self.POR_DEFECTO_LA_NUEVA:
+            with self.subTest(ruta=ruta):
+                por_defecto = self.client.get(ruta, HTTP_HOST='www.conquerblocks.com')
+                self.assertIn('--papel:#fafafa', por_defecto.content.decode())
+                primera = self.client.get(ruta + '?v=1', HTTP_HOST='www.conquerblocks.com')
+                self.assertNotIn('--papel:#fafafa', primera.content.decode())
+                # Y pedir la nueva a mano da lo mismo que no pedir nada.
+                nueva = self.client.get(ruta + '?v=2', HTTP_HOST='www.conquerblocks.com')
+                self.assertEqual(nueva.content, por_defecto.content)
 
     def test_con_v2_se_sirve_la_nueva(self):
         for host, ruta in self.CON_SEGUNDA:

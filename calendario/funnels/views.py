@@ -1024,6 +1024,7 @@ class FunnelStatusView(View):
             url = _publica(escuela, gr['ruta'], gr.get('publicada'))
             sep = '&' if '?' in url else '?'
             return {'url': url, 'titulo': gr['titulo_pagina'],
+                    'url_v1': f'{url}{sep}v=1' if gr.get('plantilla_v2') else None,
                     'url_v2': f'{url}{sep}v=2' if gr.get('plantilla_v2') else None}
 
         paginas = []
@@ -1037,8 +1038,11 @@ class FunnelStatusView(View):
                 'orden': datos['orden'],
                 'escuela': escuela,
                 'titulo': datos['titulo_pagina'],
-                # Las que tienen segunda versión se abren con `?v=2`; las demás
-                # no enseñan el par, para no sugerir una que no existe.
+                # Las que tienen segunda versión enseñan el par, y cada enlace pide
+                # la suya: sin `?v=` se sirve la que la página tenga por defecto,
+                # que ya no es la primera en todas. Las demás no enseñan el par,
+                # para no sugerir una versión que no existe.
+                'url_v1': f'{url}{"&" if "?" in url else "?"}v=1' if datos.get('plantilla_v2') else None,
                 'url_v2': f'{url}{"&" if "?" in url else "?"}v=2' if datos.get('plantilla_v2') else None,
                 'tipo': 'pantalla de lanzamiento',
                 'funnel': datos.get('funnel'),
@@ -1060,6 +1064,8 @@ class FunnelStatusView(View):
                 'orden': datos['orden'],
                 'escuela': datos['escuela'],
                 'titulo': datos['titulo_pagina'],
+                'url_v1': (f'{url_campana}{"&" if "?" in url_campana else "?"}v=1'
+                           if datos.get('plantilla_v2') else None),
                 'url_v2': (f'{url_campana}{"&" if "?" in url_campana else "?"}v=2'
                            if datos.get('plantilla_v2') else None),
                 'tipo': 'página de campaña',

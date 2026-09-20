@@ -188,6 +188,10 @@ class LaBitacoraDeLaCodingWeekSeEditaEnteraTest(TestCase):
     HOST = 'www.conquerblocks.com'
 
     # Un valor reconocible por campo y lo que tiene que aparecer en el HTML.
+    # `solo_v1` marca los que la segunda versión no usa: el logo lo pone el
+    # sistema paperboard —el negro sobre papel, no el blanco de la primera— y el
+    # fondo y la rejilla los sustituye su papel con textura. Siguen editándose,
+    # pero solo se ven en `?v=1`.
     NUEVOS = {
         'chapa': ('EVENTO <strong>NUEVO</strong>', 'EVENTO <strong>NUEVO</strong>'),
         'antetitulo': ('LA CLASE 9', 'LA CLASE 9'),
@@ -208,15 +212,40 @@ class LaBitacoraDeLaCodingWeekSeEditaEnteraTest(TestCase):
             {campo.clave for campo in contenido.campos_de(self.CLAVE)},
             set(self.NUEVOS),
         )
+        self.assertTrue(self.SOLO_V1 < set(self.NUEVOS))
 
-    def test_cambiarlo_todo_desde_el_panel_cambia_la_pagina(self):
+    SOLO_V1 = {'logo', 'fondo', 'rejilla'}
+    # Los párrafos se ven en las dos, pero no con la misma marca: la réplica los
+    # une con saltos dobles y la nueva los separa con margen, un <p> cada uno.
+    EN_LA_NUEVA = {'parrafos': '<p>Párrafo uno</p>'}
+
+    def _publica_todo(self):
         fila = ContenidoDeEvento.objects.get(clave=self.CLAVE)
         fila.textos = {clave: valor for clave, (valor, _) in self.NUEVOS.items()}
         fila.save()
-        html = self.client.get(self.RUTA, HTTP_HOST=self.HOST).content.decode()
+
+    def test_cambiarlo_todo_desde_el_panel_cambia_la_pagina(self):
+        """La primera versión, la réplica: usa todos los campos."""
+        self._publica_todo()
+        html = self.client.get(self.RUTA + '?v=1', HTTP_HOST=self.HOST).content.decode()
         for clave, (_, esperado) in self.NUEVOS.items():
             with self.subTest(campo=clave):
                 self.assertIn(esperado, html)
         # Y ya no queda nada de lo que traía el código.
+        self.assertNotIn('EL SENTIDO COMÚN', html)
+        self.assertNotIn('104554f0', html)
+
+    def test_y_la_que_ve_el_trafico_tambien(self):
+        """La segunda, que es la que se sirve por defecto desde que se aprobó.
+
+        Las tres imágenes no: el envoltorio las pone el sistema paperboard.
+        """
+        self._publica_todo()
+        html = self.client.get(self.RUTA, HTTP_HOST=self.HOST).content.decode()
+        for clave, (_, esperado) in self.NUEVOS.items():
+            if clave in self.SOLO_V1:
+                continue
+            with self.subTest(campo=clave):
+                self.assertIn(self.EN_LA_NUEVA.get(clave, esperado), html)
         self.assertNotIn('EL SENTIDO COMÚN', html)
         self.assertNotIn('104554f0', html)

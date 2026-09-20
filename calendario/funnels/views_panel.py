@@ -126,7 +126,7 @@ class EditorView(RequierePermisoMixin, TemplateView):
             'tipo': TIPOS.get(pagina.tipo, pagina.tipo),
             'secciones': secciones,
             'puede_editar': self.request.user.tiene_permiso('contenido_eventos.editar'),
-            'url_preview': pagina.url_publica(borrador=True),
+            'url_preview': pagina.url_publica(v2=False, borrador=True),
             'url_preview_v2': pagina.url_publica(v2=True, borrador=True) if pagina.tiene_v2 else '',
             'url_publica': pagina.url_publica(),
             'url_guardar': reverse('panel_contenido:guardar', args=[pagina.clave]),

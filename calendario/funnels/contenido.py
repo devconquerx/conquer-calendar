@@ -73,17 +73,22 @@ class Pagina:
     # Si la página tiene segunda versión (`?v=2`), para ofrecer las dos.
     tiene_v2: bool = False
 
-    def url_publica(self, v2=False, borrador=False):
+    def url_publica(self, v2=None, borrador=False):
         """La URL con la que se ve esta página desde el panel.
 
         Las pantallas de lanzamiento y de gracias resuelven la marca por
         dominio; desde el dominio del panel hay que decírselo con `?escuela=`.
+
+        `v2` pide una versión concreta: `True` la nueva y `False` la de la
+        migración. Sin decir nada se devuelve la URL a secas, que es la que ve
+        el tráfico y sirve la versión que la página tenga por defecto —y que ya
+        no es la primera en todas—.
         """
         params = []
         if self.tipo in ('lanzamiento', 'gracias'):
             params.append(f'escuela={self.escuela}')
-        if v2 and self.tiene_v2:
-            params.append('v=2')
+        if v2 is not None and self.tiene_v2:
+            params.append('v=2' if v2 else 'v=1')
         if borrador:
             params.append('borrador=1')
         return self.vista_previa + ('?' + '&'.join(params) if params else '')
