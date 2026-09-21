@@ -225,6 +225,18 @@ def enviar_payload(payload):
             f'La academia no registró la reserva {referencia}: {str(datos.get("errors"))[:200]}'
         )
 
+    # La academia guarda la sesión aunque el profesor o el alumno no pertenezcan
+    # a la academia indicada, y lo avisa en `errors` con success=True. No se
+    # reintenta —ya está guardada—, pero tiene que verse: casi siempre es un
+    # tipo de evento con la academia mal elegida, y eso descuadra el recuento
+    # por academia.
+    if datos.get('errors'):
+        logger.warning(
+            '[Academia] Reserva %s registrada con avisos (%dms) — %s',
+            referencia, elapsed_ms, str(datos.get('errors'))[:500],
+        )
+        return
+
     logger.info(
         '[Academia] Reserva %s registrada como %s (%dms) — %s',
         referencia, payload.get('status'), elapsed_ms, str(datos)[:200],

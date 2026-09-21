@@ -246,6 +246,20 @@ class ErroresDelEndpointTest(TestCase):
             with self.assertRaises(RuntimeError):
                 academia.push_sesion(self.reserva)
 
+    def test_success_con_avisos_se_registra_como_warning(self):
+        """La academia guarda la sesión aunque el profesor o el alumno no sean de
+        la academia indicada y lo avisa en `errors`. No es un fallo —no se
+        reintenta—, pero tiene que verse."""
+        cuerpo = {'data': {'syncCalendarSession': {
+            'success': True, 'created': True,
+            'errors': ['Professor profe@conquerx.com does not belong to academy 3'],
+        }}}
+        with patch('calendario.bookings.conversions.services.academia.requests.post',
+                   return_value=RespuestaFalsa(cuerpo)):
+            with self.assertLogs(academia.logger, level='WARNING') as logs:
+                academia.push_sesion(self.reserva)
+        self.assertIn('does not belong to academy 3', logs.output[0])
+
     def test_http_500_revienta(self):
         with patch('calendario.bookings.conversions.services.academia.requests.post',
                    return_value=RespuestaFalsa(status_code=500, texto='boom')):
