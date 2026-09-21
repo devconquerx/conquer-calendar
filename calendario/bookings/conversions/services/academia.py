@@ -48,6 +48,11 @@ ESTADOS = {
 }
 
 
+# El `operationName` que se manda tiene que ser el nombre que lleva la operación
+# dentro de la query: si no coinciden, el servidor no ejecuta nada y responde
+# «Unknown operation named …». Hay un test que ata los dos.
+OPERACION = 'SyncCalendarSession'
+
 MUTATION = '''
 mutation SyncCalendarSession($input: SyncCalendarSessionInput!) {
   syncCalendarSession(input: $input) {
@@ -157,7 +162,7 @@ def enviar_payload(payload):
         json={
             'query': MUTATION,
             'variables': {'input': payload},
-            'operationName': 'RegistrarSesionCalendario',
+            'operationName': OPERACION,
         },
         headers={
             'X-API-Key': api_key,

@@ -138,6 +138,19 @@ class PayloadSesionTest(TestCase):
         self.assertEqual(kwargs['headers']['X-API-Key'], API_KEY)
         self.assertEqual(kwargs['json']['variables']['input']['reservationId'], str(reserva.pk))
 
+    def test_el_nombre_de_la_operacion_coincide_con_la_query(self):
+        """Si el `operationName` no es el nombre de la operación que va en la
+        query, el servidor no ejecuta nada: «Unknown operation named …». Pasó:
+        se mandaba `RegistrarSesionCalendario` contra `mutation
+        SyncCalendarSession`, y como aquí `requests` va simulado nadie lo vio."""
+        reserva = self._reserva()
+        with patch('calendario.bookings.conversions.services.academia.requests.post',
+                   return_value=RespuestaFalsa()) as mock_post:
+            academia.push_sesion(reserva)
+
+        enviado = mock_post.call_args.kwargs['json']
+        self.assertIn(f"mutation {enviado['operationName']}(", enviado['query'])
+
     def test_sin_id_de_academia_viaja_null(self):
         """La academia es opcional a propósito: sin ella la sesión sale igual y
         cuenta para las métricas por profesor. Lo que se pierde es el recuento por
