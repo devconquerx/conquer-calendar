@@ -87,10 +87,10 @@ servicio, que es para lo que se pidió.</p>
 <table>
 <tr><th>Campo</th><th>Tipo</th><th>Qué es</th></tr>
 <tr><td><code>reservation_id</code></td><td>String</td><td>Id de la reserva en el calendario. <b>Clave del upsert.</b></td></tr>
-<tr><td><code>status</code></td><td>String</td><td><code>confirmed</code> o <code>cancelled</code>.</td></tr>
+<tr><td><code>status</code></td><td>Enum</td><td><code>CONFIRMED</code> o <code>CANCELLED</code>: GraphQL recibe los enums por su nombre.</td></tr>
 <tr><td><code>academy_id</code></td><td>Int?</td><td>La <code>Academy</code>. Puede llegar <code>null</code> &mdash; ver punto 4.</td></tr>
 <tr><td><code>professor_email</code></td><td>String</td><td>En minúsculas. Empareja con <code>Professor.user.email</code>.</td></tr>
-<tr><td><code>student_lms_id</code></td><td>String</td><td>El <code>UserProfile.id</code>, del token del iframe. Vacío si la reserva no vino embebida.</td></tr>
+<tr><td><code>student_lms_id</code></td><td>Int?</td><td>El <code>UserProfile.id</code>, del token del iframe. <code>null</code> si la reserva no vino embebida.</td></tr>
 <tr><td><code>student_email</code></td><td>String</td><td>En minúsculas. Respaldo del anterior.</td></tr>
 <tr><td><code>event_type_name</code></td><td>String</td><td>Ej. «Clase 1 a 1 de inglés».</td></tr>
 <tr><td><code>starts_at</code></td><td>DateTime</td><td>ISO-8601 en <b>UTC</b>.</td></tr>
@@ -163,14 +163,14 @@ kool run django migrate</pre>
 @strawberry.input
 class SyncCalendarSessionInput:
     reservation_id: str
-    status: str
+    status: CalendarSessionStatus  <span class="c"># enum: CONFIRMED | CANCELLED</span>
     professor_email: str
     student_email: str
     event_type_name: str
     starts_at: datetime
     ends_at: datetime
     academy_id: Optional[int] = None
-    student_lms_id: str = ""
+    student_lms_id: Optional[int] = None
 
 
 @strawberry.type
@@ -201,8 +201,8 @@ class CalendarSessionMutation:
         <span class="c"># Por id primero: es el UserProfile.id que la propia academia firmó en el</span>
         <span class="c"># token del iframe. El email es el respaldo de lo que no viene embebido.</span>
         student = None
-        if input.student_lms_id.isdigit():
-            student = UserProfile.objects.filter(pk=int(input.student_lms_id)).first()
+        if input.student_lms_id:
+            student = UserProfile.objects.filter(pk=input.student_lms_id).first()
         if not student and input.student_email:
             student = UserProfile.objects.filter(email=normalize_email(input.student_email)).first()
 
@@ -211,7 +211,7 @@ class CalendarSessionMutation:
         _, created = CalendarSession.objects.update_or_create(
             reservation_id=input.reservation_id,   <span class="c"># upsert: reintentar no duplica</span>
             defaults={
-                "status": input.status,
+                "status": input.status.value,
                 "academy": academy,
                 "professor": professor,
                 "student": student,
