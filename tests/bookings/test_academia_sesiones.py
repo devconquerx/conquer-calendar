@@ -108,7 +108,7 @@ class PayloadSesionTest(TestCase):
         self.assertEqual(payload['status'], 'CONFIRMED')
         self.assertEqual(payload['academyId'], ID_ACADEMIA)
         self.assertEqual(payload['professorEmail'], self.host.email.lower())
-        self.assertEqual(payload['studentLmsId'], str(UID_ALUMNO))
+        self.assertEqual(payload['studentLmsId'], UID_ALUMNO)
         self.assertEqual(payload['studentEmail'], EMAIL_INVITADO.lower())
         self.assertEqual(payload['eventTypeName'], 'Clase 1 a 1 de inglés')
         self.assertEqual(payload['startsAt'], reserva.inicio_utc.isoformat())
@@ -390,13 +390,24 @@ class UidEnElPayloadTest(TestCase):
         reserva.alumno_lms_uid = str(UID_ALUMNO)
         reserva.save(update_fields=['alumno_lms_uid'])
 
-        self.assertEqual(academia.construir_payload(reserva)['studentLmsId'], str(UID_ALUMNO))
+        self.assertEqual(academia.construir_payload(reserva)['studentLmsId'], UID_ALUMNO)
 
-    def test_sin_uid_viaja_vacio(self):
+    def test_sin_uid_viaja_null(self):
+        """`studentLmsId` es `Int` en el LMS: un vacío tumba la petición entera
+        («Int cannot represent non-integer value: ''»)."""
         mocks = _mock_gcal()
         with mocks[0], mocks[1], mocks[2]:
             reserva = crear_reserva(self.et)
-        self.assertEqual(academia.construir_payload(reserva)['studentLmsId'], '')
+        self.assertIsNone(academia.construir_payload(reserva)['studentLmsId'])
+
+    def test_un_uid_que_no_es_numero_viaja_null(self):
+        """No se inventa un id: la academia empareja entonces por el email."""
+        mocks = _mock_gcal()
+        with mocks[0], mocks[1], mocks[2]:
+            reserva = crear_reserva(self.et)
+        reserva.alumno_lms_uid = 'abc-123'
+        reserva.save(update_fields=['alumno_lms_uid'])
+        self.assertIsNone(academia.construir_payload(reserva)['studentLmsId'])
 
 
 class MarcaEnElPanelTest(TestCase):

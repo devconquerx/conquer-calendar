@@ -66,6 +66,19 @@ mutation SyncCalendarSession($input: SyncCalendarSessionInput!) {
 '''.strip()
 
 
+def _uid_alumno(reserva):
+    """El `UserProfile.id` del alumno como entero, o None.
+
+    En el LMS `studentLmsId` es `Int`: un string —aunque sean dígitos— o el
+    vacío de las reservas que no vienen embebidas tumban la petición entera con
+    «Int cannot represent non-integer value». Aquí se guarda como texto porque
+    así llega en el token, de modo que se convierte en la frontera. Lo que no sea
+    un número no se inventa: viaja null y la academia empareja por el email.
+    """
+    uid = (reserva.alumno_lms_uid or '').strip()
+    return int(uid) if uid.isdigit() else None
+
+
 def _config():
     """URL y clave, o None si la integración no está lista para enviar."""
     if not settings.ACADEMIA_ENABLED:
@@ -118,7 +131,7 @@ def construir_payload(reserva):
         # El alumno. `studentLmsId` es su `UserProfile.id`, que viene firmado en
         # el token del iframe; el email queda de respaldo para las reservas que no
         # se hacen embebidas y por tanto nunca lo traen.
-        'studentLmsId': reserva.alumno_lms_uid or '',
+        'studentLmsId': _uid_alumno(reserva),
         'studentEmail': (reserva.email_invitado or '').strip().lower(),
         # El nombre del evento.
         'eventTypeName': et.nombre if reserva.event_type_id else '',
