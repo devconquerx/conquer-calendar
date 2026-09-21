@@ -105,7 +105,7 @@ class PayloadSesionTest(TestCase):
         payload = academia.construir_payload(reserva)
 
         self.assertEqual(payload['reservationId'], str(reserva.pk))
-        self.assertEqual(payload['status'], 'confirmed')
+        self.assertEqual(payload['status'], 'CONFIRMED')
         self.assertEqual(payload['academyId'], ID_ACADEMIA)
         self.assertEqual(payload['professorEmail'], self.host.email.lower())
         self.assertEqual(payload['studentLmsId'], str(UID_ALUMNO))
@@ -163,18 +163,22 @@ class PayloadSesionTest(TestCase):
 
     def test_una_cancelada_viaja_como_cancelada(self):
         reserva = self._reserva(estado=Reserva.Estado.CANCELADA)
-        self.assertEqual(academia.construir_payload(reserva)['status'], 'cancelled')
+        self.assertEqual(academia.construir_payload(reserva)['status'], 'CANCELLED')
 
 
 class EstadoTraducidoTest(TestCase):
-    """El LMS usa claves en inglés en sus choices; el vocabulario nuestro se
-    queda de este lado de la frontera."""
+    """El vocabulario nuestro se queda de este lado de la frontera."""
 
     def test_el_mapa_cubre_los_dos_estados_de_reserva(self):
         self.assertEqual(
             set(academia.ESTADOS),
             {Reserva.Estado.CONFIRMADA.value, Reserva.Estado.CANCELADA.value},
         )
+
+    def test_viajan_los_nombres_del_enum_del_lms(self):
+        """En el LMS `status` es el enum `CalendarSessionStatus`, y GraphQL
+        recibe los enums por su nombre: con `confirmed` rechaza la petición."""
+        self.assertEqual(set(academia.ESTADOS.values()), {'CONFIRMED', 'CANCELLED'})
 
 
 class SinConfigurarTest(TestCase):
@@ -333,7 +337,7 @@ class DespachoTest(TestCase):
         mock_delay.assert_called_once()
         payload = mock_delay.call_args[0][0]
         self.assertEqual(payload['reservationId'], str(reserva_pk))
-        self.assertEqual(payload['status'], 'cancelled')
+        self.assertEqual(payload['status'], 'CANCELLED')
         self.assertFalse(Reserva.objects.filter(pk=reserva_pk).exists())
 
     def test_reagendar_cancela_la_vieja_y_da_de_alta_la_nueva(self):

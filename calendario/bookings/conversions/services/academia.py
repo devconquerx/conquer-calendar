@@ -39,12 +39,14 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-# El LMS usa claves en inglés también en sus `choices` (ver
-# `CalendarEvent.RECURRENCE_CHOICES`), así que el estado se traduce en la
-# frontera en vez de colarle nuestro vocabulario a su esquema.
+# El estado se traduce en la frontera en vez de colarle nuestro vocabulario a su
+# esquema. En mayúsculas porque en el LMS es un enum de Strawberry
+# (`CalendarSessionStatus`) y GraphQL recibe los enums por su NOMBRE, no por su
+# valor: con `confirmed` se rechaza la petición entera («Value 'confirmed' does
+# not exist in 'CalendarSessionStatus' enum»).
 ESTADOS = {
-    'confirmada': 'confirmed',
-    'cancelada': 'cancelled',
+    'confirmada': 'CONFIRMED',
+    'cancelada': 'CANCELLED',
 }
 
 
@@ -104,7 +106,7 @@ def construir_payload(reserva):
         # Identidad de la sesión. `reservationId` es la clave del upsert, no un
         # dato de negocio: sin él, cada reintento crearía una fila nueva.
         'reservationId': str(reserva.pk),
-        'status': ESTADOS.get(reserva.estado, reserva.estado),  # confirmed | cancelled
+        'status': ESTADOS.get(reserva.estado, reserva.estado),  # CONFIRMED | CANCELLED
         # A qué academia del LMS pertenece la sesión. Se configura en el tipo de
         # evento porque desde aquí no hay forma de deducirlo: el `school_code`
         # del resto de integraciones sale del funnel o del Lead, y una clase 1 a
