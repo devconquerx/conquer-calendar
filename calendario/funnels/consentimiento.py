@@ -126,6 +126,10 @@ MARCAS = {
         # dos sitios donde sale el banner.
         'radio': '2px',
     },
+    # Legal apagó el pixel-art de todo el funnel (`CL_LEGAL_PIXEL_STYLE = false`
+    # en frontend/src/themes/conquerlegal.js), igual que Finance: sin `pixel` y
+    # con el radio a 2px para que los botones salgan rectos. Si el flag del
+    # tema vuelve a `true`, aquí hay que volver a poner `pixel` y radio 10px.
     'conquer-legal': {
         # Legal cuelga sus textos legales de /legal/; sin ese tramo la URL da
         # 404, no una redirección como en Blocks y Finance.
@@ -133,9 +137,8 @@ MARCAS = {
         'acento': '#0040FF',
         'acento_texto': '#ffffff',
         'fuente': "'Funnel Display',Arial,sans-serif",
-        'radio': '10px',
+        'radio': '2px',
         'papel': True,
-        'pixel': True,
         # El CTA de Legal no es un degradado de dos paradas a 135deg como el de
         # Blocks: son tres, en horizontal, de periwinkle a navy. Se copia entero
         # en vez de aproximarlo con `grad_1`/`grad_2`.

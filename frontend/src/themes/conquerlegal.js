@@ -41,6 +41,29 @@ import pixelDeco2 from '../assets/img/legal/pixel-5x5-5.svg'
 import pxLg8 from '../assets/img/legal/px-lg-8.svg'
 import pxSm7 from '../assets/img/legal/px-sm-7.svg'
 
+// ═══════════════════════════════════════════════════════════════════════════
+// TEMPORAL — INTERRUPTOR GLOBAL del pixel-art de Conquer Legal.
+//
+// El mismo que ya tienen Languages (`CL_PIXEL_STYLE`) y Finance
+// (`FI_PIXEL_STYLE`). A `false` (petición de negocio) desaparece TODO el
+// pixelado de la marca, en las cuatro etapas (landing, vídeo, stepform y
+// confirmación):
+//   · racimos de píxeles decorativos del fondo (y los del footer)
+//   · borde pixelado del canto de las fotos (instructor y Paso 2)
+//   · borde pixelado de los botones (CTA de landing/vídeo y botones del form)
+//
+// Ponlo a `true` y vuelve todo tal cual estaba, sin tocar nada más: las
+// posiciones (`landing.decoPixels`, `confirmation.heroDecos`, `footerDecos`) y
+// los assets siguen definidos, solo quedan inertes mientras esté apagado.
+//
+// OJO: Finance hereda de aquí (`legal.assets`, `legal.confirmation`…), así que
+// con esto apagado Finance tampoco recibe las máscaras aunque ponga su flag a
+// `true`. Y el banner de cookies NO lee este flag: lo pinta Django con
+// `MARCAS['conquer-legal']` en calendario/funnels/consentimiento.py, que hoy va
+// sin `pixel`. Si esto vuelve a `true`, hay que volver a ponerlo allí.
+// ═══════════════════════════════════════════════════════════════════════════
+const CL_LEGAL_PIXEL_STYLE = false
+
 const legalShadow =
   '0px 2px 5px rgba(0,0,0,0.1), 0px 9px 9px rgba(0,0,0,0.09), 0px 20px 12px rgba(0,0,0,0.05), 0px 36px 14px rgba(0,0,0,0.01)'
 
@@ -55,6 +78,8 @@ export default {
     // Gradiente exacto del botón en producción (3 paradas, periwinkle→navy).
     buttonGradient: 'linear-gradient(90deg, #3E76FF 0%, #1845D6 42%, #031464 100%)',
     buttonWeight: '800',
+    // Canto del CTA: sin pixel-art se recorta a rectángulo plano.
+    ...(CL_LEGAL_PIXEL_STYLE ? {} : { buttonClip: 'none' }),
     linkGradient: 'linear-gradient(to right,#00C0FF,#0040FF)',
     ring: '#0040FF',
   },
@@ -133,7 +158,7 @@ export default {
     importanteTextSize: 'text-[18px]', // 18px móvil y desktop
     // Píxeles decorativos del hero: 150px, opacidad 0.2, pegados a los bordes
     // (izq top 58px / dcha top 117px), patrón pixel-6x6-2 azul.
-    heroDecoImg: pixelDeco,
+    heroDecoImg: CL_LEGAL_PIXEL_STYLE ? pixelDeco : undefined,
     heroDecos: ['top-[58px] left-0 w-[150px] opacity-20', 'top-[117px] right-0 w-[150px] opacity-20'],
     // Badges de los pasos (1/2/3): móvil 16px / desktop 20px, peso 500, pill,
     // padding 4px 16px (medido en producción).
@@ -168,7 +193,7 @@ export default {
     paso2BadgeMb: 'mb-7 md:mb-16',
     paso2ReminderMt: 'mt-7 md:mt-12',
     paso2MobileBox: 'aspect-square lg:aspect-auto',
-    paso2MaskMobile: confMaskBottom,
+    paso2MaskMobile: CL_LEGAL_PIXEL_STYLE ? confMaskBottom : undefined,
     paso2ContentPad: 'p-6 lg:p-12',
     paso2Image: confEmpathy,
     paso2ImageMode: 'photo',
@@ -214,10 +239,12 @@ export default {
     footerMode: 'minimal',
     footerPadY: 'py-8',
     footerLogoHeight: 'h-[39px] md:h-[88px] w-auto',
-    footerDecos: [
-      { img: 'pxLg8', cls: 'top-[9px] right-[30px] w-[75px] md:right-[15px] md:w-[100px] opacity-20' },
-      { img: 'pxSm7', cls: 'top-0 left-[31px] w-[100px] -translate-y-[80%] md:left-[150px] md:w-[150px]' },
-    ],
+    footerDecos: CL_LEGAL_PIXEL_STYLE
+      ? [
+          { img: 'pxLg8', cls: 'top-[9px] right-[30px] w-[75px] md:right-[15px] md:w-[100px] opacity-20' },
+          { img: 'pxSm7', cls: 'top-0 left-[31px] w-[100px] -translate-y-[80%] md:left-[150px] md:w-[150px]' },
+        ]
+      : undefined,
   },
 
   // Fondo de página paperboard (usado por el StepForm).
@@ -237,10 +264,15 @@ export default {
     tornTransition2000,
     gridBackground,
     // El badge/sm7/lg8 de la página de vídeo reutilizan los píxeles azules de Legal.
-    pixels: { deco: pixelDeco, deco2: pixelDeco2, sm7: pixelDeco, lg8: pixelDeco2, pxLg8, pxSm7 },
+    // Sin `pixels` no se pinta ningún racimo: todos los puntos de render
+    // (Landing, VideoPage, Confirmation) están guardados por `assets.pixels`.
+    pixels: CL_LEGAL_PIXEL_STYLE
+      ? { deco: pixelDeco, deco2: pixelDeco2, sm7: pixelDeco, lg8: pixelDeco2, pxLg8, pxSm7 }
+      : undefined,
     bulletIcons: [bulletReloj, bulletEscribir, bulletDocumento],
-    instructorMask,
-    instructorMaskBottom, // borde pixelado abajo (móvil); el derecho es para desktop
+    instructorMask: CL_LEGAL_PIXEL_STYLE ? instructorMask : undefined,
+    // borde pixelado abajo (móvil); el derecho es para desktop
+    instructorMaskBottom: CL_LEGAL_PIXEL_STYLE ? instructorMaskBottom : undefined,
     instructorPhoto,
     // La foto de Legal se pinta como background del cuadro: bgSize = zoom (la foto
     // es cuadrada y "alejada"), bgPosition = punto focal (centra a Ignacio sin
@@ -325,5 +357,7 @@ export default {
     // Mismo gradiente azul de producción que los CTA de la landing y el vídeo.
     '--theme-btn-gradient': 'linear-gradient(90deg, #3E76FF 0%, #1845D6 42%, #031464 100%)',
     '--theme-form-shadow': legalShadow,
+    // Botones del stepform (NavigationControls / WelcomeScreen).
+    ...(CL_LEGAL_PIXEL_STYLE ? {} : { '--theme-btn-clip': 'none' }),
   },
 }

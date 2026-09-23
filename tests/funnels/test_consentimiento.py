@@ -340,8 +340,8 @@ class SacarloAManoParaVerloTest(TestCase):
 
 
 class CadaMarcaHablaSuIdiomaVisualTest(TestCase):
-    """Blocks, Finance y Legal van en cartón; Blocks y Legal además con el CTA
-    pixelado; Finance con su degradado pero sin píxeles; Languages liso.
+    """Blocks, Finance y Legal van en cartón; Blocks además con el CTA
+    pixelado; Finance y Legal con su degradado pero sin píxeles; Languages liso.
 
     Es lo que fallaba en Cookiebot: el mismo recuadro blanco genérico sobre tres
     marcas que no se parecen en nada.
@@ -357,12 +357,14 @@ class CadaMarcaHablaSuIdiomaVisualTest(TestCase):
             self.assertIn('paperboard-texture', bloque, f'{host}{ruta}')
             self.assertIn('background-size:auto,216px', bloque, f'{host}{ruta}')
 
-    def test_legal_tambien_va_en_carton_y_pixelado(self):
-        # Su tema declara `paperboard: true` y no anula `buttonClip`, así que su
-        # CTA es el mismo botón recortado que el de Blocks, en azul.
+    def test_legal_va_en_carton_pero_sin_pixeles(self):
+        # Como Finance: el funnel apagó el pixel-art (`CL_LEGAL_PIXEL_STYLE`),
+        # así que el CTA del banner va recto, sin recorte.
         html = self._html('www.conquerlegal.com', '/hub/registro-eu')
         self.assertIn('paperboard-texture', html.split('#cqx-consent .tarjeta{')[2])
-        self.assertIn('clip-path:var(--pixel-clip)', html)
+        css = html.split('#cqx-consent{')[1].split('</style>')[0]
+        self.assertNotIn('clip-path:var(--pixel-clip)', css)
+        self.assertIn('--radio:2px', css)
 
     def test_el_degradado_de_legal_se_copia_entero(self):
         # Tres paradas y en horizontal: aproximarlo con dos a 135deg daba otro
@@ -466,7 +468,8 @@ class ElIconoQueQuedaDespuesTest(TestCase):
         self.assertIn('#cqx-consent-icono{border-radius:0', self._html())
         # Finance ya no tiene CTA pixelado: su icono vuelve a ser redondo.
         for host, ruta in (('www.conquerlanguages.com', '/cl-evento'),
-                           ('www.conquerfinance.com', '/evento/evento-online')):
+                           ('www.conquerfinance.com', '/evento/evento-online'),
+                           ('www.conquerlegal.com', '/hub/registro-eu')):
             self.assertNotIn('#cqx-consent-icono{border-radius:0', self._html(host, ruta), host)
 
 
