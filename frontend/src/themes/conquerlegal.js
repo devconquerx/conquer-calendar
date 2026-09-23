@@ -274,11 +274,10 @@ export default {
     // borde pixelado abajo (móvil); el derecho es para desktop
     instructorMaskBottom: CL_LEGAL_PIXEL_STYLE ? instructorMaskBottom : undefined,
     instructorPhoto,
-    // La foto de Legal se pinta como background del cuadro: bgSize = zoom (la foto
-    // es cuadrada y "alejada"), bgPosition = punto focal (centra a Ignacio sin
-    // recortar la cabeza ni dejar huecos). Valores afinados en vivo.
-    instructorBgSize: '140%',
-    instructorBgPosition: '70% 18%',
+    // Foto cuadrada (900×900) ya encuadrada de cintura para arriba: se muestra
+    // completa, sin el zoom que necesitaba la anterior (más alejada).
+    instructorBgSize: 'cover',
+    instructorBgPosition: 'center',
   },
 
   layout: {
