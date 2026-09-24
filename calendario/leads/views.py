@@ -55,6 +55,7 @@ for f in Lead._meta.get_fields():
 _FUNNEL_SLUG_TO_CRM_CODE = {
     'blocks-latam': 'cb-latam', 'blocks-eu': 'cb-eu', 'blocks-us': 'cb-us', 'blocks-eu-2': 'cb-eu-2',
     'finance-latam': 'fi-latam', 'finance-eu': 'fi-eu', 'finance-us': 'fi-us',
+    'finance-eu-2': 'fi-eu-2',
     'languages-latam': 'cl-latam', 'languages-eu': 'cl-eu', 'languages-us': 'cl-us',
     'languages-kids-latam': 'cl-kids-latam', 'languages-kids-eu': 'cl-kids-eu',
     'languages-kids-us': 'cl-kids-us',

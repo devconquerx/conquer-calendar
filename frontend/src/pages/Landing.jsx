@@ -57,6 +57,10 @@ export default function Landing({ school, program, region, formConfig, nextUrl, 
 function PaperboardLanding({ school, program, region, formConfig, theme, assets, instructor, disclaimer, nextUrl, funnelSlug, videoEnabled }) {
   const accent = theme.accent || {}
   const footer = theme.footer || {}
+  const landing = formConfig?.landing || formConfig?.welcome || {}
+  const contactLine = landing.disclaimerContact !== false && footer.contactEmail
+    ? ` Puedes contactarnos enviándonos un email a ${footer.contactEmail}`
+    : null
   // Ancho de la columna de contenido (réplica del `container-large` de Webflow:
   // 1280px en Legal, 1064px en Blocks). Inline porque Tailwind no genera clases
   // arbitrarias construidas en runtime.
@@ -225,18 +229,19 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
         {disclaimer && (
           // `disclaimer` admite un array de párrafos (ej. Finance EU en prod trae
           // 3 notas al pie separadas, no una sola línea larga); el email de
-          // contacto se auto-añade siempre al último párrafo.
+          // contacto se auto-añade al último párrafo salvo que la copy ya
+          // traiga el suyo (`landing.disclaimerContact === false`).
           Array.isArray(disclaimer)
             ? disclaimer.map((line, i) => (
                 <p key={i} className="max-w-[90%] mx-auto text-xs font-light text-neutral-500 leading-[1.25] text-center mb-1.5 last:mb-0">
                   {line}
-                  {i === disclaimer.length - 1 && footer.contactEmail && ` Puedes contactarnos enviándonos un email a ${footer.contactEmail}`}
+                  {i === disclaimer.length - 1 && contactLine}
                 </p>
               ))
             : (
               <p className="max-w-[90%] mx-auto text-xs font-light text-neutral-500 leading-[1.25] text-center">
                 {disclaimer}
-                {footer.contactEmail && ` Puedes contactarnos enviándonos un email a ${footer.contactEmail}`}
+                {contactLine}
               </p>
             )
         )}

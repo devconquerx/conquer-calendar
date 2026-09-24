@@ -547,6 +547,10 @@ def _video_url(escuela, region, base='', slug=None):
     # comparten escuela+región — de ahí el caso especial por slug.
     if slug == 'blocks-eu-2':
         return f'{base}/conquer-blocks/video-2-clase-eu/'
+    # Segunda landing de Finance EU (finance-eu-2, LP2 de fi-eu): misma
+    # nomenclatura que la de Blocks, en la raíz de conquerfinance.com.
+    if slug == 'finance-eu-2':
+        return f'{base}/video-2-clase-eu'
     # Conquer Languages GE (la variante en inglés) no sigue la convención de
     # region: replica las rutas de producción /ge/*, que están en inglés.
     if escuela == 'conquer-languages' and region == 'ge':
@@ -564,6 +568,8 @@ def _video_url(escuela, region, base='', slug=None):
 def _landing_url(escuela, region, base='', slug=None):
     if slug == 'blocks-eu-2':
         return f'{base}/conquer-blocks/clase-2-online-gratuita-eu/'
+    if slug == 'finance-eu-2':
+        return f'{base}/clase-2-online-gratuita-eu'
     if escuela == 'conquer-languages' and region == 'ge':
         return f'{base}/ge/free-online-training'
     if escuela == 'conquer-legal':
