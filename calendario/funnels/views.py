@@ -541,16 +541,20 @@ _ESCUELAS_SOLO_STEPFORM = ('conquer-blocks-esp', 'conquer-languages-kids')
 # replica EXACTAMENTE las URLs vivas de www.conquerfinance.com (Webflow): sin
 # barra final, y la confirmación compartida entre regiones sin sufijo — cuando
 # el dominio pase a servirse desde aquí no puede cambiar ni un carácter.
+# Slugs de las segundas landings (LP2) de Conquer Finance.
+_FINANCE_LP2 = ('finance-eu-2', 'finance-latam-2')
+
+
 def _video_url(escuela, region, base='', slug=None):
     # Segunda landing de Blocks EU (blocks-eu-2, réplica de cb-eu-2): tiene su
     # propia URL de video (VSL corta), distinta de la de blocks-eu aunque
     # comparten escuela+región — de ahí el caso especial por slug.
     if slug == 'blocks-eu-2':
         return f'{base}/conquer-blocks/video-2-clase-eu/'
-    # Segunda landing de Finance EU (finance-eu-2, LP2 de fi-eu): misma
+    # Segundas landings de Finance (LP2 de fi-eu y fi-latam): misma
     # nomenclatura que la de Blocks, en la raíz de conquerfinance.com.
-    if slug == 'finance-eu-2':
-        return f'{base}/video-2-clase-eu'
+    if slug in _FINANCE_LP2:
+        return f'{base}/video-2-clase-{region}'
     # Conquer Languages GE (la variante en inglés) no sigue la convención de
     # region: replica las rutas de producción /ge/*, que están en inglés.
     if escuela == 'conquer-languages' and region == 'ge':
@@ -568,8 +572,8 @@ def _video_url(escuela, region, base='', slug=None):
 def _landing_url(escuela, region, base='', slug=None):
     if slug == 'blocks-eu-2':
         return f'{base}/conquer-blocks/clase-2-online-gratuita-eu/'
-    if slug == 'finance-eu-2':
-        return f'{base}/clase-2-online-gratuita-eu'
+    if slug in _FINANCE_LP2:
+        return f'{base}/clase-2-online-gratuita-{region}'
     if escuela == 'conquer-languages' and region == 'ge':
         return f'{base}/ge/free-online-training'
     if escuela == 'conquer-legal':

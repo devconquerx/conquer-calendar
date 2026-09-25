@@ -30,9 +30,10 @@ FUNNEL_TAG_MAP = {
     # su id numérico, basta con sustituirlo aquí.
     'ai-eu': 'ai-eu',
     'fi-latam': '454', 'fi-eu': '456', 'fi-us': '457',
-    # LP2 de Finance EU: misma etiqueta que fi-eu para que entre en las mismas
-    # automatizaciones de AC (no tiene una propia como cb-eu-2 con la 502).
-    'fi-eu-2': '456',
+    # LP2 de Finance: misma etiqueta que la LP1 de su región para que entren en
+    # las mismas automatizaciones de AC (no tienen una propia como cb-eu-2 con
+    # la 502).
+    'fi-eu-2': '456', 'fi-latam-2': '454',
     'cf-latam': '454', 'cf-eu': '456', 'cf-us': '457',
     'cl-latam': '465', 'cl-eu': '466', 'cl-us': '468',
     'cg-latam': 'cg-latam', 'cg-eu': 'cg-eu', 'cg-us': 'cg-us',

@@ -115,13 +115,18 @@ urlpatterns = [
         FunnelClaseView.as_view(), {'escuela': 'conquer-blocks', 'region': 'eu', 'slug': 'blocks-eu-2'},
         name='clase_cb_eu_2',
     ),
-    # Segunda landing EU de Conquer Finance (finance-eu-2, fi-eu-2). Mismo caso
-    # que la de Blocks, pero en la raíz de conquerfinance.com. La escuela va
-    # fija porque la vista resuelve por slug y no necesita el Host.
+    # Segundas landings de Conquer Finance (LP2 de fi-eu y fi-latam). Mismo
+    # caso que la de Blocks, pero en la raíz de conquerfinance.com. La escuela
+    # va fija porque la vista resuelve por slug y no necesita el Host.
     re_path(
         r'^clase-2-online-gratuita-eu/?$',
         FunnelClaseView.as_view(), {'escuela': 'conquer-finance', 'region': 'eu', 'slug': 'finance-eu-2'},
         name='clase_cf_eu_2',
+    ),
+    re_path(
+        r'^clase-2-online-gratuita-latam/?$',
+        FunnelClaseView.as_view(), {'escuela': 'conquer-finance', 'region': 'latam', 'slug': 'finance-latam-2'},
+        name='clase_cf_latam_2',
     ),
     # Página de video (VSL), entre la landing y el StepForm. Por path para
     # cualquier escuela; por Host en la ruta raíz.
@@ -138,6 +143,11 @@ urlpatterns = [
         r'^video-2-clase-eu/?$',
         FunnelVideoView.as_view(), {'escuela': 'conquer-finance', 'region': 'eu', 'slug': 'finance-eu-2'},
         name='video_cf_eu_2',
+    ),
+    re_path(
+        r'^video-2-clase-latam/?$',
+        FunnelVideoView.as_view(), {'escuela': 'conquer-finance', 'region': 'latam', 'slug': 'finance-latam-2'},
+        name='video_cf_latam_2',
     ),
     re_path(
         r'^video-clase-(?P<region>latam|eu|us)/?$',
