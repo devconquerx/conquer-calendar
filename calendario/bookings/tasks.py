@@ -250,30 +250,31 @@ def dispatch_schedule_tasks(reserva_id):
         s = build_schedule_ctx(reserva)
         lead = s.lead
 
-        # Conquer Legal NO usa la API directa de conversiones (van por el
-        # server container de sGTM); ver dispatch_lead_tasks.
-        es_legal = (s.school_code or '') == 'cg'
-
         # Plataformas de ads condicionadas por la fuente de tráfico. Sin Lead
         # emparejado, se usa el utm_source del tracking como fallback (igual que
         # funnels), para no perder conversiones de reservas sin Lead.
-        if es_legal:
-            pass
-        elif lead:
-            if is_from_meta(lead):
-                process_schedule_meta_capi.delay(reserva_id)
-            if is_from_tiktok(lead):
-                process_schedule_tiktok_events.delay(reserva_id)
-            if is_from_google(lead):
-                process_schedule_google_ads.delay(reserva_id)
+        if lead:
+            meta_on = is_from_meta(lead)
+            tiktok_on = is_from_tiktok(lead)
+            google_on = is_from_google(lead)
         else:
             src = (s.utm_source or '').lower()
-            if src == 'metaads':
-                process_schedule_meta_capi.delay(reserva_id)
-            if 'tiktok' in src:
-                process_schedule_tiktok_events.delay(reserva_id)
-            if src == 'googleads':
-                process_schedule_google_ads.delay(reserva_id)
+            meta_on = src == 'metaads'
+            tiktok_on = 'tiktok' in src
+            google_on = src == 'googleads'
+
+        # Conquer Legal: Google Ads/TikTok van por el server container de sGTM
+        # (empujarlos también por API los duplicaría). Meta sí va por API, con
+        # el token de su negocio (META_ACCESS_TOKEN_LEGAL); ver dispatch_lead_tasks.
+        if (s.school_code or '') == 'cg':
+            tiktok_on = google_on = False
+
+        if meta_on:
+            process_schedule_meta_capi.delay(reserva_id)
+        if tiktok_on:
+            process_schedule_tiktok_events.delay(reserva_id)
+        if google_on:
+            process_schedule_google_ads.delay(reserva_id)
 
         if s.lead_email:
             process_schedule_activecampaign.delay(reserva_id)
@@ -365,10 +366,10 @@ def sweep_incomplete_reservas():
                 tiktok_on = 'tiktok' in src
                 google_on = src == 'googleads'
 
-            # Mismo gate que dispatch_schedule_tasks: Legal no usa la API
-            # directa de conversiones (van por el server container de sGTM).
+            # Mismo gate que dispatch_schedule_tasks: Legal manda Meta por API;
+            # Google Ads/TikTok van por el server container de sGTM.
             if (s.school_code or '') == 'cg':
-                meta_on = tiktok_on = google_on = False
+                tiktok_on = google_on = False
 
             if meta_on and 'sch_meta_capi_done' not in tag_names and 'sch_meta_capi_failed' not in tag_names:
                 process_schedule_meta_capi.delay(reserva.pk)

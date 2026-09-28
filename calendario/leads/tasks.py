@@ -299,15 +299,14 @@ def dispatch_lead_tasks(lead_id):
     # Respaldo en Supabase: siempre, independiente del origen y del CRM.
     process_supabase.delay(lead_id)
 
-    # Conquer Legal NO usa la API directa de conversiones: las suyas las
-    # dispara el server container de sGTM (tags Google Ads/Meta del contenedor
-    # de Legal) — empujarlas también por API las duplicaría. El resto de
-    # marcas replica el push por API que hacía el CRM con el funnel viejo.
+    # Conquer Legal: Google Ads/TikTok los dispara el server container de sGTM
+    # — empujarlos también por API los duplicaría. Meta sí va por API (el sGTM
+    # no lo manda), con el token de su negocio (META_ACCESS_TOKEN_LEGAL).
     es_legal = get_school_code(lead) == 'cg'
 
     # Meta CAPI va para TODOS los leads de landings con pixel (cualquier fuente),
     # igual que el CRM viejo — no solo los de MetaAds (paridad y dedup del pixel).
-    if not es_legal and (fires_pixel_lead(lead) or is_from_meta(lead)):
+    if fires_pixel_lead(lead) or is_from_meta(lead):
         process_meta_capi.delay(lead_id)
     if not es_legal and is_from_tiktok(lead):
         process_tiktok_events.delay(lead_id)
@@ -368,15 +367,15 @@ def sweep_incomplete_leads():
                 requeued += 1
             continue
 
-        # Mismo gate que dispatch_lead_tasks: Legal no usa la API directa de
-        # conversiones (van por el server container de sGTM).
+        # Mismo gate que dispatch_lead_tasks: Legal manda Meta por API;
+        # Google Ads/TikTok van por el server container de sGTM.
         es_legal = get_school_code(lead) == 'cg'
 
         if 'supabase_done' not in tag_names and 'supabase_failed' not in tag_names:
             process_supabase.delay(lead.pk)
             requeued += 1
 
-        if not es_legal and (fires_pixel_lead(lead) or is_from_meta(lead)) and 'meta_capi_done' not in tag_names and 'meta_capi_failed' not in tag_names:
+        if (fires_pixel_lead(lead) or is_from_meta(lead)) and 'meta_capi_done' not in tag_names and 'meta_capi_failed' not in tag_names:
             process_meta_capi.delay(lead.pk)
             requeued += 1
 

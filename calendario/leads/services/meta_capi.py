@@ -6,7 +6,7 @@ from django.conf import settings
 
 from .utils import (
     hash_value, hash_phone, get_school_code, get_region_from_lead,
-    get_conversion_value, SCHOOL_PIXEL_META,
+    get_conversion_value, SCHOOL_PIXEL_META, meta_access_token,
 )
 from ..models import ConversionLog
 
@@ -23,9 +23,9 @@ def push_lead(lead):
         logger.warning(f'[Meta CAPI] Lead {lead.pk}: unknown school {school_code}')
         return
 
-    access_token = getattr(settings, 'META_ACCESS_TOKEN', '')
+    access_token = meta_access_token(school_code)
     if not access_token:
-        logger.warning('[Meta CAPI] META_ACCESS_TOKEN not configured')
+        logger.warning('[Meta CAPI] token not configured for school %s', school_code)
         return
 
     region = get_region_from_lead(lead)

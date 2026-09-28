@@ -16,7 +16,17 @@ SCHOOL_PIXEL_META = {
     'cl': '627205843180202',
     'cf': '1011283009921986',
     'fi': '1011283009921986',
+    'cg': '2428151880928158',  # Conquer Legal (negocio propio, token META_ACCESS_TOKEN_LEGAL)
 }
+
+
+def meta_access_token(school_code):
+    """Token de Conversions API para el píxel de la escuela."""
+    from django.conf import settings
+    if school_code == 'cg':
+        return getattr(settings, 'META_ACCESS_TOKEN_LEGAL', '')
+    return getattr(settings, 'META_ACCESS_TOKEN', '')
+
 
 SCHOOL_PIXEL_TIKTOK = {
     'cb': ('CTMK2ORC77U1LI1DFAD0', 'c75fa5e7a7791913563fab7a409e0d0b6998e9fb'),

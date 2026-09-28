@@ -318,6 +318,8 @@ FUNNEL_PUBLIC_BASE = env.dict('CALENDARIO_FUNNEL_PUBLIC_BASE', default={})
 # lead/booking nunca se rompe por falta de claves.
 # ──────────────────────────────────────────────────────────────────────
 META_ACCESS_TOKEN = env.str('META_ACCESS_TOKEN', default='')
+# Conquer Legal es un negocio aparte en Meta: el token de ConquerX no ve su píxel.
+META_ACCESS_TOKEN_LEGAL = env.str('META_ACCESS_TOKEN_LEGAL', default='')
 ACTIVECAMPAIGN_API_URL = env.str('ACTIVECAMPAIGN_API_URL', default='')
 ACTIVECAMPAIGN_API_KEY = env.str('ACTIVECAMPAIGN_API_KEY', default='')
 NEVERBOUNCE_API_KEY = env.str('NEVERBOUNCE_API_KEY', default='')

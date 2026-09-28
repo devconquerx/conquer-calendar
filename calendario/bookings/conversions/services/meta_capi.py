@@ -5,7 +5,7 @@ import requests
 from django.conf import settings
 
 from calendario.leads.services.utils import (
-    hash_value, hash_phone, get_conversion_value, SCHOOL_PIXEL_META,
+    hash_value, hash_phone, get_conversion_value, SCHOOL_PIXEL_META, meta_access_token,
 )
 from calendario.leads.models import ConversionLog
 from .utils import build_schedule_ctx
@@ -24,9 +24,9 @@ def push_schedule(reserva):
         logger.warning('[Meta CAPI] Reserva %s: unknown school %s', reserva.pk, school_code)
         return
 
-    access_token = getattr(settings, 'META_ACCESS_TOKEN', '')
+    access_token = meta_access_token(school_code)
     if not access_token:
-        logger.warning('[Meta CAPI] META_ACCESS_TOKEN not configured')
+        logger.warning('[Meta CAPI] token not configured for school %s', school_code)
         return
 
     lead = s.lead
