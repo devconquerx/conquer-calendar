@@ -16,4 +16,10 @@ def on_lead_created(sender, instance, created, **kwargs):
 
     from .tasks import dispatch_lead_tasks
 
-    dispatch_lead_tasks(instance.pk)
+    # El lead ya está guardado: si Redis/Celery no responde, no puede romper el
+    # alta (el post_save corre dentro del request). El sweep lo reencola después
+    # porque le faltarán sus tags *_done.
+    try:
+        dispatch_lead_tasks(instance.pk)
+    except Exception:
+        logger.exception('No se pudieron encolar las tareas del lead %s', instance.pk)

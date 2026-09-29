@@ -417,6 +417,13 @@ MONITORING_ALERT_RECIPIENTS = [
     r.strip() for r in env.str('MONITORING_ALERT_RECIPIENTS', default='').split(',') if r.strip()
 ]
 SENTRY_ORG_URL = env.str('SENTRY_ORG_URL', default='')
+# "Dead man's switch" externo (p. ej. healthchecks.io): check_colas lo llama cada
+# minuto. Si el servidor, Redis, beat o el worker de sistema mueren, deja de
+# llegar y es el servicio EXTERNO el que avisa: desde dentro nadie podría.
+MONITORING_HEARTBEAT_URL = env.str('MONITORING_HEARTBEAT_URL', default='')
+# Tareas en cola a partir de las cuales se avisa, por cola.
+MONITORING_UMBRAL_COLAS = {'celery': 1500, 'crm': 100, 'sistema': 30}
+MONITORING_REDIS_MAX_MB = env.int('MONITORING_REDIS_MAX_MB', default=1024)
 
 # Celery
 CELERY_BROKER_URL = env.str('CELERY_BROKER_URL', default='redis://redis:6379/0')
@@ -429,6 +436,19 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 120
 CELERY_TASK_SOFT_TIME_LIMIT = 90
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+# Cada proceso del worker coge UNA tarea cada vez: con el prefetch por defecto
+# (4 por proceso) una tarea lenta retiene detrás a otras que ya se llevó de la
+# cola aunque haya procesos libres.
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
+# Nadie lee el resultado de las tareas: guardarlo metía una clave por tarea en
+# Redis durante 24 h (tras el atasco del 28-sep eran más de 100.000).
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_RESULT_EXPIRES = 3600
+# Si un mensaje entregado no se confirma en esta ventana, Redis lo reentrega
+# (duplicado). Tiene que superar a la tarea más larga (sincronizar_bunny_r2,
+# 1 h) y a lo aplazado por calendario/core/resiliencia.py (5 min como mucho).
+CELERY_BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 7200}
 
 CELERY_BEAT_SCHEDULE = {
     'sweep-incomplete-leads': {
@@ -442,6 +462,10 @@ CELERY_BEAT_SCHEDULE = {
     'sweep-incomplete-prellamadas': {
         'task': 'calendario.funnels.tasks.sweep_incomplete_prellamadas',
         'schedule': 120.0,
+    },
+    'check-colas': {
+        'task': 'calendario.monitoring.tasks.check_colas',
+        'schedule': 60.0,
     },
     'check-funnel-health': {
         'task': 'calendario.monitoring.tasks.check_funnel_health',

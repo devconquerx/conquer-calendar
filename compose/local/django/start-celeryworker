@@ -4,4 +4,9 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-exec celery -A config worker --loglevel=info
+# CELERY_QUEUES: qué colas atiende este worker (ver calendario/core/resiliencia.py).
+# En producción hay dos workers: `celery` (integraciones) y `crm,sistema`.
+exec celery -A config worker --loglevel=info \
+    --queues="${CELERY_QUEUES:-celery,crm,sistema}" \
+    --hostname="${CELERY_WORKER_NAME:-celery}@%h" \
+    --concurrency="${CELERY_WORKER_CONCURRENCY:-4}"

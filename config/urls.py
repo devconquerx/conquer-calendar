@@ -34,12 +34,31 @@ def health(request):
     })
 
 
+def health_colas(request):
+    """Salud de las colas de Celery para un monitor EXTERNO (UptimeRobot,
+    healthchecks...): 200 si check_colas corrió hace menos de 3 min y no vio
+    problemas; 503 si no. Si el worker de sistema, beat o Redis mueren, el
+    latido envejece y esto empieza a dar 503 aunque Django siga vivo."""
+    import time
+    from calendario.core import resiliencia
+
+    latido = resiliencia.leer_latido()
+    edad = time.time() - latido['ts'] if latido else None
+    ok = edad is not None and edad < 180 and not latido['problemas']
+    return JsonResponse({
+        'status': 'ok' if ok else 'error',
+        'segundos_desde_el_ultimo_check': round(edad) if edad is not None else None,
+        'problemas': latido['problemas'] if latido else ['check_colas no ha corrido'],
+    }, status=200 if ok else 503)
+
+
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     path('accounts/', include('allauth.urls')),
     path('acceder-como/stop/', MagicLoginStopView.as_view(), name='magic_login_stop'),
     path('acceder-como/<str:token>/', MagicLoginView.as_view(), name='magic_login'),
     path('health/', health, name='health'),
+    path('health/colas/', health_colas, name='health_colas'),
     path('panel/', include('calendario.users.urls')),
     path('panel/', include('calendario.permisos.urls')),
     path('panel/event-types/', include('calendario.event_types.urls')),

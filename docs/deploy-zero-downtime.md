@@ -38,8 +38,13 @@ y su servicio SSR propio. Sólo una recibe tráfico; la otra está parada.
      127.0.0.1:8001  django-blue                  127.0.0.1:8002  django-green
                      └─ node-ssr-blue                              └─ node-ssr-green
 
-     (sin color, compartidos): celeryworker · celerybeat · redis
+     (sin color, compartidos): celeryworker · celeryworker-crm · celerybeat · redis
 ```
+
+Hay dos workers de Celery (ver `calendario/core/resiliencia.py`): `celeryworker`
+atiende la cola `celery` (integraciones de marketing) y `celeryworker-crm` las
+colas `crm` (envíos al CRM) y `sistema` (sweeps y monitor), para que nada de
+marketing pueda retrasar lo que ven los setters y closers.
 
 El despliegue levanta el color **parado** con el código nuevo, lo valida a fondo
 mientras el otro sigue sirviendo, y sólo entonces reescribe el upstream y hace
@@ -80,7 +85,9 @@ bash deploy/prod-deploy.sh status|deploy|rollback
 
 `./deploy.sh --rollback` arranca el color anterior (que quedó parado pero
 intacto, con **su** imagen), lo valida, devuelve Celery a la imagen previa y
-cambia el upstream. Tarda segundos y no reconstruye nada.
+cambia el upstream. Tarda segundos y no reconstruye nada. Si la imagen previa es
+anterior a las colas separadas, pasa a `celery` lo que quedara en `crm` y
+`sistema` (sus workers solo escuchan `celery`).
 
 Lo que **no** deshace: las migraciones ya aplicadas y el `collectstatic`. Por eso
 las migraciones tienen que ser compatibles hacia atrás (siguiente sección).

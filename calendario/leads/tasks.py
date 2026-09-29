@@ -1,5 +1,4 @@
 import logging
-import os
 from datetime import timedelta
 
 from celery import shared_task
@@ -129,16 +128,13 @@ def process_vsl_crm(self, email, vsl_key, percent):
 
 # El sondeo SMTP pregunta a Gmail si el buzón existe, y Gmail corta la IP si se
 # le pregunta demasiado seguido (nos pasó: 421 tras ~1.500 sondeos en 20 min).
-# El caudal normal de leads son ~3/min, pero hay ráfagas de campaña de hasta 27
-# en un minuto, así que sin freno una ráfaga bastaría para quemar la IP.
-#
-# `rate_limit` es por worker node y aquí solo hay uno, así que actúa de límite
-# global: las ráfagas se reparten en el tiempo en vez de salir de golpe. Se
-# puede subir por entorno sin tocar código si vemos que la cola se acumula.
-NEVERBOUNCE_RATE_LIMIT = os.environ.get('EMAIL_VERIFIER_RATE_LIMIT', '6/m')
+# El freno vive en calendario/core/resiliencia.py (servicio 'verificador_email',
+# EMAIL_VERIFIER_RATE_LIMIT, 6/m por defecto), no en `rate_limit` de Celery: ese
+# retiene las tareas limitadas en memoria del worker ocupando su prefetch, y una
+# ráfaga de verificaciones dejaba al resto de tareas esperando detrás.
 
 
-@shared_task(rate_limit=NEVERBOUNCE_RATE_LIMIT, **RETRY_POLICY)
+@shared_task(**RETRY_POLICY)
 def process_neverbounce(self, lead_id):
     from calendario.leads.models import Lead
     from calendario.leads.services import email_validation

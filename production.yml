@@ -135,6 +135,10 @@ services:
       conquer.color: "green"
 
   # ── Servicios sin color (únicos) ───────────────────────────────────────────
+  # Dos workers para que nada de marketing pueda retrasar lo que va al CRM
+  # (incidente del 28-sep-2026, ver calendario/core/resiliencia.py):
+  #   celeryworker      → cola `celery`: integraciones (AC, Meta, Respond.io...)
+  #   celeryworker-crm  → colas `crm` y `sistema`: envíos al CRM, sweeps y monitor
   celeryworker:
     image: conquer_calendario_production_django
     restart: unless-stopped
@@ -146,11 +150,38 @@ services:
       - /etc/conquer:/etc/conquer:ro
     environment:
       <<: *celery-env
+      CELERY_QUEUES: "celery"
+      CELERY_WORKER_NAME: "integraciones"
+      # Cada servicio tiene su tope de huecos (resiliencia.SERVICIOS): con 8,
+      # aunque uno se cuelgue con todos los suyos, quedan procesos para el resto.
+      CELERY_WORKER_CONCURRENCY: "8"
     depends_on:
       - redis
     # Warm shutdown de Celery: con SIGTERM deja de aceptar tareas nuevas y
     # termina las que tiene en vuelo. CELERY_TASK_TIME_LIMIT es 120s, así que
     # damos 130s antes del SIGKILL → ninguna tarea (CRM, correos) se pierde.
+    stop_grace_period: 130s
+    labels:
+      conquer.role: "celeryworker"
+
+  celeryworker-crm:
+    image: conquer_calendario_production_django
+    restart: unless-stopped
+    env_file:
+      - /home/conquer-calendar/.env
+    command: /start-celeryworker
+    volumes:
+      - ./calendario-media:/calendario-media
+      - /etc/conquer:/etc/conquer:ro
+    environment:
+      <<: *celery-env
+      CELERY_QUEUES: "crm,sistema"
+      CELERY_WORKER_NAME: "crm"
+      # El CRM puede ocupar como mucho 4 (resiliencia.SERVICIOS['crm']): los
+      # otros 2 quedan siempre para sweeps y monitor aunque el CRM no conteste.
+      CELERY_WORKER_CONCURRENCY: "6"
+    depends_on:
+      - redis
     stop_grace_period: 130s
     labels:
       conquer.role: "celeryworker"

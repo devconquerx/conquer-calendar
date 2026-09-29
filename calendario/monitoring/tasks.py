@@ -152,3 +152,94 @@ def check_funnel_health():
         )
     else:
         logger.info('[Monitoring] leads_task_stale OK: %d stale', stale_leads)
+
+
+@shared_task
+def check_colas():
+    """Cada minuto, desde la cola `sistema` (worker propio: no se atasca con el
+    resto). Vigila lo que el 28-sep-2026 falló sin que nadie se enterara:
+
+    - tareas acumuladas en cada cola de Celery
+    - servicios con el cortacircuitos abierto
+    - prellamadas y reservas que no han llegado al CRM en 10 min
+    - memoria de Redis (si se llena, deja de aceptar tareas)
+
+    De paso borra las marcas de "pendiente" huérfanas (mensajes purgados a mano o
+    perdidos), para que el sweep pueda volver a encolar esos objetos.
+
+    Y al final llama al heartbeat externo: si esta tarea deja de correr (servidor,
+    Redis, beat o worker caídos), el aviso lo da el servicio externo.
+    """
+    from django.conf import settings
+    from calendario.core import resiliencia
+
+    now = timezone.now()
+    problemas = []
+
+    try:
+        umbrales = getattr(settings, 'MONITORING_UMBRAL_COLAS', {})
+        for cola, n in resiliencia.longitudes_de_colas().items():
+            if n >= umbrales.get(cola, 1000):
+                problemas.append(('cola_' + cola, f'Cola "{cola}" con {n} tareas (umbral {umbrales.get(cola, 1000)})'))
+            logger.info('[Monitoring] cola %s: %d', cola, n)
+    except Exception as exc:
+        problemas.append(('redis', f'No se pudo leer Redis: {exc}'))
+
+    try:
+        mb, limite_mb = resiliencia.memoria_redis_mb()
+        umbral_mb = getattr(settings, 'MONITORING_REDIS_MAX_MB', 1024)
+        if limite_mb:
+            umbral_mb = min(umbral_mb, limite_mb * 0.8)
+        if mb >= umbral_mb:
+            problemas.append(('redis_memoria', f'Redis usa {mb:.0f} MB (umbral {umbral_mb:.0f} MB). '
+                                               f'Si se llena deja de aceptar tareas.'))
+    except Exception:
+        pass
+
+    try:
+        resiliencia.limpiar_pendientes_huerfanas()
+    except Exception:
+        logger.exception('[Monitoring] No se pudieron limpiar marcas de pendiente huérfanas')
+
+    try:
+        for servicio, segundos in resiliencia.circuitos_abiertos().items():
+            problemas.append(('circuito_' + servicio,
+                              f'{servicio}: circuito abierto ({segundos:.0f}s más). Sus tareas esperan, no se pierden.'))
+    except Exception:
+        pass
+
+    if getattr(settings, 'CRM_INGEST_ENABLED', False):
+        from calendario.funnels.models import Prellamada
+        from calendario.bookings.models import Reserva
+
+        desde, hasta = now - timedelta(minutes=60), now - timedelta(minutes=10)
+        prellamadas = (
+            Prellamada.objects.filter(creado_en__gte=desde, creado_en__lte=hasta)
+            .exclude(tags__name__in=['crm_done', 'crm_failed']).count()
+        )
+        if prellamadas:
+            problemas.append(('crm_prellamadas', f'{prellamadas} prellamadas sin llegar al CRM tras 10 min'))
+        reservas = (
+            Reserva.objects.filter(fecha_creacion__gte=desde, fecha_creacion__lte=hasta,
+                                   tags__name='sch_crm_dispatched')
+            .exclude(tags__name__in=['sch_crm_done', 'sch_crm_failed', 'sch_crm_skipped']).count()
+        )
+        if reservas:
+            problemas.append(('crm_reservas', f'{reservas} reservas sin llegar al CRM tras 10 min'))
+
+    for metrica, texto in problemas:
+        logger.warning('[Monitoring] %s', texto)
+        if getattr(settings, 'MONITORING_ENABLED', False):
+            _record_and_send(metrica, f'URGENTE: {texto}',
+                             f'{texto}\nHora del check: {now:%Y-%m-%d %H:%M:%S UTC}')
+
+    resiliencia.registrar_latido(problemas)
+
+    url = getattr(settings, 'MONITORING_HEARTBEAT_URL', '')
+    if url:
+        import requests
+        try:
+            requests.get(url + ('/fail' if problemas else ''), timeout=5)
+        except Exception:
+            logger.warning('[Monitoring] heartbeat no enviado')
+    return len(problemas)

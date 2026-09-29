@@ -3,8 +3,9 @@ import os
 import sys
 from pathlib import Path
 
-from celery import Celery
-from celery.signals import task_failure
+from celery import Celery, Task
+from celery.exceptions import Ignore
+from celery.signals import task_failure, task_retry, task_success
 
 # manage.py añade <repo>/calendario al sys.path para que apps como `metronic`/
 # `layout` (ubicadas en calendario/) sean importables como top-level. El worker
@@ -17,9 +18,119 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.local')
 
 logger = logging.getLogger(__name__)
 
-app = Celery('calendario')
+class TareaResiliente(Task):
+    """Base de TODAS las tareas: aplica calendario/core/resiliencia.py.
+
+    - Al encolar: si ya hay una copia pendiente con los mismos argumentos, no se
+      encola otra (los sweeps no pueden multiplicar la cola).
+    - Al ejecutar: si su servicio tiene el circuito abierto, va por encima de su
+      ritmo o ya ocupa todos sus huecos, se aplaza (se reencola con retraso y
+      esta ejecución termina en el acto) en vez de esperar ocupando el worker.
+    """
+
+    def apply_async(self, args=None, kwargs=None, task_id=None, producer=None,
+                    link=None, link_error=None, shadow=None, **options):
+        from celery.utils import uuid
+        from calendario.core import resiliencia
+
+        task_id = task_id or uuid()
+        # Reintentos y aplazamientos (llevan `retries`) son la misma copia que
+        # sigue viva: se encolan siempre y renuevan la marca de pendiente.
+        if 'retries' in options:
+            resiliencia.marcar_pendiente(self.name, args, kwargs, task_id)
+        elif not self.app.conf.task_always_eager:
+            if not resiliencia.reservar_pendiente(self.name, args, kwargs, task_id):
+                logger.info('[Resiliencia] %s%s ya está pendiente: no se encola otra copia',
+                            self.name, tuple(args or ()))
+                return None
+            # Lo que encola un sweep va por el carril de recuperación.
+            if resiliencia.carril_actual() == resiliencia.CARRIL_RECUPERACION:
+                options['headers'] = {**(options.get('headers') or {}),
+                                      'carril': resiliencia.CARRIL_RECUPERACION}
+        return super().apply_async(args, kwargs, task_id=task_id, producer=producer,
+                                   link=link, link_error=link_error, shadow=shadow, **options)
+
+    def __call__(self, *args, **kwargs):
+        req = self.request
+        if req.called_directly or req.is_eager:
+            return super().__call__(*args, **kwargs)
+
+        from calendario.core import resiliencia
+
+        # Desde que empieza, un cambio nuevo del objeto puede encolar otra copia:
+        # esta ya no lo verá.
+        resiliencia.soltar_pendiente(self.name, args, kwargs)
+
+        if self.name in resiliencia.SWEEPS:
+            with resiliencia.en_carril(resiliencia.CARRIL_RECUPERACION):
+                return super().__call__(*args, **kwargs)
+
+        servicio = resiliencia.SERVICIO_DE_TAREA.get(self.name)
+        limite = self.time_limit or self.app.conf.task_time_limit or 120
+        aplazo = resiliencia.motivo_para_aplazar(
+            servicio, req.id, carril=_carril_de(req), ttl_hueco=limite + resiliencia.MARGEN_HUECO,
+        )
+        if aplazo:
+            segundos, motivo = aplazo
+            espera = resiliencia.segundos_de_aplazo(segundos, motivo)
+            try:
+                self.signature_from_request(
+                    req, args, kwargs, countdown=espera, retries=req.retries,
+                ).apply_async()
+            except Exception:
+                # Si ni siquiera se puede reencolar, se ejecuta: nunca se pierde.
+                logger.exception('[Resiliencia] No se pudo aplazar %s; se ejecuta ya', self.name)
+            else:
+                logger.info('[Resiliencia] %s%s aplazada %.0fs (%s: %s)%s',
+                            self.name, args, espera, servicio, motivo,
+                            ' [recuperación]' if _carril_de(req) else '')
+                raise Ignore()
+            servicio = None  # no ocupó hueco
+
+        try:
+            return super().__call__(*args, **kwargs)
+        finally:
+            if servicio:
+                resiliencia.soltar_hueco(servicio, req.id)
+
+
+def _carril_de(req):
+    """El carril viaja como header del mensaje (y se conserva al aplazar)."""
+    headers = getattr(req, 'headers', None)
+    if isinstance(headers, dict) and headers.get('carril'):
+        return headers['carril']
+    return getattr(req, 'carril', None)
+
+
+app = Celery('calendario', task_cls=TareaResiliente)
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
+
+
+def _rutas():
+    from calendario.core.resiliencia import RUTAS
+    return {nombre: {'queue': cola} for nombre, cola in RUTAS.items()}
+
+
+app.conf.task_routes = _rutas()
+
+
+@task_success.connect
+def _exito_servicio(sender=None, **kw):
+    from calendario.core import resiliencia
+    resiliencia.registrar_exito(resiliencia.SERVICIO_DE_TAREA.get(getattr(sender, 'name', '')))
+
+
+@task_retry.connect
+def _reintento_servicio(sender=None, reason=None, **kw):
+    from calendario.core import resiliencia
+    resiliencia.registrar_fallo(resiliencia.SERVICIO_DE_TAREA.get(getattr(sender, 'name', '')), reason)
+
+
+@task_failure.connect
+def _fallo_servicio(sender=None, exception=None, **kw):
+    from calendario.core import resiliencia
+    resiliencia.registrar_fallo(resiliencia.SERVICIO_DE_TAREA.get(getattr(sender, 'name', '')), exception)
 
 
 # Maps task name → (model_app_label, failed_tag).

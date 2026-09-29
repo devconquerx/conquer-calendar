@@ -363,8 +363,8 @@ cmd_deploy() {
   #    warm shutdown (termina lo que tiene en vuelo) y lo que llegue mientras
   #    tanto se queda encolado en Redis: no se pierde ninguna tarea.
   say "Reciclando Celery (worker + beat) a la imagen nueva…"
-  dc stop -t 130 celeryworker celerybeat
-  dc up -d celeryworker celerybeat
+  dc stop -t 130 celeryworker celeryworker-crm celerybeat
+  dc up -d celeryworker celeryworker-crm celerybeat
 
   # 6) EL SWAP. Recarga elegante de nginx: sin requests perdidos.
   say "Cambiando el tráfico a $new…"
@@ -430,8 +430,18 @@ cmd_rollback() {
   if [[ -n "$old_img" ]]; then
     say "Devolviendo Celery a la imagen anterior…"
     docker tag "$old_img" "$DJANGO_IMAGE:latest"
-    dc stop -t 130 celeryworker celerybeat
-    dc up -d --force-recreate celeryworker celerybeat
+    dc stop -t 130 celeryworker celeryworker-crm celerybeat
+    dc up -d --force-recreate celeryworker celeryworker-crm celerybeat
+    # Una versión anterior a las colas separadas (calendario/core/resiliencia.py)
+    # solo escucha la cola `celery`: lo que quedara en `crm` y `sistema` se
+    # quedaría sin nadie que lo procese. Se pasa a `celery`.
+    if ! docker run --rm --entrypoint test "$old_img" -f /app/calendario/core/resiliencia.py; then
+      say "La versión anterior no conoce las colas crm/sistema: pasando su contenido a 'celery'…"
+      local cola
+      for cola in crm sistema; do
+        dc exec -T redis sh -c "while [ -n \"\$(redis-cli RPOPLPUSH $cola celery)\" ]; do :; done"
+      done
+    fi
   else
     warn "No queda imagen de la versión anterior: Celery SIGUE con el código nuevo."
     warn "El front sí volvió atrás. Si las tareas de fondo son el problema, hay que redesplegar el commit bueno."
@@ -566,8 +576,8 @@ EOF
     ok "Contenedor legacy app-django-1 PARADO (no borrado: red de seguridad)."
   fi
   docker stop -t 15 app-node-ssr-1 >/dev/null 2>&1 || true
-  dc stop -t 130 celeryworker celerybeat || true
-  dc up -d celeryworker celerybeat
+  dc stop -t 130 celeryworker celeryworker-crm celerybeat || true
+  dc up -d celeryworker celeryworker-crm celerybeat
 
   ok "Bootstrap completado. A partir de ahora: ./deploy.sh"
   warn "Actualiza el crontab para que use /usr/local/bin/calendar-dj (ver docs/deploy-zero-downtime.md)."
