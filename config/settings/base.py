@@ -84,6 +84,9 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Lo primero: captura la petición tal como llegó (ruta y host originales,
+    # antes de que AppBasePathMiddleware los reescriba).
+    'calendario.core.respaldo.RespaldoRequestsMiddleware',
     'calendario.users.middleware.StripTrailingDotHostMiddleware',
     'calendario.funnels.middleware.AppBasePathMiddleware',
     'calendario.funnels.middleware.FunnelPublicCoopMiddleware',
@@ -393,9 +396,12 @@ SUPABASE_URL = env.str('SUPABASE_URL', default='')  # https://<ref>.supabase.co
 SUPABASE_SECRET_KEY = env.str('SUPABASE_SECRET_KEY', default='')
 SUPABASE_TIMEOUT_SECONDS = env.int('SUPABASE_TIMEOUT_SECONDS', default=15)
 SUPABASE_RETENTION_DAYS = env.int('SUPABASE_RETENTION_DAYS', default=7)
-SUPABASE_TABLE_LEADS = env.str('SUPABASE_TABLE_LEADS', default='leads_backup')
-SUPABASE_TABLE_PRE_SCHEDULES = env.str('SUPABASE_TABLE_PRE_SCHEDULES', default='preschedules_backup')
-SUPABASE_TABLE_SCHEDULES = env.str('SUPABASE_TABLE_SCHEDULES', default='schedules_backup')
+# Esquema en docs/supabase_backup_schema.sql (calendario/core/respaldo.py).
+SUPABASE_TABLE_LEADS = env.str('SUPABASE_TABLE_LEADS', default='leads')
+SUPABASE_TABLE_PRE_SCHEDULES = env.str('SUPABASE_TABLE_PRE_SCHEDULES', default='prellamadas')
+SUPABASE_TABLE_SCHEDULES = env.str('SUPABASE_TABLE_SCHEDULES', default='reservas')
+SUPABASE_TABLE_REQUESTS = env.str('SUPABASE_TABLE_REQUESTS', default='requests')
+SUPABASE_TABLE_VIDEO_PROGRESS = env.str('SUPABASE_TABLE_VIDEO_PROGRESS', default='video_progress')
 
 # ──────────────────────────────────────────────────────────────────────
 # Respaldo del catálogo de vídeo: Bunny Stream → Cloudflare R2
@@ -424,6 +430,7 @@ MONITORING_HEARTBEAT_URL = env.str('MONITORING_HEARTBEAT_URL', default='')
 # Tareas en cola a partir de las cuales se avisa, por cola.
 MONITORING_UMBRAL_COLAS = {'celery': 1500, 'crm': 100, 'sistema': 30}
 MONITORING_REDIS_MAX_MB = env.int('MONITORING_REDIS_MAX_MB', default=1024)
+MONITORING_SUPABASE_MAX_MB = env.int('MONITORING_SUPABASE_MAX_MB', default=400)
 
 # Celery
 CELERY_BROKER_URL = env.str('CELERY_BROKER_URL', default='redis://redis:6379/0')

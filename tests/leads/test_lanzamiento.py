@@ -62,8 +62,10 @@ class DespachoDeLanzamientoTest(TestCase):
         # el veredicto del email para decidir sobre ActiveCampaign.
         self.assertTrue(llamadas['process_neverbounce'], 'el email debe validarse')
         self.assertFalse(llamadas['process_crm_send'], 'al CRM se llega encadenado')
+        # El respaldo en Supabase no es un envío: se guarda como cualquier lead.
+        self.assertTrue(llamadas['process_supabase'], 'el lead de evento también se respalda')
         for servicio in SERVICIOS:
-            if servicio == 'process_neverbounce':
+            if servicio in ('process_neverbounce', 'process_supabase'):
                 continue
             self.assertFalse(llamadas[servicio], f'{servicio} no debería dispararse')
 

@@ -22,9 +22,27 @@ def purge_old_supabase_backups():
         settings.SUPABASE_TABLE_LEADS,
         settings.SUPABASE_TABLE_PRE_SCHEDULES,
         settings.SUPABASE_TABLE_SCHEDULES,
+        settings.SUPABASE_TABLE_REQUESTS,
+        settings.SUPABASE_TABLE_VIDEO_PROGRESS,
     )
     for table in tables:
         try:
             supabase.delete_older_than(table, 'created_at', days)
         except Exception:
             logger.exception('[Supabase] purge falló para %s', table)
+
+
+@shared_task(bind=True, max_retries=3, autoretry_for=(Exception,), retry_backoff=True,
+             retry_backoff_max=300, default_retry_delay=30, acks_late=True)
+def process_request_supabase(self, tabla, fila):
+    """Sube a Supabase un request en crudo capturado por
+    calendario.core.respaldo.RespaldoRequestsMiddleware. `tabla` es 'requests'
+    o 'video_progress'. Upsert por `id` (uuid de la captura): los reintentos no
+    duplican."""
+    from . import supabase
+
+    nombre = {
+        'requests': settings.SUPABASE_TABLE_REQUESTS,
+        'video_progress': settings.SUPABASE_TABLE_VIDEO_PROGRESS,
+    }[tabla]
+    supabase.insert_rows(nombre, [fila], on_conflict='id')

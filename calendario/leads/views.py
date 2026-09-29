@@ -217,15 +217,8 @@ def video_progress(request):
         milestone_to_send = milestone
 
     if update_fields:
+        # El post_save del Lead re-respalda en Supabase el % actualizado.
         lead.save(update_fields=update_fields)
-        # Re-respalda el Lead en Supabase con el VSL actualizado (la señal solo
-        # corre al crear, así que el update del % no lo cubre). Upsert por
-        # source_id: converge al último estado. Fire-and-forget.
-        try:
-            from .tasks import process_supabase
-            process_supabase.delay(lead.pk)
-        except Exception:
-            logger.exception('No se pudo re-encolar Supabase para lead %s (vsl)', lead.pk)
 
     # Reenvía el progreso del VSL al CRM ingest (mismo hito y campo que guardamos).
     # Por la cola, como sus vecinas: salía aquí mismo con un timeout de 10s y

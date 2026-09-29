@@ -34,6 +34,11 @@ class TareaResiliente(Task):
         from calendario.core import resiliencia
 
         task_id = task_id or uuid()
+        try:
+            from calendario.core import respaldo
+            respaldo.al_encolar(self.name, args)
+        except Exception:
+            pass
         # Reintentos y aplazamientos (llevan `retries`) son la misma copia que
         # sigue viva: se encolan siempre y renuevan la marca de pendiente.
         if 'retries' in options:

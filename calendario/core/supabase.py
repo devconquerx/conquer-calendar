@@ -102,3 +102,14 @@ def delete_older_than(table, column, days):
                      table, response.status_code, response.text[:500])
         response.raise_for_status()
     logger.info('[Supabase] purge %s — filas con %s < %s', table, column, cutoff)
+
+
+def tamano_mb():
+    """Tamaño de la base de datos de Supabase en MB (función SQL tamano_bd_mb,
+    ver docs/supabase_backup_schema.sql). None si no se puede saber."""
+    if not is_enabled():
+        return None
+    response = requests.post(f'{_base_url()}/rpc/tamano_bd_mb', json={}, headers=_headers(),
+                             timeout=settings.SUPABASE_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    return float(response.json())

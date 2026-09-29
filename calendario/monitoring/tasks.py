@@ -196,6 +196,19 @@ def check_colas():
     except Exception:
         pass
 
+    # Supabase en el plan Free pasa a solo lectura al llegar a 500 MB: se avisa
+    # antes. Cada 10 min basta (y no gasta egress en cada minuto).
+    if now.minute % 10 == 0:
+        try:
+            from calendario.core import supabase
+            mb = supabase.tamano_mb()
+            umbral = getattr(settings, 'MONITORING_SUPABASE_MAX_MB', 400)
+            if mb is not None and mb >= umbral:
+                problemas.append(('supabase_tamano', f'Supabase ocupa {mb:.0f} MB (umbral {umbral} MB; '
+                                                     f'en el plan Free queda en solo lectura a 500 MB)'))
+        except Exception:
+            logger.exception('[Monitoring] No se pudo leer el tamaño de Supabase')
+
     try:
         resiliencia.limpiar_pendientes_huerfanas()
     except Exception:

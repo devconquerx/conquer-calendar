@@ -113,6 +113,7 @@ SERVICIO_DE_TAREA = {
     'calendario.bookings.tasks.process_academia_borrado': 'academia',
     'calendario.video_backup.tasks.sincronizar_bunny_r2': 'bunny',
     'calendario.core.tasks.purge_old_supabase_backups': 'supabase',
+    'calendario.core.tasks.process_request_supabase': 'supabase',
 }
 
 # Tareas que no llaman a ningún servicio externo (o que solo encolan). Toda
@@ -209,7 +210,10 @@ def _k(*partes):
 #    la marca se ha quedado huérfana (mensaje purgado o perdido) y limpiarla.
 # ---------------------------------------------------------------------------
 def clave_pendiente(nombre, args, kwargs):
-    return _k('pendiente', nombre, repr(tuple(args or ())), repr(sorted((kwargs or {}).items())))
+    # Con hash: los argumentos pueden ser grandes (un request entero en crudo).
+    import hashlib
+    firma = repr(tuple(args or ())) + repr(sorted((kwargs or {}).items()))
+    return _k('pendiente', nombre, hashlib.sha1(firma.encode()).hexdigest())
 
 
 def _valor_pendiente(id_tarea):

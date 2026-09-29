@@ -263,7 +263,11 @@ def dispatch_lead_tasks(lead_id):
 
     lead = Lead.objects.get(pk=lead_id)
 
-    # Los leads de evento van SOLO al CRM. No es una decisión nueva: en el
+    # Respaldo en Supabase: siempre, de cualquier lead (también los de evento),
+    # independiente del origen y del CRM.
+    process_supabase.delay(lead_id)
+
+    # Los leads de evento van SOLO al CRM (el respaldo de arriba no es un envío). No es una decisión nueva: en el
     # escenario de Make esas ramas están apagadas y se ve en el log de
     # ejecuciones —un evento de Blocks consume 2 operaciones (webhook + CRM) y
     # uno de Languages con teléfono 3 (webhook + CRM + FunnelChat)—; si
@@ -291,9 +295,6 @@ def dispatch_lead_tasks(lead_id):
             process_funnelchat.delay(lead_id)
         logger.info('Lead %s: lanzamiento → CRM (+FunnelChat si CL)', lead_id)
         return
-
-    # Respaldo en Supabase: siempre, independiente del origen y del CRM.
-    process_supabase.delay(lead_id)
 
     # Conquer Legal: Google Ads/TikTok los dispara el server container de sGTM
     # — empujarlos también por API los duplicaría. Meta sí va por API (el sGTM
@@ -350,6 +351,11 @@ def sweep_incomplete_leads():
         # relanza un values_list por cada lead (N+1).
         tag_names = set(t.name for t in lead.tags.all())
 
+        # Supabase: todos, también los de evento.
+        if 'supabase_done' not in tag_names and 'supabase_failed' not in tag_names:
+            process_supabase.delay(lead.pk)
+            requeued += 1
+
         # Misma regla que dispatch_lead_tasks: los de evento solo van al CRM,
         # así que el sweep no debe reencolarles el resto de servicios.
         if es_lead_de_lanzamiento(lead):
@@ -366,10 +372,6 @@ def sweep_incomplete_leads():
         # Mismo gate que dispatch_lead_tasks: Legal manda Meta por API;
         # Google Ads/TikTok van por el server container de sGTM.
         es_legal = get_school_code(lead) == 'cg'
-
-        if 'supabase_done' not in tag_names and 'supabase_failed' not in tag_names:
-            process_supabase.delay(lead.pk)
-            requeued += 1
 
         if (fires_pixel_lead(lead) or is_from_meta(lead)) and 'meta_capi_done' not in tag_names and 'meta_capi_failed' not in tag_names:
             process_meta_capi.delay(lead.pk)
