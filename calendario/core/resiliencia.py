@@ -25,6 +25,9 @@ pasar:
 5. **Cortacircuitos** (`circuito_abierto`): si un servicio falla seguido o
    devuelve 429, se deja de llamarlo un rato. Sus tareas se aplazan sin
    ejecutarse, así que no gastan huecos ni reintentos (no acaban en *_failed).
+   Y aunque el circuito no llegue a abrirse (un servicio lento con timeouts
+   sueltos), un fallo del servicio tampoco gasta reintentos: la tarea se aplaza
+   y lo sigue intentando 24 h (PACIENCIA_SERVICIO, TareaResiliente.retry).
 
 6. **Carril de recuperación** (`CARRIL_RECUPERACION`): lo que reencola un
    sweep solo usa la capacidad que el tráfico en vivo deja libre. Un backlog de
@@ -441,6 +444,27 @@ def es_fallo_del_servicio(exc):
     if codigo is not None:
         return codigo == 429 or codigo >= 500
     return isinstance(exc, requests.RequestException)
+
+
+# Cuánto se sigue intentando una tarea cuyo servicio falla (timeout, 5xx, 429,
+# conexión) antes de darla por perdida. Es la ventana de los sweeps: pasado este
+# tiempo el objeto ya no lo recoge nadie.
+PACIENCIA_SERVICIO = 24 * 3600
+
+# Servicios que NO esperan: el verificador de email es opcional y detrás de él
+# va encadenado el envío al CRM. Si no contesta, se sigue sin validar (como
+# siempre) en vez de retrasar la entrada del lead al CRM.
+SIN_PACIENCIA = {'verificador_email'}
+
+
+def tiene_paciencia(nombre_tarea):
+    servicio = SERVICIO_DE_TAREA.get(nombre_tarea)
+    return bool(servicio) and servicio not in SIN_PACIENCIA
+
+
+def espera_tras_fallo(aplazos):
+    """15 s, 30 s, 1 min, 2 min, 4 min y luego cada 5 min, con jitter."""
+    return min(APLAZO_MAX, 15 * 2 ** min(aplazos - 1, 5) * random.uniform(0.8, 1.2))
 
 
 def registrar_fallo(servicio, exc):

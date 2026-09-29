@@ -99,6 +99,43 @@ class TareaResiliente(Task):
                 resiliencia.soltar_hueco(servicio, req.id)
 
 
+    def retry(self, args=None, kwargs=None, exc=None, throw=True, eta=None, countdown=None,
+              max_retries=None, **options):
+        """Un fallo DEL SERVICIO (timeout, 5xx, 429, conexión) no gasta reintentos:
+        la tarea se aplaza con espera creciente y lo sigue intentando hasta
+        resiliencia.PACIENCIA_SERVICIO (24 h). Así un servicio lento o caído un
+        rato nunca da un envío por perdido. Los fallos nuestros (un 400, un
+        objeto borrado) siguen el camino normal: sus reintentos y, al agotarlos,
+        el tag *_failed y la alerta."""
+        from calendario.core import resiliencia
+
+        req = self.request
+        if (exc is not None and not req.called_directly and not req.is_eager
+                and resiliencia.tiene_paciencia(self.name)
+                and resiliencia.es_fallo_del_servicio(exc)):
+            headers = dict(getattr(req, 'headers', None) or {})
+            ahora = resiliencia.time.time()
+            desde = float(headers.get('servicio_desde') or ahora)
+            if ahora - desde < resiliencia.PACIENCIA_SERVICIO:
+                aplazos = int(headers.get('servicio_aplazos') or 0) + 1
+                espera = resiliencia.espera_tras_fallo(aplazos)
+                resiliencia.registrar_fallo(resiliencia.SERVICIO_DE_TAREA.get(self.name), exc)
+                headers.update(servicio_desde=desde, servicio_aplazos=aplazos)
+                try:
+                    self.signature_from_request(
+                        req, args, kwargs, countdown=espera, retries=req.retries, headers=headers,
+                    ).apply_async()
+                except Exception:
+                    logger.exception('[Resiliencia] No se pudo aplazar %s tras fallo del servicio', self.name)
+                else:
+                    logger.warning('[Resiliencia] %s%s: fallo del servicio (%s), aplazo %d en %.0fs '
+                                   '(sin gastar reintento; lleva %.0f min)', self.name, tuple(req.args or ()),
+                                   type(exc).__name__, aplazos, espera, (ahora - desde) / 60)
+                    raise Ignore()
+        return super().retry(args=args, kwargs=kwargs, exc=exc, throw=throw, eta=eta,
+                             countdown=countdown, max_retries=max_retries, **options)
+
+
 def _carril_de(req):
     """El carril viaja como header del mensaje (y se conserva al aplazar)."""
     headers = getattr(req, 'headers', None)

@@ -421,3 +421,73 @@ class SaludYMemoriaTest(ConRedis):
         with patch.object(resiliencia, 'longitudes_de_colas', return_value={'celery': 0, 'crm': 0, 'sistema': 0}), \
                 patch.object(resiliencia, 'memoria_redis_mb', return_value=(900, 0)):
             self.assertEqual(check_colas(), 1)
+
+
+class PacienciaConElServicioTest(ConRedis):
+    """Un servicio lento (timeouts sueltos que no abren el circuito) no puede
+    dar envíos por perdidos: el 29-sep ActiveCampaign agotó los reintentos de
+    varios leads y quedaron fuera de AC para siempre."""
+
+    def _ejecutar(self, nombre, exc, headers=None):
+        from celery.exceptions import Retry
+        tarea = _tarea_real(nombre)
+        firma = MagicMock()
+        tarea.push_request(id='t-1', called_directly=False, is_eager=False, retries=0, args=(1,),
+                           kwargs={}, headers=headers or {},
+                           delivery_info={'exchange': '', 'routing_key': 'celery'})
+        try:
+            with patch.object(tarea, '_orig_run', side_effect=exc), \
+                    patch.object(type(tarea), 'signature_from_request', return_value=firma) as sfr, \
+                    patch.object(resiliencia, 'motivo_para_aplazar', return_value=None):
+                try:
+                    tarea(1)
+                except (Ignore, Retry) as fin:
+                    return type(fin), sfr.call_args
+        finally:
+            tarea.pop_request()
+
+    def test_un_timeout_se_aplaza_sin_gastar_reintento(self):
+        fin, llamada = self._ejecutar('calendario.leads.tasks.process_activecampaign',
+                                      requests.exceptions.ReadTimeout('lento'))
+        self.assertIs(fin, Ignore)
+        self.assertEqual(llamada.kwargs['retries'], 0)
+        self.assertEqual(llamada.kwargs['headers']['servicio_aplazos'], 1)
+        self.assertIn('servicio_desde', llamada.kwargs['headers'])
+
+    def test_un_429_o_un_5xx_tambien(self):
+        for exc in (_error_http(429), _error_http(503)):
+            fin, _ = self._ejecutar('calendario.leads.tasks.process_activecampaign', exc)
+            self.assertIs(fin, Ignore)
+
+    def test_conserva_el_carril_y_cuenta_los_aplazos(self):
+        from calendario.core.resiliencia import time as t
+        fin, llamada = self._ejecutar(
+            'calendario.leads.tasks.process_activecampaign', requests.exceptions.ConnectionError(),
+            headers={'carril': 'recuperacion', 'servicio_desde': t.time() - 600, 'servicio_aplazos': 3})
+        self.assertIs(fin, Ignore)
+        self.assertEqual(llamada.kwargs['headers']['carril'], 'recuperacion')
+        self.assertEqual(llamada.kwargs['headers']['servicio_aplazos'], 4)
+
+    def test_pasadas_24h_vuelve_al_camino_normal(self):
+        from celery.exceptions import Retry
+        from calendario.core.resiliencia import time as t
+        fin, _ = self._ejecutar(
+            'calendario.leads.tasks.process_activecampaign', requests.exceptions.ReadTimeout(),
+            headers={'servicio_desde': t.time() - resiliencia.PACIENCIA_SERVICIO - 1})
+        self.assertIs(fin, Retry)
+
+    def test_un_error_nuestro_gasta_sus_reintentos_como_siempre(self):
+        from celery.exceptions import Retry
+        fin, _ = self._ejecutar('calendario.leads.tasks.process_activecampaign', _error_http(400))
+        self.assertIs(fin, Retry)
+
+    def test_el_verificador_de_email_no_espera(self):
+        """Detrás va encadenado el CRM: si no contesta, se sigue sin validar."""
+        self.assertFalse(resiliencia.tiene_paciencia('calendario.leads.tasks.process_neverbounce'))
+        self.assertTrue(resiliencia.tiene_paciencia('calendario.leads.tasks.process_crm_send'))
+
+    def test_la_espera_crece_hasta_el_tope(self):
+        esperas = [resiliencia.espera_tras_fallo(n) for n in range(1, 10)]
+        self.assertLess(esperas[0], 20)
+        self.assertTrue(all(e <= resiliencia.APLAZO_MAX for e in esperas))
+        self.assertGreater(esperas[-1], 200)
