@@ -24,11 +24,13 @@ SCHEDULE_SCHOOL_TAG_MAP = {
 }
 
 
+# Se mandan TODAS las escuelas: cuáles atiende el puente lo decide Relay en su .env (sin tocar ni reiniciar calendar).
+# Una escuela no activada en Relay responde 404 y aquí se escribe en AC como siempre (plan B).
+ESCUELAS_PUENTE = {'cb', 'cf', 'cl', 'cg'}
+
+
 def _escuelas_puente():
-    valor = getattr(settings, 'RELAY_PUENTE_ESCUELAS', '') or ''
-    if isinstance(valor, (list, tuple)):
-        valor = ','.join(valor)
-    return {e.strip().lower() for e in valor.split(',') if e.strip()}
+    return ESCUELAS_PUENTE
 
 
 def push_relay(reserva, s=None):

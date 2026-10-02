@@ -1,7 +1,7 @@
 """
 Agendas por el puente de Relay (migración desde ActiveCampaign).
 
-Para las escuelas de RELAY_PUENTE_ESCUELAS, calendar manda la agenda a Relay y Relay escribe en AC. Si Relay falla,
+Calendar manda (todas las escuelas: cuáles atiende lo decide Relay; las demás responden 404) la agenda a Relay y Relay escribe en AC. Si Relay falla,
 tarda o no responde 200, calendar etiqueta AC directamente como siempre (plan B). Sin la variable, nada cambia.
 """
 from datetime import timedelta
@@ -68,9 +68,9 @@ class PuenteRelayTest(TestCase):
         self.agendar(post=MagicMock(return_value=respuesta(cuerpo={'relay': False})))
         self.ac.add_tag.assert_not_called()
 
-    def test_escuela_no_activada_va_a_ac_como_siempre(self):
-        p = self.agendar(escuela='cl')
-        p.assert_not_called()
+    def test_escuela_no_activada_en_relay_va_a_ac_como_siempre(self):
+        p = self.agendar(escuela='cl', post=MagicMock(return_value=respuesta(404)))
+        self.assertEqual(p.call_args.kwargs['json']['escuela'], 'cl')
         self.ac.add_tag.assert_called_once_with('77', '477')
 
     def test_plan_b_si_relay_falla(self):
@@ -82,12 +82,6 @@ class PuenteRelayTest(TestCase):
                 self.agendar(post=post)
                 self.ac.create_or_update_contact.assert_called_once_with('lead@ejemplo.com', 'Lucía')
                 self.ac.add_tag.assert_called_once_with('77', '460')
-
-    @override_settings(RELAY_PUENTE_ESCUELAS='')
-    def test_sin_escuelas_activadas_no_llama_a_relay(self):
-        p = self.agendar()
-        p.assert_not_called()
-        self.ac.add_tag.assert_called_once_with('77', '460')
 
     @override_settings(RELAY_API_KEY='')
     def test_relay_sin_configurar_va_a_ac(self):

@@ -1,7 +1,7 @@
 """
 Registro de lead y % de VSL por el puente de Relay (migración desde ActiveCampaign).
 
-Para las escuelas de RELAY_PUENTE_ESCUELAS_LEAD, calendar manda el lead y el % de VSL a Relay y Relay escribe en AC.
+Calendar manda (todas las escuelas: cuáles atiende lo decide Relay; las demás responden 404) el lead y el % de VSL a Relay y Relay escribe en AC.
 Si Relay falla, tarda o no responde 200, calendar escribe en AC directamente como siempre (plan B). Sin la variable,
 nada cambia.
 """
@@ -76,15 +76,15 @@ class PuenteRelayLeadTest(TestCase):
                 self.ac.add_tag.assert_called_once_with('77', '502')
                 self.ac.add_to_list.assert_called_once_with('77', '19', status=1)
 
-    def test_lead_escuela_no_activada_va_a_ac(self):
+    def test_lead_escuela_no_activada_en_relay_va_a_ac(self):
         self.escuela = 'cl'
         self.lead.funnel = 'cl-eu'
-        p = self.registrar()
-        p.assert_not_called()
+        p = self.registrar(post=MagicMock(return_value=respuesta(404)))
+        self.assertEqual(p.call_args.kwargs['json']['escuela'], 'cl')
         self.ac.add_tag.assert_called_once_with('77', '466')
 
-    @override_settings(RELAY_PUENTE_ESCUELAS_LEAD='')
-    def test_sin_escuelas_lead_no_llama_a_relay(self):
+    @override_settings(RELAY_API_KEY='')
+    def test_sin_relay_configurado_no_llama_a_relay(self):
         p = self.registrar()
         p.assert_not_called()
         self.ac.create_or_update_contact.assert_called_once()
