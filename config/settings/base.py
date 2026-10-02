@@ -325,6 +325,10 @@ META_ACCESS_TOKEN = env.str('META_ACCESS_TOKEN', default='')
 META_ACCESS_TOKEN_LEGAL = env.str('META_ACCESS_TOKEN_LEGAL', default='')
 ACTIVECAMPAIGN_API_URL = env.str('ACTIVECAMPAIGN_API_URL', default='')
 ACTIVECAMPAIGN_API_KEY = env.str('ACTIVECAMPAIGN_API_KEY', default='')
+# Puente de Relay (migración desde AC): escuelas cuyas agendas van por Relay, p. ej. 'cb'. Vacío = como siempre.
+RELAY_API_URL = env.str('RELAY_API_URL', default='')
+RELAY_API_KEY = env.str('RELAY_API_KEY', default='')
+RELAY_PUENTE_ESCUELAS = env.str('RELAY_PUENTE_ESCUELAS', default='')
 NEVERBOUNCE_API_KEY = env.str('NEVERBOUNCE_API_KEY', default='')
 
 # Verificación de email propia (sondeo SMTP). Sustituye a NeverBounce como
