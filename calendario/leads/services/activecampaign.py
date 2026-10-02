@@ -224,6 +224,8 @@ def push_relay_lead(lead, school_code=None):
         return False
     datos = {'email': lead.email, 'nombre_completo': lead.full_name or '', 'escuela': escuela,
              'funnel': _funnel_key(lead, school_code) or '',
+             # Para el historial de UTM de Relay (una llegada por registro; la referencia evita duplicarlo)
+             'referencia': f'calendar-lead:{lead.pk}', 'fecha': lead.created.isoformat() if lead.created else '',
              'telefono': f"{lead.lead_phone_prefix or ''}{lead.lead_phone or ''}" if lead.lead_phone else '',
              'origen': 'calendar',
              **{k: str(getattr(lead, k, None)) for k in CUSTOM_FIELD_MAP if getattr(lead, k, None)}}
@@ -384,7 +386,8 @@ def push_relay_vsl(lead, percent, region=None):
     etiquetas = set(lead.tags.names())
     registro = {'funnel': _funnel_key(lead, get_school_code(lead)) or '', 'nombre_completo': lead.full_name or '',
                 'utm': {k: str(getattr(lead, k)) for k in CUSTOM_FIELD_MAP if getattr(lead, k, None)},
-                'en_ac': bool(etiquetas & {'activecampaign_done', 'relay_puente_lead_done'})}
+                'en_ac': bool(etiquetas & {'activecampaign_done', 'relay_puente_lead_done'}),
+                'referencia': f'calendar-lead:{lead.pk}', 'fecha': lead.created.isoformat() if lead.created else ''}
     datos = {'email': lead.email, 'escuela': escuela, 'region': region_key, 'porcentaje': porcentaje, 'origen': 'calendar',
              'registro': registro}
     if not _post_relay('vsl', datos, f'Lead {lead.pk}'):

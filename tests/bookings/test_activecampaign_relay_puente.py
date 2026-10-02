@@ -111,5 +111,7 @@ class RegistroEnLaAgendaTest(PuenteRelayTest):
                 patch('calendario.leads.services.activecampaign.get_school_code', return_value='cb'), \
                 patch.object(activecampaign.requests, 'post', MagicMock(return_value=respuesta())) as p:
             activecampaign.push_schedule(self.reserva)
-        self.assertEqual(p.call_args.kwargs['json']['registro'], {
+        registro = dict(p.call_args.kwargs['json']['registro'])
+        self.assertEqual((registro.pop('referencia'), bool(registro.pop('fecha'))), (f'calendar-lead:{lead.pk}', True))
+        self.assertEqual(registro, {
             'funnel': 'cb-eu', 'nombre_completo': 'Lucía Pérez', 'utm': {'utm_source': 'metaads'}, 'en_ac': True})

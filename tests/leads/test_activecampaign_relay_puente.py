@@ -55,7 +55,9 @@ class PuenteRelayLeadTest(TestCase):
         self.assertEqual(p.call_args.args[0], 'https://relay.test/api/v1/puente-ac/lead')
         self.assertEqual(p.call_args.kwargs['timeout'], 2)
         self.assertEqual(p.call_args.kwargs['headers']['Authorization'], 'Bearer rl_live_prueba')
-        self.assertEqual(p.call_args.kwargs['json'], {
+        enviado = dict(p.call_args.kwargs['json'])
+        self.assertEqual((enviado.pop('referencia'), bool(enviado.pop('fecha'))), (f'calendar-lead:{self.lead.pk}', True))
+        self.assertEqual(enviado, {
             'email': 'lead@ejemplo.com', 'nombre_completo': 'Lucía Pérez', 'escuela': 'cb', 'funnel': 'cb-eu-2',
             'telefono': '+34600111222', 'origen': 'calendar', 'utm_source': 'metaads', 'utm_campaign': 'c1'})
         self.ac.create_or_update_contact.assert_not_called()
@@ -92,7 +94,11 @@ class PuenteRelayLeadTest(TestCase):
     def test_vsl_por_el_puente(self):
         p = self.vsl(percent=30, region='usa')
         self.assertEqual(p.call_args.args[0], 'https://relay.test/api/v1/puente-ac/vsl')
-        self.assertEqual(p.call_args.kwargs['json'], {
+        enviado = dict(p.call_args.kwargs['json'])
+        registro = dict(enviado['registro'])
+        self.assertEqual((registro.pop('referencia'), bool(registro.pop('fecha'))), (f'calendar-lead:{self.lead.pk}', True))
+        enviado['registro'] = registro
+        self.assertEqual(enviado, {
             'email': 'lead@ejemplo.com', 'escuela': 'cb', 'region': 'us', 'porcentaje': 30, 'origen': 'calendar',
             'registro': {'funnel': 'cb-eu-2', 'nombre_completo': 'Lucía Pérez',
                          'utm': {'utm_source': 'metaads', 'utm_campaign': 'c1'}, 'en_ac': False}})

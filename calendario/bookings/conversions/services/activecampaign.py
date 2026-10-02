@@ -46,7 +46,8 @@ def _registro_del_lead(lead, escuela, email):
     etiquetas = set(lead.tags.names())
     return {'funnel': _funnel_key(lead, codigo) or '', 'nombre_completo': lead.full_name or '',
             'utm': {k: str(getattr(lead, k)) for k in CUSTOM_FIELD_MAP if getattr(lead, k, None)},
-            'en_ac': bool(etiquetas & {'activecampaign_done', 'relay_puente_lead_done'})}
+            'en_ac': bool(etiquetas & {'activecampaign_done', 'relay_puente_lead_done'}),
+            'referencia': f'calendar-lead:{lead.pk}', 'fecha': lead.created.isoformat() if lead.created else ''}
 
 
 def push_relay(reserva, s=None):
