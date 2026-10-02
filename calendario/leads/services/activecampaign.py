@@ -7,6 +7,12 @@ from .utils import get_school_code, get_region_from_lead
 
 logger = logging.getLogger(__name__)
 
+# Puente de Relay (migración desde ActiveCampaign). Para las escuelas de RELAY_PUENTE_ESCUELAS_LEAD el registro del lead
+# y el % de VSL se mandan a Relay, que decide si atiende al contacto y escribe él mismo en AC lo mismo que hace este
+# módulo. Si Relay falla, tarda más de RELAY_PUENTE_TIMEOUT o no responde 200, se escribe en AC directamente (plan B).
+# Contrato: relay/apps/puente_ac/README.md. Se quita cuando se apague AC (relay/docs/provisional-migracion-ac.md).
+RELAY_PUENTE_TIMEOUT = 2
+
 # ActiveCampaign custom field IDs for UTM/click params
 CUSTOM_FIELD_MAP = {
     'utm_source': '43',
@@ -164,19 +170,36 @@ def _resolve_tag_id(client, tag_value):
     return tag_id or None
 
 
-def push_lead(lead):
-    """Sync lead to ActiveCampaign: create/update contact, set tags, add to list."""
-    api_url = getattr(settings, 'ACTIVECAMPAIGN_API_URL', '')
-    api_key = getattr(settings, 'ACTIVECAMPAIGN_API_KEY', '')
-    if not api_url or not api_key:
-        logger.warning('[ActiveCampaign] API not configured')
-        return
+def _escuelas_puente_lead():
+    valor = getattr(settings, 'RELAY_PUENTE_ESCUELAS_LEAD', '') or ''
+    if isinstance(valor, (list, tuple)):
+        valor = ','.join(valor)
+    return {e.strip().lower() for e in valor.split(',') if e.strip()}
 
-    if not lead.email:
-        return
 
-    school_code = get_school_code(lead)
+def _post_relay(ruta, datos, ref):
+    """POST al puente de Relay. True solo con un 200; si no, loguea y devuelve False (el llamador hace el plan B)."""
+    url = (getattr(settings, 'RELAY_API_URL', '') or '').rstrip('/')
+    clave = getattr(settings, 'RELAY_API_KEY', '') or ''
+    if not url or not clave:
+        return False
+    try:
+        r = requests.post(f'{url}/api/v1/puente-ac/{ruta}', json=datos, timeout=RELAY_PUENTE_TIMEOUT,
+                          headers={'Authorization': f'Bearer {clave}', 'Accept': 'application/json'})
+    except requests.RequestException as e:
+        logger.warning('[Relay] %s: puente %s no disponible (%s): plan B (AC directo)', ref, ruta, type(e).__name__)
+        return False
+    if r.status_code != 200:
+        logger.warning('[Relay] %s: puente %s respondió %s: plan B (AC directo)', ref, ruta, r.status_code)
+        return False
+    return True
 
+
+def _escuela_relay(school_code):
+    return 'cf' if school_code == 'fi' else (school_code or '')
+
+
+def _funnel_key(lead, school_code):
     # `lead.funnel` ya llega como el código corto del CRM (p.ej. 'cb-eu-2',
     # 'fi-latam' — ver leads/views.py::_FUNNEL_SLUG_TO_CRM_CODE), así que si
     # calza tal cual con una entrada del mapa se usa directo. Esto es necesario
@@ -185,11 +208,54 @@ def push_lead(lead):
     # este atajo, cb-eu-2 caía al tag de cb-latam por el fallback de región.
     funnel_lower = (lead.funnel or '').lower().strip()
     if funnel_lower in FUNNEL_TAG_MAP:
-        funnel_key = funnel_lower
-    else:
-        region = get_region_from_lead(lead).lower()  # 'latam', 'eu', 'usa'
-        region_key = 'us' if region == 'usa' else region
-        funnel_key = f'{school_code}-{region_key}' if school_code else None
+        return funnel_lower
+    region = get_region_from_lead(lead).lower()  # 'latam', 'eu', 'usa'
+    region_key = 'us' if region == 'usa' else region
+    return f'{school_code}-{region_key}' if school_code else None
+
+
+def push_relay_lead(lead, school_code=None):
+    """Manda el registro del lead al puente de Relay. True si lo aceptó (200): entonces Relay escribe en AC."""
+    school_code = school_code if school_code is not None else get_school_code(lead)
+    escuela = _escuela_relay(school_code)
+    if not lead.email or not escuela or escuela not in _escuelas_puente_lead():
+        return False
+    datos = {'email': lead.email, 'nombre_completo': lead.full_name or '', 'escuela': escuela,
+             'funnel': _funnel_key(lead, school_code) or '',
+             'telefono': f"{lead.lead_phone_prefix or ''}{lead.lead_phone or ''}" if lead.lead_phone else '',
+             'origen': 'calendar',
+             **{k: str(getattr(lead, k, None)) for k in CUSTOM_FIELD_MAP if getattr(lead, k, None)}}
+    if not _post_relay('lead', datos, f'Lead {lead.pk}'):
+        return False
+    logger.info('[Relay] Lead %s: registro %s enviado al puente', lead.pk, datos['funnel'])
+    return True
+
+
+def push_lead(lead):
+    """Sync lead to ActiveCampaign: create/update contact, set tags, add to list.
+
+    Para las escuelas de RELAY_PUENTE_ESCUELAS_LEAD va primero por el puente de Relay; si falla, sigue como siempre."""
+    if not lead.email:
+        return
+
+    school_code = get_school_code(lead)
+
+    if push_relay_lead(lead, school_code):
+        lead.tags.add('relay_puente_lead_done')
+        try:
+            lead.is_form_vsl_processed = True
+            lead.save(update_fields=['is_form_vsl_processed'])
+        except Exception as save_err:
+            logger.error(f'[ActiveCampaign] Lead {lead.pk} failed to save is_form_vsl_processed: {save_err}')
+        return
+
+    api_url = getattr(settings, 'ACTIVECAMPAIGN_API_URL', '')
+    api_key = getattr(settings, 'ACTIVECAMPAIGN_API_KEY', '')
+    if not api_url or not api_key:
+        logger.warning('[ActiveCampaign] API not configured')
+        return
+
+    funnel_key = _funnel_key(lead, school_code)
 
     client = ActiveCampaignClient()
 
@@ -254,14 +320,19 @@ def push_vsl_percent(lead, percent, region=None):
     `region` es la que reporta el navegador; si no llega, se deduce del lead.
     Si la combinación marca+región no tiene campo, no-op: igual de inocuo que
     el `return` temprano que hacía el JS legacy cuando no había mapeo.
+
+    Para las escuelas de RELAY_PUENTE_ESCUELAS_LEAD va primero por el puente de Relay; si falla, sigue como siempre.
     """
+    if not lead.email or not percent:
+        return
+
+    if push_relay_vsl(lead, percent, region):
+        return
+
     api_url = getattr(settings, 'ACTIVECAMPAIGN_API_URL', '')
     api_key = getattr(settings, 'ACTIVECAMPAIGN_API_KEY', '')
     if not api_url or not api_key:
         logger.warning('[ActiveCampaign] API not configured')
-        return
-
-    if not lead.email or not percent:
         return
 
     school_code = get_school_code(lead)
@@ -292,3 +363,22 @@ def push_vsl_percent(lead, percent, region=None):
         '[ActiveCampaign] Lead %s: vsl %s%% -> campo %s (%s-%s)',
         lead.pk, percent, field_id, school_code, region_key,
     )
+
+
+def push_relay_vsl(lead, percent, region=None):
+    """Manda el % de VSL al puente de Relay (misma escuela y región que push_vsl_percent). True si lo aceptó (200)."""
+    escuela = _escuela_relay(get_school_code(lead))
+    if not escuela or escuela not in _escuelas_puente_lead():
+        return False
+    region_key = (region or '').lower().strip() or (get_region_from_lead(lead) or '').lower()
+    if region_key == 'usa':
+        region_key = 'us'
+    try:
+        porcentaje = int(float(percent))
+    except (TypeError, ValueError):
+        return False
+    datos = {'email': lead.email, 'escuela': escuela, 'region': region_key, 'porcentaje': porcentaje, 'origen': 'calendar'}
+    if not _post_relay('vsl', datos, f'Lead {lead.pk}'):
+        return False
+    logger.info('[Relay] Lead %s: vsl %s%% (%s-%s) enviado al puente', lead.pk, percent, escuela, region_key)
+    return True

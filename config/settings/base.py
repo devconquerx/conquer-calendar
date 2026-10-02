@@ -329,6 +329,8 @@ ACTIVECAMPAIGN_API_KEY = env.str('ACTIVECAMPAIGN_API_KEY', default='')
 RELAY_API_URL = env.str('RELAY_API_URL', default='')
 RELAY_API_KEY = env.str('RELAY_API_KEY', default='')
 RELAY_PUENTE_ESCUELAS = env.str('RELAY_PUENTE_ESCUELAS', default='')
+# Escuelas cuyo registro de lead y % de VSL van por el puente de Relay (aparte de las agendas). Vacío = como siempre.
+RELAY_PUENTE_ESCUELAS_LEAD = env.str('RELAY_PUENTE_ESCUELAS_LEAD', default='')
 NEVERBOUNCE_API_KEY = env.str('NEVERBOUNCE_API_KEY', default='')
 
 # Verificación de email propia (sondeo SMTP). Sustituye a NeverBounce como
