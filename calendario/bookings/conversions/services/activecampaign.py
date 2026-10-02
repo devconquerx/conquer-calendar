@@ -33,6 +33,22 @@ def _escuelas_puente():
     return ESCUELAS_PUENTE
 
 
+def _registro_del_lead(lead, escuela, email):
+    """Registro del lead de la reserva (funnel, nombre, UTM y si llegó a AC), para que Relay complete a quien se
+    registró antes de activar el puente y agenda ahora. Solo si es el mismo email y la misma escuela que la agenda."""
+    if lead is None or (lead.email or '').strip().lower() != (email or '').strip().lower():
+        return None
+    from calendario.leads.services.activecampaign import CUSTOM_FIELD_MAP, _escuela_relay, _funnel_key, get_school_code
+
+    codigo = get_school_code(lead)
+    if _escuela_relay(codigo) != escuela:
+        return None
+    etiquetas = set(lead.tags.names())
+    return {'funnel': _funnel_key(lead, codigo) or '', 'nombre_completo': lead.full_name or '',
+            'utm': {k: str(getattr(lead, k)) for k in CUSTOM_FIELD_MAP if getattr(lead, k, None)},
+            'en_ac': bool(etiquetas & {'activecampaign_done', 'relay_puente_lead_done'})}
+
+
 def push_relay(reserva, s=None):
     """Manda la agenda al puente de Relay. True si Relay la aceptó (200): entonces Relay escribe en AC.
 
@@ -45,6 +61,8 @@ def push_relay(reserva, s=None):
         return False
     datos = {'email': s.lead_email, 'nombre_completo': s.lead_name or '', 'escuela': escuela,
              'telefono': s.lead_phone_number or '', 'origen': 'calendar', 'reiniciar': False}
+    if registro := _registro_del_lead(getattr(s, 'lead', None), escuela, s.lead_email):
+        datos['registro'] = registro
     try:
         r = requests.post(f'{url}/api/v1/puente-ac/agenda', json=datos, timeout=RELAY_PUENTE_TIMEOUT,
                           headers={'Authorization': f'Bearer {clave}', 'Accept': 'application/json'})

@@ -94,3 +94,22 @@ class PuenteRelayTest(TestCase):
         p = self.agendar(escuela='fi')
         self.assertEqual(p.call_args.kwargs['json']['escuela'], 'cf')
         self.ac.add_tag.assert_not_called()
+
+
+@override_settings(**RELAY)
+class RegistroEnLaAgendaTest(PuenteRelayTest):
+    """Rezagados: la agenda lleva el registro del lead (misma persona y escuela) para que Relay lo complete."""
+
+    def test_manda_el_registro_del_lead(self):
+        from calendario.leads.models import Lead
+
+        lead = Lead.objects.create(email='lead@ejemplo.com', full_name='Lucía Pérez', funnel='cb-eu', utm_source='metaads')
+        lead.tags.add('activecampaign_done')
+        c = ctx()
+        c.lead = lead
+        with patch.object(activecampaign, 'build_schedule_ctx', return_value=c), \
+                patch('calendario.leads.services.activecampaign.get_school_code', return_value='cb'), \
+                patch.object(activecampaign.requests, 'post', MagicMock(return_value=respuesta())) as p:
+            activecampaign.push_schedule(self.reserva)
+        self.assertEqual(p.call_args.kwargs['json']['registro'], {
+            'funnel': 'cb-eu', 'nombre_completo': 'Lucía Pérez', 'utm': {'utm_source': 'metaads'}, 'en_ac': True})
