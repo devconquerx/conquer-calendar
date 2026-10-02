@@ -379,7 +379,14 @@ def push_relay_vsl(lead, percent, region=None):
         porcentaje = int(float(percent))
     except (TypeError, ValueError):
         return False
-    datos = {'email': lead.email, 'escuela': escuela, 'region': region_key, 'porcentaje': porcentaje, 'origen': 'calendar'}
+    # Su registro, para que Relay complete a quien se registró antes de activar el puente (solo le llega el % de VSL).
+    # `en_ac`: si el registro llegó a AC (directo o por el puente); con el email rechazado no, y Relay no lo completa.
+    etiquetas = set(lead.tags.names())
+    registro = {'funnel': _funnel_key(lead, get_school_code(lead)) or '', 'nombre_completo': lead.full_name or '',
+                'utm': {k: str(getattr(lead, k)) for k in CUSTOM_FIELD_MAP if getattr(lead, k, None)},
+                'en_ac': bool(etiquetas & {'activecampaign_done', 'relay_puente_lead_done'})}
+    datos = {'email': lead.email, 'escuela': escuela, 'region': region_key, 'porcentaje': porcentaje, 'origen': 'calendar',
+             'registro': registro}
     if not _post_relay('vsl', datos, f'Lead {lead.pk}'):
         return False
     logger.info('[Relay] Lead %s: vsl %s%% (%s-%s) enviado al puente', lead.pk, percent, escuela, region_key)

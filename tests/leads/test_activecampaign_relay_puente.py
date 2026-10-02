@@ -92,8 +92,13 @@ class PuenteRelayLeadTest(TestCase):
     def test_vsl_por_el_puente(self):
         p = self.vsl(percent=30, region='usa')
         self.assertEqual(p.call_args.args[0], 'https://relay.test/api/v1/puente-ac/vsl')
-        self.assertEqual(p.call_args.kwargs['json'], {'email': 'lead@ejemplo.com', 'escuela': 'cb', 'region': 'us',
-                                                      'porcentaje': 30, 'origen': 'calendar'})
+        self.assertEqual(p.call_args.kwargs['json'], {
+            'email': 'lead@ejemplo.com', 'escuela': 'cb', 'region': 'us', 'porcentaje': 30, 'origen': 'calendar',
+            'registro': {'funnel': 'cb-eu-2', 'nombre_completo': 'Lucía Pérez',
+                         'utm': {'utm_source': 'metaads', 'utm_campaign': 'c1'}, 'en_ac': False}})
+        self.lead.tags.add('activecampaign_done')
+        p = self.vsl(percent=40, region='usa')
+        self.assertTrue(p.call_args.kwargs['json']['registro']['en_ac'])
         self.ac.create_or_update_contact.assert_not_called()
 
     def test_vsl_plan_b(self):
