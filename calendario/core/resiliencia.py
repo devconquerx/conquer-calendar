@@ -47,7 +47,6 @@ existiera. Una protección que puede trabar la cola por sí misma no protege.
 import contextlib
 import contextvars
 import logging
-import os
 import random
 import time
 
@@ -105,7 +104,6 @@ SERVICIO_DE_TAREA = {
     'calendario.bookings.tasks.process_schedule_supabase': 'supabase',
     'calendario.funnels.tasks.process_pre_schedule_supabase': 'supabase',
     'calendario.leads.tasks.process_funnelchat': 'funnelchat',
-    'calendario.leads.tasks.process_neverbounce': 'verificador_email',
     'calendario.leads.tasks.process_crm_send': 'crm',
     'calendario.leads.tasks.process_vsl_crm': 'crm',
     'calendario.funnels.tasks.process_pre_schedule_crm': 'crm',
@@ -123,24 +121,14 @@ SERVICIO_DE_TAREA = {
 # tarea tiene que estar en SERVICIO_DE_TAREA o aquí: un test lo comprueba, para
 # que una tarea nueva no se cuele sin tope de huecos ni ritmo.
 SIN_SERVICIO = {
+    # PROVISIONAL (se borra en el despliegue siguiente): solo reencola AC y CRM.
+    'calendario.leads.tasks.process_neverbounce',
     'calendario.leads.tasks.sweep_incomplete_leads',
     'calendario.bookings.tasks.sweep_incomplete_reservas',
     'calendario.funnels.tasks.sweep_incomplete_prellamadas',
     'calendario.monitoring.tasks.check_funnel_health',
     'calendario.monitoring.tasks.check_colas',
 }
-
-
-def _por_minuto(valor, defecto):
-    """'6/m', '1/s', '120/h' o un número → tareas por minuto."""
-    try:
-        valor = str(valor).strip()
-        if '/' not in valor:
-            return float(valor)
-        n, unidad = valor.split('/')
-        return float(n) * {'s': 60, 'm': 1, 'h': 1 / 60}[unidad.strip()[0]]
-    except Exception:
-        return defecto
 
 
 SERVICIOS = {
@@ -152,11 +140,6 @@ SERVICIOS = {
     'google_ads': {'huecos': 2, 'por_min': 90},
     'supabase': {'huecos': 3, 'por_min': 600},
     'funnelchat': {'huecos': 2, 'por_min': 120},
-    # Sondeo SMTP propio: Gmail corta la IP si se le pregunta seguido.
-    'verificador_email': {
-        'huecos': 1,
-        'por_min': _por_minuto(os.environ.get('EMAIL_VERIFIER_RATE_LIMIT', '6/m'), 6),
-    },
     'crm': {'huecos': 4, 'por_min': 600},
     'academia': {'huecos': 2, 'por_min': 120},
     'bunny': {'huecos': 1, 'por_min': 60},
@@ -451,15 +434,8 @@ def es_fallo_del_servicio(exc):
 # tiempo el objeto ya no lo recoge nadie.
 PACIENCIA_SERVICIO = 24 * 3600
 
-# Servicios que NO esperan: el verificador de email es opcional y detrás de él
-# va encadenado el envío al CRM. Si no contesta, se sigue sin validar (como
-# siempre) en vez de retrasar la entrada del lead al CRM.
-SIN_PACIENCIA = {'verificador_email'}
-
-
 def tiene_paciencia(nombre_tarea):
-    servicio = SERVICIO_DE_TAREA.get(nombre_tarea)
-    return bool(servicio) and servicio not in SIN_PACIENCIA
+    return bool(SERVICIO_DE_TAREA.get(nombre_tarea))
 
 
 def espera_tras_fallo(aplazos):

@@ -183,7 +183,6 @@ TASK_FAILURE_TAGS = {
     'calendario.leads.tasks.process_google_ads': ('leads.Lead', 'google_ads_failed'),
     'calendario.leads.tasks.process_respondio': ('leads.Lead', 'respondio_failed'),
     'calendario.leads.tasks.process_activecampaign': ('leads.Lead', 'activecampaign_failed'),
-    'calendario.leads.tasks.process_neverbounce': ('leads.Lead', 'neverbounce_failed'),
     'calendario.leads.tasks.process_crm_send': ('leads.Lead', 'crm_failed'),
     'calendario.leads.tasks.process_supabase': ('leads.Lead', 'supabase_failed'),
     'calendario.bookings.tasks.process_schedule_meta_capi': ('bookings.Reserva', 'sch_meta_capi_failed'),

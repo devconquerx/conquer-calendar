@@ -63,7 +63,7 @@ class ElCodigoDeFunnelTest(TestCase):
 
     Su código no lleva "lanzamiento" —es `cb-codingweek5-eu`—, así que sin
     declararlo se iría por el pipeline completo del funnel: Supabase,
-    NeverBounce, Respond.io y conversiones. En Make consume las mismas dos
+    ActiveCampaign, Respond.io y conversiones. En Make consume las mismas dos
     operaciones que un lanzamiento, webhook e ingest, y nada más.
     """
 

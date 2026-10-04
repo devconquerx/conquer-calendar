@@ -147,7 +147,7 @@ def check_funnel_health():
             'leads_task_stale',
             f'{stale_leads} leads con tareas Celery incompletas',
             f'{stale_leads} leads (creados hace 5-60 min) sin tag crm_done.\n'
-            f'Posibles causas: Celery workers caídos, Redis no responde, NeverBounce/CRM caídos.\n'
+            f'Posibles causas: Celery workers caídos, Redis no responde, CRM caído.\n'
             f'Hora del check: {now:%Y-%m-%d %H:%M:%S UTC}',
         )
     else:

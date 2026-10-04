@@ -8,10 +8,8 @@ Languages con teléfono 3 (webhook + CRM + FunnelChat)—. Si salieran correos o
 Respond.io habría 5 o más, y no hay ninguna ejecución por encima de 4 en
 150.969 registros.
 
-Sí pasan por la validación del email, aunque Make no lo hiciera: el CRM
-decide con `neverbounce_result` si el lead entra en ActiveCampaign, y desde que
-dejó de consultar a NeverBounce no tiene forma de averiguarlo por su cuenta. Si
-no le llega el veredicto desde aquí, se queda sin ninguno.
+El calendario no valida el email de nadie: eso lo hace Relay al recibir el
+contacto. Al CRM van directos.
 """
 import json
 import re
@@ -28,7 +26,7 @@ from calendario.leads.tasks import es_lead_de_lanzamiento
 RUTA = 'calendario.leads.tasks.'
 SERVICIOS = ('process_supabase', 'process_meta_capi', 'process_tiktok_events',
              'process_google_ads', 'process_respondio', 'process_activecampaign',
-             'process_neverbounce', 'process_funnelchat')
+             'process_funnelchat')
 
 
 class DetectaLanzamientoTest(TestCase):
@@ -56,28 +54,23 @@ class DespachoDeLanzamientoTest(TestCase):
             for p in parches.values():
                 p.stop()
 
-    def test_el_de_evento_va_al_crm_pasando_por_la_validacion(self):
+    def test_el_de_evento_va_directo_al_crm(self):
         llamadas = self._crear('cb-lanzamiento11')
-        # El CRM le llega encadenado desde la validación, no directo: necesita
-        # el veredicto del email para decidir sobre ActiveCampaign.
-        self.assertTrue(llamadas['process_neverbounce'], 'el email debe validarse')
-        self.assertFalse(llamadas['process_crm_send'], 'al CRM se llega encadenado')
+        self.assertTrue(llamadas['process_crm_send'], 'al CRM se llega directo')
         # El respaldo en Supabase no es un envío: se guarda como cualquier lead.
         self.assertTrue(llamadas['process_supabase'], 'el lead de evento también se respalda')
         for servicio in SERVICIOS:
-            if servicio in ('process_neverbounce', 'process_supabase'):
+            if servicio == 'process_supabase':
                 continue
             self.assertFalse(llamadas[servicio], f'{servicio} no debería dispararse')
 
-    def test_el_de_evento_sin_email_va_directo_al_crm(self):
-        """Sin email no hay nada que validar, así que no se encadena nada."""
+    def test_el_de_evento_sin_email_tambien_va_al_crm(self):
         parches = {n: patch(RUTA + n) for n in SERVICIOS}
         parches['process_crm_send'] = patch(RUTA + 'process_crm_send')
         activos = {n: p.start() for n, p in parches.items()}
         try:
             Lead.objects.create(full_name='Ana', funnel='cb-lanzamiento11')
             self.assertTrue(activos['process_crm_send'].delay.called)
-            self.assertFalse(activos['process_neverbounce'].delay.called)
         finally:
             for p in parches.values():
                 p.stop()
@@ -86,9 +79,9 @@ class DespachoDeLanzamientoTest(TestCase):
         llamadas = self._crear('cb-eu')
         self.assertTrue(llamadas['process_supabase'])
         self.assertTrue(llamadas['process_respondio'])
-        self.assertTrue(llamadas['process_neverbounce'])
-        # El CRM le llega encadenado desde NeverBounce, no directo.
-        self.assertFalse(llamadas['process_crm_send'])
+        # Sin validar nada antes: AC (o el puente de Relay) y CRM salen directos.
+        self.assertTrue(llamadas['process_activecampaign'])
+        self.assertTrue(llamadas['process_crm_send'])
 
 
 class AltaDesdeLaPantallaDeEventoTest(TestCase):
@@ -102,8 +95,7 @@ class AltaDesdeLaPantallaDeEventoTest(TestCase):
             'url': 'https://www.conquerblocks.com/evento/evento-online?utm_source=ActiveCampaign',
             'utm_source': 'ActiveCampaign', 'utm_campaign': 'cb-lanzamiento11',
         }
-        # Se encola la validación, que es quien encadena el envío al CRM.
-        with patch(RUTA + 'process_neverbounce') as validacion:
+        with patch(RUTA + 'process_crm_send') as crm:
             resp = self.client.post(reverse('funnels:register_lead'),
                                     data=json.dumps(cuerpo), content_type='application/json')
         self.assertEqual(resp.status_code, 200)
@@ -112,7 +104,7 @@ class AltaDesdeLaPantallaDeEventoTest(TestCase):
         self.assertEqual(lead.full_name, 'Ana Pérez')
         self.assertEqual(lead.lead_phone_prefix, '+34')
         self.assertEqual(lead.utm_campaign, 'cb-lanzamiento11')
-        self.assertTrue(validacion.delay.called)
+        self.assertTrue(crm.delay.called)
 
 
 class CodigoDeEdicionEnLaPantallaTest(TestCase):
@@ -392,7 +384,7 @@ class EmailEnMinusculasTest(TestCase):
     def _alta(self, email):
         with patch(RUTA + 'process_crm_send'), patch(RUTA + 'process_supabase'), \
              patch(RUTA + 'process_respondio'), patch(RUTA + 'process_activecampaign'), \
-             patch(RUTA + 'process_neverbounce'), patch(RUTA + 'process_funnelchat'):
+             patch(RUTA + 'process_funnelchat'):
             resp = self.client.post(
                 reverse('funnels:register_lead'),
                 data=json.dumps({'name': 'Ana', 'email': email, 'funnel': 'cb-lanzamiento11'}),

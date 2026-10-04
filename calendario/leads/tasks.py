@@ -126,82 +126,20 @@ def process_vsl_crm(self, email, vsl_key, percent):
     crm.push_vsl_progress(email, vsl_key, percent)
 
 
-# El sondeo SMTP pregunta a Gmail si el buzón existe, y Gmail corta la IP si se
-# le pregunta demasiado seguido (nos pasó: 421 tras ~1.500 sondeos en 20 min).
-# El freno vive en calendario/core/resiliencia.py (servicio 'verificador_email',
-# EMAIL_VERIFIER_RATE_LIMIT, 6/m por defecto), no en `rate_limit` de Celery: ese
-# retiene las tareas limitadas en memoria del worker ocupando su prefetch, y una
-# ráfaga de verificaciones dejaba al resto de tareas esperando detrás.
-
-
 @shared_task(**RETRY_POLICY)
 def process_neverbounce(self, lead_id):
+    """PROVISIONAL: solo para vaciar la cola durante el despliegue.
+
+    Ya no se encola (la validación del email es cosa de Relay), pero el color
+    viejo pudo dejar mensajes pendientes. Hace lo que hacía al terminar —mandar a
+    ActiveCampaign/puente y al CRM— sin validar nada. Se borra en el despliegue
+    siguiente, junto con la migración que borra la columna.
+    """
     from calendario.leads.models import Lead
-    from calendario.leads.services import email_validation
 
     lead = Lead.objects.get(pk=lead_id)
-
-    # La validación es enriquecimiento opcional: NO debe bloquear el envío al
-    # CRM. Si no está configurada o falla, se continúa sin resultado.
-    #
-    # Desde el sondeo SMTP propio esto ya casi nunca depende de NeverBounce,
-    # pero el contrato de la tarea no cambia: rellena `neverbounce_result` y
-    # marca el mismo tag de siempre.
-    if not lead.neverbounce_result:
-        try:
-            email_validation.validate_email(lead)
-            lead.refresh_from_db(fields=['neverbounce_result'])
-        except Exception as exc:
-            # Aquí ya no llegan los timeouts de lectura ni los vetos del
-            # proveedor (el servicio los registra como 'unknown' y no relanza),
-            # sino los fallos transitorios de verdad: conexión caída, 5xx,
-            # respuesta ilegible. Esos sí merecen reintento, porque la siguiente
-            # vez pueden funcionar.
-            #
-            # Sólo se reporta como error cuando se agotan los intentos: antes se
-            # logueaba uno por intento, así que un único lead generaba hasta
-            # cuatro eventos en Sentry aunque el reintento acabara bien.
-            if self.request.retries < self.max_retries:
-                logger.warning(
-                    'Lead %s: validación de email falló (intento %s de %s), se reintenta: %s',
-                    lead_id, self.request.retries + 1, self.max_retries + 1, exc,
-                )
-            try:
-                raise self.retry(exc=exc)
-            except self.MaxRetriesExceededError:
-                logger.exception(
-                    'Lead %s: la validación agotó los reintentos; se continúa sin '
-                    'validación (el CRM lo reintentará al recibir el lead sin '
-                    'neverbounce_result)', lead_id,
-                )
-
-    if lead.neverbounce_result:
-        lead.tags.add('neverbounce_done')
-        logger.info('Lead %s: neverbounce_done', lead_id)
-    else:
-        lead.tags.add('neverbounce_skipped')
-        logger.info('Lead %s: neverbounce_skipped (sin validación)', lead_id)
-
-    # Con el veredicto en la mano ya se puede decidir sobre ActiveCampaign.
-    # Solo se frena cuando el servidor de correo ha dicho que ese buzón no
-    # existe: cualquier duda (catch-all, timeout, proveedor que no nos habla)
-    # deja pasar el lead, porque perder uno bueno cuesta más que colar uno malo.
-    nb = lead.neverbounce_result or {}
-    if es_lead_de_lanzamiento(lead):
-        # De los de evento se encarga el CRM de punta a punta (etiquetas,
-        # conversiones y ActiveCampaign), igual que cuando los mandaba Make.
-        # Aquí solo se les añade el veredicto para que pueda decidir.
-        pass
-    elif nb.get('is_rejected'):
-        lead.tags.add('activecampaign_skipped')
-        logger.info(
-            'Lead %s: ActiveCampaign OMITIDO — %s dice que el buzón no existe (%s)',
-            lead_id, nb.get('source', '?'), nb.get('reason', nb.get('result')),
-        )
-    else:
+    if not es_lead_de_lanzamiento(lead):
         process_activecampaign.delay(lead_id)
-
-    # El envío al CRM se dispara siempre (la validación viaja si está disponible).
     process_crm_send.delay(lead_id)
 
 
@@ -272,18 +210,9 @@ def dispatch_lead_tasks(lead_id):
     # ejecuciones —un evento de Blocks consume 2 operaciones (webhook + CRM) y
     # uno de Languages con teléfono 3 (webhook + CRM + FunnelChat)—; si
     # salieran correos, Respond.io o las CAPI habría 5 o más, y no existe
-    # ninguna ejecución por encima de 4. Tampoco pasan por NeverBounce: Make
-    # postea directo al ingest y es el CRM quien valida el email.
+    # ninguna ejecución por encima de 4.
     if es_lead_de_lanzamiento(lead):
-        # Van al CRM validados. El CRM decide con `neverbounce_result` si el
-        # lead entra en ActiveCampaign, y por sí solo no tiene forma de
-        # averiguarlo: su IP está vetada en Gmail, así que si no le llega el
-        # veredicto desde aquí se queda sin ninguno. `process_neverbounce`
-        # encadena el envío al CRM al terminar.
-        if lead.email:
-            process_neverbounce.delay(lead_id)
-        else:
-            process_crm_send.delay(lead_id)
+        process_crm_send.delay(lead_id)
         # La única excepción es FunnelChat, y solo en Languages: en Make cuelga
         # de la rama de Languages, que filtra `funnel` por 'cl'. Los de Blocks
         # no tienen módulo, y los de Finance tampoco entran porque esa rama
@@ -314,10 +243,10 @@ def dispatch_lead_tasks(lead_id):
     # crea por email y el número se reconcilia luego (prellamada/reserva).
     if lead.email:
         process_respondio.delay(lead_id)
-        # ActiveCampaign ya no sale aquí: lo encadena process_neverbounce cuando
-        # sabe si el email existe. Meter una dirección inexistente en AC es un
-        # rebote duro asegurado, y el umbral que no se puede pasar es el 2%.
-        process_neverbounce.delay(lead_id)
+        # Validar el email no es cosa del calendario: lo hace Relay al recibir
+        # el contacto, y él decide si lo escribe en ActiveCampaign.
+        process_activecampaign.delay(lead_id)
+        process_crm_send.delay(lead_id)
         process_funnelchat.delay(lead_id)
 
     logger.info('Lead %s: dispatched processing tasks', lead_id)
@@ -390,32 +319,15 @@ def sweep_incomplete_leads():
             requeued += 1
 
         if (lead.email and 'activecampaign_done' not in tag_names
-                and 'activecampaign_failed' not in tag_names
-                and 'activecampaign_skipped' not in tag_names
-                and not es_lead_de_lanzamiento(lead)):
-            # Se repite aquí la decisión de process_neverbounce en vez de exigir
-            # que la validación haya terminado: si el verificador se atasca, un
-            # lead sin veredicto entra en AC igualmente en la siguiente pasada.
-            # El sweep es la red que impide que un fallo nuestro deje leads sin
-            # enviar, no otro sitio donde puedan quedarse atrapados.
-            if (lead.neverbounce_result or {}).get('is_rejected'):
-                lead.tags.add('activecampaign_skipped')
-            else:
-                process_activecampaign.delay(lead.pk)
-                requeued += 1
+                and 'activecampaign_failed' not in tag_names):
+            process_activecampaign.delay(lead.pk)
+            requeued += 1
 
         if lead.email and 'funnelchat_done' not in tag_names and 'funnelchat_failed' not in tag_names:
             process_funnelchat.delay(lead.pk)
             requeued += 1
 
-        if (lead.email and 'neverbounce_done' not in tag_names
-                and 'neverbounce_skipped' not in tag_names
-                and 'neverbounce_failed' not in tag_names):
-            process_neverbounce.delay(lead.pk)
-            requeued += 1
-
         if (settings.CRM_INGEST_ENABLED and lead.email
-                and ('neverbounce_done' in tag_names or 'neverbounce_skipped' in tag_names)
                 and 'crm_done' not in tag_names and 'crm_failed' not in tag_names):
             process_crm_send.delay(lead.pk)
             requeued += 1

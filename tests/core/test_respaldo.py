@@ -100,7 +100,6 @@ class ObjetoCompletoTest(TestCase):
 
     def test_el_lead_de_evento_tambien_se_respalda(self):
         with patch('calendario.leads.tasks.process_supabase') as sb, \
-                patch('calendario.leads.tasks.process_neverbounce'), \
                 patch('calendario.leads.tasks.process_crm_send'), \
                 patch('calendario.leads.tasks.process_funnelchat'):
             Lead.objects.create(email='a@b.com', funnel='cb-lanzamiento11')

@@ -359,13 +359,6 @@
               <span class="menu-title">{% trans 'Buscador de Leads' %}</span>
             </a>
           </div>
-
-          <div class="menu-item">
-            <a class="menu-link" href="{% url 'sales:ga_email_verification' %}">
-              <span class="menu-icon"><i class="bi bi-envelope-check"></i></span>
-              <span class="menu-title">{% trans 'Verificación emails' %}</span>
-            </a>
-          </div>
         {% endif %}
 
         {% if request.user.is_superuser %}

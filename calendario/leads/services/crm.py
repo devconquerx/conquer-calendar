@@ -30,7 +30,7 @@ _SCHOOL_CRM_CODE = {
 
 
 def push_lead(lead):
-    """Envía el Lead al ingest del CRM tras la validación de NeverBounce.
+    """Envía el Lead al ingest del CRM.
 
     Devuelve True si se llegó a enviar y False si se omitió por falta de API
     key. Lo devuelve en vez de tragárselo porque quien llama marca el lead como
@@ -109,8 +109,6 @@ def push_lead(lead):
         'country_name': lead.country_name,
         'city': lead.city,
         'is_proxy': lead.is_proxy,
-        # NeverBounce result
-        'neverbounce_result': lead.neverbounce_result,
     }
 
     payload = {k: v for k, v in payload.items() if v is not None}
