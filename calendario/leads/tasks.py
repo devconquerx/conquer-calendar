@@ -127,23 +127,6 @@ def process_vsl_crm(self, email, vsl_key, percent):
 
 
 @shared_task(**RETRY_POLICY)
-def process_neverbounce(self, lead_id):
-    """PROVISIONAL: solo para vaciar la cola durante el despliegue.
-
-    Ya no se encola (la validación del email es cosa de Relay), pero el color
-    viejo pudo dejar mensajes pendientes. Hace lo que hacía al terminar —mandar a
-    ActiveCampaign/puente y al CRM— sin validar nada. Se borra en el despliegue
-    siguiente, junto con la migración que borra la columna.
-    """
-    from calendario.leads.models import Lead
-
-    lead = Lead.objects.get(pk=lead_id)
-    if not es_lead_de_lanzamiento(lead):
-        process_activecampaign.delay(lead_id)
-    process_crm_send.delay(lead_id)
-
-
-@shared_task(**RETRY_POLICY)
 def process_crm_send(self, lead_id):
     """Envía el Lead al CRM ingest. Gated por CRM_INGEST_ENABLED:
     mientras esté en False hace no-op (y el sweep no lo reintenta)."""

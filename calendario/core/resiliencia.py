@@ -121,8 +121,6 @@ SERVICIO_DE_TAREA = {
 # tarea tiene que estar en SERVICIO_DE_TAREA o aquí: un test lo comprueba, para
 # que una tarea nueva no se cuele sin tope de huecos ni ritmo.
 SIN_SERVICIO = {
-    # PROVISIONAL (se borra en el despliegue siguiente): solo reencola AC y CRM.
-    'calendario.leads.tasks.process_neverbounce',
     'calendario.leads.tasks.sweep_incomplete_leads',
     'calendario.bookings.tasks.sweep_incomplete_reservas',
     'calendario.funnels.tasks.sweep_incomplete_prellamadas',
