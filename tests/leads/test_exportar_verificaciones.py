@@ -1,36 +1,43 @@
-"""El volcado de verificaciones que hereda Relay antes de borrarlas del calendario."""
+"""El volcado de verificaciones que hereda Relay antes de borrarlas del calendario.
+
+Los datos se meten por SQL: el modelo ya no los conoce, pero la tabla y la
+columna siguen en la BD hasta la migración que las borra.
+"""
 import json
 import os
 import tempfile
-from datetime import timedelta
 from io import StringIO
 from unittest.mock import patch
 
 from django.core.management import call_command
+from django.db import connection
 from django.test import TestCase
-from django.utils import timezone
 
-from calendario.leads.models import EmailVerificationCache, Lead
+from calendario.leads.models import Lead
 
 
 class ExportarVerificacionesTest(TestCase):
 
     def setUp(self):
-        EmailVerificationCache.objects.create(
-            email='malo@ejemplo.com', result='invalid', reason='smtp_user_unknown',
-            smtp_code=550, smtp_message='no such user',
-            expires_at=timezone.now() + timedelta(days=180),
-        )
         with patch('celery.app.task.Task.apply_async'):
-            self.nb = Lead.objects.create(email='Viejo@Ejemplo.com', neverbounce_result={
+            self.viejo = Lead.objects.create(email='Viejo@Ejemplo.com')
+            self.propio = Lead.objects.create(email='nuevo@ejemplo.com')
+            Lead.objects.create(email='sin@veredicto.com')
+        with connection.cursor() as cur:
+            cur.execute(
+                "INSERT INTO email_verification_cache (created, modified, email, result, reason, "
+                "smtp_code, smtp_message, expires_at, hit_count) VALUES (now(), now(), "
+                "'malo@ejemplo.com', 'invalid', 'smtp_user_unknown', 550, 'no such user', "
+                "now() + interval '180 days', 3)"
+            )
+            cur.execute('UPDATE leads SET neverbounce_result = %s WHERE id = %s', [json.dumps({
                 'status': 'success', 'result': 'valid', 'is_valid': True,
-                'is_rejected': False, 'flags': ['has_dns'], 'execution_time': 120,
-            })
-            self.propio = Lead.objects.create(email='nuevo@ejemplo.com', neverbounce_result={
+                'flags': ['has_dns'], 'execution_time': 120,
+            }), self.viejo.pk])
+            cur.execute('UPDATE leads SET neverbounce_result = %s WHERE id = %s', [json.dumps({
                 'status': 'success', 'result': 'catchall', 'source': 'own_smtp',
                 'reason': 'catchall_domain', 'flags': [], 'smtp_code': 250,
-            })
-            Lead.objects.create(email='sin@veredicto.com')
+            }), self.propio.pk])
 
     def _exportar(self, **opts):
         with tempfile.TemporaryDirectory() as tmp:
@@ -50,13 +57,14 @@ class ExportarVerificacionesTest(TestCase):
         self.assertEqual(cache['reason'], 'smtp_user_unknown')
         self.assertEqual(cache['source'], 'own_smtp')
         self.assertEqual(cache['extra']['smtp_code'], 550)
+        self.assertEqual(cache['extra']['hit_count'], 3)
         self.assertTrue(cache['fecha'])
 
         viejo = por_email['viejo@ejemplo.com']  # en minúsculas
         self.assertEqual(viejo['origen'], 'lead')
         self.assertEqual(viejo['source'], 'neverbounce')  # sin `source` = NeverBounce
         self.assertEqual(viejo['flags'], ['has_dns'])
-        self.assertEqual(viejo['extra']['lead_id'], self.nb.pk)
+        self.assertEqual(viejo['extra']['lead_id'], self.viejo.pk)
 
         propio = por_email['nuevo@ejemplo.com']
         self.assertEqual(propio['source'], 'own_smtp')

@@ -156,11 +156,6 @@ class RitmoPorServicioTest(ConRedis):
         resiliencia.motivo_para_aplazar('activecampaign', 'yo')
         self.assertIsNone(resiliencia._turno_reservado('yo'))
 
-    def test_verificador_de_email_lee_su_variable_de_entorno(self):
-        self.assertEqual(resiliencia._por_minuto('6/m', 0), 6)
-        self.assertEqual(resiliencia._por_minuto('1/s', 0), 60)
-        self.assertEqual(resiliencia._por_minuto('basura', 6), 6)
-
 
 class CortacircuitosTest(ConRedis):
 
@@ -480,11 +475,6 @@ class PacienciaConElServicioTest(ConRedis):
         from celery.exceptions import Retry
         fin, _ = self._ejecutar('calendario.leads.tasks.process_activecampaign', _error_http(400))
         self.assertIs(fin, Retry)
-
-    def test_el_verificador_de_email_no_espera(self):
-        """Detrás va encadenado el CRM: si no contesta, se sigue sin validar."""
-        self.assertFalse(resiliencia.tiene_paciencia('calendario.leads.tasks.process_neverbounce'))
-        self.assertTrue(resiliencia.tiene_paciencia('calendario.leads.tasks.process_crm_send'))
 
     def test_la_espera_crece_hasta_el_tope(self):
         esperas = [resiliencia.espera_tras_fallo(n) for n in range(1, 10)]

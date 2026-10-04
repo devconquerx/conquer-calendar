@@ -2,7 +2,7 @@
  *
  * Crea el Lead en el calendario, que a su vez lo empuja al ingest del CRM por
  * Celery. Es el único destino, igual que en el escenario viejo de Make: los
- * leads de lanzamiento no pasan por Supabase, CAPI, Respond.io ni NeverBounce.
+ * leads de lanzamiento no pasan por Supabase, CAPI ni Respond.io.
  *
  * Lo comparten las plantillas de las tres marcas, que solo se diferencian en el
  * diseño: Blocks y Finance abren el formulario en un popup y Languages lo lleva
