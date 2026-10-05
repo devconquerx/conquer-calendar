@@ -153,14 +153,14 @@
                             <td class="text-end">
                                 <div class="d-flex justify-content-end gap-1">
                                     {% if 'usuarios.activar' in PERMISOS_USUARIO and usuario != request.user %}
-                                    <form method="post" action="{% url 'panel_usuarios:usuario_toggle_activo' usuario.pk %}">
-                                        {% csrf_token %}
-                                        <button type="submit"
-                                                class="btn btn-sm btn-icon {% if usuario.is_active %}btn-light-warning{% else %}btn-light-success{% endif %}"
-                                                title="{% if usuario.is_active %}Desactivar{% else %}Activar{% endif %}">
-                                            <i class="bi bi-{% if usuario.is_active %}eye-slash{% else %}eye{% endif %}"></i>
-                                        </button>
-                                    </form>
+                                    {# Sin <form> propio: estaría anidado en #form-bulk y el navegador lo descarta, #}
+                                    {# así que el botón enviaba el formulario masivo sin «accion». formaction lo redirige. #}
+                                    <button type="submit"
+                                            formaction="{% url 'panel_usuarios:usuario_toggle_activo' usuario.pk %}"
+                                            class="btn btn-sm btn-icon {% if usuario.is_active %}btn-light-warning{% else %}btn-light-success{% endif %}"
+                                            title="{% if usuario.is_active %}Desactivar{% else %}Activar{% endif %}">
+                                        <i class="bi bi-{% if usuario.is_active %}eye-slash{% else %}eye{% endif %}"></i>
+                                    </button>
                                     {% endif %}
                                     {% if 'usuarios.eliminar' in PERMISOS_USUARIO %}
                                     <a href="{% url 'panel_usuarios:usuario_delete' usuario.pk %}"
