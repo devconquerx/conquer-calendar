@@ -98,6 +98,18 @@ class ObjetoCompletoTest(TestCase):
         self.assertEqual(fila['datos']['utm_source'], 'x')
         json.dumps(fila)  # serializable tal cual
 
+    def test_manda_vacias_las_columnas_del_trigger(self):
+        """El trigger de Supabase quita de `datos` lo que ya está en el request y
+        lo anota en estas columnas. Si el upsert no las reescribiera junto con
+        `datos`, quedarían las de la versión anterior y el objeto no se podría
+        reconstruir."""
+        with patch('celery.app.task.Task.apply_async'):
+            lead = Lead.objects.create(email='ana@ejemplo.com')
+        fila = respaldo.fila_de_objeto(lead, lead.created)
+        for columna in ('request_id', 'fuera_del_request', 'renombradas'):
+            self.assertIn(columna, fila)
+            self.assertIsNone(fila[columna])
+
     def test_el_lead_de_evento_tambien_se_respalda(self):
         with patch('calendario.leads.tasks.process_supabase') as sb, \
                 patch('calendario.leads.tasks.process_crm_send'), \
@@ -155,3 +167,34 @@ class PeticionesRarasTest(TestCase):
         self.assertEqual(fila['host'], '167.172.146.251')
         self.assertEqual(fila['status'], resp.status_code)
 
+
+@override_settings(SUPABASE_ENABLED=True, SUPABASE_URL='https://x.supabase.co', SUPABASE_SECRET_KEY='k',
+                   SUPABASE_RETENTION_DAYS=7)
+class PurgaTest(TestCase):
+    """La purga va en una función SQL que borra en orden (las filas dependen unas
+    de otras), no con un DELETE por tabla."""
+
+    def _respuesta(self, cuerpo):
+        from unittest.mock import Mock
+        return Mock(status_code=200, json=Mock(return_value=cuerpo), raise_for_status=Mock())
+
+    def test_llama_a_purgar_respaldo_con_la_retencion(self):
+        from calendario.core.tasks import purge_old_supabase_backups
+
+        with patch('calendario.core.supabase.requests.post',
+                   return_value=self._respuesta({'leads': 3, 'requests': 9})) as post, \
+                patch('calendario.core.supabase.requests.delete') as delete:
+            purge_old_supabase_backups()
+        url = post.call_args.args[0]
+        self.assertTrue(url.endswith('/rest/v1/rpc/purgar_respaldo'))
+        self.assertEqual(post.call_args.kwargs['json'], {'dias': 7})
+        delete.assert_not_called()
+
+    def test_un_paso_fallido_se_avisa(self):
+        from calendario.core import supabase
+
+        with patch('calendario.core.supabase.requests.post',
+                   return_value=self._respuesta({'leads': 3, 'requests': 'deadlock detected'})), \
+                self.assertLogs('calendario.core.supabase', level='ERROR') as logs:
+            supabase.purgar(7)
+        self.assertIn('deadlock detected', logs.output[0])

@@ -17,19 +17,10 @@ def purge_old_supabase_backups():
     if not supabase.is_enabled():
         return
 
-    days = getattr(settings, 'SUPABASE_RETENTION_DAYS', 7)
-    tables = (
-        settings.SUPABASE_TABLE_LEADS,
-        settings.SUPABASE_TABLE_PRE_SCHEDULES,
-        settings.SUPABASE_TABLE_SCHEDULES,
-        settings.SUPABASE_TABLE_REQUESTS,
-        settings.SUPABASE_TABLE_VIDEO_PROGRESS,
-    )
-    for table in tables:
-        try:
-            supabase.delete_older_than(table, 'created_at', days)
-        except Exception:
-            logger.exception('[Supabase] purge falló para %s', table)
+    try:
+        supabase.purgar(getattr(settings, 'SUPABASE_RETENTION_DAYS', 7))
+    except Exception:
+        logger.exception('[Supabase] purge falló')
 
 
 @shared_task(bind=True, max_retries=3, autoretry_for=(Exception,), retry_backoff=True,

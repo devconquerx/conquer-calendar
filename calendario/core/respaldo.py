@@ -13,6 +13,11 @@ lo que manda:
 
 Aquí no se guarda nada en la base de datos de calendar: la captura viaja en la
 tarea de Celery hasta Supabase (con la protección de calendario/core/resiliencia.py).
+
+Aquí se mandan siempre las filas completas. Que nada se guarde dos veces (los
+mismos headers en cada petición, el lead repitiendo el body que lo creó...) lo
+resuelven los triggers de Supabase; para leer las filas enteras están las vistas
+*_completo. Ver docs/supabase_backup_schema.sql.
 """
 import base64
 import contextvars
@@ -188,4 +193,10 @@ def fila_de_objeto(obj, creado):
         'created_at': creado.isoformat() if creado else timezone.now().isoformat(),
         'updated_at': timezone.now().isoformat(),
         'datos': serializar(obj),
+        # `datos` va entero: lo que ya está en el body de un request lo quita el
+        # trigger de Supabase y lo anota en estas columnas. Se mandan vacías para
+        # que el upsert las reescriba junto con `datos` y nunca queden desparejas.
+        'request_id': None,
+        'fuera_del_request': None,
+        'renombradas': None,
     }

@@ -9,15 +9,13 @@ y loguean — nunca lanzan por falta de configuración. Sí lanzan (para que Cel
 reintente) cuando Supabase devuelve un error HTTP en una operación que sí se
 intentó.
 
-Retención corta: el respaldo guarda solo una ventana reciente; `delete_older_than`
-(invocado por la task periódica) borra lo más viejo que SUPABASE_RETENTION_DAYS.
+Retención corta: el respaldo guarda solo una ventana reciente; `purgar` (invocado
+por la task periódica) borra lo más viejo que SUPABASE_RETENTION_DAYS.
 """
 import logging
-from datetime import timedelta
 
 import requests
 from django.conf import settings
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -86,22 +84,24 @@ def insert_rows(table, rows, on_conflict=None):
     logger.info('[Supabase] %d fila(s) escrita(s) en %s', len(rows), table)
 
 
-def delete_older_than(table, column, days):
-    """Borra de `table` las filas cuyo `column` es anterior a hoy menos `days`."""
+def purgar(days):
+    """Borra lo más viejo que `days` días (función SQL purgar_respaldo, ver
+    docs/supabase_backup_schema.sql). Va en SQL y no con un DELETE por tabla
+    porque las filas dependen unas de otras: hay que borrar en orden y no tocar
+    lo que otra fila todavía usa. Devuelve lo borrado por tabla."""
     if not is_enabled():
-        return
-    cutoff = (timezone.now() - timedelta(days=days)).isoformat()
-    response = requests.delete(
-        f'{_base_url()}/{table}',
-        params={column: f'lt.{cutoff}'},
-        headers=_headers({'Prefer': 'return=minimal'}),
-        timeout=settings.SUPABASE_TIMEOUT_SECONDS,
-    )
-    if response.status_code not in (200, 204):
-        logger.error('[Supabase] purge en %s falló — status=%d body=%s',
-                     table, response.status_code, response.text[:500])
-        response.raise_for_status()
-    logger.info('[Supabase] purge %s — filas con %s < %s', table, column, cutoff)
+        return None
+    response = requests.post(f'{_base_url()}/rpc/purgar_respaldo', json={'dias': days},
+                             headers=_headers(), timeout=settings.SUPABASE_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    hecho = response.json()
+    # Un paso que choca con una escritura simultánea no tumba la purga: devuelve
+    # el error en lugar del número y se reintenta en la siguiente pasada.
+    errores = {tabla: v for tabla, v in hecho.items() if not isinstance(v, int)}
+    if errores:
+        logger.error('[Supabase] purga incompleta: %s', errores)
+    logger.info('[Supabase] purga de más de %d días: %s', days, hecho)
+    return hecho
 
 
 def tamano_mb():
