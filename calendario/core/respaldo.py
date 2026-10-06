@@ -61,7 +61,9 @@ def capturar(request):
         'id': str(uuid.uuid4()),
         'recibido_en': timezone.now().isoformat(),
         'metodo': request.method,
-        'host': request.get_host() if request.META.get('HTTP_HOST') else None,
+        # Tal cual llegó: get_host() lanza DisallowedHost con hosts no permitidos
+        # (bots que atacan la IP), y esas peticiones también se guardan.
+        'host': request.META.get('HTTP_HOST'),
         'ruta': request.path,
         'query': {k: request.GET.getlist(k) for k in request.GET},
         'headers': dict(request.headers),
@@ -76,7 +78,7 @@ def capturar(request):
         largo = 0
     if largo > MAX_BODY:
         fila['body_texto'] = f'<body de {largo} bytes: no se guarda>'
-        return fila
+        return _sin_nulos(fila)
     crudo = request.body
     try:
         fila['body'] = json.loads(crudo) if crudo else None
@@ -85,7 +87,22 @@ def capturar(request):
             fila['body_texto'] = crudo.decode('utf-8')
         except UnicodeDecodeError:
             fila['body_texto'] = 'base64:' + base64.b64encode(crudo).decode()
-    return fila
+    if b'\x00' in crudo or b'\\u0000' in crudo:
+        # Postgres no admite el carácter nulo ni en text ni en jsonb (Supabase
+        # responde 400 y la fila se pierde). Se guarda el body exacto en base64
+        # y, en el resto, el nulo queda escrito como el texto "\u0000".
+        fila['body_texto'] = 'base64:' + base64.b64encode(crudo).decode()
+    return _sin_nulos(fila)
+
+
+def _sin_nulos(valor):
+    if isinstance(valor, str):
+        return valor.replace('\x00', '\\u0000')
+    if isinstance(valor, dict):
+        return {_sin_nulos(k): _sin_nulos(v) for k, v in valor.items()}
+    if isinstance(valor, list):
+        return [_sin_nulos(v) for v in valor]
+    return valor
 
 
 # Tareas de respaldo de objetos → tipo con el que se anotan en la captura.

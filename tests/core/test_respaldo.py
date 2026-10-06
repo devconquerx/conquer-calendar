@@ -124,3 +124,34 @@ class SubidaDeRequestsTest(TestCase):
         with patch('calendario.core.supabase.insert_rows') as insertar:
             process_request_supabase('video_progress', {'id': 'x'})
         insertar.assert_called_once_with('video_progress', [{'id': 'x'}], on_conflict='id')
+
+
+class PeticionesRarasTest(TestCase):
+    """Lo que mandan bots y escáneres también se guarda (30-sep: un POST con un
+    carácter nulo hizo que Supabase respondiera 400 y la fila se perdiera)."""
+
+    def _capturar(self, **kwargs):
+        with patch(ENCOLAR) as encolar:
+            resp = self.client.post('/resolve', **kwargs)
+        self.assertTrue(encolar.called, 'la petición no se capturó')
+        return resp, encolar.call_args.args[1]
+
+    def test_caracter_nulo_en_json(self):
+        # El JSON trae el escape \u0000, que al parsearlo es un carácter nulo real.
+        _, fila = self._capturar(data='{"a": "x\\u0000y"}', content_type='application/json')
+        self.assertNotIn('\x00', json.dumps(fila, ensure_ascii=False))
+        self.assertEqual(fila['body'], {'a': 'x\\u0000y'})  # queda como texto visible
+        self.assertTrue(fila['body_texto'].startswith('base64:'))  # y el body exacto aparte
+
+    def test_caracter_nulo_en_texto(self):
+        import base64
+        _, fila = self._capturar(data=b'hola\x00mundo', content_type='text/plain')
+        self.assertNotIn('\x00', json.dumps(fila, ensure_ascii=False))
+        self.assertEqual(base64.b64decode(fila['body_texto'][len('base64:'):]), b'hola\x00mundo')
+
+    def test_host_no_permitido(self):
+        """Los bots atacan la IP del servidor: Django lo rechaza, pero se guarda."""
+        resp, fila = self._capturar(data='{}', content_type='application/json', HTTP_HOST='167.172.146.251')
+        self.assertEqual(fila['host'], '167.172.146.251')
+        self.assertEqual(fila['status'], resp.status_code)
+
