@@ -75,37 +75,11 @@ const FORM_VARIANT_EXPERIMENTS = [
   // siempre y obligatorio, sin checkbox, fijo por config (`landing.phoneRequired`,
   // migración 0032). Llegó a tener uno el 14/09/2026 con los códigos 77/78; se
   // retiró el mismo día y NO se reciclan.
-  // Blocks EU, segunda landing (cb-eu-2, slug `blocks-eu-2`): 71 (control) / 72
-  // (fondo blanco). Experimento independiente del de la landing principal para
-  // no mezclar splits.
-  {
-    match: ({ funnelSlug }) => funnelSlug === 'blocks-eu-2',
-    storageKey: 'form_variant_cb_eu_2_fondo',
-    themeId: 'conquerblocks',
-    variants: ['71', '72'],
-    whiteBackgroundVariant: '72',
-  },
-  // Blocks EU, landing principal (cb-eu, slug `blocks-eu`): 69 (control) / 70
-  // (fondo blanco).
-  //
-  // Antes corría aquí el A/B del checkbox de WhatsApp (51/52 en esta landing y
-  // 53/54 en la segunda). Se apagó el 27/08/2026 dejando GANADORA la rama CON
-  // checkbox, que pasa a ser fija para todo el mundo vía `landing.whatsappOptin`
-  // en la config de los dos funnels — no por experimento, así que el campo
-  // `utm_form_variant` queda libre para este test de fondo.
-  //
-  // Los códigos son nuevos (69-72) en vez de reutilizar los viejos: 51-54 ya
-  // significan «con/sin checkbox» en los leads históricos y en la pantalla de
-  // distribución A/B del CRM, y reciclarlos mezclaría los dos experimentos en
-  // la misma serie. Por el mismo motivo cambia la `storageKey`: quien tenga
-  // guardado un 51-54 no arrastra rama al test nuevo.
-  {
-    match: ({ funnelSlug }) => funnelSlug === 'blocks-eu',
-    storageKey: 'form_variant_cb_eu_fondo',
-    themeId: 'conquerblocks',
-    variants: ['69', '70'],
-    whiteBackgroundVariant: '70',
-  },
+  // Blocks EU (69/70), Blocks EU-2 (71/72) y Languages EU (65/66) cerraron el
+  // A/B de fondo el 07/10/2026 con el PAPEL como ganador: sin experimento, el
+  // funnel vuelve al papel por defecto del tema y el lead no lleva
+  // utm_form_variant. Sus códigos no se reciclan. En Blocks EU el checkbox de
+  // WhatsApp sigue fijo por config (`landing.whatsappOptin`).
   // Blocks US (cb-us, slug `blocks-us`): 73 (control: no se pide el teléfono,
   // solo lo captura el honeypot) / 74 (test: checkbox de WhatsApp, que al
   // marcarse revela el campo de teléfono y lo hace obligatorio).
@@ -121,7 +95,7 @@ const FORM_VARIANT_EXPERIMENTS = [
     variants: ['73', '74'],
     whatsappOptinVariant: '74',
   },
-  // Languages LATAM y EU: test de fondo blanco. Su landing usa el mismo
+  // Languages LATAM: test de fondo blanco (EU lo cerró el 07/10/2026, ver arriba). Su landing usa el mismo
   // renderer paperboard que Blocks. US ya no está aquí: cerró el de fondo el
   // 14/09/2026 y corre el del teléfono, más abajo.
   {
@@ -130,13 +104,6 @@ const FORM_VARIANT_EXPERIMENTS = [
     themeId: 'conquerlanguages',
     variants: ['63', '64'],
     whiteBackgroundVariant: '64',
-  },
-  {
-    match: ({ funnelSlug }) => funnelSlug === 'languages-eu',
-    storageKey: 'form_variant_cl_eu',
-    themeId: 'conquerlanguages',
-    variants: ['65', '66'],
-    whiteBackgroundVariant: '66',
   },
   {
     // Languages US (cl-us): mismo cambio y por el mismo motivo que Blocks US

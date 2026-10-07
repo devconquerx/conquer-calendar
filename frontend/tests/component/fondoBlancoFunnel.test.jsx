@@ -20,13 +20,16 @@ vi.mock('../../src/components/vsl/VideoPlayer', () => ({ default: () => <div dat
    La clave del test: `storageKey` + `variante` dejan la rama ya asignada en
    localStorage antes de montar, igual que un visitante que viene de la landing. */
 
-// Blocks LATAM cerró su test el 07/10/2026 (blanco fijo); las dos ramas se
-// prueban con el de Blocks EU, que sigue vivo.
-const CLAVE = 'form_variant_cb_eu_fondo'
-const PAPEL = '69'
-const BLANCO = '70'
-const SLUG = 'blocks-eu'
-const CTX = { storageKey: CLAVE, slug: SLUG, region: 'eu' }
+// Blocks ya no corre el test (07/10/2026): LATAM quedó en blanco fijo y EU en
+// papel. Las dos ramas se prueban con esos dos funnels reales.
+const PAPEL = 'papel'
+const BLANCO = 'blanco'
+const CLAVE = 'form_variant_cb_latam'
+const FUNNEL = {
+  [BLANCO]: { slug: 'blocks-latam', region: 'latam' },
+  [PAPEL]: { slug: 'blocks-eu', region: 'eu' },
+}
+const ctx = (variante) => FUNNEL[variante]
 
 const configVideo = {
   video: { title: 'Título', subtitle: 'Vídeo', videoUrls: ['https://example.com/v.mp4'], buttonPercent: 75 },
@@ -42,16 +45,16 @@ function montarVideo(variante) {
       buttonPercent={75}
       nextUrl="/agenda/fullstack/eu/"
       search=""
-      funnelSlug={SLUG}
+      funnelSlug={ctx(variante).slug}
     />,
-    { variante, ...CTX }
+    ctx(variante)
   )
 }
 
 function montarConfirmacion(variante) {
   return renderConFunnel(
-    <Confirmation escuela="conquer-blocks" slug={SLUG} />,
-    { variante, ...CTX }
+    <Confirmation escuela="conquer-blocks" slug={ctx(variante).slug} />,
+    ctx(variante)
   )
 }
 
@@ -122,8 +125,8 @@ describe('A/B de fondo blanco en todo el funnel', () => {
     }
 
     const montarStepForm = (variante) => renderConFunnel(
-      <Funnel slug={SLUG} escuela="conquer-blocks" formConfig={CONFIG} search="" />,
-      { variante, ...CTX }
+      <Funnel slug={ctx(variante).slug} escuela="conquer-blocks" formConfig={CONFIG} search="" />,
+      ctx(variante)
     )
 
     it('con la variante blanca el wrapper va en blanco y sin textura', () => {
@@ -152,7 +155,7 @@ describe('A/B de fondo blanco en todo el funnel', () => {
     it('con la variante blanca usa el wrapper plano', () => {
       const { container } = renderConFunnel(
         <Calendar {...props} theme={toWhiteBackground(getTheme('conquer-blocks'))} />,
-        { variante: BLANCO, ...CTX }
+        ctx(BLANCO)
       )
       expect(container.querySelector('.bk-wrapper').className).toContain('bk-wrapper--plain')
     })
@@ -160,7 +163,7 @@ describe('A/B de fondo blanco en todo el funnel', () => {
     it('con la variante de papel conserva el wrapper con textura', () => {
       const { container } = renderConFunnel(
         <Calendar {...props} theme={getTheme('conquer-blocks')} />,
-        { variante: PAPEL, ...CTX }
+        ctx(PAPEL)
       )
       expect(container.querySelector('.bk-wrapper').className).not.toContain('bk-wrapper--plain')
     })
@@ -220,7 +223,7 @@ describe('A/B de fondo blanco en todo el funnel', () => {
           search=""
           funnelSlug="languages-ge"
         />,
-        { variante: BLANCO, storageKey: CLAVE, escuela: 'conquer-languages', slug: 'languages-ge', region: 'ge' }
+        { variante: '58', storageKey: CLAVE, escuela: 'conquer-languages', slug: 'languages-ge', region: 'ge' }
       )
       expect(estilosDe(container)).toContain('paperboard')
     })

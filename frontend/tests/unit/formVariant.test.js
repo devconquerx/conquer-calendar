@@ -40,14 +40,14 @@ describe('registro de experimentos', () => {
     )
     expect(mapa).toEqual({
       'blocks-latam': 'form_variant_cb_latam',
-      'blocks-eu': 'form_variant_cb_eu_fondo',
-      'blocks-eu-2': 'form_variant_cb_eu_2_fondo',
+      'blocks-eu': null,
+      'blocks-eu-2': null,
       'blocks-us': 'form_variant_cb_us_tel',
       'finance-latam': 'form_variant_cf_latam',
       'finance-eu': 'form_variant_cf',
       'finance-us': null,
       'languages-latam': 'form_variant_cl_latam',
-      'languages-eu': 'form_variant_cl_eu',
+      'languages-eu': null,
       'languages-us': 'form_variant_cl_us_tel',
       'languages-ge': null,
       'languages-kids-latam': null,

@@ -6,7 +6,8 @@ import { forzarVariante, simularBackend, urlEtapa } from './helpers'
    cerró el 14/09/2026 con el papel como ganador y pasó al de teléfono. */
 const REGIONES = [
   { region: 'latam', fondo: 'form_variant_cl_latam', control: '63', blanco: '64', video: 'form_variant_video_cl_latam', vControl: '11', vSin: '12' },
-  { region: 'eu', fondo: 'form_variant_cl_eu', control: '65', blanco: '66', video: 'form_variant_video_cl_eu', vControl: '13', vSin: '14' },
+  // EU cerró el de fondo el 07/10/2026 con el papel como ganador.
+  { region: 'eu', papelFijo: { clave: 'form_variant_cl_eu', viejo: '66' }, video: 'form_variant_video_cl_eu', vControl: '13', vSin: '14' },
   { region: 'us', video: 'form_variant_video_cl_us', vControl: '15', vSin: '16', telefono: 'form_variant_cl_us_tel', sinTelefono: '75', conCheckbox: '76' },
 ]
 
@@ -24,6 +25,15 @@ for (const r of REGIONES) {
 
     test(`Languages ${r.region.toUpperCase()} · landing de control conserva el papel (${r.control})`, async ({ page }) => {
       await forzarVariante(page, r.fondo, r.control)
+      await page.goto(urlEtapa(base))
+      await expect(fondo(page)).toHaveCSS('background-color', 'rgb(250, 250, 250)')
+      await expect(fondo(page)).not.toHaveCSS('background-image', 'none')
+    })
+  }
+
+  if (r.papelFijo) {
+    test(`Languages ${r.region.toUpperCase()} · test de fondo cerrado: papel aunque tuviera el blanco`, async ({ page }) => {
+      await forzarVariante(page, r.papelFijo.clave, r.papelFijo.viejo)
       await page.goto(urlEtapa(base))
       await expect(fondo(page)).toHaveCSS('background-color', 'rgb(250, 250, 250)')
       await expect(fondo(page)).not.toHaveCSS('background-image', 'none')

@@ -17,15 +17,14 @@ PRELLAMADA = 'Prellamada'
 TESTS_AB = [
     # ── Landing: la variante viaja en el Lead (LeadRegister.utm_form_variant)
     ('cl-latam', LEAD, 'Fondo de la landing', ('papel', '63'), ('blanco', '64')),
-    ('cl-eu', LEAD, 'Fondo de la landing', ('papel', '65'), ('blanco', '66')),
-    ('cb-eu', LEAD, 'Fondo de la landing', ('papel', '69'), ('blanco', '70')),
-    ('cb-eu-2', LEAD, 'Fondo de la landing', ('papel', '71'), ('blanco', '72')),
     ('cb-us', LEAD, 'Captura de teléfono', ('no se pide', '73'), ('checkbox de WhatsApp', '74')),
     ('cl-us', LEAD, 'Captura de teléfono', ('no se pide', '75'), ('checkbox de WhatsApp', '76')),
     # Cerrados el 07/10/2026 con la rama B como ganadora fija y SIN mandar ya
     # utm_form_variant (`WINNING_VARIANTS` en formVariant.js): cb-latam fondo
     # blanco (57/58), fi-latam fondo blanco (61/62) y fi-eu campo de WhatsApp
     # obligatorio (55/56). Sus códigos no se reciclan.
+    # También el 07/10/2026, con el PAPEL como ganador (sin experimento ni
+    # código): cb-eu (69/70), cb-eu-2 (71/72) y cl-eu (65/66).
     # Conquer AI no está en ninguno: pide el teléfono siempre y obligatorio, fijo
     # por config (`landing.phoneRequired`). Tuvo un test el 14/09/2026 con los
     # códigos 77/78, retirado el mismo día; NO se reciclan.

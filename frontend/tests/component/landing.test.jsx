@@ -34,7 +34,6 @@ const fondoDe = (container) => {
 describe('landing — A/B de fondo blanco', () => {
   const CASOS = [
     { marca: 'Languages LATAM', slug: 'languages-latam', escuela: 'conquer-languages', storageKey: 'form_variant_cl_latam', control: '63', blanco: '64' },
-    { marca: 'Languages EU', slug: 'languages-eu', escuela: 'conquer-languages', region: 'eu', storageKey: 'form_variant_cl_eu', control: '65', blanco: '66' },
   ]
 
   for (const c of CASOS) {
@@ -109,21 +108,18 @@ describe('landing — A/B de fondo blanco', () => {
       expect(fondoDe(container).clases).not.toContain('bg-white')
     })
 
-  it('Blocks EU entra en el test de fondo con sus códigos nuevos', () => {
-    const { container } = montar({
-      slug: 'blocks-eu', escuela: 'conquer-blocks', region: 'eu',
-      storageKey: 'form_variant_cb_eu_fondo', variante: '70',
+  /* Blocks EU, Blocks EU-2 y Languages EU cerraron el test el 07/10/2026 con el
+     PAPEL como ganador: papel para todos, también para quien tenía el blanco. */
+  for (const c of [
+    { marca: 'Blocks EU', slug: 'blocks-eu', escuela: 'conquer-blocks', storageKey: 'form_variant_cb_eu_fondo', viejo: '70' },
+    { marca: 'Blocks EU-2', slug: 'blocks-eu-2', escuela: 'conquer-blocks', storageKey: 'form_variant_cb_eu_2_fondo', viejo: '72' },
+    { marca: 'Languages EU', slug: 'languages-eu', escuela: 'conquer-languages', storageKey: 'form_variant_cl_eu', viejo: '66' },
+  ])
+    it(`${c.marca}: ganó el papel, aunque tuviera el blanco guardado`, () => {
+      const { container } = montar({ ...c, region: 'eu', variante: c.viejo })
+      expect(fondoDe(container).clases).toContain('bg-cb-bg')
+      expect(fondoDe(container).clases).not.toContain('bg-white')
     })
-    expect(fondoDe(container).clases).toContain('bg-white')
-  })
-
-  it('Blocks EU en control conserva el papel', () => {
-    const { container } = montar({
-      slug: 'blocks-eu', escuela: 'conquer-blocks', region: 'eu',
-      storageKey: 'form_variant_cb_eu_fondo', variante: '69',
-    })
-    expect(fondoDe(container).clases).toContain('bg-cb-bg')
-  })
 
   it('la variante del vídeo no afecta al fondo de la landing', () => {
     // Se fijan LAS DOS variantes: si solo se fijara la del vídeo, la de la
