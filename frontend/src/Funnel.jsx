@@ -18,6 +18,7 @@ import { getPrefillRespuestas } from './lib/prefillParams'
 import { countryFromPhone } from './lib/phoneCountry'
 import { validateBlock } from './lib/validateBlock'
 import { getTheme, ThemeContext, useVariantTheme } from './themes'
+import { PAPER_TILE } from './themes/conquerblocks'
 import { getVideoVariantExperiment, readFormVariant } from './lib/formVariant'
 import { useRouter } from './lib/router'
 import './funnel.css'
@@ -502,7 +503,7 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
         style={{
           borderColor: 'var(--theme-form-border, transparent)',
           backgroundImage: `linear-gradient(var(--theme-form-bg, transparent), var(--theme-form-bg, transparent)), var(--theme-form-texture, none)`,
-          backgroundSize: 'cover',
+          backgroundSize: PAPER_TILE,
           backgroundPosition: 'center',
         }}
       >

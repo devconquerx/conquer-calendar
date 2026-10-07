@@ -314,6 +314,7 @@ body { background: #fff; }
      borroso, porque la foto (1567x898) es más pequeña que un viewport de escritorio. */
   background-image: url('./assets/img/cb/paperboard-academia.avif');
   background-repeat: repeat;
+  background-size: 216px;
 }
 /* Variante "plana": la página del calendario va en blanco, sin la textura
    paperboard de Blocks/Legal. La usan Finance (hexboard) y la rama de fondo
@@ -710,13 +711,13 @@ body { background: #fff; }
   gap: 22px;
   background-color: var(--theme-page-bg, #F5EDE3);
   background-image: var(--theme-form-texture, none);
-  background-size: cover;
+  background-size: 216px;
   background-position: center;
   background-attachment: fixed;
 }
 .reject-card {
   background: var(--rj-card-bg);
-  background-size: cover; background-position: center;
+  background-size: 216px; background-position: center;
   border: var(--rj-card-border-w) solid var(--rj-card-border);
   border-radius: var(--rj-card-radius);
   box-shadow: var(--rj-card-shadow);

@@ -40,6 +40,7 @@ import pixelDeco2 from '../assets/img/legal/pixel-5x5-5.svg'
 // derecha (px-lg-8) y cluster pequeño a la izquierda asomando arriba (px-sm-7).
 import pxLg8 from '../assets/img/legal/px-lg-8.svg'
 import pxSm7 from '../assets/img/legal/px-sm-7.svg'
+import { PAPER_TILE } from './conquerblocks'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TEMPORAL — INTERRUPTOR GLOBAL del pixel-art de Conquer Legal.
@@ -251,7 +252,7 @@ export default {
   page: {
     backgroundColor: '#F5EDE3',
     backgroundImage: `url(${paperboardTexture})`,
-    backgroundSize: 'cover',
+    backgroundSize: PAPER_TILE,
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
   },

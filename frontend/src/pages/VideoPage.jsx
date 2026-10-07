@@ -3,7 +3,7 @@ import VideoPlayer from '../components/vsl/VideoPlayer'
 import AgendarButton from '../components/vsl/AgendarButton'
 import { getTheme, useVariantTheme } from '../themes'
 import { useVideoVariant } from '../lib/formVariantContext'
-import { CB_CARD_SHADOW } from '../themes/conquerblocks'
+import { CB_CARD_SHADOW, PAPER_TILE } from '../themes/conquerblocks'
 import { sendVideoProgressToBackend } from '../api'
 import { safeHtml } from '../lib/sanitize'
 import { useRouter } from '../lib/router'
@@ -288,14 +288,14 @@ function PaperboardVideoPage({ assets, video, urls, pct, showButton, onShowButto
     ? {
         backgroundColor: '#FAFAFA',
         backgroundImage: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.4)), url(${paperTexture})`,
-        backgroundSize: 'auto, 50%',
+        backgroundSize: PAPER_TILE,
       }
     : { backgroundColor: '#FFFFFF' }
   // Badge pill: textura paperboard con velo blanco 60% + sombra en capas.
   const tagStyle = paperTexture
     ? {
         backgroundImage: `linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url(${paperTexture})`,
-        backgroundSize: 'cover',
+        backgroundSize: PAPER_TILE,
         boxShadow: CB_CARD_SHADOW,
       }
     : { backgroundColor: '#FFFFFF', boxShadow: CB_CARD_SHADOW }

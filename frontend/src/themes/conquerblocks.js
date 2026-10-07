@@ -52,6 +52,11 @@ const cbShadow =
 export const CB_CARD_SHADOW =
   '0 1px 0.4px rgba(0,0,0,0.03), 0 2px 0.8px rgba(0,0,0,0.04), 0 3.4px 1.6px rgba(0,0,0,0.043), 0 5.4px 2.9px rgba(0,0,0,0.047), 0 8.9px 5.3px rgba(0,0,0,0.047), 0 15.4px 10.4px rgba(0,0,0,0.05), 0 30.6px 22.8px rgba(0,0,0,0.055)'
 
+// Tamaño del mosaico de la textura paperboard. La imagen es pequeña (433 px,
+// ~8 KB): con `cover` se estiraba y se veía pixelada en escritorio. En mosaico a
+// la mitad de su ancho queda nítida también en retina (igual que en eventos).
+export const PAPER_TILE = '216px'
+
 export default {
   id: 'conquerblocks',
   // Marca con landing "paperboard" (réplica Webflow). El renderer compartido
@@ -258,7 +263,7 @@ export default {
   page: {
     backgroundColor: '#F5EDE3',
     backgroundImage: `url(${paperboardTexture})`,
-    backgroundSize: 'cover',
+    backgroundSize: PAPER_TILE,
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
   },

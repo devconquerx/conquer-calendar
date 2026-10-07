@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react'
 
 import paperboardTextureAsset from '../../../assets/img/cb/paperboard-texture.avif'
 import { useTheme } from '../../../themes'
+import { PAPER_TILE } from '../../../themes/conquerblocks'
 
 const KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
 
@@ -19,7 +20,7 @@ export default function MultipleChoice({ field, value, onChange, onNext }) {
   const choiceBg = paperboardTexture
     ? {
         backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${paperboardTexture})`,
-        backgroundSize: 'cover',
+        backgroundSize: PAPER_TILE,
         backgroundPosition: 'center',
       }
     : { backgroundColor: '#FFFFFF' }

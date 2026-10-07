@@ -43,6 +43,7 @@ import instructorPhoto from '../assets/img/languages/andy.webp'
 // con el degradado teal de Languages en vez del azul.
 import pixelDeco from '../assets/img/languages/pixel-6x6-2.svg'
 import pixelDeco2 from '../assets/img/languages/pixel-5x5-5.svg'
+import { PAPER_TILE } from './conquerblocks'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TEMPORAL — INTERRUPTOR GLOBAL del pixel-art de Conquer Languages.
@@ -239,7 +240,7 @@ export default {
   page: {
     backgroundColor: '#F5EDE3',
     backgroundImage: `url(${paperboardTexture})`,
-    backgroundSize: 'cover',
+    backgroundSize: PAPER_TILE,
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
   },

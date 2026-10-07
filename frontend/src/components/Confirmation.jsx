@@ -3,6 +3,7 @@ import { leer } from '../lib/safeStorage'
 import { getTheme } from '../themes'
 import { useWhiteBackgroundConfirmacion } from '../lib/formVariantContext'
 import { toWhiteBackground } from '../themes/whiteBackground'
+import { PAPER_TILE } from '../themes/conquerblocks'
 import useTracking from '../hooks/useTracking'
 import { fireAllSchedule } from '../lib/pixelEvents'
 import { safeHtml } from '../lib/sanitize'
@@ -285,7 +286,7 @@ function StepBadge({ children, icon, big, texture, padClass, sizeClass, weightCl
           backgroundImage: texture
             ? `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${texture})`
             : undefined,
-          backgroundSize: 'cover',
+          backgroundSize: PAPER_TILE,
           backgroundPosition: 'center',
         }}
       />
@@ -362,15 +363,15 @@ function PaperboardConfirmation({ theme, assets }) {
       ? {
           backgroundColor: '#FAFAFA',
           backgroundImage: `linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.4)), url(${texture})`,
-          backgroundSize: 'auto, 50%',
+          backgroundSize: PAPER_TILE,
           backgroundRepeat: 'repeat',
           backgroundPosition: '0 0, 50% 0',
         }
-      : { backgroundImage: `url(${texture})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+      : { backgroundImage: `url(${texture})`, backgroundSize: PAPER_TILE, backgroundPosition: 'center' }
   const cardBg = texture
     ? {
         backgroundImage: `linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(${texture})`,
-        backgroundSize: 'cover',
+        backgroundSize: PAPER_TILE,
         backgroundPosition: 'center',
       }
     : undefined

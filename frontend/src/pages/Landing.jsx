@@ -2,7 +2,7 @@ import HeroSection from '../components/landing/HeroSection'
 import LandingForm from '../components/landing/LandingForm'
 import BulletPoints from '../components/landing/BulletPoints'
 import { getTheme, useVariantTheme } from '../themes'
-import { CB_CARD_SHADOW } from '../themes/conquerblocks'
+import { CB_CARD_SHADOW, PAPER_TILE } from '../themes/conquerblocks'
 import { safeHtml } from '../lib/sanitize'
 
 export default function Landing({ school, program, region, formConfig, nextUrl, funnelSlug, videoEnabled = false }) {
@@ -74,7 +74,7 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
   const isWhite = !!theme.whiteBackground
   const pageStyle = assets?.paperboardTexture ? {
     backgroundImage: `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url(${assets.paperboardTexture})`,
-    backgroundSize: 'cover',
+    backgroundSize: PAPER_TILE,
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
   } : undefined
@@ -85,7 +85,7 @@ function PaperboardLanding({ school, program, region, formConfig, theme, assets,
     backgroundImage: assets?.paperboardTexture
       ? `linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url(${assets.paperboardTexture})`
       : undefined,
-    backgroundSize: 'cover',
+    backgroundSize: PAPER_TILE,
     backgroundPosition: 'center',
     boxShadow: CB_CARD_SHADOW,
   }

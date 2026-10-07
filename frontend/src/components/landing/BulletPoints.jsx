@@ -1,5 +1,5 @@
 import { safeHtml } from '../../lib/sanitize'
-import { CB_CARD_SHADOW } from '../../themes/conquerblocks'
+import { CB_CARD_SHADOW, PAPER_TILE } from '../../themes/conquerblocks'
 
 const DEFAULT_BULLETS = [
   'Clase 100% gratuita y online',
@@ -48,7 +48,7 @@ export default function BulletPoints({ formConfig, theme }) {
       backgroundImage: theme.assets?.paperboardTexture
         ? `linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url(${theme.assets.paperboardTexture})`
         : undefined,
-      backgroundSize: 'cover',
+      backgroundSize: PAPER_TILE,
       backgroundPosition: 'center',
       boxShadow: CB_CARD_SHADOW,
     }
