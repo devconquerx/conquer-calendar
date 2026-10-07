@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # y el % de VSL se mandan a Relay, que decide si atiende al contacto y escribe él mismo en AC lo mismo que hace este
 # módulo. Si Relay falla, tarda más de RELAY_PUENTE_TIMEOUT o no responde 200, se escribe en AC directamente (plan B).
 # Contrato: relay/apps/puente_ac/README.md. Se quita cuando se apague AC (relay/docs/provisional-migracion-ac.md).
-RELAY_PUENTE_TIMEOUT = 2
+RELAY_PUENTE_TIMEOUT = 10  # va en tareas de Celery: esperar más evita el plan B (AC directo) por un Relay lento
 
 # ActiveCampaign custom field IDs for UTM/click params
 CUSTOM_FIELD_MAP = {

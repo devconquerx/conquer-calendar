@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # Relay, que decide si atiende al contacto y escribe él mismo en AC (contacto, tag de agenda y relay-<automatización>).
 # Si Relay falla, tarda más de RELAY_PUENTE_TIMEOUT o no responde 200, calendar etiqueta AC directamente (plan B).
 # Contrato: relay/apps/puente_ac/README.md. Se quita cuando se apague AC (relay/docs/provisional-migracion-ac.md).
-RELAY_PUENTE_TIMEOUT = 2
+RELAY_PUENTE_TIMEOUT = 10  # va en tareas de Celery: esperar más evita el plan B (AC directo) por un Relay lento
 
 # Tag IDs por escuela para eventos Schedule (distintos de los tags lead funnel-region)
 SCHEDULE_SCHOOL_TAG_MAP = {
