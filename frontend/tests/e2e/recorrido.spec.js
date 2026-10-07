@@ -24,16 +24,29 @@ test.describe('landing → StepForm', () => {
 
   test('el lead sale con los datos del formulario y la variante de la landing', async ({ page }) => {
     const enviado = await simularBackend(page)
-    await forzarVariante(page, 'form_variant_cb_latam', '58')
-    await page.goto(urlEtapa({ query: 'utm_source=meta&gclid=G1' }))
+    await forzarVariante(page, 'form_variant_cb_eu_fondo', '70')
+    await page.goto(urlEtapa({ slug: 'blocks-eu', region: 'eu', query: 'utm_source=meta&gclid=G1' }))
     await enviarLanding(page)
 
     await expect.poll(() => enviado.leads.length).toBe(1)
     expect(enviado.leads[0]).toMatchObject({
       name: 'Andrés QA', email: 'qa@ejemplo.com',
-      escuela: 'conquer-blocks', funnel: 'blocks-latam',
-      utm_source: 'meta', gclid: 'G1', utm_form_variant: '58',
+      escuela: 'conquer-blocks', funnel: 'blocks-eu',
+      utm_source: 'meta', gclid: 'G1', utm_form_variant: '70',
     })
+  })
+
+  /* Blocks LATAM cerró su test el 07/10/2026 con el blanco (58) como ganador:
+     el lead ya no lleva código, ni siquiera quien tenía guardada una rama. */
+  test('Blocks LATAM (test cerrado) no manda utm_form_variant', async ({ page }) => {
+    const enviado = await simularBackend(page)
+    await forzarVariante(page, 'form_variant_cb_latam', '57')
+    await page.goto(urlEtapa({ query: 'utm_source=meta' }))
+    await enviarLanding(page)
+
+    await expect.poll(() => enviado.leads.length).toBe(1)
+    expect(enviado.leads[0]).toMatchObject({ funnel: 'blocks-latam', utm_source: 'meta' })
+    expect(enviado.leads[0]).not.toHaveProperty('utm_form_variant')
   })
 
   test('los UTMs de la campaña sobreviven al salto de etapa', async ({ page }) => {
@@ -46,31 +59,41 @@ test.describe('landing → StepForm', () => {
   })
 })
 
+/* Blocks LATAM (57/58) y Finance LATAM (61/62) cerraron el test el
+   07/10/2026 con el BLANCO fijo. Las dos ramas se siguen probando con el de
+   Blocks EU (69/70), que sigue vivo y usa el mismo mecanismo. */
 test.describe('A/B de fondo blanco (landing)', () => {
   const fondo = (page) => page.locator('#funnel-root > div').first()
+  const EU = { slug: 'blocks-eu', region: 'eu' }
+  const CLAVE = 'form_variant_cb_eu_fondo'
 
-  test('la variante 58 pinta la landing en blanco, sin textura', async ({ page }) => {
-    await forzarVariante(page, 'form_variant_cb_latam', '58')
+  test('Blocks y Finance LATAM salen en blanco para todos, aunque tuvieran el papel guardado', async ({ page }) => {
+    await forzarVariante(page, 'form_variant_cb_latam', '57')
     await page.goto(urlEtapa())
     await expect(fondo(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await expect(fondo(page)).toHaveCSS('background-image', 'none')
-  })
 
-  test('la variante 57 conserva el papel', async ({ page }) => {
-    await forzarVariante(page, 'form_variant_cb_latam', '57')
-    await page.goto(urlEtapa())
-    await expect(fondo(page)).toHaveCSS('background-color', 'rgb(250, 250, 250)')
-    await expect(fondo(page)).not.toHaveCSS('background-image', 'none')
-  })
-
-  test('Finance LATAM comparte el mecanismo aunque su tema sea otro', async ({ page }) => {
-    await forzarVariante(page, 'form_variant_cf_latam', '62')
+    await forzarVariante(page, 'form_variant_cf_latam', '61')
     await page.goto(urlEtapa({ slug: 'finance-latam', escuela: 'conquer-finance' }))
     await expect(fondo(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)')
   })
 
+  test('la variante 70 pinta la landing en blanco, sin textura', async ({ page }) => {
+    await forzarVariante(page, CLAVE, '70')
+    await page.goto(urlEtapa(EU))
+    await expect(fondo(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    await expect(fondo(page)).toHaveCSS('background-image', 'none')
+  })
+
+  test('la variante 69 conserva el papel', async ({ page }) => {
+    await forzarVariante(page, CLAVE, '69')
+    await page.goto(urlEtapa(EU))
+    await expect(fondo(page)).toHaveCSS('background-color', 'rgb(250, 250, 250)')
+    await expect(fondo(page)).not.toHaveCSS('background-image', 'none')
+  })
+
   test('el ?force_form_variant de QA fuerza la variante y se limpia de la URL', async ({ page }) => {
-    await page.goto(urlEtapa({ query: 'force_form_variant=58&utm_source=meta' }))
+    await page.goto(urlEtapa({ ...EU, query: 'force_form_variant=70&utm_source=meta' }))
     await expect(page).not.toHaveURL(/force_form_variant/)
     await expect(page).toHaveURL(/utm_source=meta/)
     await expect(fondo(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)')
@@ -101,8 +124,8 @@ test.describe('A/B de fondo blanco (landing)', () => {
      la variante deja al visitante viendo papel en mitad del recorrido. Corren
      en escritorio y en móvil, que es donde se vería un escalón de color. */
   test('la página de vídeo también va en blanco, sin escalón en el rasgado', async ({ page }) => {
-    await forzarVariante(page, 'form_variant_cb_latam', '58')
-    await page.goto(urlEtapa({ stage: 'video' }))
+    await forzarVariante(page, CLAVE, '70')
+    await page.goto(urlEtapa({ ...EU, stage: 'video' }))
     const cabecera = page.locator('header').first()
     await expect(cabecera).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await expect(cabecera).toHaveCSS('background-image', 'none')
@@ -112,30 +135,30 @@ test.describe('A/B de fondo blanco (landing)', () => {
   })
 
   test('la página de vídeo de control conserva su papel', async ({ page }) => {
-    await forzarVariante(page, 'form_variant_cb_latam', '57')
-    await page.goto(urlEtapa({ stage: 'video' }))
+    await forzarVariante(page, CLAVE, '69')
+    await page.goto(urlEtapa({ ...EU, stage: 'video' }))
     const cabecera = page.locator('header').first()
     await expect(cabecera).not.toHaveCSS('background-image', 'none')
     await expect(page.locator('img[src*="torn"]').first()).toHaveCSS('filter', 'none')
   })
 
   test('el stepform va en blanco y sin textura de papel', async ({ page }) => {
-    await forzarVariante(page, 'form_variant_cb_latam', '58')
-    await page.goto(urlEtapa({ stage: 'stepform' }))
+    await forzarVariante(page, CLAVE, '70')
+    await page.goto(urlEtapa({ ...EU, stage: 'stepform' }))
     const wrap = page.locator('.funnel-wrap')
     await expect(wrap).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await expect(wrap).toHaveCSS('background-image', 'none')
   })
 
   test('el stepform de control conserva el papel', async ({ page }) => {
-    await forzarVariante(page, 'form_variant_cb_latam', '57')
-    await page.goto(urlEtapa({ stage: 'stepform' }))
+    await forzarVariante(page, CLAVE, '69')
+    await page.goto(urlEtapa({ ...EU, stage: 'stepform' }))
     await expect(page.locator('.funnel-wrap')).not.toHaveCSS('background-image', 'none')
   })
 
   test('la confirmación va en blanco', async ({ page }) => {
-    await forzarVariante(page, 'form_variant_cb_latam', '58')
-    await page.goto(urlEtapa({ stage: 'confirmation' }))
+    await forzarVariante(page, CLAVE, '70')
+    await page.goto(urlEtapa({ ...EU, stage: 'confirmation' }))
     const seccion = page.locator('section').first()
     await expect(seccion).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await expect(seccion).toHaveCSS('background-image', 'none')
@@ -144,8 +167,8 @@ test.describe('A/B de fondo blanco (landing)', () => {
   test('la confirmación de control conserva su papel', async ({ page }) => {
     // Blocks pinta el color por estilo (#FAFAFA tileado), no con la clase
     // crema, así que lo que distingue a la rama de control es la textura.
-    await forzarVariante(page, 'form_variant_cb_latam', '57')
-    await page.goto(urlEtapa({ stage: 'confirmation' }))
+    await forzarVariante(page, CLAVE, '69')
+    await page.goto(urlEtapa({ ...EU, stage: 'confirmation' }))
     await expect(page.locator('section').first()).not.toHaveCSS('background-image', 'none')
   })
 })

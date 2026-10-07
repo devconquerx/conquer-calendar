@@ -71,31 +71,10 @@ export function readFormVariant(experiment) {
    (`especializacion-eu` cuelga de la marca Blocks y de la región EU, pero es
    un funnel aparte). Los slugs están verificados contra la BD de producción. */
 const FORM_VARIANT_EXPERIMENTS = [
-  // Finance EU: 55 (checkbox, igual que Legal) / 56 (campo visible y obligatorio).
-  {
-    match: ({ funnelSlug }) => funnelSlug === 'finance-eu',
-    storageKey: 'form_variant_cf',
-    variants: ['55', '56'],
-    whatsappOptinVariant: '55',
-    alwaysPhoneVariant: '56',
-    whatsappComplianceText: true,
-  },
   // Conquer AI (ai-eu) NO corre ningún experimento: su landing pide el teléfono
   // siempre y obligatorio, sin checkbox, fijo por config (`landing.phoneRequired`,
   // migración 0032). Llegó a tener uno el 14/09/2026 con los códigos 77/78; se
   // retiró el mismo día y NO se reciclan.
-  // Finance LATAM (fi-latam, slug `finance-latam`): 61 (control: la landing tal
-  // cual) / 62 (test: fondo blanco). Mismo test de diseño que Blocks LATAM.
-  // Finance EU queda FUERA a propósito: su landing ya corre el A/B de
-  // teléfono/WhatsApp (55/56) y `utm_form_variant` es un único campo por lead,
-  // así que no puede llevar dos experimentos a la vez sin ambigüedad.
-  {
-    match: ({ funnelSlug }) => funnelSlug === 'finance-latam',
-    storageKey: 'form_variant_cf_latam',
-    themeId: 'conquerfinance',
-    variants: ['61', '62'],
-    whiteBackgroundVariant: '62',
-  },
   // Blocks EU, segunda landing (cb-eu-2, slug `blocks-eu-2`): 71 (control) / 72
   // (fondo blanco). Experimento independiente del de la landing principal para
   // no mezclar splits.
@@ -126,20 +105,6 @@ const FORM_VARIANT_EXPERIMENTS = [
     themeId: 'conquerblocks',
     variants: ['69', '70'],
     whiteBackgroundVariant: '70',
-  },
-  // Blocks LATAM (cb-latam, slug `blocks-latam`): 57 (control: la landing tal
-  // cual, con su fondo de papel) / 58 (test: la MISMA landing con el fondo en
-  // blanco). El formulario no cambia entre las dos —es un test de diseño, no de
-  // campos— y las etapas siguientes (vídeo, stepform, calendario y
-  // confirmación) tampoco: el cambio se queda en la landing. Se ancla al slug
-  // exacto para no alcanzar a `especializacion-latam`, que comparte marca y
-  // región.
-  {
-    match: ({ funnelSlug }) => funnelSlug === 'blocks-latam',
-    storageKey: 'form_variant_cb_latam',
-    themeId: 'conquerblocks',
-    variants: ['57', '58'],
-    whiteBackgroundVariant: '58',
   },
   // Blocks US (cb-us, slug `blocks-us`): 73 (control: no se pide el teléfono,
   // solo lo captura el honeypot) / 74 (test: checkbox de WhatsApp, que al
@@ -182,6 +147,33 @@ const FORM_VARIANT_EXPERIMENTS = [
     variants: ['75', '76'],
     whatsappOptinVariant: '76',
   },
+]
+
+/* ── Experimentos CERRADOS con ganador fijo ───────────────────────────────
+   El 07/10/2026 se apagaron estos tres A/B de la landing dejando la rama B
+   (la de test) para todo el mundo. Siguen declarando la MISMA bandera que en el
+   experimento, así que el resto del código (fondo blanco, teléfono
+   obligatorio, texto de WhatsApp) no distingue entre test y ganador; lo que
+   cambia es que:
+
+   - no se sortea: `winner` es la variante de todos, desde el SSR (sin parpadeo
+     de papel a blanco);
+   - NO se manda `utm_form_variant` en el lead: el test ya no existe y el código
+     marcaría como «rama B» leads que no participaron en ningún reparto;
+   - se guarda en su `storageKey` igualmente, porque la confirmación sin región
+     (ver `hasWhiteBackgroundAssigned`) hereda el fondo leyendo esa clave.
+
+   Sus códigos (55/56, 57/58, 61/62) NO se reciclan: siguen significando sus
+   ramas en los leads históricos. */
+const WINNING_VARIANTS = [
+  // Blocks LATAM: ganó el fondo blanco (58) frente al papel (57).
+  { funnelSlug: 'blocks-latam', storageKey: 'form_variant_cb_latam', themeId: 'conquerblocks', winner: '58', whiteBackgroundVariant: '58' },
+  // Finance LATAM: ganó el fondo blanco (62) frente al papel (61).
+  { funnelSlug: 'finance-latam', storageKey: 'form_variant_cf_latam', themeId: 'conquerfinance', winner: '62', whiteBackgroundVariant: '62' },
+  // Finance EU: ganó el campo de WhatsApp visible y obligatorio (56) frente al
+  // checkbox (55). El texto legal que menciona WhatsApp iba en las dos ramas y
+  // se queda.
+  { funnelSlug: 'finance-eu', storageKey: 'form_variant_cf', winner: '56', alwaysPhoneVariant: '56', whatsappComplianceText: true },
 ]
 
 /* ── Experimentos de la PÁGINA DE VÍDEO ───────────────────────────────────
@@ -229,10 +221,15 @@ const VIDEO_VARIANT_EXPERIMENTS = [
    dominio y no comparte localStorage con las demás. */
 export function hasWhiteBackgroundAssigned(themeId) {
   if (!themeId) return false
-  return FORM_VARIANT_EXPERIMENTS.some((exp) => (
+  if (FORM_VARIANT_EXPERIMENTS.some((exp) => (
     exp.whiteBackgroundVariant
     && exp.themeId === themeId
     && readFormVariant(exp) === exp.whiteBackgroundVariant
+  ))) return true
+  return WINNING_VARIANTS.some((exp) => (
+    exp.whiteBackgroundVariant
+    && exp.themeId === themeId
+    && readFormVariant({ storageKey: exp.storageKey, variants: [exp.winner] }) === exp.whiteBackgroundVariant
   ))
 }
 
@@ -242,12 +239,22 @@ export function getVideoVariantExperiment(funnelSlug) {
   return VIDEO_VARIANT_EXPERIMENTS.find((exp) => exp.funnelSlug === funnelSlug) || null
 }
 
-/** Experimento que aplica a este funnel, o null si no hay ninguno activo. */
+/** Experimento que aplica a este funnel (activo o cerrado con `winner`), o
+    null si no tiene ninguno. */
 export function getFormVariantExperiment({ themeId, region, funnelSlug } = {}) {
   const ctx = {
     themeId: themeId || '',
     region: String(region || '').toLowerCase(),
     funnelSlug: funnelSlug || '',
   }
-  return FORM_VARIANT_EXPERIMENTS.find((exp) => exp.match(ctx)) || null
+  return FORM_VARIANT_EXPERIMENTS.find((exp) => exp.match(ctx))
+    || WINNING_VARIANTS.find((exp) => exp.funnelSlug === ctx.funnelSlug)
+    || null
+}
+
+/** Deja guardado el ganador de un experimento cerrado en su storageKey (para la
+    herencia de la confirmación). Solo client-side; nunca falla. */
+export function persistWinningVariant(experiment) {
+  if (typeof window === 'undefined' || !experiment?.winner || !experiment.storageKey) return
+  try { localStorage.setItem(experiment.storageKey, experiment.winner) } catch (_) {}
 }

@@ -20,9 +20,13 @@ vi.mock('../../src/components/vsl/VideoPlayer', () => ({ default: () => <div dat
    La clave del test: `storageKey` + `variante` dejan la rama ya asignada en
    localStorage antes de montar, igual que un visitante que viene de la landing. */
 
-const CLAVE = 'form_variant_cb_latam'
-const PAPEL = '57'
-const BLANCO = '58'
+// Blocks LATAM cerró su test el 07/10/2026 (blanco fijo); las dos ramas se
+// prueban con el de Blocks EU, que sigue vivo.
+const CLAVE = 'form_variant_cb_eu_fondo'
+const PAPEL = '69'
+const BLANCO = '70'
+const SLUG = 'blocks-eu'
+const CTX = { storageKey: CLAVE, slug: SLUG, region: 'eu' }
 
 const configVideo = {
   video: { title: 'Título', subtitle: 'Vídeo', videoUrls: ['https://example.com/v.mp4'], buttonPercent: 75 },
@@ -32,22 +36,22 @@ function montarVideo(variante) {
   return renderConFunnel(
     <VideoPage
       school={{ slug: 'conquer-blocks' }}
-      region="latam"
+      region="eu"
       formConfig={configVideo}
       videoUrls={configVideo.video.videoUrls}
       buttonPercent={75}
-      nextUrl="/agenda/fullstack/latam/"
+      nextUrl="/agenda/fullstack/eu/"
       search=""
-      funnelSlug="blocks-latam"
+      funnelSlug={SLUG}
     />,
-    { variante, storageKey: CLAVE }
+    { variante, ...CTX }
   )
 }
 
 function montarConfirmacion(variante) {
   return renderConFunnel(
-    <Confirmation escuela="conquer-blocks" slug="blocks-latam" />,
-    { variante, storageKey: CLAVE }
+    <Confirmation escuela="conquer-blocks" slug={SLUG} />,
+    { variante, ...CTX }
   )
 }
 
@@ -118,8 +122,8 @@ describe('A/B de fondo blanco en todo el funnel', () => {
     }
 
     const montarStepForm = (variante) => renderConFunnel(
-      <Funnel slug="blocks-latam" escuela="conquer-blocks" formConfig={CONFIG} search="" />,
-      { variante, storageKey: CLAVE }
+      <Funnel slug={SLUG} escuela="conquer-blocks" formConfig={CONFIG} search="" />,
+      { variante, ...CTX }
     )
 
     it('con la variante blanca el wrapper va en blanco y sin textura', () => {
@@ -148,7 +152,7 @@ describe('A/B de fondo blanco en todo el funnel', () => {
     it('con la variante blanca usa el wrapper plano', () => {
       const { container } = renderConFunnel(
         <Calendar {...props} theme={toWhiteBackground(getTheme('conquer-blocks'))} />,
-        { variante: BLANCO, storageKey: CLAVE }
+        { variante: BLANCO, ...CTX }
       )
       expect(container.querySelector('.bk-wrapper').className).toContain('bk-wrapper--plain')
     })
@@ -156,7 +160,7 @@ describe('A/B de fondo blanco en todo el funnel', () => {
     it('con la variante de papel conserva el wrapper con textura', () => {
       const { container } = renderConFunnel(
         <Calendar {...props} theme={getTheme('conquer-blocks')} />,
-        { variante: PAPEL, storageKey: CLAVE }
+        { variante: PAPEL, ...CTX }
       )
       expect(container.querySelector('.bk-wrapper').className).not.toContain('bk-wrapper--plain')
     })
@@ -185,7 +189,9 @@ describe('A/B de fondo blanco en todo el funnel', () => {
       expect(estilosDe(container)).not.toContain('paperboard')
     })
 
-    it('la rama de papel sigue viendo su papel', () => {
+    it('un 61 viejo (papel, ya cerrado) no hereda el blanco hasta volver a la landing', () => {
+      // La landing de LATAM reescribe la clave con el ganador (62) al montar;
+      // mientras no pase por ella, la confirmación no inventa la rama.
       const { container } = montarFinance('61')
       expect(estilosDe(container)).toContain('paperboard')
     })

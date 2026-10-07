@@ -290,7 +290,8 @@ export default function LandingForm({ program, region, formConfig, school, theme
     // Variante A/B resuelta (Finance EU 55/56, Blocks EU 51/52 y EU-2 53/54,
     // Blocks LATAM 57/58) — el Lead.utm_form_variant y su forwarding al CRM ya
     // existían, solo faltaba poblarlo.
-    if (formVariant) body.utm_form_variant = formVariant
+    // Los experimentos cerrados (`winner`) ya no mandan código: no hubo reparto.
+    if (formVariant && !experiment?.winner) body.utm_form_variant = formVariant
 
     if (phoneData) {
       body.lead_phone = phoneDigits

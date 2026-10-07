@@ -47,9 +47,24 @@ async function enviar(container, { nombre = 'Ana', email = 'ana@ejemplo.com' } =
 
 describe('formulario de la landing', () => {
   it('manda la variante del test de fondo como utm_form_variant', async () => {
-    const { container } = montar({ slug: 'blocks-latam', storageKey: 'form_variant_cb_latam', variante: '58' })
-    expect((await enviar(container)).utm_form_variant).toBe('58')
+    const { container } = montar({ slug: 'languages-latam', escuela: 'conquer-languages', storageKey: 'form_variant_cl_latam', variante: '64' })
+    expect((await enviar(container)).utm_form_variant).toBe('64')
   })
+
+  /* Tests cerrados el 07/10/2026 con la rama B fija: ya no mandan código, ni
+     siquiera a quien tenga guardada la rama perdedora de cuando corrían. */
+  for (const c of [
+    { slug: 'blocks-latam', storageKey: 'form_variant_cb_latam', variante: '57' },
+    { slug: 'finance-latam', escuela: 'conquer-finance', storageKey: 'form_variant_cf_latam', variante: '61' },
+    { slug: 'finance-eu', escuela: 'conquer-finance', region: 'eu', storageKey: 'form_variant_cf', variante: '55', telefono: true },
+  ])
+    it(`${c.slug}: test cerrado, no manda utm_form_variant`, async () => {
+      const { container } = montar(c)
+      if (c.telefono) {
+        fireEvent.change(screen.getByPlaceholderText(/número de whatsapp \*/i), { target: { value: '612345678' } })
+      }
+      expect('utm_form_variant' in (await enviar(container))).toBe(false)
+    })
 
   it('no manda utm_form_variant en un funnel sin experimento', async () => {
     // languages-ge no participa en ningún A/B (las tres regiones grandes sí).
@@ -76,10 +91,10 @@ describe('formulario de la landing', () => {
   })
 
   it('NO manda la variante del vídeo en el lead: esa va en la prellamada', async () => {
-    const { container } = montar({ slug: 'blocks-latam', storageKey: 'form_variant_video_cb_latam', variante: '4' })
+    const { container } = montar({ slug: 'languages-latam', escuela: 'conquer-languages', storageKey: 'form_variant_video_cl_latam', variante: '12' })
     const body = await enviar(container)
-    // Manda la del test de la landing (57/58), nunca el código del vídeo.
-    expect(['57', '58']).toContain(body.utm_form_variant)
+    // Manda la del test de la landing (63/64), nunca el código del vídeo.
+    expect(['63', '64']).toContain(body.utm_form_variant)
   })
 
   it('incluye escuela, funnel, consentimiento y el email normalizado', async () => {
@@ -168,13 +183,10 @@ describe('A/B de teléfono/WhatsApp (EU)', () => {
     expect(hayCheckbox(container)).toBe(false)
   })
 
-  it('Finance EU 55: checkbox; 56: teléfono siempre visible y obligatorio', async () => {
-    const primera = montar({ slug: 'finance-eu', escuela: 'conquer-finance', region: 'eu', storageKey: 'form_variant_cf', variante: '55' })
-    expect(hayCheckbox(primera.container)).toBe(true)
-    primera.unmount()
-
-    localStorage.setItem('form_variant_cf', '56')
-    const { container } = montar({ slug: 'finance-eu', escuela: 'conquer-finance', region: 'eu' })
+  it('Finance EU: ganó el 56, teléfono siempre visible y obligatorio para todos', async () => {
+    // Aunque tenga guardada la rama perdedora (55, checkbox) de cuando corría.
+    const { container } = montar({ slug: 'finance-eu', escuela: 'conquer-finance', region: 'eu', storageKey: 'form_variant_cf', variante: '55' })
+    expect(hayCheckbox(container)).toBe(false)
     expect(screen.getByPlaceholderText(/número de whatsapp \*/i)).toBeInTheDocument()
     fireEvent.change(screen.getByPlaceholderText(/nombre/i), { target: { value: 'Ana' } })
     fireEvent.change(screen.getByPlaceholderText(/email/i), { target: { value: 'ana@ejemplo.com' } })

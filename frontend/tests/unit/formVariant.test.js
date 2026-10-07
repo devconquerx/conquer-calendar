@@ -96,9 +96,17 @@ describe('registro de experimentos', () => {
     expect(unicos(codigosVideo).length).toBe(new Set(unicos(codigosVideo)).size)
   })
 
+  it('los tests cerrados el 07/10/2026 dejan fija la rama B', () => {
+    const ganador = (slug) => getFormVariantExperiment({ funnelSlug: slug })
+    expect(ganador('blocks-latam')).toMatchObject({ winner: '58', whiteBackgroundVariant: '58' })
+    expect(ganador('finance-latam')).toMatchObject({ winner: '62', whiteBackgroundVariant: '62' })
+    expect(ganador('finance-eu')).toMatchObject({ winner: '56', alwaysPhoneVariant: '56', whatsappComplianceText: true })
+  })
+
   it('cada experimento declara variantes distintas y una bandera de qué cambia', () => {
     for (const f of FUNNELS) {
       for (const exp of [experimentoLanding(f), experimentoVideo(f)].filter(Boolean)) {
+        if (exp.winner) continue // cerrado: lo cubre el test de ganadores
         expect(exp.variants).toHaveLength(2)
         expect(exp.variants[0]).not.toBe(exp.variants[1])
         expect(exp.storageKey).toMatch(/^form_variant_/)

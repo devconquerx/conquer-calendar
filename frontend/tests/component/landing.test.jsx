@@ -33,8 +33,6 @@ const fondoDe = (container) => {
    más abajo, comprobando que se quedan en papel pase lo que pase. */
 describe('landing — A/B de fondo blanco', () => {
   const CASOS = [
-    { marca: 'Blocks LATAM', slug: 'blocks-latam', escuela: 'conquer-blocks', storageKey: 'form_variant_cb_latam', control: '57', blanco: '58' },
-    { marca: 'Finance LATAM', slug: 'finance-latam', escuela: 'conquer-finance', storageKey: 'form_variant_cf_latam', control: '61', blanco: '62' },
     { marca: 'Languages LATAM', slug: 'languages-latam', escuela: 'conquer-languages', storageKey: 'form_variant_cl_latam', control: '63', blanco: '64' },
     { marca: 'Languages EU', slug: 'languages-eu', escuela: 'conquer-languages', region: 'eu', storageKey: 'form_variant_cl_eu', control: '65', blanco: '66' },
   ]
@@ -65,6 +63,24 @@ describe('landing — A/B de fondo blanco', () => {
         expect(estilo).not.toMatch(/#F6F6F6/i)
         expect(estilo).not.toMatch(/url\(/)
       }
+    })
+  }
+
+  /* Blocks y Finance LATAM cerraron el test el 07/10/2026 con el BLANCO como
+     ganador: blanco para todos, también para quien tenía guardado el papel. */
+  for (const c of [
+    { marca: 'Blocks LATAM', slug: 'blocks-latam', escuela: 'conquer-blocks', storageKey: 'form_variant_cb_latam', viejo: '57' },
+    { marca: 'Finance LATAM', slug: 'finance-latam', escuela: 'conquer-finance', storageKey: 'form_variant_cf_latam', viejo: '61' },
+  ]) {
+    it(`${c.marca}: ganó el blanco, sale blanca sin sortear`, () => {
+      const { container } = montar({ slug: c.slug, escuela: c.escuela })
+      expect(fondoDe(container).clases).toContain('bg-white')
+      expect(fondoDe(container).estilo).not.toMatch(/background-image/)
+    })
+
+    it(`${c.marca}: quien tenía el papel guardado también la ve blanca`, () => {
+      const { container } = montar({ ...c, variante: c.viejo })
+      expect(fondoDe(container).clases).toContain('bg-white')
     })
   }
 
@@ -114,10 +130,10 @@ describe('landing — A/B de fondo blanco', () => {
     // landing se sortearía al montar y el test saldría blanco la mitad de las
     // veces (era flaky así). Con la de la landing en control, lo único que
     // puede mover el fondo es la del vídeo — y no debe.
-    localStorage.setItem('form_variant_cb_latam', '57')
+    localStorage.setItem('form_variant_cl_latam', '63')
     const { container } = montar({
-      slug: 'blocks-latam', escuela: 'conquer-blocks',
-      storageKey: 'form_variant_video_cb_latam', variante: '4',
+      slug: 'languages-latam', escuela: 'conquer-languages',
+      storageKey: 'form_variant_video_cl_latam', variante: '12',
     })
     expect(fondoDe(container).clases).toContain('bg-cb-bg')
   })

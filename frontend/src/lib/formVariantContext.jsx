@@ -3,6 +3,7 @@ import {
   getFormVariantExperiment,
   getVideoVariantExperiment,
   hasWhiteBackgroundAssigned,
+  persistWinningVariant,
   resolveFormVariant,
 } from './formVariant'
 
@@ -34,11 +35,15 @@ export default function FormVariantProvider({ themeId, region, funnelSlug, child
     () => getFormVariantExperiment({ themeId, region, funnelSlug }),
     [themeId, region, funnelSlug]
   )
-  const [variant, setVariant] = useState(null)
+  const [assigned, setAssigned] = useState(null)
+  // Un experimento cerrado no sortea: su ganador vale para todos y se conoce ya
+  // en el SSR / primer render.
+  const variant = experiment?.winner || assigned
 
   useVariantEffect(() => {
     if (!experiment) return
-    setVariant(resolveFormVariant(experiment))
+    if (experiment.winner) persistWinningVariant(experiment)
+    else setAssigned(resolveFormVariant(experiment))
   }, [experiment])
 
   const value = useMemo(
