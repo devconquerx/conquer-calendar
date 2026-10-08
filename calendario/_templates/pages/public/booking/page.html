@@ -315,6 +315,18 @@ body {
    ya está en marcha y no invite a pulsar otra vez. */
 .bk-submit:disabled,
 .bk-submit:disabled:hover { background: #9cb8e8; cursor: progress; }
+/* Embebido en la academia, con el formulario a la vista, el botón queda anclado
+   abajo de la tarjeta. La tarjeta mide 575px fijos y recorta lo que no cabe, y
+   aquí el formulario es más alto que en la página pública (identidad bloqueada y
+   la nota de "Reservas con tu cuenta de la academia"), así que el botón quedaba
+   pegado al borde o fuera de la vista sin forma de llegar a él. Ahora los campos
+   hacen scroll por encima y el botón se ve siempre, con su franja blanca al pie. */
+.bk-embebido .bk-card.bk-en-formulario .bk-right { overflow-y: auto; }
+.bk-embebido .bk-card.bk-en-formulario .bk-submit {
+  position: sticky; bottom: 16px; z-index: 1;
+  /* Arriba, degradado sobre los campos; abajo, franja blanca hasta el borde. */
+  box-shadow: 0 -16px 16px 4px #fff, 0 20px 0 20px #fff;
+}
 
 /* ── Phone picker ── */
 .ph-wrap {
@@ -415,6 +427,7 @@ body {
     padding: 24px 20px !important;
     width: 100% !important;
   }
+  .bk-embebido .bk-card.bk-en-formulario .bk-right { overflow-y: visible; }
 
   /* Title compacto en mobile */
   .bk-title       { font-size: 22px; line-height: 1.25; }
@@ -467,7 +480,7 @@ body {
 }
 </style>
 
-<div class="bk-wrapper">
+<div class="bk-wrapper{% if embed %} bk-embebido{% endif %}">
   <div class="bk-card">
 
     {# ── LEFT PANEL ── #}
@@ -810,18 +823,21 @@ function pickSlot(el) {
   document.getElementById('step-date').style.display = 'none';
   document.getElementById('step-form').style.display = 'flex';
   document.querySelector('.bk-card').classList.remove('has-slots');
+  document.querySelector('.bk-card').classList.add('bk-en-formulario');
 }
 
 function goBack() {
   document.getElementById('step-form').style.display = 'none';
   document.getElementById('step-date').style.display = 'flex';
   document.querySelector('.bk-card').classList.add('has-slots');
+  document.querySelector('.bk-card').classList.remove('bk-en-formulario');
 }
 
 {% if form_errors and inicio_utc_str %}
 document.getElementById('step-date').style.display = 'none';
 document.getElementById('step-form').style.display  = 'flex';
 document.querySelector('.bk-card').classList.remove('has-slots');
+document.querySelector('.bk-card').classList.add('bk-en-formulario');
 {% endif %}
 
 {% if form_errors %}

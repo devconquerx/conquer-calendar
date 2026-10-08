@@ -130,6 +130,10 @@ class EventosPublicosIntactosTest(EmbedBase):
         resp = self.client.get(self.url_pagina(self.publico))
         self.assertNotContains(resp, 'conquerx:calendar-height')
 
+    def test_la_pagina_publica_mantiene_su_formulario(self):
+        resp = self.client.get(self.url_pagina(self.publico))
+        self.assertNotContains(resp, 'class="bk-wrapper bk-embebido"')
+
     def test_la_pagina_publica_no_se_deja_embeber(self):
         """Solo los eventos de la academia relajan el antiframe."""
         resp = self.client.get(self.url_pagina(self.publico))
@@ -252,6 +256,11 @@ class ConTokenValidoTest(EmbedBase):
         """El iframe se ajusta a esta altura y el botón de reservar no queda escondido."""
         resp = self.client.get(self.url_pagina(self.privado) + f'?t={token_lms()}')
         self.assertContains(resp, 'conquerx:calendar-height')
+
+    def test_la_pagina_embebida_ancla_el_boton_de_reservar(self):
+        """Embebida, la tarjeta recortaba el formulario y el botón de reservar no se veía."""
+        resp = self.client.get(self.url_pagina(self.privado) + f'?t={token_lms()}')
+        self.assertContains(resp, 'class="bk-wrapper bk-embebido"')
 
     def test_la_pagina_se_deja_embeber_en_la_academia(self):
         resp = self.client.get(self.url_pagina(self.privado) + f'?t={token_lms()}')
