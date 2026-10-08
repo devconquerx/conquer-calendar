@@ -1540,4 +1540,39 @@ setTimeout(function () {
   </div>
 </div>
 {% endif %}
+{% if embed %}
+{% comment %}
+Dentro del iframe de la academia: avisa a la página que lo contiene de la altura
+real del contenido, para que ajuste el iframe y no haya scroll interno. Sin esto,
+cuando el formulario es más alto que el iframe el botón "Reservar" queda abajo y
+parece que ha desaparecido. Se mide la tarjeta y no `.bk-wrapper`, porque esta
+tiene `min-height: 100vh`: dentro de un iframe eso es la altura del propio iframe y
+la medida nunca podría bajar.
+{% endcomment %}
+<script>
+(function () {
+  if (window.parent === window) return;
+  var tarjeta = document.querySelector('.bk-card');
+  var envoltorio = document.querySelector('.bk-wrapper');
+  if (!tarjeta || !envoltorio) return;
+
+  var ultimaAltura = 0;
+  function avisarAltura() {
+    var estilo = window.getComputedStyle(envoltorio);
+    var margen = parseFloat(estilo.paddingTop) + parseFloat(estilo.paddingBottom);
+    var altura = Math.ceil(tarjeta.getBoundingClientRect().height + margen);
+    if (altura === ultimaAltura) return;
+    ultimaAltura = altura;
+    window.parent.postMessage({ type: 'conquerx:calendar-height', height: altura }, '*');
+  }
+
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(avisarAltura).observe(tarjeta);
+  }
+  window.addEventListener('load', avisarAltura);
+  window.addEventListener('resize', avisarAltura);
+  avisarAltura();
+})();
+</script>
+{% endif %}
 {% endblock %}
