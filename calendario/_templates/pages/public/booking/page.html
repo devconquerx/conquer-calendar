@@ -315,18 +315,12 @@ body {
    ya está en marcha y no invite a pulsar otra vez. */
 .bk-submit:disabled,
 .bk-submit:disabled:hover { background: #9cb8e8; cursor: progress; }
-/* Embebido en la academia, con el formulario a la vista, el botón queda anclado
-   abajo de la tarjeta. La tarjeta mide 575px fijos y recorta lo que no cabe, y
-   aquí el formulario es más alto que en la página pública (identidad bloqueada y
-   la nota de "Reservas con tu cuenta de la academia"), así que el botón quedaba
-   pegado al borde o fuera de la vista sin forma de llegar a él. Ahora los campos
-   hacen scroll por encima y el botón se ve siempre, con su franja blanca al pie. */
-.bk-embebido .bk-card.bk-en-formulario .bk-right { overflow-y: auto; }
-.bk-embebido .bk-card.bk-en-formulario .bk-submit {
-  position: sticky; bottom: 16px; z-index: 1;
-  /* Arriba, degradado sobre los campos; abajo, franja blanca hasta el borde. */
-  box-shadow: 0 -16px 16px 4px #fff, 0 20px 0 20px #fff;
-}
+/* Embebido en la academia, con el formulario a la vista, la tarjeta crece con él.
+   Mide 575px fijos y recorta lo que no cabe, y aquí el formulario es más alto que
+   en la página pública (identidad bloqueada y la nota de "Reservas con tu cuenta
+   de la academia"), así que el botón quedaba pegado al borde o fuera de la vista.
+   Al crecer, la página avisa de su altura y la academia agranda el iframe. */
+.bk-embebido .bk-card.bk-en-formulario { height: auto; min-height: 575px; }
 
 /* ── Phone picker ── */
 .ph-wrap {
@@ -427,7 +421,6 @@ body {
     padding: 24px 20px !important;
     width: 100% !important;
   }
-  .bk-embebido .bk-card.bk-en-formulario .bk-right { overflow-y: visible; }
 
   /* Title compacto en mobile */
   .bk-title       { font-size: 22px; line-height: 1.25; }
