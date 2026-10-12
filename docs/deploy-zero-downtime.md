@@ -147,7 +147,16 @@ Tras el bootstrap, `crontab -e` en el servidor y dejarlo así:
 */10 * * * * /usr/local/bin/calendar-dj python manage.py sync_gcal_incremental --todos >> /var/log/gcal_incremental.log 2>&1
 0 3 */5 * * /usr/local/bin/calendar-dj python manage.py renovar_canales_gcal --margen-horas 48 >> /var/log/gcal_renovar.log 2>&1
 */5 * * * * /usr/local/bin/calendar-dj python manage.py enviar_recordatorios >> /var/log/recordatorios.log 2>&1
+0 4 * * * flock -n /tmp/gcal_completo.lock /usr/local/bin/calendar-dj python manage.py sync_gcal_inicial --todos >> /var/log/gcal_completo.log 2>&1
 ```
+
+El sync completo de cada noche (04:00 UTC: las 6:00 en España y medianoche en América)
+no sobra: el incremental solo recibe los eventos que **cambian**, y el completo
+solo carga los próximos 90 días. Un evento creado más allá de esa ventana —o
+una instancia nueva de un recurrente— que nadie vuelve a tocar no entra nunca
+en la copia local por mucho que la ventana avance, y su hueco se ofrece como
+libre. El 12/10/2026 faltaban así 2875 eventos en 49 hosts. `flock` evita que
+dos pasadas se pisen si una se alarga.
 
 ## Puesta en marcha (una sola vez)
 
