@@ -25,6 +25,7 @@ const FUNNELS = [
   { slug: 'languages-ge', escuela: 'conquer-languages', region: 'ge' },
   { slug: 'languages-kids-latam', escuela: 'conquer-languages-kids', region: 'latam' },
   { slug: 'legal-eu', escuela: 'conquer-legal', region: 'eu' },
+  { slug: 'legal-eu-2', escuela: 'conquer-legal', region: 'eu' },
   { slug: 'especializacion-latam', escuela: 'conquer-blocks-esp', region: 'latam' },
 ]
 

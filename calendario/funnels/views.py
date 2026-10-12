@@ -462,12 +462,16 @@ def _base_path(request):
     return getattr(request, 'app_base_path', '')
 
 
-def stepform_url(escuela, region, base=''):
+def stepform_url(escuela, region, base='', slug=None):
     """URL pública canónica del StepForm: /agenda/<producto>/<region>/.
 
     `base` antepone un prefijo de path (p.ej. /preview) para mantener la
     navegación dentro del prefijo cuando el funnel se sirve detrás de él.
     """
+    # La segunda landing de Legal EU tiene prellamada propia: su StepForm
+    # resuelve por slug, no por escuela+región (que daría el de legal-eu).
+    if slug == _LEGAL_EU_2:
+        return f'{base}/hub/agendar-2-eu'
     if escuela == 'conquer-languages' and region == 'ge':
         return f'{base}/ge/schedule'
     if escuela == 'conquer-legal' and region:
@@ -493,7 +497,10 @@ class FunnelAgendaView(View):
     este fallback solo importa si el visitante llega directo a esta URL.
     """
 
-    def get(self, request, producto, region):
+    def get(self, request, producto, region, slug=None):
+        if slug:
+            funnel = get_object_or_404(FunnelForm, slug=slug, activo=True)
+            return _spa_render(request, funnel, 'stepform')
         escuela = PRODUCTO_A_ESCUELA.get(producto)
         funnel = FunnelForm.objects.filter(
             escuela=escuela, region=region, activo=True
@@ -543,6 +550,10 @@ _ESCUELAS_SOLO_STEPFORM = ('conquer-blocks-esp', 'conquer-languages-kids')
 # el dominio pase a servirse desde aquí no puede cambiar ni un carácter.
 # Slugs de las segundas landings (LP2) de Conquer Finance.
 _FINANCE_LP2 = ('finance-eu-2', 'finance-latam-2')
+# Segunda landing de Conquer Legal EU (cg-eu-2). A diferencia de las LP2 de
+# Blocks y Finance, también tiene StepForm (prellamada) propio; la reserva sí
+# es la misma que la de legal-eu.
+_LEGAL_EU_2 = 'legal-eu-2'
 
 
 def _video_url(escuela, region, base='', slug=None):
@@ -555,6 +566,8 @@ def _video_url(escuela, region, base='', slug=None):
     # nomenclatura que la de Blocks, en la raíz de conquerfinance.com.
     if slug in _FINANCE_LP2:
         return f'{base}/video-2-clase-{region}'
+    if slug == _LEGAL_EU_2:
+        return f'{base}/hub/video-2-eu'
     # Conquer Languages GE (la variante en inglés) no sigue la convención de
     # region: replica las rutas de producción /ge/*, que están en inglés.
     if escuela == 'conquer-languages' and region == 'ge':
@@ -574,6 +587,8 @@ def _landing_url(escuela, region, base='', slug=None):
         return f'{base}/conquer-blocks/clase-2-online-gratuita-eu/'
     if slug in _FINANCE_LP2:
         return f'{base}/clase-2-online-gratuita-{region}'
+    if slug == _LEGAL_EU_2:
+        return f'{base}/hub/registro-2-eu'
     if escuela == 'conquer-languages' and region == 'ge':
         return f'{base}/ge/free-online-training'
     if escuela == 'conquer-legal':
@@ -709,7 +724,7 @@ def _spa_render(request, funnel, stage, escuela=None, region=None):
     video_enabled = bool(cfg.get('video'))
     landing_url = _landing_url(escuela, region, base=base, slug=slug) if region else ''
     video_url = _video_url(escuela, region, base=base, slug=slug) if region else ''
-    stepform_u = stepform_url(escuela, region, base=base)
+    stepform_u = stepform_url(escuela, region, base=base, slug=slug)
     confirmation_url = confirmacion_url(escuela, region, base=base) if region else ''
 
     # HTML del SSR para #funnel-root (vacío → CSR). El query string se pasa con
@@ -812,7 +827,7 @@ class FunnelClaseView(View):
         if cfg.get('video') or funnel.escuela in _VIDEO_DEFAULTS:
             next_url = _video_url(funnel.escuela, funnel.region, base=_base_path(request))
         else:
-            next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request))
+            next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request), slug=funnel.slug)
         return render(
             request,
             template_name,
@@ -867,7 +882,7 @@ class FunnelVideoView(View):
         if not video_cfg.get('video'):
             video_cfg['video'] = _VIDEO_DEFAULTS.get(funnel.escuela, {})
         # Siguiente etapa tras el video: el StepForm (/agenda/<producto>/<region>/).
-        next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request))
+        next_url = stepform_url(funnel.escuela, funnel.region, base=_base_path(request), slug=funnel.slug)
         return render(
             request,
             template_name,
@@ -970,7 +985,7 @@ class FunnelStatusView(View):
                 'has_video': tiene_video,
                 'landing_url': landing,
                 'video_url': video,
-                'stepform_url': _abs(stepform_url(f.escuela, f.region, base=ruta_base)) or '',
+                'stepform_url': _abs(stepform_url(f.escuela, f.region, base=ruta_base, slug=f.slug)) or '',
                 'confirmation_url': confirmacion,
             })
         # Páginas de evento. Ninguna es un funnel —no tienen StepForm ni reserva

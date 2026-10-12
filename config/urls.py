@@ -202,6 +202,23 @@ urlpatterns = [
         FunnelAgendaView.as_view(), {'producto': 'legal'},
         name='agenda_hub_legal',
     ),
+    # Segunda landing de Legal EU (legal-eu-2, cg-eu-2): registro, vídeo y
+    # prellamada propios; reserva y confirmación compartidas con legal-eu.
+    re_path(
+        r'^hub/registro-2-eu/?$',
+        FunnelClaseView.as_view(), {'escuela': 'conquer-legal', 'region': 'eu', 'slug': 'legal-eu-2'},
+        name='clase_hub_legal_eu_2',
+    ),
+    re_path(
+        r'^hub/video-2-eu/?$',
+        FunnelVideoView.as_view(), {'escuela': 'conquer-legal', 'region': 'eu', 'slug': 'legal-eu-2'},
+        name='video_hub_legal_eu_2',
+    ),
+    re_path(
+        r'^hub/agendar-2-eu/?$',
+        FunnelAgendaView.as_view(), {'producto': 'legal', 'region': 'eu', 'slug': 'legal-eu-2'},
+        name='agenda_hub_legal_eu_2',
+    ),
     re_path(
         r'^hub/confirmacion/?$',
         FunnelConfirmationView.as_view(), {'escuela': 'conquer-legal'},

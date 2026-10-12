@@ -43,6 +43,8 @@ FUNNEL_TAG_MAP = {
     'cf-latam': '454', 'cf-eu': '456', 'cf-us': '457',
     'cl-latam': '465', 'cl-eu': '466', 'cl-us': '468',
     'cg-latam': 'cg-latam', 'cg-eu': 'cg-eu', 'cg-us': 'cg-us',
+    # Segunda landing de Legal EU: misma etiqueta que cg-eu, mismas automatizaciones.
+    'cg-eu-2': 'cg-eu',
 }
 
 # IDs numéricos conocidos (para quitar tags de escuela previos antes de añadir

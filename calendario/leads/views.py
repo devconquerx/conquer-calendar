@@ -59,7 +59,7 @@ _FUNNEL_SLUG_TO_CRM_CODE = {
     'languages-latam': 'cl-latam', 'languages-eu': 'cl-eu', 'languages-us': 'cl-us',
     'languages-kids-latam': 'cl-kids-latam', 'languages-kids-eu': 'cl-kids-eu',
     'languages-kids-us': 'cl-kids-us',
-    'legal-eu': 'cg-eu',
+    'legal-eu': 'cg-eu', 'legal-eu-2': 'cg-eu-2',
 }
 
 
