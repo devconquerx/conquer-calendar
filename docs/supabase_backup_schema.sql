@@ -424,3 +424,9 @@ GRANT EXECUTE ON FUNCTION public.tamano_bd_mb(), public.purgar_respaldo(integer)
                           public.respaldo_headers_completos(jsonb, uuid),
                           public.respaldo_objeto_completo(jsonb, uuid, text[], jsonb)
     TO service_role;
+
+-- PostgREST corta a los 8 s. Si una purga se pasa (p.ej. tras una caída), falla
+-- entera, la siguiente tiene aún más que borrar y ya no termina nunca: del 6 al
+-- 11-oct el respaldo llegó a 12 días y 462 MB así.
+ALTER ROLE service_role SET statement_timeout = '120s';
+NOTIFY pgrst, 'reload config';
