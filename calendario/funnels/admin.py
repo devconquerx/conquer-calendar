@@ -129,6 +129,22 @@ def _tag_col(done_tag, failed_tag, short_description, gated_setting=None):
     return column
 
 
+# Click IDs y cookies de píxel: la Prellamada no tiene columna propia para
+# ellos, viajan dentro de `tracking`. Se sacan a campos sueltos para verlos sin
+# abrir el JSON (son los que se mandan al PreSchedule del CRM).
+_CLICK_IDS = (
+    'gclid', 'gbraid', 'wbraid', 'fbclid', 'ttclid', 'msclkid', 'dclid', 'gclsrc',
+    '_fbp', '_fbc', '_ttp', '_ga', '_gid',
+)
+
+
+def _trk_field(clave):
+    def campo(self, obj):
+        return (obj.tracking or {}).get(clave) or '—'
+    campo.short_description = clave
+    return campo
+
+
 @admin.register(Prellamada)
 class PrellamadaAdmin(admin.ModelAdmin):
     list_display = (
@@ -145,7 +161,7 @@ class PrellamadaAdmin(admin.ModelAdmin):
         'score', 'resultado', 'event_type', 'reserva',
         'journey_id', 'event_id', 'utm_source', 'utm_campaign', 'utm_medium',
         'utm_term', 'utm_content', 'utm_idcampaign', 'utm_adsetid', 'utm_adid',
-        'utm_form_variant', 'tracking', 'creado_en',
+        'utm_form_variant', *(f'trk_{c}' for c in _CLICK_IDS), 'tracking', 'creado_en',
     )
 
     col_supabase = _tag_col('supabase_done', 'supabase_failed', 'Supabase')
@@ -167,6 +183,9 @@ class PrellamadaAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+
+for _clave in _CLICK_IDS:
+    setattr(PrellamadaAdmin, f'trk_{_clave}', _trk_field(_clave))
 
 
 # ─── Textos de las páginas de evento ─────────────────────────────────────────
