@@ -45,6 +45,9 @@ TESTS_AB = [
     ('cl-latam', PRELLAMADA, 'Footer del vídeo', ('con footer', '11'), ('sin footer', '12')),
     ('cl-eu', PRELLAMADA, 'Footer del vídeo', ('con footer', '13'), ('sin footer', '14')),
     ('cl-us', PRELLAMADA, 'Footer del vídeo', ('con footer', '15'), ('sin footer', '16')),
+    # Este no prueba el footer sino el vídeo en sí (13/10/2026). Se sortea ya en
+    # la landing, pero igualmente solo se guarda en la prellamada.
+    ('cg-eu-2', PRELLAMADA, 'VSL del vídeo', ('larga', '17'), ('corta', '18')),
 ]
 
 

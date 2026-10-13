@@ -76,8 +76,20 @@ export function useVideoVariant(funnelSlug) {
 
   return {
     variant,
+    experiment,
     hideFooter: !!experiment && variant === experiment.hideFooterVariant,
   }
+}
+
+/* Los experimentos de vídeo con `assignAtStart` (hoy, el de la VSL de Legal
+   EU-2) sortean ya en la landing: la rama decide QUÉ vídeo se carga, así que
+   tiene que estar fijada antes de llegar a él. Solo asigna; la landing no
+   cambia nada según la rama. */
+export function useAssignVideoVariantAtStart(funnelSlug) {
+  useEffect(() => {
+    const experiment = getVideoVariantExperiment(funnelSlug)
+    if (experiment?.assignAtStart) resolveFormVariant(experiment)
+  }, [funnelSlug])
 }
 
 /* Fondo blanco para la CONFIRMACIÓN, la única etapa cuyo slug no es de fiar:

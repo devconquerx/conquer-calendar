@@ -3,6 +3,7 @@ import VideoPlayer from '../components/vsl/VideoPlayer'
 import AgendarButton from '../components/vsl/AgendarButton'
 import { getTheme, useVariantTheme } from '../themes'
 import { useVideoVariant } from '../lib/formVariantContext'
+import { videoUrlsForVariant } from '../lib/formVariant'
 import { CB_CARD_SHADOW, PAPER_TILE } from '../themes/conquerblocks'
 import { sendVideoProgressToBackend } from '../api'
 import { safeHtml } from '../lib/sanitize'
@@ -18,7 +19,7 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   // A/B del footer del vídeo (Blocks EU/LATAM/US y Finance EU/LATAM). Se asigna
   // aquí —no en el root— para que solo entre en el test quien ve esta página;
   // el StepForm la lee después y la cuelga de la prellamada.
-  const { hideFooter } = useVideoVariant(funnelSlug)
+  const { hideFooter, variant: videoVariant, experiment: videoExperiment } = useVideoVariant(funnelSlug)
 
   const baseTheme = getTheme(school?.slug)
   // Rediseño por página: un tema puede pedir que SOLO su página de vídeo use el
@@ -36,7 +37,11 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
   const assets = theme.assets
 
   const video = formConfig?.video || {}
-  const urls = videoUrls && videoUrls.length ? videoUrls : (video.videoUrls || [])
+  /* Con un A/B de vídeo (Legal EU-2) la rama elige la VSL; hasta conocerla
+     no hay URL y el reproductor no monta. */
+  const urls = videoExperiment?.altVideoVariant
+    ? (videoUrlsForVariant(videoExperiment, videoVariant, video) || [])
+    : (videoUrls && videoUrls.length ? videoUrls : (video.videoUrls || []))
   /* Porcentaje del vídeo a partir del cual aparece el CTA. Ojo con el `??`: `0`
      —"desde el primer segundo"— es un valor legítimo, y con `||` se tomaba por
      ausente y caía al 75 por defecto, así que era imposible de configurar. */

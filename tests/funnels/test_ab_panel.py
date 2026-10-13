@@ -21,7 +21,7 @@ SLUG_A_CODIGO = {
     'blocks-latam': 'cb-latam', 'blocks-eu': 'cb-eu', 'blocks-eu-2': 'cb-eu-2', 'blocks-us': 'cb-us',
     'finance-latam': 'fi-latam', 'finance-eu': 'fi-eu', 'finance-us': 'fi-us',
     'languages-latam': 'cl-latam', 'languages-eu': 'cl-eu', 'languages-us': 'cl-us',
-    'languages-ge': 'cl-ge', 'legal-eu': 'cg-eu',
+    'languages-ge': 'cl-ge', 'legal-eu': 'cg-eu', 'legal-eu-2': 'cg-eu-2',
     # Conquer AI no traduce: su slug ya ES el código con el que lo indexa el CRM.
     'ai-eu': 'ai-eu',
 }
@@ -36,8 +36,11 @@ def _experimentos_del_js():
         codigos = re.findall(r"'(\d+)'", variantes)
         encontrados.append((SLUG_A_CODIGO.get(slug, slug), tuple(codigos)))
     # Los experimentos de vídeo se declaran en una tabla plana, con el slug como
-    # propiedad en vez de dentro del `match`.
-    for slug, variantes in re.findall(r"funnelSlug: '([a-z0-9-]+)'.*?variants: \[([^\]]+)\]", js):
+    # propiedad en vez de dentro del `match`. `[^}]*?` acota la búsqueda al
+    # objeto: así un experimento escrito en varias líneas también cuenta (el de
+    # legal-eu-2 se escapaba con `.*?` sin re.S), y un ganador fijo
+    # —`funnelSlug` sin `variants`— no se empareja con el objeto siguiente.
+    for slug, variantes in re.findall(r"funnelSlug: '([a-z0-9-]+)'[^}]*?variants: \[([^\]]+)\]", js):
         codigos = re.findall(r"'(\d+)'", variantes)
         encontrados.append((SLUG_A_CODIGO.get(slug, slug), tuple(codigos)))
     return encontrados

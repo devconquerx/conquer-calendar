@@ -3,7 +3,9 @@ import VideoPage from '../../src/pages/VideoPage'
 import { logosVisibles, renderConFunnel } from './helpers'
 
 vi.mock('../../src/api', () => ({ sendVideoProgressToBackend: vi.fn() }))
-vi.mock('../../src/components/vsl/VideoPlayer', () => ({ default: () => <div data-testid="player" /> }))
+vi.mock('../../src/components/vsl/VideoPlayer', () => ({
+  default: ({ videoUrls }) => <div data-testid="player" data-src={videoUrls?.[0] || ''} />,
+}))
 
 const CONFIG = { video: { videoUrls: ['https://x.test/v.mp4'], buttonPercent: 75 } }
 
@@ -54,5 +56,39 @@ describe('página de vídeo — A/B del footer', () => {
     expect(() =>
       renderConFunnel(<VideoPage school={{ slug: 'conquer-blocks' }} region="latam" formConfig={CONFIG} search="" />)
     ).not.toThrow()
+  })
+})
+
+/* A/B de la VSL de Legal EU-2 (13/10/2026): 17 ve la larga de siempre y 18 la
+   corta (`video.altVideoUrls`). Lo que se rompe si falla no se ve en la página:
+   el visitante ve otro vídeo del que dice su código, y el test se lee al revés. */
+describe('página de vídeo — A/B de la VSL de Legal EU-2', () => {
+  const VSL = { video: { videoUrls: ['https://x.test/larga.mp4'], altVideoUrls: ['https://x.test/corta.mp4'], buttonPercent: 75 } }
+  const montarLegal = (variante) => renderConFunnel(
+    <VideoPage school={{ slug: 'conquer-legal' }} region="eu" formConfig={VSL} funnelSlug="legal-eu-2" search="" />,
+    { escuela: 'conquer-legal', slug: 'legal-eu-2', variante, storageKey: 'form_variant_video_cg_eu_2' }
+  )
+  const fuente = (container) => container.querySelector('[data-testid="player"]')?.dataset.src
+
+  it('17 (control) ve la VSL larga', () => {
+    expect(fuente(montarLegal('17').container)).toBe('https://x.test/larga.mp4')
+  })
+
+  it('18 ve la VSL corta', () => {
+    expect(fuente(montarLegal('18').container)).toBe('https://x.test/corta.mp4')
+  })
+
+  it('quien llega sin rama queda sorteado y ve el vídeo de su rama', () => {
+    const { container } = montarLegal(undefined)
+    const rama = localStorage.getItem('form_variant_video_cg_eu_2')
+    expect(['17', '18']).toContain(rama)
+    expect(fuente(container)).toBe(rama === '18' ? 'https://x.test/corta.mp4' : 'https://x.test/larga.mp4')
+  })
+
+  it('no toca el footer: las dos ramas lo conservan', () => {
+    for (const v of ['17', '18']) {
+      localStorage.clear()
+      expect(montarLegal(v).container.querySelector('footer')).toBeTruthy()
+    }
   })
 })

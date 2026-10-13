@@ -72,6 +72,26 @@ describe('formulario de la landing', () => {
     expect('utm_form_variant' in (await enviar(container))).toBe(false)
   })
 
+  /* A/B de la VSL de Legal EU-2: la rama se sortea al entrar a la landing (el
+     vídeo es lo que cambia, así que tiene que estar decidida antes), pero NO
+     viaja en el Lead: su sitio es la prellamada. */
+  it('legal-eu-2: sortea la VSL en la landing y no la manda en el lead', async () => {
+    const { container } = montar({ slug: 'legal-eu-2', escuela: 'conquer-legal', region: 'eu' })
+    await waitFor(() => expect(['17', '18']).toContain(localStorage.getItem('form_variant_video_cg_eu_2')))
+    expect('utm_form_variant' in (await enviar(container))).toBe(false)
+  })
+
+  it('legal-eu-2: respeta la rama que el visitante ya tenía', async () => {
+    montar({ slug: 'legal-eu-2', escuela: 'conquer-legal', region: 'eu', storageKey: 'form_variant_video_cg_eu_2', variante: '18' })
+    await waitFor(() => expect(localStorage.getItem('form_variant_video_cg_eu_2')).toBe('18'))
+  })
+
+  it('legal-eu (el original) no entra en el sorteo de la VSL', async () => {
+    montar({ slug: 'legal-eu', escuela: 'conquer-legal', region: 'eu' })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(Object.keys(localStorage).filter((k) => k.startsWith('form_variant_video'))).toHaveLength(0)
+  })
+
   it('manda el prefijo del pais detectado aunque el lead no deje telefono', async () => {
     // El CRM recibia este campo siempre relleno. El funnel viejo lo lograba
     // metiendo un '+34' fijo; aqui va el prefijo real del pais del visitante.

@@ -11,7 +11,7 @@ import { useRouter } from '../../lib/router'
 import { autocorrectEmail } from '../../lib/emailCorrection'
 import { getTheme, useVariantTheme } from '../../themes'
 import countries from '../../data/countries'
-import { useFormVariant } from '../../lib/formVariantContext'
+import { useAssignVideoVariantAtStart, useFormVariant } from '../../lib/formVariantContext'
 
 const getFlagUrl = (iso2) => `https://flagcdn.com/w40/${iso2?.toLowerCase()}.png`
 
@@ -93,6 +93,8 @@ export default function LandingForm({ program, region, formConfig, school, theme
   // no hay variante y se muestra el estado de control, igual que el resto del
   // estado que depende de localStorage/geo (país, etc).
   const { variant: formVariant, experiment } = useFormVariant()
+  // A/B de la VSL (Legal EU-2): se sortea aquí, al comienzo del funnel.
+  useAssignVideoVariantAtStart(funnelSlug)
 
   // Teléfono siempre visible y OBLIGATORIO. Puede venir de un experimento
   // (Finance EU, variante 56) o fijo por config (`landing.phoneRequired`, que

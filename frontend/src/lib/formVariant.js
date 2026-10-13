@@ -151,7 +151,8 @@ const WINNING_VARIANTS = [
    tests a la vez sin que un dato pise al otro — de ahí que aquí sí esté
    finance-eu, que en la landing ya tiene el suyo.
 
-   Hoy todos prueban lo mismo: `hideFooterVariant` es la variante que quita el
+   Casi todos prueban lo mismo (la excepción, Legal EU-2, prueba el vídeo; va
+   al final): `hideFooterVariant` es la variante que quita el
    footer de la página de vídeo — rasgado inferior, franja de papel y logo—, de
    modo que la zona oscura del vídeo llega hasta el final de la página.
    La numeración es independiente de la de la landing (otra entidad) y arranca
@@ -172,7 +173,25 @@ const VIDEO_VARIANT_EXPERIMENTS = [
   ...exp,
   // Segundo código del par = variante de test (sin footer); el primero es control.
   hideFooterVariant: exp.variants[1],
-}))
+})).concat([
+  /* Conquer Legal EU-2 (cg-eu-2): no prueba el footer sino el VÍDEO. 17 es
+     control (la VSL de config.video.videoUrls); 18 —`altVideoVariant`— ve la
+     VSL corta, cuya URL vive en la BD junto a la otra:
+     config.video.altVideoUrls (pedido el 13/10/2026).
+
+     `assignAtStart`: el sorteo se hace al entrar a la LANDING, no al montar el
+     vídeo, porque el vídeo es justo lo que cambia: la rama tiene que estar
+     decidida antes de que el reproductor elija qué cargar. La página de vídeo
+     sigue asignando si alguien entra directo a ella. Como el resto de esta
+     familia, el código no viaja en el Lead: solo en la prellamada. */
+  {
+    funnelSlug: 'legal-eu-2',
+    storageKey: 'form_variant_video_cg_eu_2',
+    variants: ['17', '18'],
+    altVideoVariant: '18',
+    assignAtStart: true,
+  },
+])
 
 /* ¿Este visitante ya tiene asignada la rama de FONDO BLANCO en algún funnel de
    esta marca? Solo LEE, nunca asigna: no mete a nadie en el experimento.
@@ -198,6 +217,19 @@ export function hasWhiteBackgroundAssigned(themeId) {
     && exp.themeId === themeId
     && readFormVariant({ storageKey: exp.storageKey, variants: [exp.winner] }) === exp.whiteBackgroundVariant
   ))
+}
+
+/** URLs de la VSL que toca ver. Sin A/B de vídeo, las de siempre. Con él,
+    null mientras no hay rama (SSR y primer render): el reproductor no monta
+    hasta saber qué vídeo cargar, en vez de empezar a bajar el de control y
+    cambiarlo después. La rama `altVideoVariant` ve `video.altVideoUrls`; si la
+    config aún no las tiene, cae a las de siempre. */
+export function videoUrlsForVariant(experiment, variant, video) {
+  const base = video?.videoUrls || []
+  if (!experiment?.altVideoVariant) return base
+  if (!variant) return null
+  const alt = video?.altVideoUrls
+  return variant === experiment.altVideoVariant && alt?.length ? alt : base
 }
 
 /** Experimento de la página de vídeo para este funnel, o null si no tiene. */

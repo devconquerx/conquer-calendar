@@ -4,6 +4,7 @@ import {
   getVideoVariantExperiment,
   readFormVariant,
   resolveFormVariant,
+  videoUrlsForVariant,
 } from '../../src/lib/formVariant'
 
 /* Catálogo de funnels reales (slug/escuela/región tal y como están en la BD de
@@ -23,6 +24,7 @@ const FUNNELS = [
   { slug: 'languages-ge', themeId: 'conquerlanguages', region: 'ge' },
   { slug: 'languages-kids-latam', themeId: 'conquerlanguages', region: 'latam' },
   { slug: 'legal-eu', themeId: 'conquerlegal', region: 'eu' },
+  { slug: 'legal-eu-2', themeId: 'conquerlegal', region: 'eu' },
   { slug: 'ai-eu', themeId: 'conquerblocks', region: 'eu' },
   { slug: 'especializacion-latam', themeId: 'conquerblocks', region: 'latam' },
   { slug: 'especializacion-eu', themeId: 'conquerblocks', region: 'eu' },
@@ -52,6 +54,7 @@ describe('registro de experimentos', () => {
       'languages-ge': null,
       'languages-kids-latam': null,
       'legal-eu': null,
+      'legal-eu-2': null,
       // Conquer AI no corre ninguno: su teléfono es fijo por config. Cuelga de la
       // marca Blocks y de la región EU, así que si los experimentos se anclaran
       // a marca+región heredaría el de blocks-eu sin quererlo.
@@ -66,7 +69,7 @@ describe('registro de experimentos', () => {
     })
   })
 
-  it('asigna el experimento de vídeo solo a las cinco landings del test del logo', () => {
+  it('asigna el experimento de vídeo solo a los funnels que lo corren', () => {
     const mapa = Object.fromEntries(
       FUNNELS.map((f) => [f.slug, experimentoVideo(f)?.variants.join('/') || null])
     )
@@ -81,9 +84,14 @@ describe('registro de experimentos', () => {
       'languages-eu': '13/14',
       'languages-us': '15/16',
       'legal-eu': null,
+      // El A/B de la VSL larga/corta (13/10/2026), no el del footer.
+      'legal-eu-2': '17/18',
       'ai-eu': null,
       'especializacion-latam': null,
     })
+    const legal2 = experimentoVideo({ slug: 'legal-eu-2' })
+    expect(legal2).toMatchObject({ altVideoVariant: '18', assignAtStart: true })
+    expect(legal2.hideFooterVariant).toBeUndefined()  // su footer no cambia
   })
 
   it('no repite códigos entre experimentos de la misma entidad', () => {
@@ -110,7 +118,7 @@ describe('registro de experimentos', () => {
         expect(exp.variants).toHaveLength(2)
         expect(exp.variants[0]).not.toBe(exp.variants[1])
         expect(exp.storageKey).toMatch(/^form_variant_/)
-        const banderas = ['whiteBackgroundVariant', 'hideFooterVariant', 'whatsappOptinVariant', 'alwaysPhoneVariant']
+        const banderas = ['whiteBackgroundVariant', 'hideFooterVariant', 'whatsappOptinVariant', 'alwaysPhoneVariant', 'altVideoVariant']
         const declaradas = banderas.filter((b) => exp[b])
         expect(declaradas.length).toBeGreaterThan(0)
         // La variante que señala cada bandera tiene que existir en el par.
@@ -192,5 +200,28 @@ describe('readFormVariant', () => {
     for (const malo of [null, undefined, {}, { storageKey: 'k' }]) {
       expect(readFormVariant(malo)).toBeNull()
     }
+  })
+})
+
+describe('videoUrlsForVariant', () => {
+  const video = { videoUrls: ['larga.mp4'], altVideoUrls: ['corta.mp4'] }
+  const legal2 = getVideoVariantExperiment('legal-eu-2')
+
+  it('sin A/B de vídeo devuelve la VSL de siempre, también en los del footer', () => {
+    expect(videoUrlsForVariant(null, null, video)).toEqual(['larga.mp4'])
+    expect(videoUrlsForVariant(getVideoVariantExperiment('blocks-eu'), '2', video)).toEqual(['larga.mp4'])
+  })
+
+  it('no da URL hasta conocer la rama, para no empezar a bajar la de control', () => {
+    expect(videoUrlsForVariant(legal2, null, video)).toBeNull()
+  })
+
+  it('17 ve la VSL larga y 18 la corta', () => {
+    expect(videoUrlsForVariant(legal2, '17', video)).toEqual(['larga.mp4'])
+    expect(videoUrlsForVariant(legal2, '18', video)).toEqual(['corta.mp4'])
+  })
+
+  it('si la config aún no tiene la corta, la 18 cae a la larga en vez de quedarse sin vídeo', () => {
+    expect(videoUrlsForVariant(legal2, '18', { videoUrls: ['larga.mp4'] })).toEqual(['larga.mp4'])
   })
 })
