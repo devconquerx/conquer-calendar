@@ -223,6 +223,25 @@ class EventType(models.Model):
                   'quien tuvo cita el 10/09 no puede tener otra hasta el 10/10.',
     )
 
+    # Tope de reservas del tipo de evento entero, sumando todos los invitados y
+    # todos los organizadores, en la misma ventana móvil de días (ver
+    # `bookings.services.dias_llenos_evento`). Lleno el cupo, los días afectados
+    # dejan de ofrecer horas. Los dos vacíos = sin límite; o los dos o ninguno.
+    limite_evento = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1)],
+        verbose_name='Máximo de reservas del evento',
+        help_text='Cuántas reservas admite este evento en total cada «días del máximo», '
+                  'sumando todos los invitados. Vacío: sin límite.',
+    )
+    limite_evento_dias = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1)],
+        verbose_name='Días del máximo del evento',
+        help_text='Tamaño de la ventana, contada por la fecha de la cita. Con 2 cada 1 día, '
+                  'en cuanto un día tiene dos reservas desaparecen sus horas.',
+    )
+
     mostrar_caja_comentarios = models.BooleanField(
         default=True,
         verbose_name='Caja de comentarios',
@@ -332,10 +351,19 @@ class EventType(models.Model):
             raise ValidationError({
                 campo: 'Para limitar las reservas hacen falta los dos datos: cuántas y cada cuántos días.',
             })
+        if (self.limite_evento is None) != (self.limite_evento_dias is None):
+            campo = 'limite_evento_dias' if self.limite_evento_dias is None else 'limite_evento'
+            raise ValidationError({
+                campo: 'Para limitar las reservas hacen falta los dos datos: cuántas y cada cuántos días.',
+            })
 
     @property
     def tiene_limite_reservas(self):
         return bool(self.limite_reservas and self.limite_reservas_dias)
+
+    @property
+    def tiene_limite_evento(self):
+        return bool(self.limite_evento and self.limite_evento_dias)
 
     @property
     def solo_alumnos(self):
