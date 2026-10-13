@@ -116,10 +116,10 @@ def process_vsl_crm(self, email, vsl_key, percent):
     dato no le urge a nadie, así que va por la cola como sus dos vecinos de la
     misma vista: el respaldo en Supabase y el % a ActiveCampaign.
 
-    Ojo con `RETRY_POLICY`: aquí no reintenta nada. `push_vsl_progress` se traga
-    los fallos —captura `RequestException` y de un 5xx solo deja un log—, así
-    que la tarea nunca lanza y el reintento no llega a dispararse. Si algún día
-    interesa que lo haga, hay que empezar por que esa función levante el error.
+    Si el CRM está caído (red, timeout, 5xx) `push_vsl_progress` lanza y la
+    tarea se reintenta como las demás del CRM; antes se tragaba el fallo y el
+    hito se perdía (FUNNELS-5C/C). Un 4xx no se reintenta: repetirlo no lo
+    arregla.
     """
     from calendario.leads.services import crm
 
@@ -258,7 +258,10 @@ def sweep_incomplete_leads():
     from calendario.leads.services.utils import get_school_code
 
     requeued = 0
-    for lead in leads.iterator(chunk_size=200):
+    # Sin `.iterator(chunk_size=200)`: con él Django repite el prefetch de tags
+    # por cada bloque de 200 (~20 queries por pasada, FUNNELS-F2/CJ). Son los
+    # leads de 24 h —unos miles—, así que caben en memoria de una vez.
+    for lead in leads:
         # .all() reutiliza la caché de prefetch_related; .names() la descarta y
         # relanza un values_list por cada lead (N+1).
         tag_names = set(t.name for t in lead.tags.all())

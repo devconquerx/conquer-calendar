@@ -4,6 +4,8 @@ import time
 import requests
 from django.conf import settings
 
+from calendario.core.resiliencia import nivel_de_fallo
+
 from .utils import build_schedule_ctx
 
 logger = logging.getLogger(__name__)
@@ -95,7 +97,8 @@ def push_schedule(reserva):
             reserva.pk, elapsed_ms, response.text[:200],
         )
     else:
-        logger.error(
+        logger.log(
+            nivel_de_fallo(status=response.status_code),
             '[CRM] Reserva %s failed (%dms) — status=%d response=%s',
             reserva.pk, elapsed_ms, response.status_code, response.text[:500],
         )

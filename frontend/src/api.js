@@ -5,6 +5,33 @@ function getCsrf() {
   return document.getElementById('funnel-root')?.dataset?.csrf || ''
 }
 
+// Esperas entre intentos de los envíos fire-and-forget. Un "Failed to fetch" es
+// casi siempre la red del móvil o del navegador in-app (TikTok, Instagram) que
+// se cae un momento: FUNNELS-D2/7K/7P eran 250 al mes y en cada uno se perdía el
+// lead o la prellamada. El servidor tolera el reintento: la prellamada es un
+// upsert por journey_id y el lead se deduplica por journey_id + event_id.
+const ESPERAS_REINTENTO_MS = [1000, 3000]
+
+function postConReintentos(url, cuerpo, accion) {
+  const enviar = (intento) => fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrf(),
+    },
+    body: cuerpo,
+  }).catch((err) => {
+    // Solo se reintenta lo que no llegó a tener respuesta (TypeError de red);
+    // una respuesta de error del servidor no la arregla repetirla.
+    if (err instanceof TypeError && intento < ESPERAS_REINTENTO_MS.length) {
+      return new Promise((r) => setTimeout(r, ESPERAS_REINTENTO_MS[intento])).then(() => enviar(intento + 1))
+    }
+    console.error(`[API] Error en ${accion}:`, err)
+    Sentry.captureException(err, { tags: { action: accion }, extra: { intentos: intento + 1 } })
+  })
+  return enviar(0)
+}
+
 export async function fetchConfig(slug) {
   const res = await fetch(apiUrl(`/f/api/${slug}/config/`))
   if (!res.ok) throw new Error('Error al cargar el formulario')
@@ -31,17 +58,8 @@ export async function postResolver(slug, respuestas, tracking = {}) {
  * bloquea ni rompe el avance del formulario.
  */
 export function sendPreSchedule(slug, respuestas, tracking = {}) {
-  fetch(apiUrl(`/f/api/${slug}/resolver/`), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCsrf(),
-    },
-    body: JSON.stringify({ respuestas, tracking, final: false }),
-  }).catch((err) => {
-    console.error('[API] Error sending pre-schedule:', err)
-    Sentry.captureException(err, { tags: { action: 'sendPreSchedule' } })
-  })
+  return postConReintentos(apiUrl(`/f/api/${slug}/resolver/`),
+    JSON.stringify({ respuestas, tracking, final: false }), 'sendPreSchedule')
 }
 
 export async function postReservar(slug, data) {
@@ -62,17 +80,7 @@ export async function postReservar(slug, data) {
  * bloquea ni rompe el flujo del formulario.
  */
 export function registerLead(payload) {
-  fetch(apiUrl('/f/api/lead/'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCsrf(),
-    },
-    body: JSON.stringify(payload),
-  }).catch((err) => {
-    console.error('[API] Error registering lead:', err)
-    Sentry.captureException(err, { tags: { action: 'registerLead' } })
-  })
+  return postConReintentos(apiUrl('/f/api/lead/'), JSON.stringify(payload), 'registerLead')
 }
 
 /**

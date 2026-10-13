@@ -5,6 +5,8 @@ from datetime import datetime
 import requests
 from django.conf import settings
 
+from calendario.core.resiliencia import nivel_de_fallo
+
 from .utils import (
     hash_value, hash_phone, get_school_code, get_region_from_lead,
     get_conversion_value, SCHOOL_CUSTOMER_GOOGLE, SCHOOL_CONVERSION_ACTIONS,
@@ -119,7 +121,7 @@ def push_lead(lead):
         log.error_message = str(e)[:2000]
         log.execution_time_ms = elapsed
         log.save()
-        logger.error(f'[Google Ads] Lead {lead.pk} error: {e}')
+        logger.log(nivel_de_fallo(e), '[Google Ads] Lead %s error: %s', lead.pk, e)
         raise
 
 

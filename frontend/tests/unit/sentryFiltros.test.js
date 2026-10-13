@@ -17,7 +17,18 @@ describe('filtros de ruido de navegadores embebidos', () => {
     expect(filtra("Cannot read properties of undefined (reading 'domInteractive')")).toBe(true)
   })
 
+  it('tapa lo que inyectan otros WebView y las extensiones', () => {
+    // Copiados literalmente de FUNNELS-4R, 5S, 6B, 6D, 4J y 5P.
+    expect(filtra('ReferenceError: xbrowser is not defined')).toBe(true)
+    expect(filtra('ReferenceError: swbrowser is not defined')).toBe(true)
+    expect(filtra("TypeError: undefined is not an object (evaluating 'window.webkit.messageHandlers')")).toBe(true)
+    expect(filtra('Error: Error invoking invokeMethod: Java bridge method invocation error')).toBe(true)
+    expect(filtra('i: Failed to connect to MetaMask')).toBe(true)
+  })
+
   it('NO tapa errores nuestros que se le parezcan', () => {
+    expect(filtra('ReferenceError: browser is not defined')).toBe(false)
+    expect(filtra('ReferenceError: Hls is not defined')).toBe(false)
     expect(filtra("Cannot read properties of undefined (reading 'formConfig')")).toBe(false)
     expect(filtra("Cannot read properties of null (reading 'parentNode')")).toBe(false)
     expect(filtra('Invalid hook call. Hooks can only be called inside of the body of a function component.')).toBe(false)
@@ -28,6 +39,8 @@ describe('filtros de ruido de navegadores embebidos', () => {
   it('descarta los scripts inyectados por la app anfitriona, y solo esos', () => {
     const bloquea = (url) => URLS_DE_TERCEROS.some((re) => re.test(url))
     expect(bloquea('iabjs://navigation_performance_logger_android')).toBe(true)
+    expect(bloquea('chrome-extension://eppiocemhmnlbhjplcgkofciiegomcon/executors/200.js')).toBe(true)
+    expect(bloquea('safari-web-extension://1234/content.js')).toBe(true)
     expect(bloquea('https://calendar.conquerx.com/static/assets/funnel-B_uLUlBx.js')).toBe(false)
   })
 })

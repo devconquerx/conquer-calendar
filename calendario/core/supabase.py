@@ -20,6 +20,16 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+class BloqueadoPorCloudflare(requests.HTTPError):
+    """El WAF de Cloudflare (delante de Supabase) rechazó la petición por lo que
+    lleva dentro: un 403 con su página "Attention Required!", no un error de
+    PostgREST. Reintentar lo mismo da lo mismo (FUNNELS-7M)."""
+
+
+# Por debajo del soft time limit de Celery (90 s), para que la tarea no se corte antes.
+PURGA_TIMEOUT_SECONDS = 80
+
+
 def is_enabled():
     """True si el respaldo a Supabase está activo y mínimamente configurado."""
     if not getattr(settings, 'SUPABASE_ENABLED', False):
@@ -76,6 +86,9 @@ def insert_rows(table, rows, on_conflict=None):
         headers=_headers({'Prefer': prefer}),
         timeout=settings.SUPABASE_TIMEOUT_SECONDS,
     )
+    if response.status_code == 403 and 'cloudflare' in response.text[:2000].lower():
+        logger.warning('[Supabase] Cloudflare bloqueó el insert en %s', table)
+        raise BloqueadoPorCloudflare(f'Cloudflare bloqueó el insert en {table}', response=response)
     if response.status_code not in (200, 201, 204):
         logger.error('[Supabase] insert en %s falló — status=%d body=%s',
                      table, response.status_code, response.text[:500])
@@ -91,8 +104,13 @@ def purgar(days):
     lo que otra fila todavía usa. Devuelve lo borrado por tabla."""
     if not is_enabled():
         return None
+    # La purga recorre todas las tablas y tarda ~20 s: con el timeout de un
+    # insert (15 s) se cortaba cada hora y el respaldo no se vaciaba (FUNNELS-FE).
     response = requests.post(f'{_base_url()}/rpc/purgar_respaldo', json={'dias': days},
-                             headers=_headers(), timeout=settings.SUPABASE_TIMEOUT_SECONDS)
+                             headers=_headers(), timeout=PURGA_TIMEOUT_SECONDS)
+    if not response.ok:
+        # Sin el cuerpo, un 500 de la función SQL no dice qué paso falló (FUNNELS-F3).
+        logger.error('[Supabase] purga — status=%d body=%s', response.status_code, response.text[:1000])
     response.raise_for_status()
     hecho = response.json()
     # Un paso que choca con una escritura simultánea no tumba la purga: devuelve

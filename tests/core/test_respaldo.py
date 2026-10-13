@@ -137,6 +137,41 @@ class SubidaDeRequestsTest(TestCase):
             process_request_supabase('video_progress', {'id': 'x'})
         insertar.assert_called_once_with('video_progress', [{'id': 'x'}], on_conflict='id')
 
+    def test_si_cloudflare_la_bloquea_va_blindada_en_base64(self):
+        """FUNNELS-7M: el WAF de Cloudflare rechazaba siempre la misma fila (un bot
+        contra la raíz) y se perdía tras los reintentos."""
+        import base64
+
+        from calendario.core import supabase
+        from calendario.core.tasks import process_request_supabase
+
+        fila = {'id': 'x', 'metodo': 'POST', 'ruta': '/', 'ip': '1.2.3.4', 'status': 403,
+                'headers': {'User-Agent': 'Mozilla/5.0'}, 'body_texto': 'ataque', 'objetos': []}
+        with patch('calendario.core.supabase.insert_rows',
+                   side_effect=[supabase.BloqueadoPorCloudflare('403'), None]) as insertar:
+            process_request_supabase('requests', fila)
+
+        blindada = insertar.call_args.args[1][0]
+        self.assertEqual({k: blindada[k] for k in ('id', 'metodo', 'ip', 'status', 'objetos')},
+                         {'id': 'x', 'metodo': 'POST', 'ip': '1.2.3.4', 'status': 403, 'objetos': []})
+        self.assertNotIn('headers', blindada)
+        prefijo, codificado = blindada['body_texto'].split(':', 1)
+        self.assertEqual(prefijo, 'cloudflare-base64')
+        self.assertEqual(json.loads(base64.b64decode(codificado)),
+                         {'ruta': '/', 'headers': {'User-Agent': 'Mozilla/5.0'}, 'body_texto': 'ataque'})
+
+    @override_settings(SUPABASE_ENABLED=True, SUPABASE_URL='https://x.supabase.co',
+                       SUPABASE_SECRET_KEY='k', SUPABASE_TIMEOUT_SECONDS=5)
+    def test_reconoce_la_pagina_de_bloqueo_de_cloudflare(self):
+        from unittest.mock import Mock
+
+        from calendario.core import supabase
+
+        pagina = Mock(status_code=403, text='<title>Attention Required! | Cloudflare</title>')
+        with patch('calendario.core.supabase.requests.post', return_value=pagina):
+            with self.assertRaises(supabase.BloqueadoPorCloudflare):
+                supabase.insert_rows('requests', [{'id': 'x'}], on_conflict='id')
+
 
 class PeticionesRarasTest(TestCase):
     """Lo que mandan bots y escáneres también se guarda (30-sep: un POST con un

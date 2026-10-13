@@ -11,7 +11,7 @@ import Hls from 'hls.js'
 import { describe, expect, it } from 'vitest'
 
 import {
-  idDelVideo, motorDelFallo, planDeRecuperacionHls, segundosBuffereados, tramoDeEspera,
+  idDelVideo, motorDelFallo, planDeRecuperacionHls, respaldoMp4, segundosBuffereados, tramoDeEspera,
 } from '../../src/components/vsl/VideoPlayer'
 
 describe('motorDelFallo', () => {
@@ -178,5 +178,18 @@ describe('planDeRecuperacionHls — contrato con hls.js', () => {
     for (const metodo of ['startLoad', 'recoverMediaError', 'swapAudioCodec']) {
       expect(typeof Hls.prototype[metodo]).toBe('function')
     }
+  })
+})
+
+describe('respaldoMp4', () => {
+  it('da el MP4 de 720p de un HLS de Bunny Stream', () => {
+    expect(respaldoMp4('https://vz-fc5a9efc-2a2.b-cdn.net/23c461a1-b63a-43db-9adb-21d7b3f7a037/playlist.m3u8'))
+      .toBe('https://vz-fc5a9efc-2a2.b-cdn.net/23c461a1-b63a-43db-9adb-21d7b3f7a037/play_720p.mp4')
+  })
+
+  it('fuera de Bunny Stream no se inventa nada', () => {
+    expect(respaldoMp4('https://vslconquerx.b-cdn.net/conquerblocks/VSL%20Corta%20Conquer%20Blocks%20-%20H264.mp4')).toBe(null)
+    expect(respaldoMp4('https://cdn.test/otro/playlist.m3u8')).toBe(null)
+    expect(respaldoMp4('')).toBe(null)
   })
 })

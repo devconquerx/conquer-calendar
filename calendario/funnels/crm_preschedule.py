@@ -11,6 +11,8 @@ import time
 import requests
 from django.conf import settings
 
+from calendario.core.resiliencia import nivel_de_fallo
+
 logger = logging.getLogger(__name__)
 
 
@@ -152,7 +154,8 @@ def push_pre_schedule(prellamada):
             prellamada.pk, elapsed_ms, response.status_code == 201,
         )
     else:
-        logger.error(
+        logger.log(
+            nivel_de_fallo(status=response.status_code),
             '[CRM] Prellamada %s failed (%dms) — status=%d response=%s',
             prellamada.pk, elapsed_ms, response.status_code, response.text[:500],
         )

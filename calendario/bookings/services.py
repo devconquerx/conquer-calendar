@@ -68,7 +68,8 @@ def _obtener_hosts_pool(event_type):
     return []
 
 
-def _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc, palabras_ignorar=None):
+def _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc, palabras_ignorar=None,
+                                         sync_activo=None):
     """
     Devuelve intervalos busy del host intentando primero la copia local.
     Fallback a freeBusy en vivo si el host no tiene sync activo (regla #2).
@@ -79,12 +80,12 @@ def _obtener_busy_intervalos_con_fallback(host, desde_utc, hasta_utc, palabras_i
     sin sync activo la regla no aplica (degradación documentada).
     """
     from calendario.google_calendar.models import GoogleCalendarSyncEstado
-    try:
-        sync_estado = GoogleCalendarSyncEstado.objects.get(host=host)
-        if sync_estado.estado == GoogleCalendarSyncEstado.ACTIVO:
-            return obtener_busy_intervalos_local(host, desde_utc, hasta_utc, palabras_ignorar)
-    except GoogleCalendarSyncEstado.DoesNotExist:
-        pass
+    if sync_activo is None:
+        sync_activo = GoogleCalendarSyncEstado.objects.filter(
+            host=host, estado=GoogleCalendarSyncEstado.ACTIVO,
+        ).exists()
+    if sync_activo:
+        return obtener_busy_intervalos_local(host, desde_utc, hasta_utc, palabras_ignorar)
     return obtener_busy_intervalos(host.email, desde_utc, hasta_utc)
 
 
@@ -125,12 +126,60 @@ def _abiertas_para_event_type(host, reservas, palabras_ignorar, desde_utc, hasta
     return esta_abierta
 
 
-def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_override=None):
+def _precargar_hosts(event_type, hosts):
+    """Lo que el cálculo de slots necesita de cada host y no depende de las
+    fechas —su horario, los bloques semanales y si tiene sync activo—, en cuatro
+    queries para todo el pool en vez de cuatro por host.
+
+    Con los 19 organizadores de `1-on-1 | Conquer Languages` cada visita al
+    calendario y cada reserva lanzaban cerca de cien queries sueltas
+    (FUNNELS-CK/CM/CN/CT/CR/CP/D9/D4). Devuelve {host_id: {...}} con lo mismo
+    que resolverían `resolver_horario` y `_obtener_busy_intervalos_con_fallback`.
+    """
+    from calendario.availability.models import Horario
+    from calendario.google_calendar.models import GoogleCalendarSyncEstado
+
+    ids = [h.pk for h in hosts]
+    asignados = {
+        etxh.host_id: etxh.horario
+        for etxh in EventTypeXHost.objects
+        .filter(event_type=event_type, host_id__in=ids, horario__isnull=False)
+        .select_related('horario')
+    }
+    defaults = {}
+    for horario in Horario.objects.filter(host_id__in=ids, es_default=True):
+        defaults.setdefault(horario.host_id, horario)  # el primero, como `.first()`
+    horarios = {hid: asignados.get(hid) or defaults.get(hid) for hid in ids}
+
+    bloques = defaultdict(list)
+    for b in BloqueHorarioSemanal.objects.filter(
+        horario_id__in={h.pk for h in horarios.values() if h}
+    ):
+        bloques[b.horario_id].append(b)
+
+    activos = set(
+        GoogleCalendarSyncEstado.objects
+        .filter(host_id__in=ids, estado=GoogleCalendarSyncEstado.ACTIVO)
+        .values_list('host_id', flat=True)
+    )
+    return {
+        hid: {
+            'horario': horario,
+            'bloques': bloques[horario.pk] if horario else [],
+            'sync_activo': hid in activos,
+        }
+        for hid, horario in horarios.items()
+    }
+
+
+def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_override=None,
+                              precarga=None):
     """
     Devuelve lista de inicio_utc aware-UTC disponibles para un host concreto.
     fecha_desde / fecha_hasta: date naive (interpretadas en TZ del host).
     Clamp servidor: fecha_hasta = min(fecha_hasta, fecha_desde + MAX_VENTANA_DIAS).
     busy_override: si se pasa, usa esta lista de (inicio, fin) en vez de la caché local/API.
+    precarga: lo de este host en `_precargar_hosts`; sin ella se consulta aquí.
     """
     tz_host = ZoneInfo(host.timezone)
     duracion = event_type.duracion_minutos
@@ -164,12 +213,13 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     # a este organizador, y si no tiene ninguno el que la persona marcó como
     # default. Un solo camino —antes había dos, el global y el del etxh, con
     # reglas de precedencia distintas para cada uno.
-    horario = resolver_horario(event_type, host)
+    horario = precarga['horario'] if precarga else resolver_horario(event_type, host)
     if horario is None:
         return []
 
     bloques_por_dia = defaultdict(list)
-    for b in BloqueHorarioSemanal.objects.filter(horario=horario):
+    bloques = precarga['bloques'] if precarga else BloqueHorarioSemanal.objects.filter(horario=horario)
+    for b in bloques:
         bloques_por_dia[b.dia_semana].append(b)
 
     # Overrides por fecha: si una fecha tiene bloques específicos, estos
@@ -247,6 +297,7 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     else:
         busy_intervalos = list(_obtener_busy_intervalos_con_fallback(
             host, desde_utc, hasta_utc, palabras_ignorar,
+            sync_activo=precarga['sync_activo'] if precarga else None,
         ))
 
     slots = []
@@ -310,9 +361,10 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     return slots
 
 
-def _slots_host_threadsafe(event_type, host, fecha_desde, fecha_hasta):
+def _slots_host_threadsafe(event_type, host, fecha_desde, fecha_hasta, precarga=None):
     try:
-        return _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta)
+        return _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta,
+                                         precarga=precarga)
     finally:
         # Cada hilo abre su propia conexión a la BD; la cerramos al terminar
         # para no agotar el pool del backend.
@@ -372,9 +424,11 @@ def calcular_slots(event_type, fecha_desde, fecha_hasta):
             _calcular_slots_para_host(event_type, hosts[0], fecha_desde, fecha_hasta)
         )
     else:
+        precarga = _precargar_hosts(event_type, hosts)
         with ThreadPoolExecutor(max_workers=min(len(hosts), _MAX_HILOS_SLOTS)) as pool:
             futuros = [
-                pool.submit(_slots_host_threadsafe, event_type, h, fecha_desde, fecha_hasta)
+                pool.submit(_slots_host_threadsafe, event_type, h, fecha_desde, fecha_hasta,
+                            precarga[h.pk])
                 for h in hosts
             ]
             for f in futuros:
@@ -434,10 +488,12 @@ def _candidatos_para_slot(event_type, inicio_utc):
     hosts = _obtener_hosts_pool(event_type)
     if not hosts:
         return []
+    precarga = _precargar_hosts(event_type, hosts)
     candidatos = []
     for host in hosts:
         fecha_local = inicio_utc.astimezone(ZoneInfo(host.timezone)).date()
-        slots_host = _calcular_slots_para_host(event_type, host, fecha_local, fecha_local)
+        slots_host = _calcular_slots_para_host(event_type, host, fecha_local, fecha_local,
+                                               precarga=precarga[host.pk])
         if inicio_utc in slots_host:
             candidatos.append(host)
     return candidatos

@@ -3,6 +3,8 @@ import logging
 import requests
 from django.conf import settings
 
+from calendario.core.resiliencia import nivel_de_fallo
+
 from calendario.leads.services.activecampaign import ActiveCampaignClient
 from .utils import build_schedule_ctx
 
@@ -123,5 +125,5 @@ def push_schedule(reserva):
         logger.info('[ActiveCampaign] Reserva %s synced, contact_id=%s', reserva.pk, contact_id)
 
     except Exception as e:
-        logger.error('[ActiveCampaign] Reserva %s error: %s', reserva.pk, e)
+        logger.log(nivel_de_fallo(e), '[ActiveCampaign] Reserva %s error: %s', reserva.pk, e)
         raise

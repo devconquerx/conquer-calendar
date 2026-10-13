@@ -427,6 +427,20 @@ def es_fallo_del_servicio(exc):
     return isinstance(exc, requests.RequestException)
 
 
+def nivel_de_fallo(exc=None, status=None):
+    """Nivel de log para el fallo de un intento. Si es del servicio (red,
+    timeout, 5xx, 429), TareaResiliente lo reintenta 24 h: es un warning, y si
+    al final se da por perdido avisa el propio fallo de la tarea. Si es nuestro
+    (un 400, un dato que no cuadra), reintentar no lo arregla: error.
+
+    Antes cada intento era un error en Sentry: un corte de 2 minutos del CRM o
+    de ActiveCampaign eran cientos de issues sin nada perdido (FUNNELS-7T/6A/C/
+    5C/41/2J/5Z)."""
+    if status is not None:
+        return logging.WARNING if status == 429 or status >= 500 else logging.ERROR
+    return logging.WARNING if exc is not None and es_fallo_del_servicio(exc) else logging.ERROR
+
+
 # Cuánto se sigue intentando una tarea cuyo servicio falla (timeout, 5xx, 429,
 # conexión) antes de darla por perdida. Es la ventana de los sweeps: pasado este
 # tiempo el objeto ya no lo recoge nadie.

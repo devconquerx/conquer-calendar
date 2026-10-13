@@ -18,10 +18,10 @@ const LEGACY_STORAGE_KEY = 'videolitics'
 /* Qué fracción de las reproducciones correctas se reporta a Sentry.
    Los fallos se mandan todos —son pocos y cada uno importa— pero los aciertos
    son ~4.500 al día si esto acaba en todos los funnels, y Sentry cobra por
-   evento. Con una de cada cuatro sobra para calcular tasas por navegador, que
-   es para lo único que sirve el dato. Subir a 1 mientras el piloto esté en un
-   solo funnel es perfectamente asumible. */
-const MUESTREO_ARRANQUE = 0.25
+   evento. Con una de cada veinte sobra para calcular tasas por navegador, que
+   es para lo único que sirve el dato: siguen siendo ~150 al día. Con una de
+   cada cuatro eran 36.000 eventos al mes, la mitad de toda la cuota (13-oct). */
+const MUESTREO_ARRANQUE = 0.05
 
 /* Qué motor de medios reportó el fallo, deducido del texto del MediaError.
    Hace falta porque el cubo de errores mezcla dos poblaciones distintas y en
@@ -66,6 +66,17 @@ export function tramoDeEspera(ms) {
    nombre del fichero como etiqueta se puede preguntar lo que hasta ahora no se
    podía: si el máster de 1,88 GB falla más que los de 350 MB.
    Se descodifica el %20 porque alguno lleva espacios en el nombre. */
+/* MP4 de respaldo de un HLS de Bunny Stream. Bunny genera junto al
+   `playlist.m3u8` un `play_<calidad>.mp4` de cada vídeo (comprobado el 13-oct en
+   los siete de las VSL). Es lo que se le da al navegador cuando hls.js no puede:
+   Chrome, Firefox y Edge no reproducen el `.m3u8` por su cuenta, así que sin esto
+   el visitante se quedaba sin vídeo (FUNNELS-77/E9/CY). 720p es la calidad
+   intermedia de las que hay en todas. Fuera de Bunny Stream no se inventa nada. */
+export function respaldoMp4(url) {
+  const m = /^(https:\/\/vz-[^/]+\.b-cdn\.net\/[^/]+)\/playlist\.m3u8(\?.*)?$/i.exec(url || '')
+  return m ? `${m[1]}/play_720p.mp4` : null
+}
+
 export function idDelVideo(url) {
   if (!url) return 'sin-video'
   try {
@@ -351,6 +362,19 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
             return
           }
 
+          /* hls.js se rinde, pero el vídeo no tiene por qué: se pasa al MP4 de
+             respaldo desde el segundo en que iba. */
+          const mp4 = respaldoMp4(videoUrl)
+          const media = videoRef.current
+          if (mp4 && media) {
+            const segundo = media.currentTime || 0
+            try { hls?.destroy() } catch { /* ya destruida */ }
+            hls = null
+            media.src = mp4
+            if (segundo) media.currentTime = segundo
+            media.play?.()?.catch?.(() => {})
+          }
+
           /* Aquí sí se acabó. Solo este caso llega a Sentry: reportar también
              los fatales de los que nos recuperamos devolvería el ruido que
              motivó esto —259 eventos que en su mayoría eran baches de red de
@@ -360,10 +384,13 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
           import('@sentry/react')
             .then(({ captureMessage }) => {
               captureMessage(`[VSL] hls.js falló: ${data.type}`, {
-                level: 'error',
+                // Con respaldo el visitante sigue viendo el vídeo: ya no es
+                // un error, pero se cuenta para saber cuánto se usa.
+                level: mp4 ? 'warning' : 'error',
                 tags: {
                   motivo_video: `hls-${data.type}`,
                   motor_video: 'hls.js',
+                  respaldo_video: mp4 ? 'mp4' : 'ninguno',
                   id_video: idDelVideo(videoUrl),
                   espera_video: tramoDeEspera(
                     inicioCargaRef.current == null
@@ -403,14 +430,18 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
            librería no llegó a cargarse, no aparecía por ningún lado. Se reporta
            aquí, con su motivo, y el error del <video> que venga después ya es
            una consecuencia conocida. */
-        if (videoRef.current) videoRef.current.src = videoUrl
+        /* Con Bunny Stream hay algo mejor que el `.m3u8`: su MP4 de respaldo,
+           que estos navegadores sí reproducen. */
+        const mp4 = respaldoMp4(videoUrl)
+        if (videoRef.current) videoRef.current.src = mp4 || videoUrl
         import('@sentry/react')
           .then(({ captureMessage }) => {
             captureMessage('[VSL] no se pudo cargar hls.js', {
-              level: 'error',
+              level: mp4 ? 'warning' : 'error',
               tags: {
                 motivo_video: 'hls-no-cargado',
                 motor_video: 'sin-hls-js',
+                respaldo_video: mp4 ? 'mp4' : 'ninguno',
                 id_video: idDelVideo(videoUrl),
                 espera_video: tramoDeEspera(
                   inicioCargaRef.current == null
@@ -745,6 +776,34 @@ export default function VideoPlayer({ videoUrls, buttonPercent = 75, showControl
         // Always autoplay muted — even with returning overlay showing
         player.play()?.catch(() => {})
       }
+    }).catch((error) => {
+      /* Ni con el reintento llegó Plyr (FUNNELS-5E: Safari no dice qué chunk
+         falló, así que ni siquiera se puede reintentar). Antes esta promesa
+         quedaba sin `catch`: el <video> se quedaba sin controles ni botón para
+         seguir y el visitante, atascado en la página. Se tira del reproductor
+         del navegador y se muestra ya el botón, porque sin Plyr no hay
+         `timeupdate` que lo saque a su porcentaje. */
+      if (cancelled) return
+      const media = videoRef.current
+      if (media) {
+        media.controls = true
+        media.playsInline = true
+        media.play?.()?.catch?.(() => {})
+      }
+      setShowUnmute(false)
+      if (!buttonShownRef.current) {
+        buttonShownRef.current = true
+        if (onShowButton) onShowButton()
+      }
+      import('@sentry/react')
+        .then(({ captureMessage }) => {
+          captureMessage('[VSL] no se pudo cargar Plyr: reproductor nativo', {
+            level: 'warning',
+            tags: { id_video: idDelVideo(videoUrl) },
+            extra: { detalle: String(error?.message || error).slice(0, 300) },
+          })
+        })
+        .catch(() => {})
     })
 
     const video = videoRef.current

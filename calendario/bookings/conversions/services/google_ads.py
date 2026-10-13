@@ -4,6 +4,8 @@ import time
 import requests
 from django.conf import settings
 
+from calendario.core.resiliencia import nivel_de_fallo
+
 from calendario.leads.services.utils import (
     hash_value, hash_phone, get_conversion_value,
     SCHOOL_CUSTOMER_GOOGLE, SCHOOL_CONVERSION_ACTIONS,
@@ -125,5 +127,5 @@ def push_schedule(reserva):
         log.error_message = str(e)[:2000]
         log.execution_time_ms = elapsed
         log.save()
-        logger.error('[Google Ads] Reserva %s error: %s', reserva.pk, e)
+        logger.log(nivel_de_fallo(e), '[Google Ads] Reserva %s error: %s', reserva.pk, e)
         raise

@@ -23,10 +23,28 @@ import * as Sentry from '@sentry/react'
 export const ERRORES_DE_NAVEGADORES_EMBEBIDOS = [
   /Java object is gone/,
   /domInteractive/,
+  /* Mismo origen, otras apps (13-oct, ~950 eventos al mes):
+     - `xbrowser`/`swbrowser`: el autorrelleno que inyectan algunos WebView de
+       Android (`execute_auto_fill` en un script <anonymous>, FUNNELS-4R/5S/6B).
+     - `window.webkit.messageHandlers`: el puente nativo de un WebView de iOS
+       que no lo tiene montado (FUNNELS-6D/64/4A).
+     - "Java bridge method invocation error": el puente de un WebView de
+       Android (FUNNELS-4J).
+     - MetaMask: su extensión, en páginas que no usan ninguna cartera (FUNNELS-5P).
+     Ninguno de esos nombres existe en nuestro código. */
+  /\b(?:x|sw)browser is not defined/,
+  /window\.webkit\.messageHandlers/,
+  /Java bridge method invocation error/,
+  /Failed to connect to MetaMask/,
 ]
 
-/* Scripts inyectados por la app anfitriona: nada que venga de ahí es nuestro. */
-export const URLS_DE_TERCEROS = [/^iabjs:\/\//]
+/* Scripts inyectados por la app anfitriona o por extensiones del navegador:
+   nada que venga de ahí es nuestro (el `M_ID` de FUNNELS-4P sale de una
+   extensión de Chrome). */
+export const URLS_DE_TERCEROS = [
+  /^iabjs:\/\//,
+  /^(?:chrome|moz|safari(?:-web)?)-extension:\/\//,
+]
 
 if (typeof window !== 'undefined' && import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({

@@ -3,6 +3,8 @@ import logging
 import requests
 from django.conf import settings
 
+from calendario.core.resiliencia import nivel_de_fallo
+
 from .utils import get_school_code, get_region_from_lead
 
 logger = logging.getLogger(__name__)
@@ -307,7 +309,7 @@ def push_lead(lead):
         logger.info(f'[ActiveCampaign] Lead {lead.pk} synced, contact_id={contact_id}')
 
     except Exception as e:
-        logger.error(f'[ActiveCampaign] Lead {lead.pk} error: {e}')
+        logger.log(nivel_de_fallo(e), '[ActiveCampaign] Lead %s error: %s', lead.pk, e)
         raise
     finally:
         try:

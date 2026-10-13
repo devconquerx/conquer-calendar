@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.utils import timezone as django_tz
 from googleapiclient.errors import HttpError
@@ -14,6 +15,36 @@ from .services import obtener_servicio_calendar
 logger = logging.getLogger(__name__)
 
 _VENTANA_SYNC_DIAS = 90
+
+_AVISO_FALLO_CADA = 24 * 3600
+
+
+def _avisar_fallo(host, estado_previo, mensaje, *args, exc_info=False):
+    """Loguea un fallo de sync sin inundar Sentry: el cron pasa cada 10 min.
+
+    - Si el host venía bien, es warning: Google falla a veces una sola vez
+      (`unauthorized_client` suelto, FUNNELS-2E) y la pasada siguiente va bien.
+    - Si ya venía con error, el fallo se repite: error, una vez al día por host.
+      Un host sin Google Calendar (FUNNELS-1F, `notACalendarUser`) avisaba en
+      cada pasada.
+    """
+    clave = f'gcal_sync_fallo_avisado:{host.pk}'
+    if estado_previo == GoogleCalendarSyncEstado.ERROR and cache.add(clave, True, _AVISO_FALLO_CADA):
+        logger.error(mensaje, *args, exc_info=exc_info)
+    else:
+        logger.warning(mensaje, *args, exc_info=exc_info)
+
+
+def _marcar_error(sync_estado):
+    """Pasa el host a error y devuelve el estado que tenía."""
+    previo = sync_estado.estado
+    sync_estado.estado = GoogleCalendarSyncEstado.ERROR
+    sync_estado.save(update_fields=['estado'])
+    return previo
+
+
+def _limpiar_aviso(host):
+    cache.delete(f'gcal_sync_fallo_avisado:{host.pk}')
 
 
 def _host_declino(item):
@@ -605,6 +636,7 @@ def sincronizar_host_completo(host):
                 {gid: c.get('titulo', '') for gid, c in nuevos_eventos.items()},
             )
 
+        _limpiar_aviso(host)
         logger.info(
             "sync_completo: OK host=%s eventos_activos=%d sync_token=%s",
             host.email,
@@ -613,15 +645,11 @@ def sincronizar_host_completo(host):
         )
 
     except HttpError as e:
-        logger.error(
-            "sync_completo: HttpError %s para %s — %s", e.resp.status, host.email, e
-        )
-        sync_estado.estado = GoogleCalendarSyncEstado.ERROR
-        sync_estado.save(update_fields=['estado'])
+        _avisar_fallo(host, _marcar_error(sync_estado),
+                      "sync_completo: HttpError %s para %s — %s", e.resp.status, host.email, e)
     except Exception:
-        logger.exception("sync_completo: error inesperado para %s", host.email)
-        sync_estado.estado = GoogleCalendarSyncEstado.ERROR
-        sync_estado.save(update_fields=['estado'])
+        _avisar_fallo(host, _marcar_error(sync_estado),
+                      "sync_completo: error inesperado para %s", host.email, exc_info=True)
 
 
 def sincronizar_host_incremental(host):
@@ -743,6 +771,7 @@ def sincronizar_host_incremental(host):
                 if hay_cambios:
                     _invalidar_cache_por_host(host)
 
+                _limpiar_aviso(host)
                 logger.info("sync_incremental: OK host=%s cambios=%s", host.email, hay_cambios)
 
             except HttpError as e:
@@ -757,16 +786,19 @@ def sincronizar_host_incremental(host):
                     )
                     # Salimos del atomic para hacer sync completo sin lock anidado
                     raise _ResyncNecesario()
-                logger.error(
-                    "sync_incremental: HttpError %s para %s — %s", e.resp.status, host.email, e
-                )
-                sync_estado.estado = GoogleCalendarSyncEstado.ERROR
-                sync_estado.save(update_fields=['estado'])
+                _avisar_fallo(host, _marcar_error(sync_estado),
+                              "sync_incremental: HttpError %s para %s — %s",
+                              e.resp.status, host.email, e)
 
     except _ResyncNecesario:
         sincronizar_host_completo(host)
     except Exception:
-        logger.exception("sync_incremental: error inesperado para %s", host.email)
+        # Aquí cae el RefreshError (la credencial delegada no se pudo renovar):
+        # el atomic ya se deshizo, así que el estado se marca fuera.
+        sync_estado = GoogleCalendarSyncEstado.objects.filter(host=host).first()
+        previo = _marcar_error(sync_estado) if sync_estado else GoogleCalendarSyncEstado.ERROR
+        _avisar_fallo(host, previo, "sync_incremental: error inesperado para %s",
+                      host.email, exc_info=True)
 
 
 class _ResyncNecesario(Exception):

@@ -131,6 +131,17 @@ def register_lead(request):
 
     _truncate_fields(fields)
 
+    # El frontend reintenta si la red se cae (api.js, postConReintentos): si el
+    # primer intento sí llegó y solo se perdió la respuesta, el reintento es el
+    # mismo envío —mismo visitante, mismo evento, mismo correo— y no puede crear
+    # un segundo Lead (ni repetir sus envíos al CRM, AC y píxeles).
+    if fields.get('journey_id') and fields.get('event_id'):
+        repetido = Lead.objects.filter(
+            journey_id=fields['journey_id'], event_id=fields['event_id'], email=fields['email'],
+        ).only('id').first()
+        if repetido:
+            return JsonResponse({'status': 'ok', 'id': repetido.id})
+
     fields['ip_address'] = _get_client_ip(request)
     fields['date_submitted'] = timezone.now()
 

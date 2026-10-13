@@ -4,6 +4,8 @@ import time
 import requests
 from django.conf import settings
 
+from calendario.core.resiliencia import nivel_de_fallo
+
 from calendario.leads.services.utils import es_lead_de_lanzamiento
 
 logger = logging.getLogger(__name__)
@@ -131,7 +133,8 @@ def push_lead(lead):
             lead.pk, elapsed_ms, response.text[:200],
         )
     else:
-        logger.error(
+        logger.log(
+            nivel_de_fallo(status=response.status_code),
             '[CRM] Lead %s failed (%dms) — status=%d response=%s',
             lead.pk, elapsed_ms, response.status_code, response.text[:500],
         )
@@ -145,8 +148,8 @@ def push_vsl_progress(email, vsl_key, percent):
 
     Vivía en `leads/views.py` y salía dentro del request de
     `/f/api/video-progress/`. Ahora la llama `process_vsl_crm` desde la cola:
-    ver ahí por qué. Fail-safe: sin CRM_API_KEY hace no-op y lo registra, sin
-    romper el flujo.
+    ver ahí por qué. Sin CRM_API_KEY hace no-op y lo registra. Si el CRM no
+    responde o da 5xx, lanza para que la tarea lo reintente.
     """
     api_key = getattr(settings, 'CRM_API_KEY', '')
     if not api_key:
@@ -183,9 +186,15 @@ def push_vsl_progress(email, vsl_key, percent):
                 '[CRM] vsl-progress: %s no tiene LeadRegister, no hay dónde anotarlo', email,
             )
         else:
-            logger.error(
+            logger.log(
+                nivel_de_fallo(status=response.status_code),
                 '[CRM] vsl-progress PATCH failed — status=%d response=%s',
                 response.status_code, response.text[:500],
             )
+            # Un 5xx se reintenta (process_vsl_crm, 24 h): el CRM guarda el
+            # máximo, así que un hito viejo que llega tarde no pisa a uno nuevo.
+            if nivel_de_fallo(status=response.status_code) == logging.WARNING:
+                response.raise_for_status()
     except requests.RequestException as exc:
-        logger.error('[CRM] vsl-progress PATCH error: %s', exc)
+        logger.warning('[CRM] vsl-progress PATCH error: %s', exc)
+        raise
