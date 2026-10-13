@@ -7,16 +7,19 @@ zona del host. Lleno el cupo, los días afectados dejan de ofrecer horas y
 `crear_reserva` rechaza lo que llegue tarde con SlotNoDisponibleError.
 """
 from datetime import timedelta
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.test import TestCase
 from django.utils import timezone
 
 from calendario.bookings.models import Reserva
-from calendario.bookings.services import calcular_slots, dias_llenos_evento
+from calendario.bookings.services import calcular_slots, crear_reserva, dias_llenos_evento
 from tests.factories import NOMBRE_INVITADO, crear_disponibilidad, crear_event_type, crear_host
 
 
+@patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
+@patch('calendario.bookings.services.crear_evento_google')
 class LimiteEventoTest(TestCase):
 
     def setUp(self):
@@ -34,6 +37,12 @@ class LimiteEventoTest(TestCase):
     def _slots(self, dia):
         return calcular_slots(self.et, dia, dia)
 
+    def _reservar(self, inicio, n):
+        return crear_reserva(
+            event_type=self.et, inicio_utc=inicio,
+            nombre_invitado=NOMBRE_INVITADO, email_invitado=f'invitado{n}@test.com',
+        )
+
     def _reserva_directa(self, dia, **extra):
         inicio = self._slots(dia)[0]
         return Reserva.objects.create(
@@ -42,7 +51,30 @@ class LimiteEventoTest(TestCase):
             nombre_invitado=NOMBRE_INVITADO, email_invitado='directa@test.com', **extra,
         )
 
-    def test_ventana_de_varios_dias(self):
+    def test_dos_cada_un_dia_cierra_el_dia_al_llegar_a_dos(self, *_):
+        slots = self._slots(self.dia)
+        self._reservar(slots[0], 1)
+        self.assertTrue(self._slots(self.dia), 'con una reserva el día sigue abierto')
+        self._reservar(slots[-1], 2)
+        self.assertEqual(self._slots(self.dia), [])
+        self.assertTrue(self._slots(self.dia + timedelta(days=1)), 'el día siguiente no se toca')
+
+    def test_las_canceladas_no_cuentan(self, *_):
+        self._reserva_directa(self.dia, estado=Reserva.Estado.CANCELADA)
+        self._reserva_directa(self.dia, estado=Reserva.Estado.CANCELADA)
+        self.assertTrue(self._slots(self.dia))
+
+    def test_sin_limite_no_filtra_nada(self, *_):
+        self.et.limite_evento = None
+        self.et.limite_evento_dias = None
+        self.et.save()
+        slots = self._slots(self.dia)
+        self._reservar(slots[0], 1)
+        self._reservar(slots[1], 2)
+        self._reservar(slots[2], 3)
+        self.assertTrue(self._slots(self.dia))
+
+    def test_ventana_de_varios_dias(self, *_):
         # 2 cada 7: con reservas el día 0 y el 3, queda lleno cualquier día que
         # quepa con las dos en una semana, es decir del -3 al 6. Hacia atrás
         # también: las reservas futuras cierran los días previos.

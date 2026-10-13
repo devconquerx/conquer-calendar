@@ -379,7 +379,7 @@ def calcular_slots(event_type, fecha_desde, fecha_hasta):
             ]
             for f in futuros:
                 slots_set.update(f.result())
-    return sorted(slots_set)
+    return _quitar_dias_llenos(event_type, sorted(slots_set))
 
 
 _SLOTS_TTL = 45
@@ -796,6 +796,15 @@ def dias_llenos_evento(event_type, dias):
         event_type, min(dias) - timedelta(days=ancho), max(dias) + timedelta(days=ancho), tz,
     )
     return {d for d in dias if _excede_limite(fechas, d, maximo, ancho)}
+
+
+def _quitar_dias_llenos(event_type, slots):
+    """Quita los slots de los días que ya alcanzaron el tope del evento."""
+    if not event_type.tiene_limite_evento or not slots:
+        return slots
+    tz = ZoneInfo(event_type.host.timezone)
+    llenos = dias_llenos_evento(event_type, {s.astimezone(tz).date() for s in slots})
+    return [s for s in slots if s.astimezone(tz).date() not in llenos]
 
 
 def _comprobar_bloqueo(email_invitado):
