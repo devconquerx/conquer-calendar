@@ -13,8 +13,11 @@ from zoneinfo import ZoneInfo
 from django.test import TestCase
 from django.utils import timezone
 
+from calendario.bookings.exceptions import SlotNoDisponibleError
 from calendario.bookings.models import Reserva
-from calendario.bookings.services import calcular_slots, crear_reserva, dias_llenos_evento
+from calendario.bookings.services import (
+    calcular_slots, crear_reserva, dias_llenos_evento, reemplazar_reserva,
+)
 from tests.factories import NOMBRE_INVITADO, crear_disponibilidad, crear_event_type, crear_host
 
 
@@ -59,6 +62,14 @@ class LimiteEventoTest(TestCase):
         self.assertEqual(self._slots(self.dia), [])
         self.assertTrue(self._slots(self.dia + timedelta(days=1)), 'el día siguiente no se toca')
 
+    def test_la_tercera_reserva_del_dia_se_rechaza(self, *_):
+        slots = self._slots(self.dia)
+        self._reservar(slots[0], 1)
+        self._reservar(slots[1], 2)
+        with self.assertRaises(SlotNoDisponibleError):
+            self._reservar(slots[2], 3)
+        self.assertEqual(Reserva.objects.count(), 2)
+
     def test_las_canceladas_no_cuentan(self, *_):
         self._reserva_directa(self.dia, estado=Reserva.Estado.CANCELADA)
         self._reserva_directa(self.dia, estado=Reserva.Estado.CANCELADA)
@@ -88,3 +99,15 @@ class LimiteEventoTest(TestCase):
             dias_llenos_evento(self.et, dias.values()),
             {dias[-3], dias[1], dias[6]},
         )
+
+    def test_reagendar_dentro_de_un_dia_lleno(self, *_):
+        # La vieja se cancela antes de contar: moverla de hora no gasta cupo.
+        slots = self._slots(self.dia)
+        vieja = self._reservar(slots[0], 1)
+        self._reservar(slots[1], 2)
+        nueva = reemplazar_reserva(
+            vieja.pk, self.et, slots[2], NOMBRE_INVITADO, 'invitado1@test.com',
+        )
+        self.assertEqual(nueva.inicio_utc, slots[2])
+        self.assertEqual(Reserva.objects.filter(estado=Reserva.Estado.CONFIRMADA).count(), 2)
+
