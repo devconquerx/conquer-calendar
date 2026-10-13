@@ -761,6 +761,43 @@ def comprobar_limite_reservas(event_type, inicio_utc, email_invitado,
     raise LimiteReservasError(event_type, disponible_desde)
 
 
+def _fechas_reservas_evento(event_type, desde, hasta, tz):
+    """Fechas (en `tz`) de las reservas confirmadas del tipo de evento entre los
+    días `desde` y `hasta`, ambos incluidos. Una fecha por reserva, repetidas."""
+    qs = Reserva.objects.filter(
+        event_type=event_type,
+        estado=Reserva.Estado.CONFIRMADA,
+        inicio_utc__gte=datetime.combine(desde, datetime.min.time(), tzinfo=tz),
+        inicio_utc__lt=datetime.combine(hasta + timedelta(days=1), datetime.min.time(), tzinfo=tz),
+    )
+    return [i.astimezone(tz).date() for i in qs.values_list('inicio_utc', flat=True)]
+
+
+def dias_llenos_evento(event_type, dias):
+    """De los días `dias` (fechas en la zona del host), los que ya no admiten
+    otra reserva por el tope del tipo de evento.
+
+    El tope es «`limite_evento` cada `limite_evento_dias` días» sumando todas
+    las reservas confirmadas del tipo, de cualquier invitado y cualquier
+    organizador, en ventana móvil por la fecha de la cita: la misma cuenta que
+    el límite por invitado (`_excede_limite`). Con 2 cada 1 día, un día con dos
+    reservas queda lleno; con 5 cada 7, cuenta cualquier semana que lo contenga,
+    también las que acaban en reservas futuras.
+    """
+    dias = set(dias)
+    if not event_type.tiene_limite_evento or not dias:
+        return set()
+    maximo = event_type.limite_evento
+    ancho = event_type.limite_evento_dias
+    tz = ZoneInfo(event_type.host.timezone)
+    # Una reserva a `ancho` días o más de todos los pedidos no comparte ventana
+    # con ninguno.
+    fechas = _fechas_reservas_evento(
+        event_type, min(dias) - timedelta(days=ancho), max(dias) + timedelta(days=ancho), tz,
+    )
+    return {d for d in dias if _excede_limite(fechas, d, maximo, ancho)}
+
+
 def _comprobar_bloqueo(email_invitado):
     bloqueo = buscar_bloqueo(email_invitado)
     if bloqueo is not None:
