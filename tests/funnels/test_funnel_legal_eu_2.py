@@ -79,8 +79,8 @@ class LegalEu2RegistroYPrellamadaTest(TestCase):
         self.assertEqual(lead.funnel, 'cg-eu-2')
         self.assertEqual(get_school_code(lead), 'cg')
         self.assertEqual(get_region_from_lead(lead), 'EU')
-        # Misma etiqueta de AC que cg-eu: mismas automatizaciones.
-        self.assertEqual(FUNNEL_TAG_MAP['cg-eu-2'], FUNNEL_TAG_MAP['cg-eu'])
+        # Etiqueta de AC propia, para separar sus leads de los de cg-eu.
+        self.assertEqual(FUNNEL_TAG_MAP['cg-eu-2'], 'cg-eu-2')
 
     def test_la_prellamada_es_suya(self):
         resp = self.client.post(

@@ -43,8 +43,9 @@ FUNNEL_TAG_MAP = {
     'cf-latam': '454', 'cf-eu': '456', 'cf-us': '457',
     'cl-latam': '465', 'cl-eu': '466', 'cl-us': '468',
     'cg-latam': 'cg-latam', 'cg-eu': 'cg-eu', 'cg-us': 'cg-us',
-    # Segunda landing de Legal EU: misma etiqueta que cg-eu, mismas automatizaciones.
-    'cg-eu-2': 'cg-eu',
+    # Segunda landing de Legal EU: etiqueta propia para separar sus leads. La
+    # VSL de Legal en AC tiene que tener cg-eu-2 como disparador además de cg-eu.
+    'cg-eu-2': 'cg-eu-2',
 }
 
 # IDs numéricos conocidos (para quitar tags de escuela previos antes de añadir
