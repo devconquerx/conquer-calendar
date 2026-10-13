@@ -111,3 +111,29 @@ class LimiteEventoTest(TestCase):
         self.assertEqual(nueva.inicio_utc, slots[2])
         self.assertEqual(Reserva.objects.filter(estado=Reserva.Estado.CONFIRMADA).count(), 2)
 
+
+class FormularioLimiteEventoTest(TestCase):
+
+    def _datos(self, **extra):
+        datos = dict(
+            nombre='Clase grupal', duracion_minutos=45, incremento_inicio_minutos=15,
+            aviso_minimo_minutos=0, aviso_maximo_dias=60, confirmacion_tipo='default',
+            crm_destino='none',
+        )
+        datos.update(extra)
+        return datos
+
+    def test_guarda_el_limite(self):
+        from calendario.event_types.forms import EventTypeForm
+        form = EventTypeForm(data=self._datos(limite_evento=2, limite_evento_dias=1))
+        form.instance.host = crear_host()
+        self.assertTrue(form.is_valid(), form.errors)
+        et = form.save()
+        self.assertEqual((et.limite_evento, et.limite_evento_dias), (2, 1))
+
+    def test_un_dato_suelto_no_vale(self):
+        from calendario.event_types.forms import EventTypeForm
+        form = EventTypeForm(data=self._datos(limite_evento=2))
+        form.instance.host = crear_host()
+        self.assertFalse(form.is_valid())
+        self.assertIn('limite_evento_dias', form.errors)

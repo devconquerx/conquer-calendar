@@ -377,6 +377,32 @@
                         {% endif %}
                     </div>
 
+                    <div class="mb-5">
+                        <label class="form-label fw-semibold fs-7" for="limite_evento">Límite de reservas del evento</label>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <input type="number" name="limite_evento" id="limite_evento" min="1" max="999"
+                                   class="form-control w-100px{% if form.limite_evento.errors %} is-invalid{% endif %}"
+                                   value="{{ form.limite_evento.value|default_if_none:'' }}" placeholder="—" />
+                            <span class="text-gray-700 fs-7">reservas cada</span>
+                            <div class="input-group w-150px">
+                                <input type="number" name="limite_evento_dias" id="limite_evento_dias" min="1" max="999"
+                                       class="form-control{% if form.limite_evento_dias.errors %} is-invalid{% endif %}"
+                                       value="{{ form.limite_evento_dias.value|default_if_none:'' }}" placeholder="—" />
+                                <span class="input-group-text">días</span>
+                            </div>
+                        </div>
+                        <div class="text-muted fs-8 mt-2">
+                            Suma las reservas de todos los invitados, por la fecha de la cita. Con 2 cada 1 día, en
+                            cuanto un día tiene dos reservas dejan de ofrecerse sus horas. Vacío: sin límite.
+                        </div>
+                        {% if form.limite_evento.errors or form.limite_evento_dias.errors %}
+                        <div class="text-danger fs-8 mt-1">
+                            {{ form.limite_evento.errors|join:", " }}
+                            {{ form.limite_evento_dias.errors|join:", " }}
+                        </div>
+                        {% endif %}
+                    </div>
+
                     <div class="et-switch">
                         <div class="form-check form-check-custom form-check-solid form-switch mt-1">
                             <input class="form-check-input" type="checkbox" name="mostrar_caja_comentarios" id="mostrar_caja_comentarios"
