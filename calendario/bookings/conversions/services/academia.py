@@ -36,6 +36,8 @@ import time
 import requests
 from django.conf import settings
 
+from calendario.bookings.models import CancelacionReserva, Reserva
+
 logger = logging.getLogger(__name__)
 
 
@@ -77,6 +79,19 @@ def _uid_alumno(reserva):
     """
     uid = (reserva.alumno_lms_uid or '').strip()
     return int(uid) if uid.isdigit() else None
+
+
+def _reagendada(reserva):
+    """Si la reserva se canceló porque el invitado la movió a otra hora.
+
+    Reagendar es cancelar la vieja y crear otra, así que para la academia la vieja
+    llega como cancelada igual que una que de verdad se anuló. El motivo solo está
+    aquí, en `CancelacionReserva`, y la academia lo usa para mostrar en la ficha
+    del alumno «Reagendada» en vez de «Cancelada».
+    """
+    if reserva.estado != Reserva.Estado.CANCELADA:
+        return False
+    return reserva.cancelaciones.filter(origen=CancelacionReserva.Origen.REAGENDADA).exists()
 
 
 def _config():
@@ -140,6 +155,9 @@ def construir_payload(reserva):
         # minutos de terminar—, no por el recuento.
         'startsAt': reserva.inicio_utc.isoformat() if reserva.inicio_utc else None,
         'endsAt': reserva.fin_utc.isoformat() if reserva.fin_utc else None,
+        # Si la cancelación fue por reagendar. Va porque la ficha del alumno en la
+        # academia separa la clase cancelada de la que solo cambió de hora.
+        'rescheduled': _reagendada(reserva),
     }
 
 

@@ -27,7 +27,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from calendario.bookings.conversions.services import academia
-from calendario.bookings.models import Reserva
+from calendario.bookings.models import CancelacionReserva, Reserva
 from calendario.event_types.models import EventType
 from calendario.users.models import User
 from tests.factories import (
@@ -123,7 +123,7 @@ class PayloadSesionTest(TestCase):
         self.assertEqual(set(payload), {
             'reservationId', 'status', 'academyId',
             'professorEmail', 'studentLmsId', 'studentEmail',
-            'eventTypeName', 'startsAt', 'endsAt',
+            'eventTypeName', 'startsAt', 'endsAt', 'rescheduled',
         })
 
     def test_envio_va_al_endpoint_con_la_clave(self):
@@ -164,6 +164,23 @@ class PayloadSesionTest(TestCase):
     def test_una_cancelada_viaja_como_cancelada(self):
         reserva = self._reserva(estado=Reserva.Estado.CANCELADA)
         self.assertEqual(academia.construir_payload(reserva)['status'], 'CANCELLED')
+
+    def test_una_confirmada_no_va_como_reagendada(self):
+        self.assertFalse(academia.construir_payload(self._reserva())['rescheduled'])
+
+    def test_una_cancelada_sin_mas_no_va_como_reagendada(self):
+        reserva = self._reserva(estado=Reserva.Estado.CANCELADA)
+        CancelacionReserva.objects.create(reserva=reserva, origen=CancelacionReserva.Origen.PUBLICA)
+
+        self.assertFalse(academia.construir_payload(reserva)['rescheduled'])
+
+    def test_una_cancelada_por_reagendar_va_como_reagendada(self):
+        """La academia distingue en la ficha del alumno la clase que se canceló
+        de la que solo se movió de hora; sin esto las dos le llegan igual."""
+        reserva = self._reserva(estado=Reserva.Estado.CANCELADA)
+        CancelacionReserva.objects.create(reserva=reserva, origen=CancelacionReserva.Origen.REAGENDADA)
+
+        self.assertTrue(academia.construir_payload(reserva)['rescheduled'])
 
 
 class EstadoTraducidoTest(TestCase):
@@ -380,6 +397,9 @@ class DespachoTest(TestCase):
 
         mock_cancel.assert_called_once_with(vieja.pk)
         mock_alta.assert_called_once_with(nueva.pk)
+        vieja.refresh_from_db()
+        self.assertTrue(academia.construir_payload(vieja)['rescheduled'])
+        self.assertFalse(academia.construir_payload(nueva)['rescheduled'])
 
 
 class UidEnElPayloadTest(TestCase):
