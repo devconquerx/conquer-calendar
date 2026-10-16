@@ -6,6 +6,7 @@
 <html lang="{{ LANGUAGE_CODE }}" {% printHtmlAttributes 'html' %}>
     <!--begin::Head-->
     <head>
+        {% block head_inicio %}{% endblock head_inicio %}
         <!-- Sentry Session Replay -->
         {% if SENTRY_SESION_REPLAY %}
         <script
