@@ -647,7 +647,7 @@ body {
               {% comment %} La reserva se crea con el nombre y el email del token, se manden
                  los que se manden en el formulario: el readonly es solo para que
                  se entienda, no es lo que lo garantiza. {% endcomment %}
-              <div class="bk-identidad-nota">Reservas con tu cuenta de la academia.</div>
+              <div class="bk-identidad-nota">{% if reagendando %}Se mantienen el nombre y el email de tu reserva.{% else %}Reservas con tu cuenta de la academia.{% endif %}</div>
               {% endif %}
             </div>
             <div>
