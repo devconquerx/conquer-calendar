@@ -125,9 +125,11 @@ def _build_vars(reserva, site_url):
         'google_event_url':   reserva.google_event_url or '',
         'link_cancelar':      f"{site_url}/r/{reserva.confirmacion_token}/cancelar/",
         'link_reserva':       f"{site_url}/panel/reservas/{reserva.pk}/",
-        # Vuelve a la página pública del mismo tipo de evento: el invitado
-        # elige hueco nuevo y reserva otra vez. No cancela la actual.
-        'link_reagendar':     f"{site_url}/{reserva.host.slug}/{reserva.event_type.slug}/",
+        # Abre el calendario del mismo evento con el token de la reserva: así
+        # funciona también en los eventos «solo alumnos», que por su enlace
+        # público piden el token del LMS. Al elegir hueco se pregunta antes de
+        # cancelar la actual.
+        'link_reagendar':     f"{site_url}/r/{reserva.confirmacion_token}/reagendar/",
         'link_confirmar':     f"{site_url}/r/{reserva.confirmacion_token}/confirmar/",
     }
 

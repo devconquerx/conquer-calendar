@@ -32,7 +32,7 @@ VARIABLES_CORREO = [
     ('{{google_meet_url}}',     'Enlace Google Meet'),
     ('{{link_reserva}}',        'Ver reserva en la app'),
     ('{{link_cancelar}}',       'Botón: cancelar reserva'),
-    ('{{link_reagendar}}',      'Botón: reagendar (vuelve a la página del evento)'),
+    ('{{link_reagendar}}',      'Botón: reagendar (elige hueco nuevo y cambia la reserva)'),
     ('{{link_confirmar}}',      'Botón: confirmar asistencia'),
 ]
 
