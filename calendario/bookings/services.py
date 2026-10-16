@@ -829,6 +829,35 @@ def comprobar_limite_reservas(event_type, inicio_utc, email_invitado,
     raise LimiteReservasError(event_type, _primer_dia_libre(fechas, hoy, maximo, dias))
 
 
+def aviso_limite_reservas(event_type, email_invitado, telefono_invitado=''):
+    """Lo que hay que contarle al invitado antes de que elija hora, o None.
+
+    Solo sirve cuando ya se sabe quién es antes del formulario, o sea con el
+    token de la academia. Sin esto el alumno que ya tenía su llamada elegía día,
+    rellenaba el formulario y se encontraba con el tope al final.
+
+    Avisa cuando hoy ya no cabe otra cita. Devuelve la cita que la tapa —la
+    próxima si la hay; si no, la última— y desde cuándo podrá agendar otra
+    (None si no se encontró ningún día).
+    """
+    if not event_type.tiene_limite_reservas:
+        return None
+    maximo = event_type.limite_reservas
+    dias = event_type.limite_reservas_dias
+    tz = ZoneInfo(event_type.host.timezone)
+    hoy = timezone.now().astimezone(tz).date()
+    fechas = _fechas_para_limite(event_type, email_invitado, telefono_invitado,
+                                 hoy - timedelta(days=dias), tz)
+    if not fechas or not _excede_limite(fechas, hoy, maximo, dias):
+        return None
+    futuras = [f for f in fechas if f >= hoy]
+    return {
+        'cita': min(futuras) if futuras else max(fechas),
+        'cita_futura': bool(futuras),
+        'desde': _primer_dia_libre(fechas, hoy, maximo, dias),
+    }
+
+
 def _fechas_reservas_evento(event_type, desde, hasta, tz):
     """Fechas (en `tz`) de las reservas confirmadas del tipo de evento entre los
     días `desde` y `hasta`, ambos incluidos. Una fecha por reserva, repetidas."""
