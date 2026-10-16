@@ -993,10 +993,17 @@ class LimiteReservasView(View):
             desde = date.fromisoformat(request.GET.get('desde', ''))
         except ValueError:
             desde = None
-        return render(request, 'pages/public/booking/limite_reservas.html', {
+        resp = render(request, 'pages/public/booking/limite_reservas.html', {
             'event_type': event_type,
             'desde': date_format(desde, r'j \d\e F \d\e Y') if desde else '',
         })
+        # A esta página se llega también desde dentro del iframe de la academia.
+        # Sin esto sale `X-Frame-Options: DENY` y el alumno, en vez de leer que
+        # ya tiene el máximo de reservas, ve el error del navegador de que la
+        # página ha rechazado la conexión.
+        if event_type and event_type.embebible:
+            return embed.permitir_embebido(resp)
+        return resp
 
 
 class ReservaNoProcesadaView(View):
