@@ -807,6 +807,166 @@ class ReemplazarPublicaView(View):
         return _redirect_confirmacion(vieja.event_type, nueva)
 
 
+# ── Reagendar desde el correo ─────────────────────────────────────────────────
+#
+# El botón «Reagendar» de los correos llevaba a la página pública del evento, y
+# en un evento «solo alumnos» esa página pide el token del LMS: quien llegaba
+# desde el correo se encontraba con «Esta página se abre desde la academia» y no
+# podía mover su clase. Estas vistas se abren con el token de la reserva, que es
+# lo que demuestra que quien está delante es el invitado —es quien recibió el
+# correo—, así que no hace falta el del LMS.
+#
+# La identidad no se elige: sale de la reserva que se está moviendo. Al elegir
+# hueco se enseña el mismo modal de «ya tienes una reserva», que deja claro que
+# la actual se cancela, y es ese modal el que hace el reemplazo con
+# `ReemplazarPublicaView`.
+
+def _reserva_reagendable(token):
+    """La reserva a mover y si todavía se puede (no cancelada y evento activo)."""
+    reserva = get_object_or_404(
+        Reserva.objects.select_related('event_type', 'host'),
+        confirmacion_token=token,
+    )
+    if reserva.estado != Reserva.Estado.CONFIRMADA or not reserva.event_type.activo:
+        return reserva, False
+    return reserva, True
+
+
+def _tz_reagendar(request, reserva):
+    """La TZ del visitante, o la que tenía al reservar si no manda ninguna."""
+    try:
+        tz_fallback = ZoneInfo(reserva.timezone_invitado or reserva.host.timezone)
+    except (ZoneInfoNotFoundError, ValueError):
+        tz_fallback = ZoneInfo(reserva.host.timezone)
+    return _tz_visitante(request, tz_fallback)
+
+
+def _ctx_reagendar(reserva, event_type, tz_visitante, hoy_local, min_fecha, max_fecha, fecha, slots):
+    token = reserva.confirmacion_token
+    return {
+        'event_type': event_type,
+        'host': event_type.host,
+        'fecha': fecha,
+        'fecha_iso': fecha.isoformat() if fecha else '',
+        'min_fecha_iso': min_fecha.isoformat(),
+        'max_fecha_iso': max_fecha.isoformat(),
+        'slots_local': _slots_template(slots, tz_visitante) if fecha else [],
+        'tz_host': event_type.host.timezone,
+        'tz_visitante': str(tz_visitante),
+        'hoy': hoy_local,
+        'reagendando': True,
+        'nombre_invitado': reserva.nombre_invitado,
+        'email_invitado': reserva.email_invitado,
+        'telefono_invitado': reserva.telefono_invitado,
+        'notas': reserva.notas,
+        'campos_identidad_bloqueados': True,
+        'form_action_url': reverse('public_token:reagendar_submit', kwargs={'token': token}),
+        'slots_url': reverse('public_token:reagendar_slots', kwargs={'token': token}),
+    }
+
+
+class ReagendarPublicaView(View):
+
+    def get(self, request, token):
+        reserva, reagendable = _reserva_reagendable(token)
+        if not reagendable:
+            return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
+        event_type = reserva.event_type
+
+        tz_visitante = _tz_reagendar(request, reserva)
+        hoy_local = datetime.now(tz_visitante).date()
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
+
+        fecha_str = request.GET.get('fecha', '')
+        try:
+            fecha = date.fromisoformat(fecha_str) if fecha_str else None
+        except ValueError:
+            fecha = None
+        if fecha and (fecha < min_fecha or fecha > max_fecha):
+            fecha = None
+
+        mes_str = request.GET.get('mes', '')
+        try:
+            mes_base = date.fromisoformat(mes_str).replace(day=1) if mes_str else None
+        except ValueError:
+            mes_base = None
+        if not mes_base:
+            mes_base = fecha.replace(day=1) if fecha else min_fecha.replace(day=1)
+
+        slots = _slots_dia_visitante(event_type, fecha, tz_visitante) if fecha else []
+        ctx = _ctx_reagendar(reserva, event_type, tz_visitante, hoy_local,
+                             min_fecha, max_fecha, fecha, slots)
+        auto_avanzar = not request.GET.get('mes') and not fecha
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, mes_base, max_fecha, fecha,
+                                       auto_avanzar=auto_avanzar, hoy_local=hoy_local))
+        return _render_booking(request, ctx, None, event_type)
+
+
+class ReagendarFormView(View):
+    """Recibe el hueco elegido y enseña el modal de reemplazo.
+
+    No reagenda: solo pinta la confirmación. Mover la reserva sin preguntar
+    haría que un clic de más cancelara la clase que ya tenía.
+    """
+
+    def post(self, request, token):
+        reserva, reagendable = _reserva_reagendable(token)
+        if not reagendable:
+            return redirect('public_token:confirmacion', token=reserva.confirmacion_token)
+        event_type = reserva.event_type
+
+        # El nombre y el email no vienen del formulario sino de la reserva:
+        # se rellenan aquí para que la validación no dependa de lo que mande el
+        # navegador.
+        datos = request.POST.copy()
+        datos['nombre_invitado'] = reserva.nombre_invitado
+        datos['email_invitado'] = reserva.email_invitado
+        form = BookingForm(datos)
+        valido = form.is_valid()
+        # Con el teléfono mal la hora elegida sigue valiendo: se repinta ese día
+        # en vez de devolverle al primero del calendario.
+        inicio = form.cleaned_data.get('inicio_utc')
+
+        tz_visitante = _tz_reagendar(request, reserva)
+        hoy_local = datetime.now(tz_visitante).date()
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
+        fecha = inicio.astimezone(tz_visitante).date() if inicio else min_fecha
+        slots = _slots_dia_visitante(event_type, fecha, tz_visitante)
+
+        ctx = _ctx_reagendar(reserva, event_type, tz_visitante, hoy_local,
+                             min_fecha, max_fecha, fecha, slots)
+        ctx.update({
+            'telefono_invitado': request.POST.get('telefono_invitado', '') or reserva.telefono_invitado,
+            'notas': request.POST.get('notas', ''),
+            'inicio_utc_str': request.POST.get('inicio_utc', ''),
+            'slot_label': inicio.astimezone(tz_visitante).strftime('%H:%M') + ' h' if inicio else '',
+        })
+        if not valido:
+            ctx['form_errors'] = form.errors
+        ctx.update(_build_calendar_ctx(event_type, tz_visitante, min_fecha, fecha.replace(day=1),
+                                       max_fecha, fecha, hoy_local=hoy_local))
+        if valido:
+            ctx.update(_duplicado_ctx(reserva, inicio, tz_visitante))
+        return _render_booking(request, ctx, None, event_type, status=200 if valido else 400)
+
+
+class ReagendarSlotsView(View):
+
+    def get(self, request, token):
+        reserva, reagendable = _reserva_reagendable(token)
+        if not reagendable:
+            return JsonResponse({'error': 'reserva no reagendable'}, status=410)
+        event_type = reserva.event_type
+        tz_visitante = _tz_reagendar(request, reserva)
+        hoy_local = datetime.now(tz_visitante).date()
+        min_fecha, max_fecha = event_type.ventana_reservas(hoy_local)
+        data = _calcular_slots_mes_json(
+            event_type, tz_visitante, min_fecha, max_fecha,
+            request.GET.get('mes', ''),
+        )
+        return JsonResponse(data)
+
+
 def url_limite_reservas(request, error):
     """URL absoluta de la página de máximo alcanzado para este error.
 
