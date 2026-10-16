@@ -21,7 +21,10 @@ from .exceptions import (
 )
 from .forms import BookingForm
 from .models import Reserva
-from .services import calcular_slots, calcular_slots_cacheado, cancelar_reserva, crear_reserva, reemplazar_reserva
+from .services import (
+    aviso_limite_reservas, calcular_slots, calcular_slots_cacheado, cancelar_reserva, crear_reserva,
+    reemplazar_reserva,
+)
 
 # Listas fijas en español para formatear fechas: strftime('%A'/'%B') depende del
 # locale del SO (inglés en producción).
@@ -70,8 +73,29 @@ def _render_booking(request, ctx, invitado, event_type, status=200):
     lo que permite desplegarlo en la academia sin cerrar antes el enlace.
     """
     embed.aplicar_embed(ctx, invitado, embed.token_de_request(request))
+    if invitado is not None:
+        ctx['aviso_limite'] = _ctx_aviso_limite(event_type, invitado)
     resp = render(request, 'pages/public/booking/page.html', ctx, status=status)
     return embed.permitir_embebido(resp) if event_type.embebible else resp
+
+
+def _ctx_aviso_limite(event_type, invitado):
+    """El aviso de «ya tienes tu llamada» con las fechas ya en texto, o None.
+
+    Solo con alumno detrás: es el único caso en que se sabe quién reserva antes
+    de que rellene el formulario.
+    """
+    aviso = aviso_limite_reservas(event_type, invitado['email'], invitado['telefono'])
+    if aviso is None:
+        return None
+    return {
+        'cita': date_format(aviso['cita'], r'j \d\e F'),
+        'cita_futura': aviso['cita_futura'],
+        'desde': date_format(aviso['desde'], r'j \d\e F') if aviso['desde'] else '',
+        # Con la casilla de uno por invitado, elegir otra hora saca el modal que
+        # ofrece cambiar la que ya tiene; sin ella no hay nada que ofrecer.
+        'puede_cambiarla': aviso['cita_futura'] and event_type.unico_por_invitado,
+    }
 
 
 def _identidad(form, invitado):

@@ -305,6 +305,15 @@ body {
 }
 .bk-input[readonly]:focus { border-color: var(--bk-border); }
 .bk-identidad-nota { font-size: 12px; color: var(--bk-muted); margin-top: 5px; }
+/* Aviso de que el alumno ya tiene su llamada y el tope no le deja otra todavía.
+   Mismo amarillo que la reserva existente del modal de duplicado. */
+.bk-aviso-limite {
+  background: #fff3cd; border-left: 3px solid #f5b800; border-radius: 6px;
+  padding: 12px 14px; margin: 18px 0 0; font-size: 13.5px; line-height: 1.5; color: #664d03;
+}
+.bk-aviso-limite strong { color: #1a1a2e; }
+.bk-aviso-limite p { margin: 0; }
+.bk-aviso-limite p + p { margin-top: 6px; }
 .bk-submit {
   background: var(--bk-blue); color: #fff; border: none; border-radius: 8px;
   padding: 13px 24px; font-size: 15px; font-weight: 600; cursor: pointer;
@@ -491,6 +500,23 @@ body {
           <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
         </svg>
         {{ event_type.precio }} EUR
+      </div>
+      {% endif %}
+      {% if aviso_limite %}
+      {% comment %} Se pinta antes de que elija hora: sin esto el alumno que ya
+         tenía su llamada rellenaba el formulario para enterarse al final de que
+         no podía agendar otra. {% endcomment %}
+      <div class="bk-aviso-limite" role="status">
+        <p>
+          Ya tienes una llamada {% if aviso_limite.cita_futura %}agendada para el{% else %}del{% endif %}
+          <strong>{{ aviso_limite.cita }}</strong>.
+          Solo se puede{% if event_type.limite_reservas > 1 %}n{% endif %} agendar {{ event_type.limite_reservas }}
+          cada {{ event_type.limite_reservas_dias }} días, así que
+          {% if aviso_limite.desde %}la siguiente solo la podrás agendar a partir del <strong>{{ aviso_limite.desde }}</strong>.{% else %}por ahora no podrás agendar otra.{% endif %}
+        </p>
+        {% if aviso_limite.puede_cambiarla %}
+        <p>Si lo que quieres es cambiarla de día, elige la nueva hora: te preguntaremos antes de cambiarla.</p>
+        {% endif %}
       </div>
       {% endif %}
       {% if event_type.descripcion %}
