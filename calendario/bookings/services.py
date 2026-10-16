@@ -755,6 +755,49 @@ def _excede_limite(fechas, nueva, maximo, dias):
     return False
 
 
+def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, tz, excluir_pk=None):
+    """Fechas (en `tz`) de las citas del invitado que cuentan para su tope:
+    confirmadas, del mismo tipo de evento y desde el día `desde`. «El mismo
+    invitado» es mismo email O mismo teléfono, como el duplicado. Devuelve None
+    si no hay con qué identificarle."""
+    email_norm = (email_invitado or '').strip().lower()
+    tel_sufijo = _sufijo_telefono(telefono_invitado)
+    if not email_norm and not tel_sufijo:
+        return None
+
+    coincide = Q()
+    if email_norm:
+        coincide |= Q(email_invitado__iexact=email_norm)
+    if tel_sufijo:
+        coincide |= Q(telefono_norm__endswith=tel_sufijo)
+    qs = Reserva.objects.filter(
+        event_type=event_type,
+        estado=Reserva.Estado.CONFIRMADA,
+        inicio_utc__gte=datetime.combine(desde, datetime.min.time(), tzinfo=tz),
+    )
+    if excluir_pk:
+        qs = qs.exclude(pk=excluir_pk)
+    return [
+        i.astimezone(tz).date()
+        for i in _annotate_telefono_normalizado(qs).filter(coincide).values_list('inicio_utc', flat=True)
+    ]
+
+
+def _primer_dia_libre(fechas, hoy, maximo, dias):
+    """Primer día desde hoy en el que sí cabría otra cita, o None.
+
+    Las citas futuras pueden cerrar huecos por delante, así que se busca día a
+    día; si en un año largo no aparece ninguno, no se da fecha.
+    """
+    tope = max(fechas + [hoy]) + timedelta(days=dias)
+    dia = hoy
+    while dia <= tope:
+        if not _excede_limite(fechas, dia, maximo, dias):
+            return dia
+        dia += timedelta(days=1)
+    return None
+
+
 def comprobar_limite_reservas(event_type, inicio_utc, email_invitado,
                               telefono_invitado='', excluir_pk=None):
     """Lanza LimiteReservasError si esta cita supera el tope del tipo de evento.
@@ -770,10 +813,6 @@ def comprobar_limite_reservas(event_type, inicio_utc, email_invitado,
     """
     if not event_type.tiene_limite_reservas:
         return
-    email_norm = (email_invitado or '').strip().lower()
-    tel_sufijo = _sufijo_telefono(telefono_invitado)
-    if not email_norm and not tel_sufijo:
-        return
 
     maximo = event_type.limite_reservas
     dias = event_type.limite_reservas_dias
@@ -783,38 +822,11 @@ def comprobar_limite_reservas(event_type, inicio_utc, email_invitado,
     # Lo que empezó antes de hoy - días ya no cabe en ninguna ventana que
     # contenga hoy o un día posterior.
     desde = min(hoy, nueva) - timedelta(days=dias)
-
-    coincide = Q()
-    if email_norm:
-        coincide |= Q(email_invitado__iexact=email_norm)
-    if tel_sufijo:
-        coincide |= Q(telefono_norm__endswith=tel_sufijo)
-    qs = Reserva.objects.filter(
-        event_type=event_type,
-        estado=Reserva.Estado.CONFIRMADA,
-        inicio_utc__gte=datetime.combine(desde, datetime.min.time(), tzinfo=tz),
-    )
-    if excluir_pk:
-        qs = qs.exclude(pk=excluir_pk)
-    fechas = [
-        i.astimezone(tz).date()
-        for i in _annotate_telefono_normalizado(qs).filter(coincide).values_list('inicio_utc', flat=True)
-    ]
-    if not _excede_limite(fechas, nueva, maximo, dias):
+    fechas = _fechas_para_limite(event_type, email_invitado, telefono_invitado,
+                                 desde, tz, excluir_pk=excluir_pk)
+    if fechas is None or not _excede_limite(fechas, nueva, maximo, dias):
         return
-
-    # Primer día desde hoy en el que sí cabría, para decírselo. Las citas
-    # futuras pueden cerrar huecos por delante, así que se busca día a día; si en
-    # un año largo no aparece ninguno, la página no da fecha.
-    disponible_desde = None
-    tope = max(fechas + [hoy]) + timedelta(days=dias)
-    dia = hoy
-    while dia <= tope:
-        if not _excede_limite(fechas, dia, maximo, dias):
-            disponible_desde = dia
-            break
-        dia += timedelta(days=1)
-    raise LimiteReservasError(event_type, disponible_desde)
+    raise LimiteReservasError(event_type, _primer_dia_libre(fechas, hoy, maximo, dias))
 
 
 def _fechas_reservas_evento(event_type, desde, hasta, tz):
