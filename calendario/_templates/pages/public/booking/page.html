@@ -1,6 +1,34 @@
 {% extends 'layout/master.html' %}
 {% block title %}{{ event_type.nombre }} — {% endblock %}
 
+{% block head_inicio %}
+{% comment %}
+Sin `?tz=` la página se recarga con la zona del navegador, porque las horas se
+pintan en el servidor. Va lo primero del <head> para que la recarga salga antes
+de que el navegador empiece a pedir hojas de estilo y scripts que va a tirar:
+abajo del todo, como estaba, la primera visita bajaba la página entera dos veces,
+y dentro del iframe de la academia se notaba.
+
+Los errores del formulario se pintan en /reservar/ sin ?tz=: ahí no se recarga,
+que sería repetir el envío como un GET.
+{% endcomment %}
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('tz') || window.location.pathname.endsWith('/reservar/')) return;
+  var browserTz = '';
+  try { browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+  if (!browserTz) return;
+  params.set('tz', browserTz);
+  // `replace` no para de leer el resto del HTML: sin el `stop` se seguirían
+  // pidiendo estilos, scripts y el slots.json de una página que se va a tirar.
+  // Va antes del `replace`, porque después cancelaría la propia recarga.
+  if (window.stop) window.stop();
+  window.location.replace(window.location.pathname + '?' + params.toString());
+})();
+</script>
+{% endblock head_inicio %}
+
 {% block layout %}
 {% load static django_vite %}
 <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
@@ -734,14 +762,10 @@ body {
   var browserTz = '';
   try { browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
 
-  // Si la URL no trae tz, redirigimos con la TZ del navegador.
-  // EXCEPCIÓN: errores de formulario renderizan en /reservar/ sin ?tz= — no redirigir.
-  var onSubmitEndpoint = window.location.pathname.endsWith('/reservar/');
-  if (!urlTz && browserTz && !onSubmitEndpoint) {
-    params.set('tz', browserTz);
-    window.location.replace(window.location.pathname + '?' + params.toString());
-    return;
-  }
+  // Si la URL no trae tz, la recarga con la del navegador ya salió desde el
+  // <head> (ver `head_inicio`); aquí no se repite. Si llega aquí sin tz es
+  // porque se quedó en la página: errores del formulario o navegador sin zona.
+  if (!urlTz && browserTz && !window.location.pathname.endsWith('/reservar/')) return;
 
   var activeTz = urlTz || '{{ tz_visitante }}' || browserTz || 'UTC';
   var now      = new Date();
