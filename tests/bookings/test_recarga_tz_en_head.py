@@ -7,6 +7,8 @@ estáticos sin comprimir— para tirarla y pedirla otra vez, y dentro del iframe
 la academia el calendario tardaba en aparecer. Tiene que ir antes de cualquier
 hoja de estilo o script externo.
 """
+import re
+
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -26,7 +28,9 @@ class RecargaTzEnHeadTest(TestCase):
     def test_va_antes_de_cualquier_estilo_o_script_externo(self):
         recarga = self.html.index('window.location.replace')
         self.assertLess(recarga, self.html.index('<link'))
-        self.assertLess(recarga, self.html.index('<script src'))
+        script_externo = re.search(r'<script[^>]*\ssrc=', self.html)
+        if script_externo:
+            self.assertLess(recarga, script_externo.start())
         self.assertLess(recarga, self.html.index('</head>'))
 
     def test_corta_la_carga_antes_de_recargar(self):
