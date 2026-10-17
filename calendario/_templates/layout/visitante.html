@@ -1,0 +1,14 @@
+{% extends 'layout/master.html' %}
+{% comment %}
+Base de las páginas que ve el visitante: reservar, confirmación, cancelar,
+límite alcanzado… Igual que la del panel pero sin su JavaScript (Metronic,
+jQuery, Bootstrap, select2), que ninguna de estas páginas usa y pesaba ~0,9 MB
+comprimido: dentro del iframe de la academia era parte de lo que tardaba en
+aparecer el calendario. Los estilos se quedan, que es de lo que sí depende cómo
+se ven.
+
+Si una de estas páginas llega a necesitar algo del tema, que lo cargue ella o
+que vuelva a extender de `layout/master.html`.
+{% endcomment %}
+{% block javascript %}{% endblock javascript %}
+{% block js_panel %}{% endblock js_panel %}
