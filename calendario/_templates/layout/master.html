@@ -208,6 +208,7 @@
         <script src="{% static 'js/novedades-polling.js' %}"></script>
         {% endif %}
 
+        {% block js_panel %}
         <script>
           jQuery(document).ready(function() {
             $('.backHistory').on('click', function(e){
@@ -250,6 +251,7 @@
 
 
         </script>
+        {% endblock js_panel %}
 
 
     <div id="pk" data-pk="{{ request.user.pk }}" style="display: none;"></div>
