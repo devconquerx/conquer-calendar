@@ -57,3 +57,30 @@ class AbanicoDeHilosTest(TestCase):
         with patch.object(services, 'ThreadPoolExecutor') as pool:
             calcular_slots(self.et, hoy, hoy + timedelta(days=7))
         pool.assert_not_called()
+
+
+class UnaConexionPorHiloTest(AbanicoDeHilosTest):
+    """Cada hilo se queda con su conexión para todo su lote de organizadores.
+
+    Se cerraba tras cada organizador, así que cada uno abría una conexión nueva
+    contra la Postgres gestionada, y eso costaba más que sus consultas: con las
+    25 personas de `1-on-1 | Conquer Languages`, 2,3 s el cálculo entero frente
+    a ~1 s con una conexión por hilo.
+    """
+
+    def test_cierra_una_vez_por_hilo_y_no_por_organizador(self):
+        self._poblar_pool(18)
+        hoy = date.today()
+        # `wraps` para que de verdad cierre: con un mock pelado las conexiones de
+        # los hilos se quedan abiertas y la BD de test no se puede borrar.
+        with patch.object(services.connections, 'close_all',
+                          wraps=services.connections.close_all) as close_all, \
+                patch.object(services, '_calcular_slots_para_host',
+                             wraps=services._calcular_slots_para_host) as por_host:
+            calcular_slots(self.et, hoy, hoy + timedelta(days=7))
+        self.assertEqual(close_all.call_count, _MAX_HILOS_SLOTS)
+        # Y ningún organizador se queda sin calcular por ir en lotes.
+        self.assertEqual(
+            sorted(c.args[1].pk for c in por_host.call_args_list),
+            sorted(h.pk for h in services._obtener_hosts_pool(self.et)),
+        )
