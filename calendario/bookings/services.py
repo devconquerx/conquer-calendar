@@ -361,13 +361,25 @@ def _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta, busy_o
     return slots
 
 
-def _slots_host_threadsafe(event_type, host, fecha_desde, fecha_hasta, precarga=None):
+def _slots_lote_threadsafe(event_type, hosts, fecha_desde, fecha_hasta, precarga):
+    """Slots de un lote de organizadores, calculados en un mismo hilo.
+
+    Cada hilo abre su propia conexión a la BD y aquí se cierra una sola vez, al
+    acabar el lote. Antes se cerraba tras cada organizador, así que cada uno
+    abría una conexión nueva contra la Postgres gestionada (con su TLS), y eso
+    se llevaba más tiempo que las propias consultas: medido en producción con
+    las 25 personas de `1-on-1 | Conquer Languages`, 2,3 s el cálculo entero
+    frente a ~0,5 s con una conexión por hilo. Ese cálculo es lo que tardaba
+    en aparecer el calendario cuando la caché de 45 s había caducado.
+    """
     try:
-        return _calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta,
-                                         precarga=precarga)
+        slots = []
+        for host in hosts:
+            slots.extend(_calcular_slots_para_host(event_type, host, fecha_desde, fecha_hasta,
+                                                   precarga=precarga[host.pk]))
+        return slots
     finally:
-        # Cada hilo abre su propia conexión a la BD; la cerramos al terminar
-        # para no agotar el pool del backend.
+        # Cerrarla al terminar para no agotar el pool del backend.
         connections.close_all()
 
 
@@ -425,11 +437,14 @@ def calcular_slots(event_type, fecha_desde, fecha_hasta):
         )
     else:
         precarga = _precargar_hosts(event_type, hosts)
-        with ThreadPoolExecutor(max_workers=min(len(hosts), _MAX_HILOS_SLOTS)) as pool:
+        n_hilos = min(len(hosts), _MAX_HILOS_SLOTS)
+        # Un lote por hilo, repartidos en rueda para que salgan parejos.
+        lotes = [hosts[i::n_hilos] for i in range(n_hilos)]
+        with ThreadPoolExecutor(max_workers=n_hilos) as pool:
             futuros = [
-                pool.submit(_slots_host_threadsafe, event_type, h, fecha_desde, fecha_hasta,
-                            precarga[h.pk])
-                for h in hosts
+                pool.submit(_slots_lote_threadsafe, event_type, lote, fecha_desde, fecha_hasta,
+                            precarga)
+                for lote in lotes
             ]
             for f in futuros:
                 slots_set.update(f.result())
