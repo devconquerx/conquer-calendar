@@ -90,7 +90,7 @@ class EventTypeForm(forms.ModelForm):
             'aviso_minimo_minutos', 'aviso_maximo_dias',
             'rango_fecha_inicio', 'rango_fecha_fin', 'activo', 'acceso',
             'crm_destino', 'registrar_en_academia', 'academia_lms_id',
-            'unico_por_invitado', 'limite_reservas', 'limite_reservas_dias',
+            'unico_por_invitado', 'limite_reservas', 'limite_reservas_dias', 'limite_cancelacion_horas',
             'limite_evento', 'limite_evento_dias',
             'mostrar_caja_comentarios',
             'confirmacion_tipo', 'confirmacion_url',
