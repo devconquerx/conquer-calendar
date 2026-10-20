@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from django.core.cache import cache
 from django.db import connections, transaction
-from django.db.models import Max, Q, Value
+from django.db.models import F, Max, Q, Value
 from django.db.models.functions import Replace
 from django.utils import timezone
 
@@ -770,11 +770,32 @@ def _excede_limite(fechas, nueva, maximo, dias):
     return False
 
 
+def _cancelaciones_tardias(horas):
+    """Subconsulta con las reservas que el propio invitado canceló —desde su
+    enlace, reagendando o rechazando en Google— con menos de `horas` de
+    antelación. Las que cancela el host, el panel o un comando no cuentan: no
+    es él quien deja la plaza."""
+    from .models import CancelacionReserva
+    return CancelacionReserva.objects.filter(
+        origen__in=[
+            CancelacionReserva.Origen.PUBLICA,
+            CancelacionReserva.Origen.REAGENDADA,
+            CancelacionReserva.Origen.RECHAZO_INVITADO,
+        ],
+        creada_en__gt=F('reserva__inicio_utc') - timedelta(hours=horas),
+    ).values('reserva_id')
+
+
 def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, tz, excluir_pk=None):
     """Fechas (en `tz`) de las citas del invitado que cuentan para su tope:
     confirmadas, del mismo tipo de evento y desde el día `desde`. «El mismo
     invitado» es mismo email O mismo teléfono, como el duplicado. Devuelve None
-    si no hay con qué identificarle."""
+    si no hay con qué identificarle.
+
+    Con `limite_cancelacion_horas` también cuentan las que él mismo canceló a
+    última hora: si no, cancelar una hora antes le devolvía la plaza y podía
+    reservar otra al momento, saltándose la política de «clase cancelada con
+    menos de 24 h, clase perdida»."""
     email_norm = (email_invitado or '').strip().lower()
     tel_sufijo = _sufijo_telefono(telefono_invitado)
     if not email_norm and not tel_sufijo:
@@ -785,9 +806,15 @@ def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, tz
         coincide |= Q(email_invitado__iexact=email_norm)
     if tel_sufijo:
         coincide |= Q(telefono_norm__endswith=tel_sufijo)
+    cuentan = Q(estado=Reserva.Estado.CONFIRMADA)
+    if event_type.limite_cancelacion_horas:
+        cuentan |= Q(
+            estado=Reserva.Estado.CANCELADA,
+            pk__in=_cancelaciones_tardias(event_type.limite_cancelacion_horas),
+        )
     qs = Reserva.objects.filter(
+        cuentan,
         event_type=event_type,
-        estado=Reserva.Estado.CONFIRMADA,
         inicio_utc__gte=datetime.combine(desde, datetime.min.time(), tzinfo=tz),
     )
     if excluir_pk:
@@ -821,7 +848,8 @@ def comprobar_limite_reservas(event_type, inicio_utc, email_invitado,
     (mismo email O mismo teléfono, como el duplicado), en ventana móvil y por la
     fecha de la cita en la zona del host: con 1 cada 30 días, quien tuvo cita el
     10/09 puede volver a tenerla el 10/10. Cuentan las confirmadas, pasadas o
-    futuras; las canceladas no.
+    futuras; las canceladas no, salvo las que el invitado canceló a última hora
+    (ver `_fechas_para_limite`).
 
     `excluir_pk` deja fuera una reserva que está a punto de sustituirse (el
     modal de duplicado), para no contarla dos veces.
