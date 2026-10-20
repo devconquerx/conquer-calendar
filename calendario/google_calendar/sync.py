@@ -515,6 +515,7 @@ def _cancelar_reservas_rechazadas(host, google_event_ids, declinados_por_invitad
             # lo mejor no hizo (pasó el 20/08/2026 con una cita de Ezequiel).
             # Para saber el autor real hay que mirar los registros de auditoría
             # de Google Workspace: Informes → Auditoría → Eventos de Calendar.
+            origen = CancelacionReserva.Origen.SYNC_GCAL
             detalle = f'la invitación de {host.email} figura rechazada en Google Calendar'
             quien = f'el host ({host.email})'
         else:
@@ -525,12 +526,16 @@ def _cancelar_reservas_rechazadas(host, google_event_ids, declinados_por_invitad
                 continue
             if (r.email_invitado or '').lower() not in declinados_por_invitado.get(r.google_event_id, set()):
                 continue
+            # Origen propio y no SYNC_GCAL: este sí es el invitado, y su
+            # cancelación tardía cuenta para el límite de reservas como la
+            # que hace desde su enlace (ver `_fechas_para_limite`).
+            origen = CancelacionReserva.Origen.RECHAZO_INVITADO
             detalle = f'{r.email_invitado} rechazó la invitación en Google Calendar'
             quien = f'el invitado ({r.email_invitado})'
         try:
             cancelar_reserva(
                 r,
-                origen=CancelacionReserva.Origen.SYNC_GCAL,
+                origen=origen,
                 detalle=detalle,
             )
             logger.info(

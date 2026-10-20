@@ -252,7 +252,7 @@ class CancelarPorRechazoDelInvitadoTest(TestCase):
         _cancelar_reservas_rechazadas(
             self.host, [], {'gcal-evt-1': {'lead@x.com'}})
         cancelacion = r.cancelaciones.get()
-        self.assertEqual(cancelacion.origen, CancelacionReserva.Origen.SYNC_GCAL)
+        self.assertEqual(cancelacion.origen, CancelacionReserva.Origen.RECHAZO_INVITADO)
         self.assertIn('lead@x.com', cancelacion.detalle)
 
     def test_es_idempotente(self, _crear, _conf, mock_cancelar_gcal):
