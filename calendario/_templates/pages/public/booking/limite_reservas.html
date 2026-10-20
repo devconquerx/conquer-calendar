@@ -52,6 +52,10 @@ body { background: var(--bk-bg) !important; font-family: var(--bk-font); }
         <strong>{{ event_type.nombre }}</strong> admite como máximo
         {{ event_type.limite_reservas }} reserva{{ event_type.limite_reservas|pluralize }}
         cada {{ event_type.limite_reservas_dias }} día{{ event_type.limite_reservas_dias|pluralize }}.
+        {% if event_type.limite_cancelacion_horas %}
+          Las reservas que canceles o cambies con menos de {{ event_type.limite_cancelacion_horas }}
+          horas de antelación también cuentan.
+        {% endif %}
       {% endif %}
       {% if desde %}
         Podrás volver a reservar a partir del <strong>{{ desde }}</strong>.
