@@ -536,8 +536,13 @@ body {
          no podía agendar otra. {% endcomment %}
       <div class="bk-aviso-limite" role="status">
         <p>
+          {% if aviso_limite.cancelada %}
+          Cancelaste tu llamada del <strong>{{ aviso_limite.cita }}</strong> con menos de
+          {{ event_type.limite_cancelacion_horas }} horas de antelación, así que cuenta como hecha.
+          {% else %}
           Ya tienes una llamada {% if aviso_limite.cita_futura %}agendada para el{% else %}del{% endif %}
           <strong>{{ aviso_limite.cita }}</strong>.
+          {% endif %}
           Solo se puede{% if event_type.limite_reservas > 1 %}n{% endif %} agendar {{ event_type.limite_reservas }}
           cada {{ event_type.limite_reservas_dias }} días, así que
           {% if aviso_limite.desde %}la siguiente solo la podrás agendar a partir del <strong>{{ aviso_limite.desde }}</strong>.{% else %}por ahora no podrás agendar otra.{% endif %}

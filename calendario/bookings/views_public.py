@@ -91,6 +91,7 @@ def _ctx_aviso_limite(event_type, invitado):
     return {
         'cita': date_format(aviso['cita'], r'j \d\e F'),
         'cita_futura': aviso['cita_futura'],
+        'cancelada': aviso['cancelada'],
         'desde': date_format(aviso['desde'], r'j \d\e F') if aviso['desde'] else '',
         # Con la casilla de uno por invitado, elegir otra hora saca el modal que
         # ofrece cambiar la que ya tiene; sin ella no hay nada que ofrecer.

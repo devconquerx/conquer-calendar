@@ -793,7 +793,8 @@ def cancelar_ahora_es_tardio(event_type, reserva):
     return bool(horas) and timezone.now() > reserva.inicio_utc - timedelta(hours=horas)
 
 
-def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, tz, excluir_pk=None):
+def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, tz, excluir_pk=None,
+                        con_tardias=True):
     """Fechas (en `tz`) de las citas del invitado que cuentan para su tope:
     confirmadas, del mismo tipo de evento y desde el día `desde`. «El mismo
     invitado» es mismo email O mismo teléfono, como el duplicado. Devuelve None
@@ -802,7 +803,7 @@ def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, tz
     Con `limite_cancelacion_horas` también cuentan las que él mismo canceló a
     última hora: si no, cancelar una hora antes le devolvía la plaza y podía
     reservar otra al momento, saltándose la política de «clase cancelada con
-    menos de 24 h, clase perdida»."""
+    menos de 24 h, clase perdida». `con_tardias=False` las deja fuera."""
     email_norm = (email_invitado or '').strip().lower()
     tel_sufijo = _sufijo_telefono(telefono_invitado)
     if not email_norm and not tel_sufijo:
@@ -814,7 +815,7 @@ def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, tz
     if tel_sufijo:
         coincide |= Q(telefono_norm__endswith=tel_sufijo)
     cuentan = Q(estado=Reserva.Estado.CONFIRMADA)
-    if event_type.limite_cancelacion_horas:
+    if con_tardias and event_type.limite_cancelacion_horas:
         cuentan |= Q(
             estado=Reserva.Estado.CANCELADA,
             pk__in=_cancelaciones_tardias(event_type.limite_cancelacion_horas),
@@ -888,7 +889,8 @@ def aviso_limite_reservas(event_type, email_invitado, telefono_invitado=''):
 
     Avisa cuando hoy ya no cabe otra cita. Devuelve la cita que la tapa —la
     próxima si la hay; si no, la última— y desde cuándo podrá agendar otra
-    (None si no se encontró ningún día).
+    (None si no se encontró ningún día). `cancelada` dice si esa cita es una
+    que canceló a última hora y por eso sigue contando.
     """
     if not event_type.tiene_limite_reservas:
         return None
@@ -900,10 +902,18 @@ def aviso_limite_reservas(event_type, email_invitado, telefono_invitado=''):
                                  hoy - timedelta(days=dias), tz)
     if not fechas or not _excede_limite(fechas, hoy, maximo, dias):
         return None
-    futuras = [f for f in fechas if f >= hoy]
+    confirmadas = fechas
+    if event_type.limite_cancelacion_horas:
+        confirmadas = _fechas_para_limite(event_type, email_invitado, telefono_invitado,
+                                          hoy - timedelta(days=dias), tz, con_tardias=False)
+    # Solo una confirmada se puede cambiar de día: una cancelada que sigue
+    # contando no es una cita que tenga, aunque su fecha esté por delante.
+    futuras = [f for f in confirmadas if f >= hoy]
+    cita = min(futuras) if futuras else max(fechas)
     return {
-        'cita': min(futuras) if futuras else max(fechas),
+        'cita': cita,
         'cita_futura': bool(futuras),
+        'cancelada': not futuras and cita not in confirmadas,
         'desde': _primer_dia_libre(fechas, hoy, maximo, dias),
     }
 
