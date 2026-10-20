@@ -786,6 +786,13 @@ def _cancelaciones_tardias(horas):
     ).values('reserva_id')
 
 
+def cancelar_ahora_es_tardio(event_type, reserva):
+    """¿Si el invitado cancelara `reserva` ahora, seguiría contando para su
+    tope? (ver `EventType.limite_cancelacion_horas`)"""
+    horas = event_type.limite_cancelacion_horas
+    return bool(horas) and timezone.now() > reserva.inicio_utc - timedelta(hours=horas)
+
+
 def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, tz, excluir_pk=None):
     """Fechas (en `tz`) de las citas del invitado que cuentan para su tope:
     confirmadas, del mismo tipo de evento y desde el día `desde`. «El mismo
@@ -1012,8 +1019,11 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
                 # El modal de duplicado ofrece cambiar la reserva vieja por esta.
                 # Si ni cambiándola cabe en el límite, no tiene sentido ofrecerlo:
                 # aceptaría para chocar después con la página de máximo alcanzado.
+                # Y si cambiarla ya es cancelarla tarde, la vieja seguirá
+                # contando después: no se descuenta.
                 comprobar_limite_reservas(
-                    et, inicio_utc, email_invitado, telefono_invitado, excluir_pk=existente.pk,
+                    et, inicio_utc, email_invitado, telefono_invitado,
+                    excluir_pk=None if cancelar_ahora_es_tardio(et, existente) else existente.pk,
                 )
                 raise ReservaDuplicadaError(existente)
 
@@ -1120,6 +1130,11 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
     Saltea el check de duplicado de crear_reserva porque, al cancelar primero,
     la búsqueda de "reserva futura confirmada con el mismo email" ya no
     encuentra la vieja.
+
+    Reagendar a última hora es cancelar a última hora: la vieja, ya cancelada,
+    sigue contando para el límite de reservas, y si la nueva no cabe salta
+    LimiteReservasError y la transacción deshace también la cancelación. El
+    invitado conserva su cita original.
 
     `tracking` (dict, opcional): tracking a guardar en la reserva nueva. Sin él
     se hereda el de la vieja (página pública: el reagendamiento no genera un
