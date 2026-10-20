@@ -70,7 +70,7 @@
                         <td>
                             {% if c.usuario %}
                                 {{ c.usuario.nombre_display }}
-                            {% elif c.origen == 'publica' %}
+                            {% elif c.origen == 'publica' or c.origen == 'rechazo_invitado' %}
                                 <span class="text-muted">El propio invitado</span>
                             {% elif c.origen == 'sync_gcal' %}
                                 <span class="text-muted">Sin identificar</span>
@@ -87,6 +87,8 @@
                         <td>
                             {% if c.origen == 'sync_gcal' %}
                                 <span class="badge badge-light-warning">Rechazo en Google Calendar</span>
+                            {% elif c.origen == 'rechazo_invitado' %}
+                                <span class="badge badge-light-info">Rechazo del invitado en Google</span>
                             {% elif c.origen == 'panel' %}
                                 <span class="badge badge-light-primary">Panel interno</span>
                             {% elif c.origen == 'publica' %}
