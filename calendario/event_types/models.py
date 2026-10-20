@@ -222,6 +222,17 @@ class EventType(models.Model):
         help_text='Tamaño de la ventana, contada por la fecha de la cita. Con 1 reserva cada 30 días, '
                   'quien tuvo cita el 10/09 no puede tener otra hasta el 10/10.',
     )
+    # Cancelar a última hora no devuelve la plaza: si el propio invitado cancela
+    # o reagenda con menos de estas horas de antelación, la reserva sigue
+    # contando para su tope como si la hubiera tenido. Las que cancela el host
+    # o el panel no cuentan nunca. Vacío = las canceladas no cuentan.
+    limite_cancelacion_horas = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1)],
+        verbose_name='Cancelación tardía que sigue contando (horas)',
+        help_text='Si el invitado cancela o reagenda con menos de estas horas de antelación, la reserva '
+                  'sigue contando para su límite. Vacío: las canceladas nunca cuentan.',
+    )
 
     # Tope de reservas del tipo de evento entero, sumando todos los invitados y
     # todos los organizadores, en la misma ventana móvil de días (ver
@@ -350,6 +361,10 @@ class EventType(models.Model):
             campo = 'limite_reservas_dias' if self.limite_reservas_dias is None else 'limite_reservas'
             raise ValidationError({
                 campo: 'Para limitar las reservas hacen falta los dos datos: cuántas y cada cuántos días.',
+            })
+        if self.limite_cancelacion_horas is not None and self.limite_reservas is None:
+            raise ValidationError({
+                'limite_cancelacion_horas': 'Solo tiene sentido con un límite de reservas por invitado.',
             })
         if (self.limite_evento is None) != (self.limite_evento_dias is None):
             campo = 'limite_evento_dias' if self.limite_evento_dias is None else 'limite_evento'
