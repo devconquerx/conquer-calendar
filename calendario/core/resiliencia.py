@@ -103,7 +103,6 @@ SERVICIO_DE_TAREA = {
     'calendario.leads.tasks.process_supabase': 'supabase',
     'calendario.bookings.tasks.process_schedule_supabase': 'supabase',
     'calendario.funnels.tasks.process_pre_schedule_supabase': 'supabase',
-    'calendario.leads.tasks.process_funnelchat': 'funnelchat',
     'calendario.leads.tasks.process_crm_send': 'crm',
     'calendario.leads.tasks.process_vsl_crm': 'crm',
     'calendario.funnels.tasks.process_pre_schedule_crm': 'crm',
@@ -126,6 +125,7 @@ SIN_SERVICIO = {
     'calendario.funnels.tasks.sweep_incomplete_prellamadas',
     'calendario.monitoring.tasks.check_funnel_health',
     'calendario.monitoring.tasks.check_colas',
+    'calendario.leads.tasks.process_funnelchat',  # no-op, FunnelChat retirado
 }
 
 
@@ -137,7 +137,6 @@ SERVICIOS = {
     'tiktok': {'huecos': 2, 'por_min': 120},
     'google_ads': {'huecos': 2, 'por_min': 90},
     'supabase': {'huecos': 3, 'por_min': 600},
-    'funnelchat': {'huecos': 2, 'por_min': 120},
     'crm': {'huecos': 4, 'por_min': 600},
     'academia': {'huecos': 2, 'por_min': 120},
     'bunny': {'huecos': 1, 'por_min': 60},

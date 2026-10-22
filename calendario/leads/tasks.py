@@ -80,15 +80,15 @@ def process_activecampaign(self, lead_id):
     logger.info('Lead %s: activecampaign_done', lead_id)
 
 
-@shared_task(**RETRY_POLICY)
-def process_funnelchat(self, lead_id):
-    from calendario.leads.models import Lead
-    from calendario.leads.services import funnelchat
+@shared_task
+def process_funnelchat(lead_id):
+    """Ya no hace nada: los flows de bienvenida de FunnelChat están apagados a
+    propósito (no se usan) y cada envío volvía con 409 `flow_disabled`. Los
+    reintentos acababan en 429 y en una alerta de circuito abierto por minuto.
 
-    lead = Lead.objects.get(pk=lead_id)
-    funnelchat.push_lead(lead)
-    lead.tags.add('funnelchat_done')
-    logger.info('Lead %s: funnelchat_done', lead_id)
+    Se queda como no-op solo para vaciar las tareas que siguen en la cola.
+    """
+    logger.info('Lead %s: FunnelChat retirado, skip', lead_id)
 
 
 @shared_task(**RETRY_POLICY)
@@ -196,16 +196,7 @@ def dispatch_lead_tasks(lead_id):
     # ninguna ejecución por encima de 4.
     if es_lead_de_lanzamiento(lead):
         process_crm_send.delay(lead_id)
-        # La única excepción es FunnelChat, y solo en Languages: en Make cuelga
-        # de la rama de Languages, que filtra `funnel` por 'cl'. Los de Blocks
-        # no tienen módulo, y los de Finance tampoco entran porque esa rama
-        # filtra por 'fi' y sus códigos son 'cf-lanzamientoN'. Se ve en el log:
-        # los lanzamientos de Languages con teléfono son los únicos que gastan
-        # 4 operaciones (webhook + ingest + FunnelChat + Sheets), 1.467 de
-        # 1.715; los de Blocks y Finance se quedan en 3.
-        if get_school_code(lead) == 'cl' and lead.lead_phone:
-            process_funnelchat.delay(lead_id)
-        logger.info('Lead %s: lanzamiento → CRM (+FunnelChat si CL)', lead_id)
+        logger.info('Lead %s: lanzamiento → CRM', lead_id)
         return
 
     # Conquer Legal: Google Ads/TikTok los dispara el server container de sGTM
@@ -230,7 +221,6 @@ def dispatch_lead_tasks(lead_id):
         # el contacto, y él decide si lo escribe en ActiveCampaign.
         process_activecampaign.delay(lead_id)
         process_crm_send.delay(lead_id)
-        process_funnelchat.delay(lead_id)
 
     logger.info('Lead %s: dispatched processing tasks', lead_id)
 
@@ -278,10 +268,6 @@ def sweep_incomplete_leads():
                     and 'crm_done' not in tag_names and 'crm_failed' not in tag_names):
                 process_crm_send.delay(lead.pk)
                 requeued += 1
-            if (get_school_code(lead) == 'cl' and lead.lead_phone
-                    and 'funnelchat_done' not in tag_names):
-                process_funnelchat.delay(lead.pk)
-                requeued += 1
             continue
 
         # Mismo gate que dispatch_lead_tasks: Legal manda Meta por API;
@@ -307,10 +293,6 @@ def sweep_incomplete_leads():
         if (lead.email and 'activecampaign_done' not in tag_names
                 and 'activecampaign_failed' not in tag_names):
             process_activecampaign.delay(lead.pk)
-            requeued += 1
-
-        if lead.email and 'funnelchat_done' not in tag_names and 'funnelchat_failed' not in tag_names:
-            process_funnelchat.delay(lead.pk)
             requeued += 1
 
         if (settings.CRM_INGEST_ENABLED and lead.email
