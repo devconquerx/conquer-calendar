@@ -286,3 +286,30 @@ class ComandoTest(ProcesarBase):
         post.assert_not_called()
         reserva.refresh_from_db()
         self.assertFalse(reserva.sms_recordatorio_1_procesado)
+
+
+class ValidacionEventoTest(ProcesarBase):
+
+    def _validar(self, **campos):
+        for campo, valor in campos.items():
+            setattr(self.et, campo, valor)
+        self.et.clean()
+
+    def test_horas_personalizadas_exigen_al_menos_una(self):
+        with self.assertRaisesMessage(ValidationError, 'al menos un SMS'):
+            self._validar(sms_usar_horas_correo=False, sms_recordatorio_1_horas=None, sms_recordatorio_2_horas=None)
+
+    def test_horas_iguales_no_valen(self):
+        with self.assertRaisesMessage(ValidationError, 'misma hora'):
+            self._validar(sms_usar_horas_correo=False, sms_recordatorio_1_horas=3, sms_recordatorio_2_horas=3)
+
+    def test_mensaje_largo_no_se_guarda(self):
+        with self.assertRaisesMessage(ValidationError, 'No cabe'):
+            self._validar(sms_mensaje='x' * 200)
+
+    def test_el_formulario_del_panel_expone_los_campos(self):
+        form = EventTypeForm(instance=self.et)
+        for campo in ('sms_activo', 'sms_mensaje', 'sms_usar_horas_correo',
+                      'sms_recordatorio_1_horas', 'sms_recordatorio_2_horas'):
+            self.assertIn(campo, form.fields)
+        self.assertEqual(form.sms_config_js['defecto'], sms.MENSAJE_POR_DEFECTO)
