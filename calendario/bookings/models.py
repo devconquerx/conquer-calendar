@@ -232,6 +232,14 @@ class Reserva(models.Model):
     # rota no se reintente cada 5 minutos hasta que empiece la sesión.
     recordatorio_1_intentos = models.PositiveSmallIntegerField(default=0)
     recordatorio_2_intentos = models.PositiveSmallIntegerField(default=0)
+    # `procesado` no significa «entregado»: se marca antes de llamar al proveedor
+    # para no mandar nunca dos SMS del mismo recordatorio. Lo enviado está en LogSMS.
+    sms_recordatorio_1_procesado = models.BooleanField(default=False)
+    sms_recordatorio_2_procesado = models.BooleanField(default=False)
+    sms_recordatorio_1_intentos = models.PositiveSmallIntegerField(default=0)
+    sms_recordatorio_2_intentos = models.PositiveSmallIntegerField(default=0)
+    # Código de los enlaces cortos del SMS: el enlace normal se comería medio mensaje.
+    sms_codigo = models.CharField(max_length=10, null=True, blank=True, unique=True, editable=False)
 
     # Botón "Confirmar asistencia" de los correos. No cambia nada en Google
     # Calendar (el invitado ya entra como 'accepted'): es solo la señal de que
@@ -489,6 +497,31 @@ class LogCorreo(models.Model):
 
     def __str__(self):
         return f'{self.tipo} → {self.destinatario} ({self.enviado_en:%Y-%m-%d %H:%M})'
+
+
+class LogSMS(models.Model):
+    class Tipo(models.TextChoices):
+        RECORDATORIO_1 = 'recordatorio_1', 'Recordatorio 1'
+        RECORDATORIO_2 = 'recordatorio_2', 'Recordatorio 2'
+
+    reserva = models.ForeignKey(Reserva, on_delete=models.CASCADE, related_name='logs_sms')
+    tipo = models.CharField(max_length=30, choices=Tipo.choices)
+    telefono = models.CharField(max_length=50)
+    mensaje = models.TextField()
+    enviado_en = models.DateTimeField(auto_now_add=True)
+    exitoso = models.BooleanField()
+    id_proveedor = models.CharField(max_length=100, blank=True, default='')
+    error_detalle = models.TextField(blank=True, default='')
+    respuesta = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = 'logs_sms'
+        verbose_name = 'Log de SMS'
+        verbose_name_plural = 'Logs de SMS'
+        ordering = ['-enviado_en']
+
+    def __str__(self):
+        return f'{self.tipo} → {self.telefono} ({self.enviado_en:%Y-%m-%d %H:%M})'
 
 
 class CancelacionReserva(models.Model):
