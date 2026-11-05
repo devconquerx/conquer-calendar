@@ -228,3 +228,187 @@ def enviar_sms(telefono, mensaje):
         detener_pasada=respuesta.status_code in (401, 402, 403) or codigo == '35',
         respuesta=datos,
     )
+
+
+def _zona_legible(nombre_zona):
+    return nombre_zona.rsplit('/', 1)[-1].replace('_', ' ')
+
+
+def _asegurar_codigo(reserva):
+    from .models import Reserva
+
+    if not reserva.sms_codigo:
+        codigo = ''.join(secrets.choice(_LETRAS_CODIGO) for _ in range(_LONGITUD_CODIGO))
+        Reserva.objects.filter(pk=reserva.pk).update(sms_codigo=codigo)
+        reserva.sms_codigo = codigo
+    return reserva.sms_codigo
+
+
+def _valores_reserva(reserva, plantilla):
+    nombre_zona = reserva.timezone_invitado or reserva.host.timezone
+    try:
+        zona = ZoneInfo(nombre_zona)
+    except Exception:
+        nombre_zona, zona = 'UTC', ZoneInfo('UTC')
+    inicio = reserva.inicio_utc.astimezone(zona)
+    partes_nombre = (reserva.nombre_invitado or '').split()
+    valores = {
+        'nombre': partes_nombre[0] if partes_nombre else '',
+        'nombre_invitado': reserva.nombre_invitado or '',
+        'nombre_host': reserva.host.get_full_name() or reserva.host.username,
+        'nombre_evento': reserva.event_type.nombre,
+        'fecha': f'{_DIAS_ABREV[inicio.weekday()].lower()} {inicio.day} {_MESES_ABREV[inicio.month - 1]}',
+        'hora': f'{inicio.hour}:{inicio.minute:02d}',
+        'zona': _zona_legible(nombre_zona),
+        'duracion': str(reserva.event_type.duracion_minutos),
+        'google_meet_url': reserva.google_meet_url or '',
+    }
+    # El código corto solo se crea si el mensaje va a usarlo.
+    usadas = set(_RE_VARIABLE.findall(plantilla))
+    if usadas & {'link_reagendar', 'link_cancelar'}:
+        sitio = settings.SITE_URL.rstrip('/')
+        codigo = _asegurar_codigo(reserva)
+        valores['link_reagendar'] = f'{sitio}/s/{codigo}'
+        valores['link_cancelar'] = f'{sitio}/s/{codigo}/c'
+    return valores
+
+
+def mensaje_de_reserva(reserva):
+    plantilla = (reserva.event_type.sms_mensaje or '').strip() or MENSAJE_POR_DEFECTO
+    return componer_mensaje(plantilla, _valores_reserva(reserva, plantilla))
+
+
+def horas_de_recordatorio(reserva):
+    """Lista de (número de recordatorio, horas antes) activos para la reserva."""
+    event_type = reserva.event_type
+    if event_type.sms_usar_horas_correo:
+        plantilla, _ = resolver_config(reserva, 'recordatorio')
+        if not plantilla:
+            return list(enumerate(HORAS_POR_DEFECTO, start=1))
+        return [
+            (n, getattr(plantilla, f'recordatorio_{n}_horas'))
+            for n in (1, 2)
+            if getattr(plantilla, f'recordatorio_{n}_activo')
+        ]
+    return [
+        (n, horas)
+        for n, horas in (
+            (1, event_type.sms_recordatorio_1_horas),
+            (2, event_type.sms_recordatorio_2_horas),
+        )
+        if horas
+    ]
+
+
+def _reclamar(reserva, n):
+    """Marca el recordatorio como procesado. Solo gana una ejecución del cron."""
+    from .models import Reserva
+
+    campo = f'sms_recordatorio_{n}_procesado'
+    return bool(Reserva.objects.filter(pk=reserva.pk, **{campo: False}).update(**{campo: True}))
+
+
+def _devolver(reserva, n, sumar_intento):
+    from django.db.models import F
+
+    from .models import Reserva
+
+    cambios = {f'sms_recordatorio_{n}_procesado': False}
+    if sumar_intento:
+        cambios[f'sms_recordatorio_{n}_intentos'] = F(f'sms_recordatorio_{n}_intentos') + 1
+    Reserva.objects.filter(pk=reserva.pk).update(**cambios)
+
+
+def _pendientes_ahora(reserva, ahora):
+    """Recordatorios que tocan ya, del más cercano a la cita al más lejano.
+
+    Si la reserva se creó con la ventana ya abierta, ese recordatorio no se manda:
+    quien reserva dos horas antes acaba de ver la cita y no necesita el aviso de 24 h.
+    """
+    restante = reserva.inicio_utc - ahora
+    antelacion_al_crear = reserva.inicio_utc - reserva.fecha_creacion
+    pendientes = []
+    for n, horas in horas_de_recordatorio(reserva):
+        ventana = timedelta(hours=horas)
+        if (
+            restante <= ventana
+            and antelacion_al_crear > ventana
+            and not getattr(reserva, f'sms_recordatorio_{n}_procesado')
+            and getattr(reserva, f'sms_recordatorio_{n}_intentos') < MAX_INTENTOS
+        ):
+            pendientes.append((n, horas))
+    return sorted(pendientes, key=lambda par: par[1])
+
+
+def _enviar_recordatorio(reserva, n):
+    from .models import LogSMS
+
+    telefono = normalizar_telefono(reserva.telefono_invitado)
+    mensaje = mensaje_de_reserva(reserva)
+    if telefono:
+        resultado = enviar_sms(telefono, mensaje)
+    else:
+        resultado = ResultadoEnvio(False, error=f'Teléfono no válido: {reserva.telefono_invitado}')
+
+    LogSMS.objects.create(
+        reserva=reserva,
+        tipo=f'recordatorio_{n}',
+        telefono=telefono or reserva.telefono_invitado[:50],
+        mensaje=mensaje,
+        exitoso=resultado.ok,
+        id_proveedor=resultado.id_proveedor,
+        error_detalle=resultado.error,
+        respuesta=resultado.respuesta,
+    )
+    return resultado
+
+
+def procesar_recordatorios(ahora=None, limite=MAX_POR_EJECUCION):
+    """Envía los SMS que tocan. Devuelve (enviados, errores, quedan_pendientes)."""
+    from .models import Reserva
+
+    ahora = ahora or datetime.now(timezone.utc)
+    reservas = (
+        Reserva.objects
+        .filter(
+            event_type__sms_activo=True,
+            estado=Reserva.Estado.CONFIRMADA,
+            inicio_utc__gt=ahora,
+        )
+        .filter(Q(sms_recordatorio_1_procesado=False) | Q(sms_recordatorio_2_procesado=False))
+        .exclude(telefono_invitado='')
+        .select_related('event_type', 'host')
+        .order_by('inicio_utc')
+    )
+
+    enviados = errores = 0
+    for reserva in reservas:
+        pendientes = _pendientes_ahora(reserva, ahora)
+        if not pendientes:
+            continue
+        if limite and enviados + errores >= limite:
+            return enviados, errores, True
+
+        # Si se acumulan varios (el cron estuvo parado), solo sale el más cercano
+        # a la cita: el resto ya llega tarde y se da por pasado sin gastar un SMS.
+        (n, _), *atrasados = pendientes
+        for atrasado, _ in atrasados:
+            _reclamar(reserva, atrasado)
+        if not _reclamar(reserva, n):
+            continue
+
+        resultado = _enviar_recordatorio(reserva, n)
+        if resultado.ok:
+            enviados += 1
+            continue
+
+        errores += 1
+        logger.error('SMS no enviado para la reserva %s: %s', reserva.pk, resultado.error)
+        if resultado.detener_pasada:
+            # Sin saldo o sin credenciales fallarían todos. No se gastan intentos:
+            # en cuanto se arregle la cuenta, los que sigan a tiempo saldrán.
+            _devolver(reserva, n, sumar_intento=False)
+            return enviados, errores, True
+        if resultado.reintentable:
+            _devolver(reserva, n, sumar_intento=True)
+    return enviados, errores, False
