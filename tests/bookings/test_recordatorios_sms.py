@@ -59,3 +59,40 @@ class TextoTest(TestCase):
         self.assertEqual(sms.normalizar_telefono('+34 612 34 56 78'), '34612345678')
         self.assertEqual(sms.normalizar_telefono('34612345678'), '34612345678')
         self.assertEqual(sms.normalizar_telefono('123'), '')
+
+
+@override_settings(**CONFIG)
+class EnvioTest(TestCase):
+
+    def _enviar(self, **kwargs):
+        with patch.object(sms.requests, 'post', **kwargs) as post:
+            return sms.enviar_sms('34612345678', 'Hola'), post
+
+    def test_payload_sin_long_ni_ucs2(self):
+        resultado, post = self._enviar(return_value=respuesta())
+        self.assertTrue(resultado.ok)
+        self.assertEqual(post.call_args.kwargs['json'], {
+            'message': 'Hola', 'tpoa': 'ConquerPass', 'recipient': [{'msisdn': '34612345678'}],
+        })
+        self.assertEqual(post.call_args.kwargs['auth'], ('usuario', 'token'))
+
+    @override_settings(LABSMOBILE_TEST=True)
+    def test_modo_prueba(self):
+        _, post = self._enviar(return_value=respuesta())
+        self.assertEqual(post.call_args.kwargs['json']['test'], '1')
+
+    def test_http_200_con_codigo_de_error_no_cuenta_como_enviado(self):
+        resultado, _ = self._enviar(return_value=respuesta(code='27'))
+        self.assertFalse(resultado.ok)
+        self.assertFalse(resultado.reintentable)
+
+    def test_sin_saldo_detiene_la_pasada(self):
+        self.assertTrue(self._enviar(return_value=respuesta(status=402))[0].detener_pasada)
+
+    def test_tiempo_de_lectura_agotado_no_se_reintenta(self):
+        resultado, _ = self._enviar(side_effect=requests.exceptions.ReadTimeout())
+        self.assertFalse(resultado.reintentable)
+
+    def test_sin_conexion_si_se_reintenta(self):
+        resultado, _ = self._enviar(side_effect=requests.exceptions.ConnectTimeout())
+        self.assertTrue(resultado.reintentable)
