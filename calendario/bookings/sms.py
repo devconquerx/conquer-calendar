@@ -165,3 +165,66 @@ def validar_plantilla(texto):
         raise ValidationError(
             f'No cabe en un SMS: ocupa al menos {longitud} caracteres y el máximo es {MAX_CARACTERES}.'
         )
+
+
+def normalizar_telefono(valor):
+    """Número internacional solo con dígitos, o '' si no sirve para enviar un SMS."""
+    digitos = ''.join(c for c in (valor or '') if c.isdigit())
+    if not digitos:
+        return ''
+    if phonenumbers is None:
+        return digitos if len(digitos) >= 8 else ''
+    try:
+        numero = phonenumbers.parse(f'+{digitos}', None)
+    except phonenumbers.NumberParseException:
+        return ''
+    return digitos if phonenumbers.is_valid_number(numero) else ''
+
+
+def sms_configurado():
+    return bool(settings.LABSMOBILE_USERNAME and settings.LABSMOBILE_API_TOKEN)
+
+
+def enviar_sms(telefono, mensaje):
+    payload = {
+        'message': mensaje,
+        'tpoa': settings.LABSMOBILE_SENDER,
+        'recipient': [{'msisdn': telefono}],
+    }
+    if settings.LABSMOBILE_TEST:
+        payload['test'] = '1'
+
+    try:
+        respuesta = requests.post(
+            URL_ENVIO,
+            json=payload,
+            auth=(settings.LABSMOBILE_USERNAME, settings.LABSMOBILE_API_TOKEN),
+            timeout=TIMEOUT_SEGUNDOS,
+        )
+    except requests.exceptions.ConnectTimeout as exc:
+        return ResultadoEnvio(False, error=f'Sin conexión con LabsMobile: {exc}', reintentable=True)
+    except requests.exceptions.RequestException as exc:
+        # Pudo llegar a salir: reintentar podría mandar un segundo SMS.
+        return ResultadoEnvio(False, error=f'Respuesta perdida de LabsMobile: {exc}')
+
+    try:
+        datos = respuesta.json()
+    except ValueError:
+        datos = {}
+    if not isinstance(datos, dict):
+        datos = {}
+    codigo = str(datos.get('code', ''))
+    detalle = str(datos.get('message') or respuesta.text[:300])
+
+    # El HTTP 200 no basta: el resultado real del envío viene en `code`.
+    if respuesta.status_code == 200 and codigo == '0':
+        return ResultadoEnvio(True, id_proveedor=str(datos.get('subid', '')), respuesta=datos)
+
+    error = f'HTTP {respuesta.status_code}, código {codigo or "-"}: {detalle}'
+    return ResultadoEnvio(
+        False,
+        error=error,
+        reintentable=respuesta.status_code >= 500 or codigo == '30',
+        detener_pasada=respuesta.status_code in (401, 402, 403) or codigo == '35',
+        respuesta=datos,
+    )
