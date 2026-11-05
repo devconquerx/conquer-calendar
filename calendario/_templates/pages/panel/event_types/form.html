@@ -432,6 +432,78 @@
                         </label>
                     </div>
 
+                    <div class="et-switch">
+                        <div class="form-check form-check-custom form-check-solid form-switch mt-1">
+                            <input class="form-check-input" type="checkbox" name="sms_activo" id="sms_activo"
+                                   {% if form.sms_activo.value %}checked{% endif %} />
+                        </div>
+                        <label class="cursor-pointer" for="sms_activo">
+                            <span class="d-block fw-semibold fs-7 text-gray-900">Recordatorios por SMS</span>
+                            <span class="d-block text-muted fs-8">
+                                Envía al invitado un SMS de máximo 160 caracteres antes de la cita.
+                            </span>
+                        </label>
+                    </div>
+                    <div id="sms_config" class="mt-3 mb-5"{% if not form.sms_activo.value %} hidden{% endif %}>
+                        <label class="form-label fw-semibold fs-7" for="sms_mensaje">Mensaje</label>
+                        <textarea name="sms_mensaje" id="sms_mensaje" rows="3"
+                                  class="form-control{% if form.sms_mensaje.errors %} is-invalid{% endif %}"
+                                  placeholder="Vacío: se envía el mensaje por defecto">{{ form.sms_mensaje.value|default_if_none:'' }}</textarea>
+                        {% if form.sms_mensaje.errors %}
+                        <div class="text-danger fs-8 mt-1">{{ form.sms_mensaje.errors|join:", " }}</div>
+                        {% endif %}
+                        <div class="d-flex flex-wrap gap-1 mt-2">
+                            {% for variable, descripcion in form.sms_variables.items %}
+                            <button type="button" class="btn btn-sm btn-light py-1 px-2 fs-8" data-sms-variable="{{ variable }}" title="{{ descripcion }}">{{ variable }}</button>
+                            {% endfor %}
+                        </div>
+                        <div class="bg-light rounded p-3 mt-3">
+                            <div class="d-flex justify-content-between text-muted fs-8 mb-1">
+                                <span>Así llegaría</span>
+                                <span id="sms_contador"></span>
+                            </div>
+                            <div id="sms_vista_previa" class="fs-7 text-gray-800" style="white-space: pre-wrap; word-break: break-word;"></div>
+                        </div>
+                        <div class="text-muted fs-8 mt-2">
+                            Solo texto. Las tildes y los emojis se quitan al enviar, y si un nombre es muy largo se recorta para que quepa en un SMS.
+                        </div>
+
+                        <div class="form-check form-check-custom form-check-solid mt-4">
+                            <input class="form-check-input" type="checkbox" name="sms_usar_horas_correo" id="sms_usar_horas_correo"
+                                   {% if form.sms_usar_horas_correo.value %}checked{% endif %} />
+                            <label class="form-check-label fs-7 text-gray-800" for="sms_usar_horas_correo">
+                                Enviar a las mismas horas que el correo de recordatorio (si no tiene, 24 h y 1 h antes)
+                            </label>
+                        </div>
+                        <div id="sms_horas" class="d-flex flex-wrap gap-3 mt-3"{% if form.sms_usar_horas_correo.value %} hidden{% endif %}>
+                            <div>
+                                <label class="form-label fs-8" for="sms_recordatorio_1_horas">Primer SMS</label>
+                                <div class="input-group w-150px">
+                                    <input type="number" name="sms_recordatorio_1_horas" id="sms_recordatorio_1_horas" min="1" max="999"
+                                           class="form-control{% if form.sms_recordatorio_1_horas.errors %} is-invalid{% endif %}"
+                                           value="{{ form.sms_recordatorio_1_horas.value|default_if_none:'' }}" placeholder="—" />
+                                    <span class="input-group-text">h antes</span>
+                                </div>
+                                {% if form.sms_recordatorio_1_horas.errors %}
+                                <div class="text-danger fs-8 mt-1">{{ form.sms_recordatorio_1_horas.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label class="form-label fs-8" for="sms_recordatorio_2_horas">Segundo SMS</label>
+                                <div class="input-group w-150px">
+                                    <input type="number" name="sms_recordatorio_2_horas" id="sms_recordatorio_2_horas" min="1" max="999"
+                                           class="form-control{% if form.sms_recordatorio_2_horas.errors %} is-invalid{% endif %}"
+                                           value="{{ form.sms_recordatorio_2_horas.value|default_if_none:'' }}" placeholder="—" />
+                                    <span class="input-group-text">h antes</span>
+                                </div>
+                                {% if form.sms_recordatorio_2_horas.errors %}
+                                <div class="text-danger fs-8 mt-1">{{ form.sms_recordatorio_2_horas.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {{ form.sms_config_js|json_script:"sms-config" }}
+
                     <div class="row g-4 mt-3">
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold fs-7 d-flex align-items-center gap-2" for="acceso">
