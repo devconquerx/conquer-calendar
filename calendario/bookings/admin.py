@@ -9,7 +9,7 @@ from django.urls import path, reverse
 from django.utils.html import format_html, mark_safe
 
 from .models import (BloqueoInvitado, ConfigBloqueos, ConfigCorreoDefault, ConfigCorreoEvento, ConfigCorreoGrupo, DominioRemitente,
-                     LogCorreo, PlantillaCorreo, Reserva)
+                     LogCorreo, LogSMS, PlantillaCorreo, Reserva)
 from calendario.event_types.models import EventType
 from calendario.leads.admin import _tag_check
 from calendario.monitoring.models import TaskFailureLog, AlertLog
@@ -382,6 +382,20 @@ class ConfigBloqueosAdmin(admin.ModelAdmin):
         return redirect(reverse('admin:bookings_configbloqueos_change', args=[obj.pk]))
 
 
+@admin.register(LogSMS)
+class LogSMSAdmin(admin.ModelAdmin):
+    list_display = ('tipo', 'telefono', 'exitoso', 'enviado_en', 'reserva')
+    list_filter = ('tipo', 'exitoso')
+    search_fields = ('telefono', 'reserva__email_invitado')
+    raw_id_fields = ('reserva',)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(LogCorreo)
 class LogCorreoAdmin(admin.ModelAdmin):
     list_display = ('tipo', 'destinatario', 'exitoso_icon', 'enviado_en', 'reserva', 'ver_contenido_link')
@@ -603,7 +617,8 @@ class ReservaAdmin(admin.ModelAdmin):
                        'google_meet_url'),
         }),
         ('Recordatorios', {
-            'fields': ('recordatorio_1_enviado', 'recordatorio_2_enviado'),
+            'fields': ('recordatorio_1_enviado', 'recordatorio_2_enviado',
+                       'sms_recordatorio_1_procesado', 'sms_recordatorio_2_procesado'),
         }),
         ('Tracking', {
             'fields': (
