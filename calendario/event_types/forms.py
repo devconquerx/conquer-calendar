@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 
+from calendario.bookings import sms
+
 from .models import EventType, EventTypeXHost
 
 
@@ -93,6 +95,8 @@ class EventTypeForm(forms.ModelForm):
             'unico_por_invitado', 'limite_reservas', 'limite_reservas_dias', 'limite_cancelacion_horas',
             'limite_evento', 'limite_evento_dias',
             'mostrar_caja_comentarios',
+            'sms_activo', 'sms_mensaje', 'sms_usar_horas_correo',
+            'sms_recordatorio_1_horas', 'sms_recordatorio_2_horas',
             'confirmacion_tipo', 'confirmacion_url',
             'gcal_palabras_ignorar',
         ]
@@ -107,6 +111,21 @@ class EventTypeForm(forms.ModelForm):
             'unico_por_invitado': 'Solo una reserva por invitado',
             'mostrar_caja_comentarios': 'Caja de comentarios',
         }
+
+    @property
+    def sms_config_js(self):
+        """Lo que necesita la vista previa del SMS en el panel."""
+        return {
+            'defecto': sms.MENSAJE_POR_DEFECTO,
+            'ejemplo': sms.valores_de_ejemplo(),
+            'recortables': sms.RECORTABLES,
+            'minimo': sms.LONGITUD_MINIMA_RECORTE,
+            'maximo': sms.MAX_CARACTERES,
+        }
+
+    @property
+    def sms_variables(self):
+        return sms.VARIABLES
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
