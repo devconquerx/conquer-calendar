@@ -234,6 +234,39 @@ class EventType(models.Model):
                   'sigue contando para su límite. Vacío: las canceladas nunca cuentan.',
     )
 
+    # Recordatorios por SMS al invitado (ver `bookings.sms`).
+    sms_activo = models.BooleanField(
+        default=False,
+        verbose_name='Enviar recordatorios por SMS',
+    )
+    sms_mensaje = models.TextField(
+        blank=True,
+        default='',
+        verbose_name='Mensaje del SMS',
+        help_text='Vacío: se envía el mensaje por defecto. Máximo 160 caracteres, sin tildes ni emojis '
+                  '(se quitan solos). Variables: {{nombre}}, {{nombre_invitado}}, {{nombre_host}}, '
+                  '{{nombre_evento}}, {{fecha}}, {{hora}}, {{zona}}, {{duracion}}, {{google_meet_url}}, '
+                  '{{link_reagendar}}, {{link_cancelar}}.',
+    )
+    sms_usar_horas_correo = models.BooleanField(
+        default=True,
+        verbose_name='SMS a las mismas horas que el correo',
+        help_text='Usa las horas del recordatorio por correo; si el evento no tiene, 24 h y 1 h antes. '
+                  'Desmárcalo para elegir otras.',
+    )
+    sms_recordatorio_1_horas = models.PositiveSmallIntegerField(
+        null=True, blank=True, default=24,
+        validators=[MinValueValidator(1)],
+        verbose_name='SMS 1: horas antes',
+        help_text='Solo si no usa las horas del correo. Vacío: no se envía.',
+    )
+    sms_recordatorio_2_horas = models.PositiveSmallIntegerField(
+        null=True, blank=True, default=1,
+        validators=[MinValueValidator(1)],
+        verbose_name='SMS 2: horas antes',
+        help_text='Solo si no usa las horas del correo. Vacío: no se envía.',
+    )
+
     # Tope de reservas del tipo de evento entero, sumando todos los invitados y
     # todos los organizadores, en la misma ventana móvil de días (ver
     # `bookings.services.dias_llenos_evento`). Lleno el cupo, los días afectados
@@ -370,6 +403,27 @@ class EventType(models.Model):
             campo = 'limite_evento_dias' if self.limite_evento_dias is None else 'limite_evento'
             raise ValidationError({
                 campo: 'Para limitar las reservas hacen falta los dos datos: cuántas y cada cuántos días.',
+            })
+        self._validar_sms()
+
+    def _validar_sms(self):
+        from calendario.bookings.sms import validar_plantilla
+
+        if self.sms_mensaje.strip():
+            try:
+                validar_plantilla(self.sms_mensaje)
+            except ValidationError as exc:
+                raise ValidationError({'sms_mensaje': exc.messages})
+        if not self.sms_activo or self.sms_usar_horas_correo:
+            return
+        horas = [self.sms_recordatorio_1_horas, self.sms_recordatorio_2_horas]
+        if not any(horas):
+            raise ValidationError({
+                'sms_recordatorio_1_horas': 'Indica cuántas horas antes se envía al menos un SMS.',
+            })
+        if horas[0] and horas[0] == horas[1]:
+            raise ValidationError({
+                'sms_recordatorio_2_horas': 'Los dos SMS no pueden salir a la misma hora.',
             })
 
     @property
