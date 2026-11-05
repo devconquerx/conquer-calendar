@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 
 from calendario.bookings.correos import _enviar, resolver_config
 from calendario.bookings.models import Reserva
+from calendario.bookings.sms import procesar_recordatorios, sms_configurado
 
 
 # Tras varios fallos seguidos dejamos de insistir: si una dirección está rota,
@@ -103,6 +104,17 @@ class Command(BaseCommand):
                     time.sleep(pausa)
 
         resumen = f'Recordatorios procesados: {enviados} enviados, {errores} errores.'
+        if pendientes:
+            resumen += ' Quedan pendientes para la siguiente ejecución.'
+        self.stdout.write(self.style.SUCCESS(resumen))
+        self._procesar_sms(ahora)
+
+    def _procesar_sms(self, ahora):
+        if not sms_configurado():
+            self.stdout.write('SMS sin configurar: no se envía ninguno.')
+            return
+        enviados, errores, pendientes = procesar_recordatorios(ahora=ahora)
+        resumen = f'SMS procesados: {enviados} enviados, {errores} errores.'
         if pendientes:
             resumen += ' Quedan pendientes para la siguiente ejecución.'
         self.stdout.write(self.style.SUCCESS(resumen))
