@@ -9,7 +9,7 @@ from .models import EventType, EventTypeXHost
 @admin.register(EventType)
 class EventTypeAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'host', 'duracion_minutos', 'slug_equipo', 'activo', 'crm_destino', 'registrar_en_academia', 'fecha_actualizacion')
-    list_filter = ('activo', 'crm_destino', 'registrar_en_academia', 'academia_lms_id')
+    list_filter = ('activo', 'crm_destino', 'registrar_en_academia', 'academia_lms_id', 'sms_activo')
     search_fields = ('nombre', 'host__username', 'host__email')
     readonly_fields = ('id',)
     fields = ('id', 'host', 'nombre', 'slug', 'slug_equipo', 'descripcion', 'duracion_minutos',
@@ -18,6 +18,8 @@ class EventTypeAdmin(admin.ModelAdmin):
               'registrar_en_academia', 'academia_lms_id',
               'unico_por_invitado', 'limite_reservas', 'limite_reservas_dias', 'limite_cancelacion_horas',
               'limite_evento', 'limite_evento_dias',
+              'sms_activo', 'sms_mensaje', 'sms_usar_horas_correo',
+              'sms_recordatorio_1_horas', 'sms_recordatorio_2_horas',
               'confirmacion_tipo', 'confirmacion_url')
     inlines = [ConfigCorreoEventoInline]
     actions = ('activar_registro_academia', 'desactivar_registro_academia')
