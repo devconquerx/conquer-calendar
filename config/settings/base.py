@@ -224,6 +224,13 @@ MAILGUN_API_KEY_POR_REGION = {
     'eu': env.str('MAILGUN_API_KEY_EU', default=''),
 }
 
+# LabsMobile: SMS de recordatorio. Sin usuario o token no se envía ninguno.
+LABSMOBILE_USERNAME = env.str('LABSMOBILE_USERNAME', default='')
+LABSMOBILE_API_TOKEN = env.str('LABSMOBILE_API_TOKEN', default='')
+LABSMOBILE_SENDER = env.str('LABSMOBILE_SENDER', default='ConquerPass')
+# True = envío simulado: LabsMobile lo registra, pero no llega ni gasta saldo.
+LABSMOBILE_TEST = env.bool('LABSMOBILE_TEST', default=False)
+
 ADMIN_URL = "admin/"
 
 AUTHENTICATION_BACKENDS = [
