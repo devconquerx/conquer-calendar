@@ -257,3 +257,32 @@ class MensajeTest(ProcesarBase):
         self.assertTrue(post.call_args.kwargs['json']['message'].startswith('Te esperamos Raul a las '))
         reserva.refresh_from_db()
         self.assertIsNone(reserva.sms_codigo)
+
+
+class EnlaceCortoTest(ProcesarBase):
+
+    def test_redirige_a_reagendar_y_cancelar(self):
+        reserva = self._reserva(horas=23)
+        Reserva.objects.filter(pk=reserva.pk).update(sms_codigo='abcDEF1234')
+        token = reserva.confirmacion_token
+        self.assertRedirects(self.client.get('/s/abcDEF1234'), f'/r/{token}/reagendar/', fetch_redirect_response=False)
+        self.assertRedirects(self.client.get('/s/abcDEF1234/c'), f'/r/{token}/cancelar/', fetch_redirect_response=False)
+        self.assertEqual(self.client.get('/s/noexiste00').status_code, 404)
+
+
+class ComandoTest(ProcesarBase):
+
+    def test_el_cron_de_siempre_tambien_envia_los_sms(self):
+        self._reserva(horas=23)
+        with patch.object(sms.requests, 'post', return_value=respuesta()) as post:
+            call_command('enviar_recordatorios', pausa=0, verbosity=0)
+        self.assertEqual(post.call_count, 1)
+
+    @override_settings(LABSMOBILE_USERNAME='', LABSMOBILE_API_TOKEN='')
+    def test_sin_credenciales_no_consume_los_recordatorios(self):
+        reserva = self._reserva(horas=23)
+        with patch.object(sms.requests, 'post') as post:
+            call_command('enviar_recordatorios', pausa=0, verbosity=0)
+        post.assert_not_called()
+        reserva.refresh_from_db()
+        self.assertFalse(reserva.sms_recordatorio_1_procesado)
