@@ -313,3 +313,33 @@ class ValidacionEventoTest(ProcesarBase):
                       'sms_recordatorio_1_horas', 'sms_recordatorio_2_horas'):
             self.assertIn(campo, form.fields)
         self.assertEqual(form.sms_config_js['defecto'], sms.MENSAJE_POR_DEFECTO)
+
+
+class PantallasTest(ProcesarBase):
+
+    def setUp(self):
+        super().setUp()
+        self.admin = User.objects.create_superuser(
+            username='admin.sms', email='admin.sms@test.com', password='x',
+        )
+        self.client.force_login(self.admin)
+
+    def test_el_panel_muestra_la_casilla_y_la_vista_previa(self):
+        url = reverse('panel_event_types:event_type_update', args=[self.et.pk])
+        contenido = self.client.get(url).content.decode()
+        self.assertIn('name="sms_activo"', contenido)
+        self.assertIn('name="sms_mensaje"', contenido)
+        self.assertIn('id="sms-config"', contenido)
+        self.assertIn('data-sms-variable="link_reagendar"', contenido)
+
+    def test_el_admin_muestra_los_campos_y_el_log(self):
+        url = reverse('admin:event_types_eventtype_change', args=[self.et.pk])
+        self.assertContains(self.client.get(url), 'name="sms_mensaje"')
+        reserva = self._reserva(horas=23)
+        log = LogSMS.objects.create(
+            reserva=reserva, tipo='recordatorio_1', telefono='34612345678', mensaje='Hola', exitoso=True,
+        )
+        self.assertContains(self.client.get(reverse('admin:bookings_logsms_changelist')), '34612345678')
+        self.assertEqual(
+            self.client.get(reverse('admin:bookings_logsms_change', args=[log.pk])).status_code, 200,
+        )
