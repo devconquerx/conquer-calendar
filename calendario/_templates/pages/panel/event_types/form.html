@@ -935,6 +935,79 @@ por debajo de la cabecera. Sus inputs no llevan name, así que no se envían.
 </script>
 <script>
 (function () {
+  var activo = document.getElementById('sms_activo');
+  var config = document.getElementById('sms_config');
+  var mismasHoras = document.getElementById('sms_usar_horas_correo');
+  var horas = document.getElementById('sms_horas');
+  var mensaje = document.getElementById('sms_mensaje');
+  var vistaPrevia = document.getElementById('sms_vista_previa');
+  var contador = document.getElementById('sms_contador');
+  var datos = JSON.parse(document.getElementById('sms-config').textContent);
+
+  // La misma limpieza que hace bookings/sms.py antes de enviar.
+  var GSM = '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà';
+  var EXTENDIDO = '^{}\\[~]|€';
+  var SUSTITUTOS = {'“': '"', '”': '"', '„': '"', '‘': "'", '’': "'", '´': "'", '`': "'", '–': '-', '—': '-', '−': '-', '…': '...', '•': '-', '·': '-', '\u00a0': ' '};
+
+  function valido(c) { return GSM.indexOf(c) !== -1 || EXTENDIDO.indexOf(c) !== -1; }
+  function limpiar(texto) {
+    return Array.from(texto.replace(/\r\n?/g, '\n')).map(function (c) {
+      if (valido(c)) return c;
+      if (SUSTITUTOS[c]) return SUSTITUTOS[c];
+      return Array.from(c.normalize('NFKD')).filter(valido).join('');
+    }).join('');
+  }
+  function longitud(texto) {
+    return Array.from(texto).reduce(function (t, c) { return t + (EXTENDIDO.indexOf(c) !== -1 ? 2 : 1); }, 0);
+  }
+  function sustituir(plantilla, valores) {
+    return plantilla.replace(/\{\{\s*(\w+)\s*\}\}/g, function (todo, nombre) {
+      return valores.hasOwnProperty(nombre) ? valores[nombre] : todo;
+    });
+  }
+  function componer() {
+    var plantilla = limpiar(mensaje.value.trim() || datos.defecto);
+    var valores = {};
+    Object.keys(datos.ejemplo).forEach(function (k) { valores[k] = limpiar(datos.ejemplo[k]); });
+    var texto = sustituir(plantilla, valores);
+    datos.recortables.forEach(function (clave) {
+      while (longitud(texto) > datos.maximo && valores[clave].length > datos.minimo) {
+        valores[clave] = valores[clave].slice(0, -1).trimEnd();
+        texto = sustituir(plantilla, valores);
+      }
+    });
+    return texto.trim();
+  }
+  function pintar() {
+    var texto = componer();
+    var usados = longitud(texto);
+    vistaPrevia.textContent = texto;
+    contador.textContent = usados + ' / ' + datos.maximo;
+    contador.classList.toggle('text-danger', usados > datos.maximo);
+  }
+  function alternar() {
+    config.hidden = !activo.checked;
+    horas.hidden = mismasHoras.checked;
+  }
+
+  document.querySelectorAll('[data-sms-variable]').forEach(function (boton) {
+    boton.addEventListener('click', function () {
+      var variable = '{' + '{' + boton.dataset.smsVariable + '}' + '}';
+      var inicio = mensaje.selectionStart;
+      mensaje.setRangeText(variable, inicio, mensaje.selectionEnd, 'end');
+      mensaje.focus();
+      pintar();
+    });
+  });
+  mensaje.addEventListener('input', pintar);
+  activo.addEventListener('change', alternar);
+  mismasHoras.addEventListener('change', alternar);
+  alternar();
+  pintar();
+})();
+</script>
+<script>
+(function () {
   var duracionInput   = document.querySelector('[name="duracion_minutos"]');
   var incrementoSelect = document.querySelector('[name="incremento_inicio_minutos"]');
   if (!duracionInput || !incrementoSelect) return;
