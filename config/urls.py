@@ -72,6 +72,7 @@ urlpatterns = [
     path('panel/contenido/', include('calendario.funnels.urls_panel')),
     path('', RedirectView.as_view(url='/panel/', permanent=False)),
     path('r/', include('calendario.bookings.urls_public_token')),
+    path('s/', include('calendario.bookings.urls_sms')),
     path('u/<uuid:token>/', include('calendario.bookings.urls_public_enlace_unico')),
     path('e/<slug:slug_equipo>/', include('calendario.bookings.urls_public_team')),
     path('f/', include('calendario.funnels.urls')),

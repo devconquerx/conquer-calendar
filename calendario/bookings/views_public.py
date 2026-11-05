@@ -696,6 +696,16 @@ class ConfirmacionView(View):
         return resp
 
 
+class EnlaceCortoSMSView(View):
+    """Enlaces cortos de los SMS: solo redirigen a las páginas de siempre, que ya
+    piden confirmación antes de cambiar nada. Así da igual que el móvil abra el
+    enlace por su cuenta para generar la vista previa."""
+
+    def get(self, request, codigo, destino):
+        reserva = get_object_or_404(Reserva, sms_codigo=codigo)
+        return redirect(f'public_token:{destino}', token=reserva.confirmacion_token)
+
+
 class CancelarPublicaView(View):
     """Cancelación desde el enlace de los correos (confirmación y recordatorio).
 
