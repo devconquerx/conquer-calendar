@@ -96,3 +96,164 @@ class EnvioTest(TestCase):
     def test_sin_conexion_si_se_reintenta(self):
         resultado, _ = self._enviar(side_effect=requests.exceptions.ConnectTimeout())
         self.assertTrue(resultado.reintentable)
+
+
+@override_settings(**CONFIG)
+class ProcesarBase(TestCase):
+
+    def setUp(self):
+        self.host = crear_host()
+        self.et = crear_event_type(self.host)
+        self.et.nombre = 'Admisión'
+        self.et.sms_activo = True
+        self.et.save()
+
+    def _reserva(self, horas, creada_hace_dias=30, telefono=TELEFONO):
+        inicio = datetime.now(dt_timezone.utc) + timedelta(hours=horas)
+        reserva = Reserva.objects.create(
+            event_type=self.et, host=self.host, inicio_utc=inicio,
+            fin_utc=inicio + timedelta(minutes=30), nombre_invitado='Raúl Pérez',
+            email_invitado=EMAIL_INVITADO, telefono_invitado=telefono,
+            timezone_invitado='Europe/Madrid',
+        )
+        Reserva.objects.filter(pk=reserva.pk).update(
+            fecha_creacion=datetime.now(dt_timezone.utc) - timedelta(days=creada_hace_dias),
+        )
+        reserva.refresh_from_db()
+        return reserva
+
+    def _procesar(self, **kwargs):
+        kwargs.setdefault('return_value', respuesta())
+        with patch.object(sms.requests, 'post', **kwargs) as post:
+            resultado = sms.procesar_recordatorios()
+        return resultado, post
+
+
+class MomentoDeEnvioTest(ProcesarBase):
+
+    def test_fuera_de_ventana_no_se_envia(self):
+        self._reserva(horas=30)
+        _, post = self._procesar()
+        post.assert_not_called()
+
+    def test_recordatorio_de_24h_y_un_solo_sms_aunque_el_cron_repita(self):
+        reserva = self._reserva(horas=23)
+        _, post = self._procesar()
+        self.assertEqual(post.call_count, 1)
+        _, post = self._procesar()
+        post.assert_not_called()
+        reserva.refresh_from_db()
+        self.assertTrue(reserva.sms_recordatorio_1_procesado)
+        self.assertFalse(reserva.sms_recordatorio_2_procesado)
+
+    def test_luego_sale_el_de_1h(self):
+        reserva = self._reserva(horas=0.5)
+        Reserva.objects.filter(pk=reserva.pk).update(sms_recordatorio_1_procesado=True)
+        _, post = self._procesar()
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(LogSMS.objects.get().tipo, 'recordatorio_2')
+
+    def test_si_tocan_dos_a_la_vez_solo_sale_el_mas_cercano(self):
+        reserva = self._reserva(horas=0.5)
+        _, post = self._procesar()
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(LogSMS.objects.get().tipo, 'recordatorio_2')
+        reserva.refresh_from_db()
+        self.assertTrue(reserva.sms_recordatorio_1_procesado)
+
+    def test_reserva_creada_con_la_ventana_abierta_no_recibe_ese_recordatorio(self):
+        self._reserva(horas=5, creada_hace_dias=0)
+        _, post = self._procesar()
+        post.assert_not_called()
+
+    def test_horas_personalizadas(self):
+        self.et.sms_usar_horas_correo = False
+        self.et.sms_recordatorio_1_horas = 48
+        self.et.sms_recordatorio_2_horas = None
+        self.et.save()
+        self._reserva(horas=40)
+        self._reserva(horas=0.5)
+        _, post = self._procesar()
+        self.assertEqual(post.call_count, 2)
+        self.assertEqual(set(LogSMS.objects.values_list('tipo', flat=True)), {'recordatorio_1'})
+
+    def test_mismas_horas_que_el_correo(self):
+        plantilla = PlantillaCorreo.objects.create(
+            nombre='P', texto_encabezado='x', cuerpo='x',
+            recordatorio_1_activo=True, recordatorio_1_horas=6, recordatorio_2_activo=False,
+        )
+        ConfigCorreoEvento.objects.create(event_type=self.et, plantilla_recordatorio=plantilla)
+        self._reserva(horas=10)
+        self.assertEqual(self._procesar()[1].call_count, 0)
+        self._reserva(horas=5)
+        self.assertEqual(self._procesar()[1].call_count, 1)
+
+    def test_evento_sin_activar_o_reserva_cancelada_o_sin_telefono(self):
+        cancelada = self._reserva(horas=2)
+        Reserva.objects.filter(pk=cancelada.pk).update(estado=Reserva.Estado.CANCELADA)
+        self._reserva(horas=2, telefono='')
+        _, post = self._procesar()
+        post.assert_not_called()
+        self.et.sms_activo = False
+        self.et.save()
+        self._reserva(horas=2)
+        post = self._procesar()[1]
+        post.assert_not_called()
+
+
+class FallosTest(ProcesarBase):
+
+    def test_fallo_temporal_se_reintenta_hasta_el_tope(self):
+        reserva = self._reserva(horas=23)
+        for _ in range(sms.MAX_INTENTOS + 2):
+            self._procesar(return_value=respuesta(status=500))
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.sms_recordatorio_1_intentos, sms.MAX_INTENTOS)
+        self.assertEqual(LogSMS.objects.count(), sms.MAX_INTENTOS)
+
+    def test_respuesta_perdida_no_se_reintenta_para_no_duplicar(self):
+        self._reserva(horas=23)
+        self._procesar(side_effect=requests.exceptions.ReadTimeout())
+        _, post = self._procesar()
+        post.assert_not_called()
+
+    def test_sin_saldo_para_la_pasada_y_no_gasta_intentos(self):
+        primera = self._reserva(horas=22)
+        self._reserva(horas=23)
+        resultado, post = self._procesar(return_value=respuesta(status=402))
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(resultado, (0, 1, True))
+        primera.refresh_from_db()
+        self.assertFalse(primera.sms_recordatorio_1_procesado)
+        self.assertEqual(primera.sms_recordatorio_1_intentos, 0)
+        self.assertEqual(self._procesar()[0], (2, 0, False))
+
+    def test_telefono_invalido_queda_en_el_log_sin_llamar_al_proveedor(self):
+        self._reserva(horas=23, telefono='123')
+        _, post = self._procesar()
+        post.assert_not_called()
+        log = LogSMS.objects.get()
+        self.assertFalse(log.exitoso)
+        self.assertIn('Teléfono no válido', log.error_detalle)
+
+
+class MensajeTest(ProcesarBase):
+
+    def test_vacio_usa_el_mensaje_por_defecto_sin_tildes_y_con_enlace_corto(self):
+        reserva = self._reserva(horas=23)
+        _, post = self._procesar()
+        reserva.refresh_from_db()
+        mensaje = post.call_args.kwargs['json']['message']
+        self.assertIn('Hola Raul, recuerda tu cita Admision el ', mensaje)
+        self.assertIn('(Madrid)', mensaje)
+        self.assertTrue(mensaje.endswith(f'https://calendar.conquerx.com/s/{reserva.sms_codigo}'))
+        self.assertLessEqual(sms.longitud_sms(mensaje), 160)
+
+    def test_mensaje_propio_del_evento(self):
+        self.et.sms_mensaje = 'Te esperamos {{nombre}} a las {{hora}}'
+        self.et.save()
+        reserva = self._reserva(horas=23)
+        _, post = self._procesar()
+        self.assertTrue(post.call_args.kwargs['json']['message'].startswith('Te esperamos Raul a las '))
+        reserva.refresh_from_db()
+        self.assertIsNone(reserva.sms_codigo)
