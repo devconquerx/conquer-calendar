@@ -4,7 +4,7 @@ import random
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.core.cache import cache
 from django.db import connections, transaction
@@ -793,12 +793,25 @@ def cancelar_ahora_es_tardio(event_type, reserva):
     return bool(horas) and timezone.now() > reserva.inicio_utc - timedelta(hours=horas)
 
 
-def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, tz, excluir_pk=None,
+def _zona_de_invitado(timezone_invitado, zona_respaldo):
+    """La zona del invitado, o `zona_respaldo` si no la tenemos o no es válida:
+    el mismo criterio con el que se le enseñan las reservas."""
+    try:
+        return ZoneInfo(timezone_invitado or zona_respaldo)
+    except (ZoneInfoNotFoundError, ValueError):
+        return ZoneInfo(zona_respaldo)
+
+
+def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, excluir_pk=None,
                         con_tardias=True):
-    """Fechas (en `tz`) de las citas del invitado que cuentan para su tope:
-    confirmadas, del mismo tipo de evento y desde el día `desde`. «El mismo
-    invitado» es mismo email O mismo teléfono, como el duplicado. Devuelve None
-    si no hay con qué identificarle.
+    """Fechas de las citas del invitado que cuentan para su tope: confirmadas,
+    del mismo tipo de evento y desde el día `desde`. «El mismo invitado» es mismo
+    email O mismo teléfono, como el duplicado. Devuelve None si no hay con qué
+    identificarle.
+
+    Cada cita lleva la fecha que vio el invitado al reservarla, en su zona. Con
+    la del dueño del evento, una clase del 5 a las 18:00 en Toronto pasaba a ser
+    del 6 para un dueño en Madrid, y el aviso le hablaba de un día que no era.
 
     Con `limite_cancelacion_horas` también cuentan las que él mismo canceló a
     última hora: si no, cancelar una hora antes le devolvía la plaza y podía
@@ -820,17 +833,22 @@ def _fechas_para_limite(event_type, email_invitado, telefono_invitado, desde, tz
             estado=Reserva.Estado.CANCELADA,
             pk__in=_cancelaciones_tardias(event_type.limite_cancelacion_horas),
         )
+    # Un día de margen porque cada cita va en su zona: el corte fino es el de abajo.
     qs = Reserva.objects.filter(
         cuentan,
         event_type=event_type,
-        inicio_utc__gte=datetime.combine(desde, datetime.min.time(), tzinfo=tz),
+        inicio_utc__gte=datetime.combine(desde - timedelta(days=1), datetime.min.time(), tzinfo=UTC),
     )
     if excluir_pk:
         qs = qs.exclude(pk=excluir_pk)
-    return [
-        i.astimezone(tz).date()
-        for i in _annotate_telefono_normalizado(qs).filter(coincide).values_list('inicio_utc', flat=True)
+    filas = _annotate_telefono_normalizado(qs).filter(coincide).values_list(
+        'inicio_utc', 'timezone_invitado', 'host__timezone',
+    )
+    fechas = [
+        inicio.astimezone(_zona_de_invitado(zona, zona_host)).date()
+        for inicio, zona, zona_host in filas
     ]
+    return [f for f in fechas if f >= desde]
 
 
 def _primer_dia_libre(fechas, hoy, maximo, dias):
@@ -874,7 +892,7 @@ def comprobar_limite_reservas(event_type, inicio_utc, email_invitado,
     # contenga hoy o un día posterior.
     desde = min(hoy, nueva) - timedelta(days=dias)
     fechas = _fechas_para_limite(event_type, email_invitado, telefono_invitado,
-                                 desde, tz, excluir_pk=excluir_pk)
+                                 desde, excluir_pk=excluir_pk)
     if fechas is None or not _excede_limite(fechas, nueva, maximo, dias):
         return
     raise LimiteReservasError(event_type, _primer_dia_libre(fechas, hoy, maximo, dias))
@@ -899,13 +917,13 @@ def aviso_limite_reservas(event_type, email_invitado, telefono_invitado=''):
     tz = ZoneInfo(event_type.host.timezone)
     hoy = timezone.now().astimezone(tz).date()
     fechas = _fechas_para_limite(event_type, email_invitado, telefono_invitado,
-                                 hoy - timedelta(days=dias), tz)
+                                 hoy - timedelta(days=dias))
     if not fechas or not _excede_limite(fechas, hoy, maximo, dias):
         return None
     confirmadas = fechas
     if event_type.limite_cancelacion_horas:
         confirmadas = _fechas_para_limite(event_type, email_invitado, telefono_invitado,
-                                          hoy - timedelta(days=dias), tz, con_tardias=False)
+                                          hoy - timedelta(days=dias), con_tardias=False)
     # Solo una confirmada se puede cambiar de día: una cancelada que sigue
     # contando no es una cita que tenga, aunque su fecha esté por delante.
     futuras = [f for f in confirmadas if f >= hoy]
