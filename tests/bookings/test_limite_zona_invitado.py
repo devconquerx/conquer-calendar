@@ -63,6 +63,17 @@ class LimiteEnZonaDelInvitadoTest(TestCase):
         self.assertEqual(aviso['cita'], date(2026, 11, 5))
         self.assertEqual(aviso['desde'], date(2026, 11, 19))
 
+    def test_una_clase_ya_terminada_no_sale_como_agendada(self):
+        with self._ahora(FIN_CLASE + timedelta(minutes=1)):
+            aviso = aviso_limite_reservas(self.et, EMAIL, timezone_invitado=TORONTO)
+        self.assertFalse(aviso['cita_futura'])
+
+    def test_una_clase_de_hoy_que_aun_no_termino_sigue_agendada(self):
+        with self._ahora(INICIO_CLASE - timedelta(hours=2)):
+            aviso = aviso_limite_reservas(self.et, EMAIL, timezone_invitado=TORONTO)
+        self.assertTrue(aviso['cita_futura'])
+        self.assertEqual(aviso['cita'], date(2026, 11, 5))
+
     def test_el_dia_14_abre_entero_en_su_zona(self):
         with self._ahora(FIN_CLASE + timedelta(days=1)):
             self._comprobar(toronto(19, 8))
