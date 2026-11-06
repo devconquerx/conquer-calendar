@@ -1,7 +1,7 @@
 """
 Límite de reservas por invitado: «X reservas cada Y días» en un tipo de evento.
 
-La ventana es móvil y cuenta por la fecha de la cita en la zona del host: con 1
+La ventana es móvil y cuenta por la fecha de la cita en la zona del invitado: con 1
 cada 30 días, quien tuvo cita el 10/09 puede volver a tenerla el 10/10. Con una
 reserva futura y «Solo una reserva por invitado» se sigue ofreciendo cambiarla;
 superado el tope, se manda a la página de máximo alcanzado.
