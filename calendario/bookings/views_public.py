@@ -74,18 +74,20 @@ def _render_booking(request, ctx, invitado, event_type, status=200):
     """
     embed.aplicar_embed(ctx, invitado, embed.token_de_request(request))
     if invitado is not None:
-        ctx['aviso_limite'] = _ctx_aviso_limite(event_type, invitado)
+        tz_visitante = _tz_visitante(request, ZoneInfo(event_type.host.timezone))
+        ctx['aviso_limite'] = _ctx_aviso_limite(event_type, invitado, tz_visitante)
     resp = render(request, 'pages/public/booking/page.html', ctx, status=status)
     return embed.permitir_embebido(resp) if event_type.embebible else resp
 
 
-def _ctx_aviso_limite(event_type, invitado):
+def _ctx_aviso_limite(event_type, invitado, tz_visitante):
     """El aviso de «ya tienes tu llamada» con las fechas ya en texto, o None.
 
     Solo con alumno detrás: es el único caso en que se sabe quién reserva antes
     de que rellene el formulario.
     """
-    aviso = aviso_limite_reservas(event_type, invitado['email'], invitado['telefono'])
+    aviso = aviso_limite_reservas(event_type, invitado['email'], invitado['telefono'],
+                                  timezone_invitado=str(tz_visitante))
     if aviso is None:
         return None
     return {

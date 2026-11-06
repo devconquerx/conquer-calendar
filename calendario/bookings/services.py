@@ -899,7 +899,7 @@ def comprobar_limite_reservas(event_type, inicio_utc, email_invitado,
     raise LimiteReservasError(event_type, _primer_dia_libre(fechas, hoy, maximo, dias))
 
 
-def aviso_limite_reservas(event_type, email_invitado, telefono_invitado=''):
+def aviso_limite_reservas(event_type, email_invitado, telefono_invitado='', timezone_invitado=''):
     """Lo que hay que contarle al invitado antes de que elija hora, o None.
 
     Solo sirve cuando ya se sabe quién es antes del formulario, o sea con el
@@ -915,7 +915,7 @@ def aviso_limite_reservas(event_type, email_invitado, telefono_invitado=''):
         return None
     maximo = event_type.limite_reservas
     dias = event_type.limite_reservas_dias
-    tz = ZoneInfo(event_type.host.timezone)
+    tz = _zona_de_invitado(timezone_invitado, event_type.host.timezone)
     hoy = timezone.now().astimezone(tz).date()
     fechas = _fechas_para_limite(event_type, email_invitado, telefono_invitado,
                                  hoy - timedelta(days=dias))
