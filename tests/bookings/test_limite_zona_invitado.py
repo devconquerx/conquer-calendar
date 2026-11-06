@@ -57,6 +57,12 @@ class LimiteEnZonaDelInvitadoTest(TestCase):
     def _comprobar(self, inicio, zona=TORONTO, email=EMAIL):
         comprobar_limite_reservas(self.et, inicio, email, timezone_invitado=zona)
 
+    def test_el_aviso_nombra_el_dia_que_ve_la_alumna(self):
+        with self._ahora(FIN_CLASE + timedelta(minutes=1)):
+            aviso = aviso_limite_reservas(self.et, EMAIL, timezone_invitado=TORONTO)
+        self.assertEqual(aviso['cita'], date(2026, 11, 5))
+        self.assertEqual(aviso['desde'], date(2026, 11, 19))
+
     def test_el_dia_14_abre_entero_en_su_zona(self):
         with self._ahora(FIN_CLASE + timedelta(days=1)):
             self._comprobar(toronto(19, 8))
@@ -73,3 +79,11 @@ class LimiteEnZonaDelInvitadoTest(TestCase):
             self._comprobar(datetime(2026, 11, 19, 22, 30, tzinfo=UTC), zona='')
             with self.assertRaises(LimiteReservasError):
                 self._comprobar(datetime(2026, 11, 18, 22, 30, tzinfo=UTC), zona='')
+
+    def test_otro_alumno_en_madrid_cuenta_en_su_propia_zona(self):
+        """Mismo instante, otro alumno: para él la clase sí es del 6/11."""
+        self._reserva(timezone_invitado='Europe/Madrid', email='madrid@x.com', host=self.dueno)
+        with self._ahora(FIN_CLASE + timedelta(minutes=1)):
+            aviso = aviso_limite_reservas(self.et, 'madrid@x.com', timezone_invitado='Europe/Madrid')
+        self.assertEqual(aviso['cita'], date(2026, 11, 6))
+        self.assertEqual(aviso['desde'], date(2026, 11, 20))
