@@ -867,25 +867,26 @@ def _primer_dia_libre(fechas, hoy, maximo, dias):
 
 
 def comprobar_limite_reservas(event_type, inicio_utc, email_invitado,
-                              telefono_invitado='', excluir_pk=None):
+                              telefono_invitado='', excluir_pk=None, timezone_invitado=''):
     """Lanza LimiteReservasError si esta cita supera el tope del tipo de evento.
 
     El tope es «`limite_reservas` cada `limite_reservas_dias` días» por invitado
     (mismo email O mismo teléfono, como el duplicado), en ventana móvil y por la
-    fecha de la cita en la zona del host: con 1 cada 30 días, quien tuvo cita el
-    10/09 puede volver a tenerla el 10/10. Cuentan las confirmadas, pasadas o
+    fecha de la cita en la zona del invitado: con 1 cada 30 días, quien tuvo cita
+    el 10/09 puede volver a tenerla el 10/10. Cuentan las confirmadas, pasadas o
     futuras; las canceladas no, salvo las que el invitado canceló a última hora
     (ver `_fechas_para_limite`).
 
     `excluir_pk` deja fuera una reserva que está a punto de sustituirse (el
-    modal de duplicado), para no contarla dos veces.
+    modal de duplicado), para no contarla dos veces. `timezone_invitado` es la
+    zona desde la que reserva; sin ella se usa la del dueño del evento.
     """
     if not event_type.tiene_limite_reservas:
         return
 
     maximo = event_type.limite_reservas
     dias = event_type.limite_reservas_dias
-    tz = ZoneInfo(event_type.host.timezone)
+    tz = _zona_de_invitado(timezone_invitado, event_type.host.timezone)
     hoy = timezone.now().astimezone(tz).date()
     nueva = inicio_utc.astimezone(tz).date()
     # Lo que empezó antes de hoy - días ya no cabe en ninguna ventana que
@@ -1052,10 +1053,12 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
                 comprobar_limite_reservas(
                     et, inicio_utc, email_invitado, telefono_invitado,
                     excluir_pk=None if cancelar_ahora_es_tardio(et, existente) else existente.pk,
+                    timezone_invitado=timezone_invitado,
                 )
                 raise ReservaDuplicadaError(existente)
 
-        comprobar_limite_reservas(et, inicio_utc, email_invitado, telefono_invitado)
+        comprobar_limite_reservas(et, inicio_utc, email_invitado, telefono_invitado,
+                                  timezone_invitado=timezone_invitado)
 
         # Tope del evento entero. Los días llenos ya no se ofrecen, pero el
         # calendario se pintó antes y otra persona pudo llevarse el último hueco
