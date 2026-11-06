@@ -73,6 +73,21 @@ class LimiteEnZonaDelInvitadoTest(TestCase):
                 self._comprobar(toronto(18, 23))
         self.assertEqual(ctx.exception.disponible_desde, date(2026, 11, 19))
 
+    def test_una_reserva_antigua_sin_zona_usa_la_de_su_profesora(self):
+        """Ushuaia: las 23:00 UTC del 5/11 son las 20:00 del 5/11."""
+        self.clase.timezone_invitado = ''
+        self.clase.save(update_fields=['timezone_invitado'])
+        with self._ahora(FIN_CLASE + timedelta(minutes=1)):
+            aviso = aviso_limite_reservas(self.et, EMAIL, timezone_invitado=TORONTO)
+        self.assertEqual(aviso['cita'], date(2026, 11, 5))
+
+    def test_una_zona_guardada_invalida_no_rompe_la_cuenta(self):
+        self.clase.timezone_invitado = 'Marte/Olympus'
+        self.clase.save(update_fields=['timezone_invitado'])
+        with self._ahora(FIN_CLASE + timedelta(minutes=1)):
+            aviso = aviso_limite_reservas(self.et, EMAIL, timezone_invitado=TORONTO)
+        self.assertEqual(aviso['cita'], date(2026, 11, 5))
+
     def test_sin_zona_del_que_reserva_se_usa_la_del_dueno(self):
         """El 19/11 a las 23:30 UTC ya es día 20 en Madrid; a las 22:30, aún 19."""
         with self._ahora(FIN_CLASE + timedelta(days=1)):
