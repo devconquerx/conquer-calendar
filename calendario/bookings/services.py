@@ -910,6 +910,10 @@ def aviso_limite_reservas(event_type, email_invitado, telefono_invitado='', time
     próxima si la hay; si no, la última— y desde cuándo podrá agendar otra
     (None si no se encontró ningún día). `cancelada` dice si esa cita es una
     que canceló a última hora y por eso sigue contando.
+
+    «La próxima» es la que aún no ha terminado, no la que tiene fecha de hoy o
+    posterior: una clase que ya se dio esta mañana no está «agendada», y es la
+    misma que el modal de duplicado le ofrecería cambiar.
     """
     if not event_type.tiene_limite_reservas:
         return None
@@ -921,18 +925,25 @@ def aviso_limite_reservas(event_type, email_invitado, telefono_invitado='', time
                                  hoy - timedelta(days=dias))
     if not fechas or not _excede_limite(fechas, hoy, maximo, dias):
         return None
-    confirmadas = fechas
-    if event_type.limite_cancelacion_horas:
-        confirmadas = _fechas_para_limite(event_type, email_invitado, telefono_invitado,
-                                          hoy - timedelta(days=dias), con_tardias=False)
     # Solo una confirmada se puede cambiar de día: una cancelada que sigue
     # contando no es una cita que tenga, aunque su fecha esté por delante.
-    futuras = [f for f in confirmadas if f >= hoy]
-    cita = min(futuras) if futuras else max(fechas)
+    proxima = buscar_reserva_duplicada(event_type, email_invitado, telefono_invitado)
+    if proxima:
+        cita = proxima.inicio_utc.astimezone(
+            _zona_de_invitado(proxima.timezone_invitado, proxima.host.timezone)
+        ).date()
+        cancelada = False
+    else:
+        cita = max(fechas)
+        confirmadas = fechas
+        if event_type.limite_cancelacion_horas:
+            confirmadas = _fechas_para_limite(event_type, email_invitado, telefono_invitado,
+                                              hoy - timedelta(days=dias), con_tardias=False)
+        cancelada = cita not in confirmadas
     return {
         'cita': cita,
-        'cita_futura': bool(futuras),
-        'cancelada': not futuras and cita not in confirmadas,
+        'cita_futura': bool(proxima),
+        'cancelada': cancelada,
         'desde': _primer_dia_libre(fechas, hoy, maximo, dias),
     }
 
