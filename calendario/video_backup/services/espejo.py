@@ -100,8 +100,14 @@ def copiar_video(libreria, credenciales, video):
                 resp.raw.decode_content = True
                 r2.subir_stream(resp.raw, f'{prefijo}/{NOMBRE_VIDEO}', 'video/mp4')
 
+        # La miniatura se comprueba por su cuenta, no se fía de que el MP4 ya
+        # estuviera: si una pasada se cortó entre el vídeo y la miniatura, el
+        # vídeo cuenta como "ya estaba" y la miniatura no se subiría nunca. El
+        # tamaño también delata que alguien eligió otra miniatura en Bunny.
         thumb = video.get('thumbnailFileName') or 'thumbnail.jpg'
-        if ficheros.get(thumb) and not ya_estaba:
+        bytes_thumb = ficheros.get(thumb)
+        if bytes_thumb and (not ya_estaba
+                            or r2.tamano_objeto(f'{prefijo}/{NOMBRE_THUMB}') != bytes_thumb):
             with bunny.abrir_fichero(hostname, zona, password, guid, thumb) as resp:
                 resp.raw.decode_content = True
                 r2.subir_stream(resp.raw, f'{prefijo}/{NOMBRE_THUMB}', 'image/jpeg')

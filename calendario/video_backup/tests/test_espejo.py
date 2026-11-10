@@ -96,7 +96,8 @@ class CopiarVideoTests(TestCase):
         """Carga inicial desde un portátil + goteo en producción: dos bases de
         datos distintas, un solo bucket. La tabla vacía de producción no puede
         provocar que se vuelva a subir el catálogo entero."""
-        with patch.object(espejo.r2, 'tamano_objeto', return_value=93354543):
+        en_bucket = {'video.mp4': 93354543, 'thumbnail.jpg': 92834}
+        with patch.object(espejo.r2, 'tamano_objeto', side_effect=lambda key: en_bucket.get(key.rsplit('/', 1)[1])):
             with patch.object(espejo.r2, 'subir_stream') as subir:
                 fila = espejo.copiar_video(LIBRERIA, CREDENCIALES, VIDEO)
 
@@ -104,6 +105,19 @@ class CopiarVideoTests(TestCase):
         self.assertEqual(fila.estado, VideoEspejo.COPIADO)
         self.assertTrue(fila.ya_estaba_en_r2)
         self.assertEqual(fila.r2_key, f'135359/{VIDEO["guid"]}/video.mp4')
+
+    def test_si_el_video_ya_estaba_pero_falta_la_miniatura_se_sube_solo_la_miniatura(self):
+        """Una pasada cortada entre el MP4 y la miniatura no puede dejar el
+        vídeo sin miniatura para siempre."""
+        en_bucket = {'video.mp4': 93354543}
+        with patch.object(espejo.r2, 'tamano_objeto', side_effect=lambda key: en_bucket.get(key.rsplit('/', 1)[1])):
+            with patch.object(espejo.r2, 'subir_stream', side_effect=lambda _f, key, _ct: key) as subir:
+                fila = espejo.copiar_video(LIBRERIA, CREDENCIALES, VIDEO)
+
+        subidas = [c.args[1] for c in subir.call_args_list]
+        self.assertEqual(subidas, [f'135359/{VIDEO["guid"]}/thumbnail.jpg'])
+        self.assertEqual(fila.estado, VideoEspejo.COPIADO)
+        self.assertTrue(fila.ya_estaba_en_r2)
 
     def test_si_el_tamano_en_r2_no_cuadra_se_vuelve_a_subir(self):
         with patch.object(espejo.r2, 'tamano_objeto', return_value=12):
