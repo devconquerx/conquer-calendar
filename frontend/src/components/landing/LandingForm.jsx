@@ -75,6 +75,8 @@ export default function LandingForm({ program, region, formConfig, school, theme
   const theme = themeOverride || ownTheme
   const t = theme.landing.form
   const isPaper = !!theme.paperboard
+  // Rediseño Conquer Lab (`?diseno=lab`): lo pide LabLanding vía themeOverride.
+  const isLab = theme.design === 'lab'
   const accent = theme.accent || {}
 
   const landing = formConfig?.landing || formConfig?.welcome || {}
@@ -379,7 +381,9 @@ export default function LandingForm({ program, region, formConfig, school, theme
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className={isPaper
+            className={isLab
+              ? `flex items-center gap-1.5 px-3 py-2 rounded-l-[12px] border border-r-0 bg-white text-base leading-6 text-[color:var(--lab-ink)] min-w-[90px] ${errors.phone ? 'border-red-500' : 'border-[color:var(--lab-n300)]'}`
+              : isPaper
               ? `flex items-center gap-1.5 px-2 py-2 rounded-l rounded-r-none border border-r-0 bg-white text-base text-black shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] min-w-[90px] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
               : `flex items-center gap-1.5 px-3 py-3.5 rounded-xl border text-sm min-w-[100px] ${errors.phone ? t.inputError : t.input}`
             }
@@ -430,8 +434,10 @@ export default function LandingForm({ program, region, formConfig, school, theme
           placeholder={phonePlaceholder}
           value={phone}
           onChange={handlePhoneChange}
-          style={isPaper ? { '--tw-ring-color': accent.ring } : undefined}
-          className={isPaper
+          style={isPaper && !isLab ? { '--tw-ring-color': accent.ring } : undefined}
+          className={isLab
+            ? `flex-1 min-w-0 px-4 py-2 rounded-r-[12px] border bg-white text-base leading-6 text-[color:var(--lab-ink)] placeholder:text-[color:var(--lab-n500)] focus:outline-none focus:border-[color:var(--lab-ink)] focus:border-[1.5px] ${errors.phone ? 'border-red-500' : 'border-[color:var(--lab-n300)]'}`
+            : isPaper
             ? `flex-1 px-3 py-2 rounded-r rounded-l-none border border-l-0 bg-cb-bg text-base text-[#404040] placeholder:text-[#404040]/60 placeholder:text-sm placeholder:font-light focus:outline-none shadow-[inset_0px_2px_4px_rgba(0,0,0,0.15)] ${errors.phone ? 'border-red-500' : 'border-[#404040]'}`
             : `flex-1 px-4 py-3.5 rounded-xl border focus:outline-none text-sm transition-colors ${errors.phone ? t.inputError : t.input}`
           }
@@ -463,6 +469,117 @@ export default function LandingForm({ program, region, formConfig, school, theme
       </span>
     </label>
   ) : null
+
+  // ── Conquer Lab: réplica del bloque "02 · Formulario" de Figma (Languages ·
+  // Embudo 3). Field: label Inter 600 14/21 sobre input blanco con borde
+  // neutral/300 y radio 12 (focus: borde ink 1.5). El alto NO es el de Figma
+  // (26px): va con el mismo padding que el resto de formularios (py-2, ~42px),
+  // decisión de negocio. Casilla de 20px, legales
+  // 14/21 y CTA Languages/Button (degradado de marca, 56px, la esquina
+  // inferior derecha en recto). Los colores llegan por las CSS vars --lab-*
+  // que pone LabLanding. ──
+  if (isLab) {
+    const inputCls = (hasError) =>
+      `w-full px-4 py-2 rounded-[12px] border bg-white text-base leading-6 text-[color:var(--lab-ink)] placeholder:text-[color:var(--lab-n500)] focus:outline-none focus:border-[color:var(--lab-ink)] focus:border-[1.5px] ${hasError ? 'border-red-500' : 'border-[color:var(--lab-n300)]'}`
+    const labelCls = 'block text-sm leading-[21px] font-semibold'
+    return (
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        {honeypotField}
+        {phoneHoneypotField}
+
+        <div className={`grid grid-cols-1 gap-4 md:gap-5 ${phoneVisible ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+          <div>
+            <label htmlFor="lab-name" className={labelCls}>{phName}</label>
+            <input
+              id="lab-name"
+              type="text"
+              placeholder={landing.namePlaceholderLab || 'Nombre'}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={`mt-2 ${inputCls(errors.name)}`}
+            />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="email" className={labelCls}>{phEmail}</label>
+            <input
+              type="email"
+              // id="email": lo lee el GTM heredado de Webflow (enhanced
+              // conversions), igual que en las otras ramas.
+              id="email"
+              placeholder={landing.emailPlaceholderLab || 'nombre@ejemplo.com'}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={`mt-2 ${inputCls(errors.email)}`}
+            />
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+          </div>
+
+          {phoneField && (
+            <div>
+              <span className={labelCls}>{phonePlaceholder}</span>
+              <div className="mt-2">{phoneField}</div>
+            </div>
+          )}
+        </div>
+
+        {showWhatsappOptin && (
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={wantsWhatsapp}
+              onChange={(e) => {
+                const checked = e.target.checked
+                setWantsWhatsapp(checked)
+                if (!checked) {
+                  setPhone('')
+                  setErrors((prev) => ({ ...prev, phone: undefined }))
+                }
+              }}
+              className="peer sr-only"
+            />
+            {/* Casilla de 20px (borde neutral/300 1.5, radio 4); marcada se
+                rellena con el color de marca. */}
+            <span
+              aria-hidden="true"
+              className="mt-0.5 w-5 h-5 shrink-0 rounded-[4px] border-[1.5px] border-[color:var(--lab-n300)] bg-white flex items-center justify-center peer-checked:border-[color:var(--lab-middle)] peer-checked:bg-[color:var(--lab-middle)] peer-focus-visible:ring-2 peer-focus-visible:ring-[color:var(--lab-middle)]/40 [&>svg]:opacity-0 peer-checked:[&>svg]:opacity-100"
+            >
+              <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 text-white" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+            </span>
+            <span className="text-base leading-6 font-semibold">
+              OPCIONAL: Envíame un acceso directo a la repetición por WhatsApp
+            </span>
+          </label>
+        )}
+
+        <div className="flex flex-col gap-1 text-sm leading-[21px]">
+          {showCommercialConsent && (
+            <p>
+              {experiment?.whatsappComplianceText
+                ? 'Al continuar aceptas que te enviemos tips, la repetición de la clase y recursos exclusivos por email/whatsapp. (Tranqui, solo contenido útil, nada de spam).'
+                : consentText}
+            </p>
+          )}
+          <p>
+            {consentPrivacyPre}{' '}
+            <a href={school?.privacyPolicyUrl || theme.footer?.legal?.privacy || '#'} target="_blank" rel="noopener noreferrer" className="underline">
+              {consentPrivacyLink}
+            </a>
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full h-14 px-6 rounded-[28px] rounded-br-none text-white uppercase font-semibold text-lg md:text-[22px] leading-[22px] flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition-all disabled:opacity-50"
+          style={{ backgroundImage: 'var(--lab-gradient)' }}
+        >
+          {submitting ? <Spinner /> : buttonText}
+        </button>
+      </form>
+    )
+  }
 
   // ── Hexboard (Finance): réplica 1:1 del form de producción (cf-form.css +
   // medidas en vivo): inputs Arial 14 de 34px de alto (radio 20, borde

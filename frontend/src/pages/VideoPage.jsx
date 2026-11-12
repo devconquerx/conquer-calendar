@@ -8,6 +8,8 @@ import { CB_CARD_SHADOW, PAPER_TILE } from '../themes/conquerblocks'
 import { sendVideoProgressToBackend } from '../api'
 import { safeHtml } from '../lib/sanitize'
 import { useRouter } from '../lib/router'
+import LabVideoPage from '../components/lab/LabVideoPage'
+import { isLabRequested } from '../themes/lab'
 
 /* Página de video (VSL) standalone — entre la landing de lead y el StepForm.
    Muestra el video (autoplay muted + overlays), revela el botón al alcanzar el
@@ -112,6 +114,33 @@ export default function VideoPage({ school, region, formConfig, videoUrls, butto
     }
     window.location.href = `${nextUrl}${search}`
   }, [router, nextUrl, ctaUrl])
+
+  // Rediseño Conquer Lab: solo con `?diseno=lab` (la landing lo arrastra en el
+  // query al navegar aquí) y si la marca trae su bloque `lab`. Los overlays y
+  // el CTA del reproductor reconocen `design: 'lab'`; el aro del overlay de
+  // "ya habías empezado" toma sus colores de `accent.buttonGradient`.
+  if (baseTheme.lab && isLabRequested(initialSearch)) {
+    const c = baseTheme.lab.colors
+    const labTheme = {
+      ...baseTheme,
+      design: 'lab',
+      accent: { ...baseTheme.accent, buttonGradient: `linear-gradient(90deg, ${c.start}, ${c.middle}, ${c.end})` },
+    }
+    return (
+      <LabVideoPage
+        theme={labTheme}
+        video={video}
+        urls={urls}
+        pct={pct}
+        showButton={showButton}
+        onShowButton={handleShowButton}
+        onProgress={handleProgress}
+        goToStepForm={goToStepForm}
+        school={school}
+        hideFooter={hideFooter}
+      />
+    )
+  }
 
   if (isPaper) {
     return (

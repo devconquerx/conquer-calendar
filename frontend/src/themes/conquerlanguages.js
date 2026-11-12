@@ -44,6 +44,20 @@ import instructorPhoto from '../assets/img/languages/andy.webp'
 import pixelDeco from '../assets/img/languages/pixel-6x6-2.svg'
 import pixelDeco2 from '../assets/img/languages/pixel-5x5-5.svg'
 import { PAPER_TILE } from './conquerblocks'
+// Rediseño "Conquer Lab" (Figma: Languages · Embudo 3). Solo se usa con
+// `?diseno=lab`; ver themes/lab.js.
+import { labBandBackground } from './lab'
+import labLogo from '../assets/img/languages/lab/logo.svg'
+import labPaper from '../assets/img/languages/lab/papel.avif'
+import labBandTexture from '../assets/img/languages/lab/textura-lineas.webp'
+import labTorn from '../assets/img/languages/lab/transicion-papel.webp'
+import labAndy from '../assets/img/languages/lab/andy.avif'
+import labSeal from '../assets/img/languages/lab/sello.svg'
+import labMedalla from '../assets/img/languages/lab/conquie-medalla.svg'
+import labPaso2 from '../assets/img/languages/lab/paso2-telefono.avif'
+import labConquieDinero from '../assets/img/languages/lab/conquie-dinero.svg'
+import labConquieCool from '../assets/img/languages/lab/conquie-cool.svg'
+import labConquiePaz from '../assets/img/languages/lab/conquie-paz.svg'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TEMPORAL — INTERRUPTOR GLOBAL del pixel-art de Conquer Languages.
@@ -87,6 +101,50 @@ export default {
   // que Finance/Blocks. Flag de MARCA: no toca el GTM en vivo, solo cambia cómo
   // conquer-calendar navega en su propio flujo. Sobrevive a esta migración.
   gtmHardConfirmation: true,
+
+  // Tokens del sistema Conquer Lab para Languages (variables Brand/Languages
+  // de la librería). Inerte salvo con `?diseno=lab`.
+  lab: {
+    colors: { start: '#6CA5BC', middle: '#548FAA', end: '#3E7894', tint: '#F2F9FF' },
+    // Superficie "Papel blanco": la textura en gris, en mosaico de 566×400.
+    paper: labPaper,
+    paperTile: '566px 400px',
+    // Superficie "Gradiente" de la banda del formulario (orden = el de Figma,
+    // la primera capa arriba).
+    bandBackground: labBandBackground([
+      { rgb: '96,154,179', at: '50% 51.6%', size: '71.4% 40.2%' },
+      { rgb: '73,132,159', at: '98.7% 21.2%', size: '64.1% 36.1%' },
+      { rgb: '62,120,148', at: '3.7% 23.9%', size: '61% 34.3%' },
+      { rgb: '84,143,170', at: '1.4% 81.9%', size: '67.6% 38%' },
+      { rgb: '108,165,188', at: '106.4% 77.4%', size: '64.1% 36.1%' },
+    ], '#609AB3'),
+    bandTexture: labBandTexture,
+    torn: labTorn,
+    logo: labLogo,
+    // Sello plano (degradado de marca) de marca de agua en la banda del vídeo.
+    seal: labSeal,
+    instructorPhoto: labAndy,
+    // Conquies con el tratamiento "Color por línea de negocio". Los SVG traen
+    // el sticker blanco y su sombra, que desbordan la caja de 56px: `inset`
+    // reproduce ese desborde tal cual lo coloca Figma.
+    // Confirmación de llamada: lo que Figma cambia respecto a `confirmation`
+    // (los vídeos y el copy de los pasos 1 y 3 se reutilizan de allí).
+    confirmation: {
+      heroIcon: labMedalla,
+      paso2Image: labPaso2,
+      paso2HeadingPre: 'Mantente al tanto de ',
+      paso2HeadingAccent: 'tu teléfono',
+      paso2Paragraphs: [
+        'Te contactaremos por llamada para confirmar la cita el día y la hora acordadas. Una vez confirmada la sesión con tu asesor, te enviaremos el enlace de la videollamada.',
+        'Es importante que <strong>contestes confirmando tu llamada</strong>, ya que estamos recibiendo muchísimas solicitudes y queremos hablar con personas que estén comprometidas en ser un caso de éxito.',
+      ],
+    },
+    bulletIcons: [
+      { src: labConquieDinero, inset: '0 -17.86% -15.28% -17.86%' },
+      { src: labConquieCool, inset: '-7.75% -17.86% -25.61% -17.86%' },
+      { src: labConquiePaz, inset: '-8.93% -3.77% -26.79% -3.77%' },
+    ],
+  },
 
   // Acento de marca (teal). Mismos slots que conquerblocks/conquerlegal.
   accent: {

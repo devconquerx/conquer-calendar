@@ -80,6 +80,7 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
         formConfig={formConfig}
         funnelSlug={slug}
         videoEnabled={videoEnabled}
+        search={stageSearch}
       />
     )
   }
@@ -102,7 +103,7 @@ export default function FunnelApp({ slug, escuela, region, program, formConfig, 
       )
     }
     if (stage === 'confirmation') {
-      return <Comp escuela={escuela} slug={slug} />
+      return <Comp escuela={escuela} slug={slug} search={stageSearch} />
     }
     return <Comp slug={slug} escuela={escuela} formConfig={formConfig} search={stageSearch} />
   }

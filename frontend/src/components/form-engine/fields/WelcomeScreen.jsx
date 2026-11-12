@@ -1,3 +1,5 @@
+import { LAB_BUTTON, LAB_BUTTON_STYLE } from '../../lab/LabParts'
+
 export default function WelcomeScreen({ field, onNext, theme, messages }) {
   // El hint del Enter sale de config.messages, igual que en NavigationControls:
   // estaba escrito a mano en castellano y se colaba en el funnel en inglés (GE),
@@ -8,6 +10,33 @@ export default function WelcomeScreen({ field, onNext, theme, messages }) {
   // título Roboto 400 24px, descripción 20px negra (máx 640px), botón negro
   // radio 10 (padding 9/23/9/20) con el hint "presiona Enter" a su derecha.
   const isHex = !!theme?.hexboard
+
+  // Conquer Lab (`?diseno=lab`): Figma "00 · Bienvenida" — título 40/48,
+  // descripción 20/30 y el botón con el hint a la derecha, todo centrado.
+  if (theme?.design === 'lab') {
+    return (
+      <div className="flex flex-col items-center text-center gap-7 text-[color:var(--lab-ink)]">
+        <h1 className="font-semibold text-[28px] leading-9 md:text-[40px] md:leading-[48px] tracking-[-0.4px]">
+          {field.label || 'Formulario'}
+        </h1>
+        {field.description && (
+          <p className="text-lg leading-7 md:text-xl md:leading-[30px]">{field.description}</p>
+        )}
+        <div className="flex items-center justify-center gap-4">
+          <button
+            onClick={() => onNext(null)}
+            className={`${LAB_BUTTON} normal-case h-14 px-10 text-lg md:text-[22px] leading-[22px]`}
+            style={LAB_BUTTON_STYLE}
+          >
+            {field.buttonText || 'Comenzar'}
+          </button>
+          <span className="hidden md:inline text-sm leading-[21px] text-[color:var(--lab-n500)]">
+            {enterHint} Enter ↵
+          </span>
+        </div>
+      </div>
+    )
+  }
 
   if (isHex) {
     return (

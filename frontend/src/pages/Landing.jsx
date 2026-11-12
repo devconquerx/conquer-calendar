@@ -4,9 +4,16 @@ import BulletPoints from '../components/landing/BulletPoints'
 import { getTheme, useVariantTheme } from '../themes'
 import { CB_CARD_SHADOW, PAPER_TILE } from '../themes/conquerblocks'
 import { safeHtml } from '../lib/sanitize'
+import LabLanding from '../components/lab/LabLanding'
+import { isLabRequested } from '../themes/lab'
 
-export default function Landing({ school, program, region, formConfig, nextUrl, funnelSlug, videoEnabled = false }) {
+export default function Landing({ school, program, region, formConfig, nextUrl, funnelSlug, videoEnabled = false, search = '' }) {
   const baseTheme = getTheme(school?.slug)
+  // Rediseño Conquer Lab: solo con `?diseno=lab` y si la marca trae su bloque
+  // `lab`. Sin el parámetro la landing de producción no cambia. Se decide con
+  // el query del arranque (también llega en SSR), así servidor y cliente
+  // pintan lo mismo.
+  const labActive = !!baseTheme.lab && isLabRequested(search)
   // Rediseño por página: un tema puede pedir que SOLO su landing use el sistema
   // paperboard (hoy: Finance, que toma prestados los tokens de Legal vía
   // `landingPaper`) sin cambiar de sistema en el resto de etapas del funnel.
@@ -22,6 +29,15 @@ export default function Landing({ school, program, region, formConfig, nextUrl, 
   const landing = formConfig?.landing || formConfig?.welcome || {}
   const instructor = landing.instructor
   const disclaimer = landing.disclaimer
+
+  if (labActive) {
+    return <LabLanding
+      school={school} program={program} region={region}
+      formConfig={formConfig} theme={baseTheme}
+      instructor={instructor} disclaimer={disclaimer}
+      nextUrl={nextUrl} funnelSlug={funnelSlug} videoEnabled={videoEnabled}
+    />
+  }
 
   if (isPaper) {
     return <PaperboardLanding

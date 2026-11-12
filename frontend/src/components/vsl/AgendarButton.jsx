@@ -16,6 +16,23 @@ export function CtaButton({ theme, onClick, text, size = 'lg' }) {
   const accent = theme?.accent || {}
   const s = CTA_SIZES[size] || CTA_SIZES.lg
 
+  // Conquer Lab (`?diseno=lab`): Button · Fill=Gradient — degradado de marca de
+  // las CSS vars --lab-* y la esquina inferior derecha en recto.
+  if (theme?.design === 'lab') {
+    const labSize = size === 'sm'
+      ? 'text-sm md:text-base px-5 md:px-7 py-2 md:py-3'
+      : 'text-base md:text-[22px] px-6 md:px-10 py-4'
+    return (
+      <button
+        onClick={onClick}
+        className={`text-white ${labSize} uppercase text-center font-semibold leading-[1.1] rounded-[28px] rounded-br-none hover:brightness-105 active:scale-[0.98] transition-all`}
+        style={{ fontFamily: 'Inter, sans-serif', backgroundImage: 'var(--lab-gradient)' }}
+      >
+        {text}
+      </button>
+    )
+  }
+
   if (isPaper) {
     return (
       <button

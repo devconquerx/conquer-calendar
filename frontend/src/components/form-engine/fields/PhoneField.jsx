@@ -4,6 +4,7 @@ import examples from 'libphonenumber-js/mobile/examples'
 import { construirE164 } from '../../../lib/telefono'
 import countries from '../../../data/countries'
 import useGeoLocation from '../../../hooks/useGeoLocation'
+import { useIsLab } from '../../lab/labFields'
 
 const getFlagUrl = (iso2) => `https://flagcdn.com/w40/${iso2?.toLowerCase()}.png`
 
@@ -14,6 +15,9 @@ export default function PhoneField({ field, value, onChange, onNext }) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [search, setSearch] = useState('')
   const inputRef = useRef(null)
+  // Conquer Lab: texto 20/30 sobre línea de 1.5px en tinta, como el resto de campos.
+  const isLab = useIsLab()
+  const labText = 'text-[color:var(--lab-ink)] text-lg leading-7 md:text-xl md:leading-[30px] border-b-[1.5px] border-[color:var(--lab-ink)] pb-2.5'
   const dropdownRef = useRef(null)
   const searchInputRef = useRef(null)
 
@@ -147,7 +151,7 @@ export default function PhoneField({ field, value, onChange, onNext }) {
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="text-black text-lg md:text-3xl font-normal bg-transparent outline-none hover:opacity-70 transition-opacity border-b-2 border-black pb-2"
+            className={isLab ? `${labText} font-normal bg-transparent outline-none hover:opacity-70 transition-opacity` : "text-black text-lg md:text-3xl font-normal bg-transparent outline-none hover:opacity-70 transition-opacity border-b-2 border-black pb-2"}
           >
             {selectedCountry ? `+${selectedCountry.phoneCode}` : '...'}
           </button>
@@ -198,7 +202,7 @@ export default function PhoneField({ field, value, onChange, onNext }) {
           onChange={handlePhoneChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="flex-1 min-w-0 bg-transparent text-black text-lg md:text-3xl outline-none placeholder:text-[#aaa] border-b-2 border-black pb-2"
+          className={isLab ? `flex-1 min-w-0 bg-transparent outline-none placeholder:text-[color:var(--lab-n500)] ${labText}` : "flex-1 min-w-0 bg-transparent text-black text-lg md:text-3xl outline-none placeholder:text-[#aaa] border-b-2 border-black pb-2"}
         />
 
         {/* Flag on the right */}
@@ -208,7 +212,7 @@ export default function PhoneField({ field, value, onChange, onNext }) {
             alt={selectedCountry.iso2}
             width="48"
             height="32"
-            className="rounded-sm object-cover flex-shrink-0 mb-1 w-8 h-5 md:w-12 md:h-8"
+            className={isLab ? "rounded-sm object-cover flex-shrink-0 mb-3 w-7 h-[18px] md:w-9 md:h-6" : "rounded-sm object-cover flex-shrink-0 mb-1 w-8 h-5 md:w-12 md:h-8"}
           />
         )}
       </div>

@@ -8,6 +8,7 @@ import LongTextField from './form-engine/fields/LongTextField'
 import MultipleChoice from './form-engine/fields/MultipleChoice'
 import PhoneField from './form-engine/fields/PhoneField'
 import NavigationControls from './form-engine/NavigationControls'
+import { useIsLab } from './lab/labFields'
 
 const FIELD_COMPONENTS = {
   'short-text': TextField,
@@ -29,6 +30,7 @@ export default function FormStep({
   isLast,
 }) {
   const [fieldError, setFieldError] = useState('')
+  const isLab = useIsLab()
 
   useEffect(() => {
     setFieldError('')
@@ -95,9 +97,22 @@ export default function FormStep({
 
   const FieldComponent = FIELD_COMPONENTS[block.name]
 
+  // Conquer Lab: título H4 (32/42) "1 → Nombre *" en tinta, sin el alto mínimo
+  // (la tarjeta del Lab ya da el aire).
+  const header = isLab ? (
+    <div className="mb-7">
+      <h2 className="text-[color:var(--lab-ink)] font-semibold text-2xl leading-8 md:text-[32px] md:leading-[42px] tracking-[-0.32px]">
+        {stepNumber} → {field.label}{field.required && ' *'}
+      </h2>
+      {field.description && (
+        <p className="text-[color:var(--lab-n500)] text-base md:text-lg mt-3">{field.description}</p>
+      )}
+    </div>
+  ) : null
+
   return (
-    <div className="max-w-3xl mx-auto flex flex-col justify-center min-h-[50vh]">
-      <div className="mb-5 md:mb-10">
+    <div className={isLab ? 'flex flex-col' : 'max-w-3xl mx-auto flex flex-col justify-center min-h-[50vh]'}>
+      {header || <div className="mb-5 md:mb-10">
         <h2 className="text-black text-xl md:text-[27px] font-semibold leading-[1.3]">
           {stepNumber}
           <svg className="inline-block mx-2 align-middle" width="14" height="12" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -109,7 +124,7 @@ export default function FormStep({
         {field.description && (
           <p className="text-gray-500 text-base mt-3">{field.description}</p>
         )}
-      </div>
+      </div>}
 
       {FieldComponent ? (
         <FieldComponent

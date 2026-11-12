@@ -1,5 +1,35 @@
+import { useIsLab } from '../lab/labFields'
+import { LAB_BUTTON, LAB_BUTTON_STYLE } from '../lab/LabParts'
+
 export default function NavigationControls({ isFirst, isLast, isSubmitting, onOk, onBack, messages, hideEnterHint }) {
   const m = messages || {}
+  const isLab = useIsLab()
+
+  // Conquer Lab (`?diseno=lab`): Button · Fill=Gradient de 56px y el hint
+  // "presiona Enter ↵" en neutral/500 a la derecha.
+  if (isLab) {
+    return (
+      <div className="flex items-center gap-4 mt-7">
+        <button
+          type="button"
+          onClick={onOk}
+          disabled={isSubmitting}
+          className={`${LAB_BUTTON} normal-case h-14 px-10 text-lg md:text-[22px] leading-[22px]`}
+          style={LAB_BUTTON_STYLE}
+        >
+          {isSubmitting
+            ? (m['label.button.submitting'] || 'Enviando...')
+            : isLast ? (m['label.button.submit'] || 'Enviar') : (m['label.button.next'] || 'Siguiente')}
+        </button>
+        {!hideEnterHint && (
+          <span className="hidden md:inline text-sm leading-[21px] text-[color:var(--lab-n500)]">
+            {m['label.button.enterHint'] || 'presiona'} Enter ↵
+          </span>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-center gap-4 mt-6">
       <button

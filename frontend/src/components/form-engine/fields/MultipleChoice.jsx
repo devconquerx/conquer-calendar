@@ -46,6 +46,42 @@ export default function MultipleChoice({ field, value, onChange, onNext }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [choices, handleSelect])
 
+  // Conquer Lab (`?diseno=lab`): Figma "Opciones" — rejilla de 2 columnas
+  // (gap 12), tarjetas blancas con borde neutral/300 y radio 10, tecla de 26px
+  // con la letra y texto 18/27. Seleccionada: borde y tecla con el color de
+  // marca.
+  if (theme?.design === 'lab') {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+        {choices.map((choice, i) => {
+          const isSelected = value === choice.value
+          return (
+            <button
+              key={choice.value}
+              type="button"
+              onClick={() => handleSelect(choice.value)}
+              className={`flex items-center gap-3 text-left px-4 py-3.5 rounded-[10px] border bg-white transition-colors duration-150 ${
+                isSelected
+                  ? 'border-[color:var(--lab-middle)] bg-[color:var(--lab-tint)]'
+                  : 'border-[color:var(--lab-n300)] hover:border-[color:var(--lab-start)]'
+              }`}
+            >
+              <span
+                className={`flex items-center justify-center w-[26px] h-[26px] rounded-[6px] border text-sm leading-[21px] font-semibold uppercase flex-shrink-0 ${
+                  isSelected ? 'border-transparent text-white' : 'border-[color:var(--lab-n300)] text-[color:var(--lab-ink)]'
+                }`}
+                style={isSelected ? { backgroundImage: 'var(--lab-gradient)' } : undefined}
+              >
+                {KEYS[i] || ''}
+              </span>
+              <span className="flex-1 min-w-0 text-base leading-6 md:text-lg md:leading-[27px] text-[color:var(--lab-ink)]">{choice.label}</span>
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
   // Hexboard (Finance): opciones grises de QuillForms en producción
   // (answersColor #000000bf): fondo negro al 10% (20% hover, 75% seleccionada
   // con texto blanco), borde 1px negro 75%, radio 5px y badge de letra con

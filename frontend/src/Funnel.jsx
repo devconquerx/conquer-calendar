@@ -21,6 +21,8 @@ import { getTheme, ThemeContext, useVariantTheme } from './themes'
 import { PAPER_TILE } from './themes/conquerblocks'
 import { getVideoVariantExperiment, readFormVariant } from './lib/formVariant'
 import { useRouter } from './lib/router'
+import { isLabRequested } from './themes/lab'
+import { LabStepFormShell, LabProgress } from './components/lab/LabStepForm'
 import './funnel.css'
 
 export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUrl = '', formConfig = null, search }) {
@@ -466,10 +468,16 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
       }
     : {}
 
+  // Rediseño Conquer Lab: solo con `?diseno=lab` (viaja en el query desde la
+  // landing) y si la marca trae su bloque `lab`. Solo cubre los pasos del
+  // formulario: calendario, reserva y rechazo siguen con su diseño (salen
+  // antes, por `phase`). Los campos leen `design: 'lab'` del ThemeContext.
+  const labTheme = theme.lab && isLabRequested(initialSearch) ? { ...theme, design: 'lab' } : null
+
   const renderStep = () => {
     if (!current) return null
     if (isWelcome) {
-      return <WelcomeScreen field={welcomeField} onNext={handleNext} theme={theme} messages={messages} />
+      return <WelcomeScreen field={welcomeField} onNext={handleNext} theme={labTheme || theme} messages={messages} />
     }
     return (
       <FormStep
@@ -484,6 +492,29 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
         isFirst={currentIndex <= 1}
         isLast={isLast}
       />
+    )
+  }
+
+  if (labTheme) {
+    return (
+      <ThemeContext.Provider value={labTheme}>
+        <LabStepFormShell lab={theme.lab} footer={theme.footer} isWelcome={isWelcome}>
+          <div className="overflow-hidden">
+            <StepTransition stepKey={currentIndex} direction={direction}>
+              {renderStep()}
+            </StepTransition>
+          </div>
+          {!isWelcome && (
+            <LabProgress
+              progress={progress}
+              onUp={handleBack}
+              onDown={() => handleNext(respuestas[current?.id] || '')}
+              canGoUp={currentIndex > 1}
+              canGoDown={!isLast && currentValueFilled}
+            />
+          )}
+        </LabStepFormShell>
+      </ThemeContext.Provider>
     )
   }
 

@@ -7,6 +7,8 @@ import { PAPER_TILE } from '../themes/conquerblocks'
 import useTracking from '../hooks/useTracking'
 import { fireAllSchedule } from '../lib/pixelEvents'
 import { safeHtml } from '../lib/sanitize'
+import LabConfirmation from './lab/LabConfirmation'
+import { isLabRequested } from '../themes/lab'
 
 // Los assets y textos de la confirmación paperboard viven en el tema
 // (theme.confirmation): cada marca aporta sus iconos, fotos, vídeos y copy.
@@ -17,7 +19,7 @@ import { safeHtml } from '../lib/sanitize'
  * plataformas (Meta/Google Ads/TikTok/GA4) al montar, usando el UUID de Calendly
  * y el schedule_event_id guardados en localStorage (igual que funnels).
  */
-export default function Confirmation({ escuela = '', slug = '' }) {
+export default function Confirmation({ escuela = '', slug = '', search }) {
   const baseTheme = getTheme(escuela, slug)
   // Rediseño por página: un tema puede pedir que SOLO su confirmación use el
   // sistema paperboard (hoy: Finance, que toma el diseño de Legal y conserva su
@@ -61,6 +63,14 @@ export default function Confirmation({ escuela = '', slug = '' }) {
       scheduleEventId,
     })
   }, [eventId, journeyId, escuela])
+
+  // Rediseño Conquer Lab: solo con `?diseno=lab` (llega en el query desde el
+  // StepForm) y si la marca trae su bloque `lab`. El Schedule de arriba se
+  // dispara igual: esto solo cambia el render.
+  const labSearch = search ?? (typeof window !== 'undefined' ? window.location.search : '')
+  if (baseTheme.lab && isLabRequested(labSearch)) {
+    return <LabConfirmation theme={baseTheme} />
+  }
 
   if (isPaper) {
     return <PaperboardConfirmation theme={theme} assets={assets} />
