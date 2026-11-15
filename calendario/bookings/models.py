@@ -594,12 +594,16 @@ class CancelacionReserva(models.Model):
 
 
 class BloqueoInvitado(models.Model):
-    """Email o dominio que no puede reservar.
+    """Email, dominio o teléfono que no puede reservar.
 
     Se comprueba al crear la reserva (ver `bookings/bloqueos.py`), no al pintar
-    el calendario: el email solo se conoce cuando la persona envía el
-    formulario. Quien está bloqueado sale redirigido a la URL de
+    el calendario: el email y el teléfono solo se conocen cuando la persona
+    envía el formulario. Quien está bloqueado sale redirigido a la URL de
     `ConfigBloqueos`, sin decirle por qué.
+
+    El teléfono es opcional y va junto al email porque es lo que no cambia
+    quien intenta colarse: reserva con otro correo, pero con el mismo número.
+    También vale un bloqueo solo con teléfono, dejando el email vacío.
     """
 
     class Tipo(models.TextChoices):
@@ -608,12 +612,22 @@ class BloqueoInvitado(models.Model):
 
     tipo = models.CharField(max_length=10, choices=Tipo.choices, default=Tipo.EMAIL)
     valor = models.CharField(
-        max_length=254,
+        max_length=254, blank=True, default='',
+        verbose_name='email o dominio',
         help_text=(
             'Email concreto: <code>pepito@gmail.com</code> (el resto de gmail sigue pudiendo reservar).<br>'
             'Dominio: <code>somoshackers.com</code> bloquea ese dominio y sus subdominios; '
             'sin extensión, <code>somoshackers</code> bloquea cualquier terminación '
-            '(.com, .net, .es…). La arroba del principio da igual.'
+            '(.com, .net, .es…). La arroba del principio da igual.<br>'
+            'Puede quedar vacío si solo se bloquea un teléfono.'
+        ),
+    )
+    telefono = models.CharField(
+        max_length=20, blank=True, default='',
+        verbose_name='teléfono',
+        help_text=(
+            'Opcional. Con el prefijo del país: <code>+53 5359 5535</code>. '
+            'Se bloquea aunque reserve con otro email. Los espacios y guiones dan igual.'
         ),
     )
     motivo = models.CharField(
@@ -637,20 +651,40 @@ class BloqueoInvitado(models.Model):
         verbose_name_plural = 'bloqueos de invitados'
         ordering = ['-creado_en']
         constraints = [
-            models.UniqueConstraint(fields=['tipo', 'valor'], name='uq_bloqueo_tipo_valor'),
+            # Sin email/dominio (bloqueo solo de teléfono) puede haber varios.
+            models.UniqueConstraint(
+                fields=['tipo', 'valor'], condition=~models.Q(valor=''),
+                name='uq_bloqueo_tipo_valor',
+            ),
         ]
 
     def __str__(self):
-        return f'{self.get_tipo_display()}: {self.valor}'
+        partes = []
+        if self.valor:
+            partes.append(f'{self.get_tipo_display()}: {self.valor}')
+        if self.telefono:
+            partes.append(f'Teléfono: {self.telefono}')
+        return ' · '.join(partes) or 'Bloqueo vacío'
 
     def clean(self):
         from django.core.exceptions import ValidationError
         from django.core.validators import validate_email
-        from .bloqueos import normalizar_valor
+        from .bloqueos import normalizar_telefono, normalizar_valor
 
         self.valor = normalizar_valor(self.tipo, self.valor)
+        if self.telefono.strip():
+            telefono = normalizar_telefono(self.telefono)
+            if not telefono:
+                raise ValidationError({
+                    'telefono': 'Ese teléfono no se reconoce. Escríbelo con el prefijo del país: +53 5359 5535.',
+                })
+            self.telefono = telefono
+        else:
+            self.telefono = ''
+        if not self.valor and not self.telefono:
+            raise ValidationError({'valor': 'Escribe el email, el dominio o el teléfono a bloquear.'})
         if not self.valor:
-            raise ValidationError({'valor': 'Escribe el email o el dominio a bloquear.'})
+            return
         if self.tipo == self.Tipo.EMAIL:
             try:
                 validate_email(self.valor)
@@ -663,8 +697,9 @@ class BloqueoInvitado(models.Model):
             })
 
     def save(self, *args, **kwargs):
-        from .bloqueos import normalizar_valor
+        from .bloqueos import normalizar_telefono, normalizar_valor
         self.valor = normalizar_valor(self.tipo, self.valor)
+        self.telefono = normalizar_telefono(self.telefono) or self.telefono.strip()
         super().save(*args, **kwargs)
 
 
