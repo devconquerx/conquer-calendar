@@ -14,13 +14,14 @@ class ReservaDuplicadaError(Exception):
 
 
 class InvitadoBloqueadoError(Exception):
-    """El email del invitado (o su dominio) está bloqueado en el admin.
-    Lleva el `BloqueoInvitado` que lo frenó para que la vista cuente el intento
-    y redirija a la URL configurada."""
+    """El email del invitado (o su dominio) o su teléfono están bloqueados en
+    el admin. Lleva el `BloqueoInvitado` que lo frenó para que la vista cuente
+    el intento y redirija a la URL configurada."""
 
-    def __init__(self, bloqueo, email=''):
+    def __init__(self, bloqueo, email='', telefono=''):
         self.bloqueo = bloqueo
         self.email = email
+        self.telefono = telefono
         super().__init__("El invitado no puede reservar.")
 
 

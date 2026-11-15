@@ -994,10 +994,10 @@ def _quitar_dias_llenos(event_type, slots):
     return [s for s in slots if s.astimezone(tz).date() not in llenos]
 
 
-def _comprobar_bloqueo(email_invitado):
-    bloqueo = buscar_bloqueo(email_invitado)
+def _comprobar_bloqueo(email_invitado, telefono_invitado=''):
+    bloqueo = buscar_bloqueo(email_invitado, telefono_invitado)
     if bloqueo is not None:
-        raise InvitadoBloqueadoError(bloqueo, email_invitado)
+        raise InvitadoBloqueadoError(bloqueo, email_invitado, telefono_invitado)
 
 
 def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
@@ -1021,10 +1021,10 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
     desde dentro de la academia; es con lo que ella empareja después la sesión
     con su alumno.
 
-    Lanza InvitadoBloqueadoError si el email o su dominio están bloqueados en
-    el admin (ver `bloqueos.py`).
+    Lanza InvitadoBloqueadoError si el email, su dominio o el teléfono están
+    bloqueados en el admin (ver `bloqueos.py`).
     """
-    _comprobar_bloqueo(email_invitado)
+    _comprobar_bloqueo(email_invitado, telefono_invitado)
     with transaction.atomic():
         et = EventType.objects.select_for_update().get(pk=event_type.pk)
         if not et.activo:
@@ -1186,7 +1186,7 @@ def reemplazar_reserva(reserva_vieja_pk, event_type, inicio_utc, nombre_invitado
     """
     # Antes de tocar la vieja: si no, quedaría cancelada —con su aviso a la
     # academia y a Google— para una nueva que nunca se va a crear.
-    _comprobar_bloqueo(email_invitado)
+    _comprobar_bloqueo(email_invitado, telefono_invitado)
     with transaction.atomic():
         try:
             vieja = Reserva.objects.select_for_update().get(pk=reserva_vieja_pk)

@@ -409,7 +409,7 @@ class ReservarView(View):
         except InvitadoBloqueadoError as e:
             # El front no pinta nada: se va a `redirect_url`, igual que la página
             # pública redirige. Mismo mensaje genérico por si no lo hiciera.
-            bloqueos.registrar_intento(e.bloqueo, e.email)
+            bloqueos.registrar_intento(e.bloqueo, e.email, e.telefono)
             return JsonResponse({
                 'ok': False,
                 'error': 'bloqueado',
