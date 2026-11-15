@@ -13,6 +13,7 @@
  */
 import { AsYouType, getExampleNumber, isValidPhoneNumber } from 'libphonenumber-js'
 import examples from 'libphonenumber-js/mobile/examples'
+import { construirE164 } from './lib/telefono'
 
 window.CQXPhone = {
   /** ¿Es un número real de ese país? `e164` en formato "+58 4121234567". */
@@ -38,6 +39,16 @@ window.CQXPhone = {
     } catch {
       return ''
     }
+  },
+
+  /**
+   * E.164 a partir de lo que teclea el visitante y el país elegido. Es la misma
+   * función que usa el funnel: libphonenumber decide si los primeros dígitos son
+   * el prefijo del país o parte del número. A mano no se puede saber: un móvil
+   * cubano es "5X XXX XXX" y empieza justo por el 53 de Cuba.
+   */
+  construir(escrito, iso2, prefijo) {
+    return construirE164(escrito, iso2, String(prefijo || '').replace('+', ''))
   },
 
   /** Formatea mientras se escribe, con los grupos de dígitos propios del país. */
