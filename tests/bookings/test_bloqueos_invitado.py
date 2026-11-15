@@ -4,6 +4,9 @@ Bloqueo de invitados desde el admin.
 Se bloquea un email concreto (el resto de su proveedor sigue reservando) o un
 dominio entero. Quien está bloqueado no crea la reserva y sale redirigido a la
 URL global de `ConfigBloqueos`, o a la página propia si no hay ninguna.
+
+El bloqueo puede llevar además un teléfono (opcional): quien está bloqueado
+cambia de correo, pero casi nunca de número.
 """
 import json
 from unittest.mock import patch
@@ -80,6 +83,58 @@ class CoincidenciaTest(TestCase):
         BloqueoInvitado(tipo=DOMINIO, valor='@somoshackers').full_clean()
 
 
+class TelefonoTest(TestCase):
+    """El número cubano que destapó el caso: +53 5359 5535."""
+
+    TELEFONO = '+5353595535'
+
+    def test_bloquea_aunque_cambie_de_email(self):
+        bloquear(EMAIL, 'pepito@gmail.com', telefono=self.TELEFONO)
+        self.assertIsNotNone(buscar_bloqueo('otro@hotmail.com', '+53 53595535'))
+        self.assertIsNone(buscar_bloqueo('otro@hotmail.com', '+34 612345678'))
+        # El email sigue bloqueando sin teléfono.
+        self.assertIsNotNone(buscar_bloqueo('pepito@gmail.com', ''))
+
+    def test_da_igual_como_se_escriba_el_numero(self):
+        bloquear(EMAIL, '', telefono='+53 5359-5535')
+        for escrito in ('+5353595535', '+53 53595535', '+53 5359 5535', '0053 53595535'):
+            self.assertIsNotNone(buscar_bloqueo('a@b.com', escrito), escrito)
+
+    def test_se_guarda_normalizado(self):
+        self.assertEqual(bloquear(EMAIL, '', telefono=' +53 5359 5535 ').telefono, self.TELEFONO)
+
+    def test_movil_mexicano_con_el_1_antiguo_es_el_mismo(self):
+        bloquear(EMAIL, '', telefono='+52 1 55 1234 5678')
+        self.assertIsNotNone(buscar_bloqueo('a@b.com', '+525512345678'))
+
+    def test_solo_telefono_no_bloquea_a_todo_el_mundo(self):
+        bloquear(EMAIL, '', telefono=self.TELEFONO)
+        bloquear(DOMINIO, '', telefono='+34612345678')
+        self.assertIsNone(buscar_bloqueo('pepito@gmail.com', '+34 600123456'))
+        self.assertIsNone(buscar_bloqueo('pepito@gmail.com', ''))
+
+    def test_inactivo_no_bloquea_por_telefono(self):
+        bloquear(EMAIL, 'pepito@gmail.com', telefono=self.TELEFONO, activo=False)
+        self.assertIsNone(buscar_bloqueo('otro@hotmail.com', self.TELEFONO))
+
+    def test_validacion_del_admin(self):
+        # Nada que bloquear.
+        with self.assertRaises(ValidationError):
+            BloqueoInvitado(tipo=EMAIL, valor='', telefono='').full_clean()
+        # Sin prefijo de país no se sabe de dónde es.
+        with self.assertRaises(ValidationError):
+            BloqueoInvitado(tipo=EMAIL, valor='', telefono='53595535').full_clean()
+        b = BloqueoInvitado(tipo=EMAIL, valor='', telefono='+53 5359 5535')
+        b.full_clean()
+        self.assertEqual(b.telefono, self.TELEFONO)
+
+    def test_varios_bloqueos_solo_de_telefono(self):
+        # La unicidad de tipo+valor no puede chocar con los que no llevan email.
+        bloquear(EMAIL, '', telefono=self.TELEFONO)
+        bloquear(EMAIL, '', telefono='+34612345678')
+        self.assertEqual(BloqueoInvitado.objects.count(), 2)
+
+
 @patch('calendario.bookings.services.hay_conflicto_calendario', return_value=False)
 @patch('calendario.bookings.services.crear_evento_google')
 class ServicioTest(TestCase):
@@ -100,6 +155,16 @@ class ServicioTest(TestCase):
         bloquear(DOMINIO, 'somoshackers')
         with self.assertRaises(InvitadoBloqueadoError):
             self._reservar('loco@somoshackers.com')
+        self.assertFalse(Reserva.objects.exists())
+
+    def test_bloqueado_por_telefono_no_crea_la_reserva(self, *_):
+        bloquear(EMAIL, 'pepito@gmail.com', telefono='+5353595535')
+        with self.assertRaises(InvitadoBloqueadoError):
+            crear_reserva(
+                event_type=self.et, inicio_utc=slot_futuro(),
+                nombre_invitado=NOMBRE_INVITADO, email_invitado='otro@hotmail.com',
+                telefono_invitado='+53 53595535',
+            )
         self.assertFalse(Reserva.objects.exists())
 
     def test_reagendar_bloqueado_no_cancela_la_reserva_vieja(self, *_):
@@ -129,13 +194,23 @@ class VistaPublicaTest(TestCase):
             'user_slug': self.host.slug, 'event_type_slug': self.et.slug,
         })
 
-    def _post(self, email):
+    def _post(self, email, telefono='+34 600123456'):
         return self.client.post(self.url, {
             'inicio_utc': slot_futuro().isoformat(),
             'nombre_invitado': NOMBRE_INVITADO,
             'email_invitado': email,
-            'telefono_invitado': '+34 600123456',
+            'telefono_invitado': telefono,
         })
+
+    def test_otro_email_con_el_numero_bloqueado_no_reserva(self, *_):
+        bloqueo = bloquear(EMAIL, 'pepito@gmail.com', telefono='+34600123456')
+        resp = self._post('correo-nuevo@gmail.com', '+34 600123456')
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(resp.url.endswith(reverse('public_token:reserva_no_procesada')))
+        self.assertFalse(Reserva.objects.exists())
+        bloqueo.refresh_from_db()
+        self.assertEqual(bloqueo.intentos, 1)
 
     def test_sin_url_configurada_va_a_la_pagina_propia(self, *_):
         bloqueo = bloquear(EMAIL, 'pepito@gmail.com')
@@ -202,3 +277,18 @@ class FunnelTest(TestCase):
         self.assertFalse(Reserva.objects.exists())
         # El contador sobrevive a la transacción que deshace el intento.
         self.assertEqual(BloqueoInvitado.objects.get().intentos, 1)
+
+    def test_frena_por_telefono_con_otro_email(self, *_):
+        bloquear(EMAIL, 'pepito@gmail.com', telefono='+5353595535')
+        resp = self.client.post(self.url, data=json.dumps({
+            'prellamada_token': str(self.prellamada.token),
+            'inicio_utc': slot_futuro().isoformat(),
+            'tz': 'Europe/Madrid',
+            'nombre': 'Lead',
+            'email': 'loco@somoshackers.com',
+            'telefono': '+5353595535',
+        }), content_type='application/json')
+
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.json()['error'], 'bloqueado')
+        self.assertFalse(Reserva.objects.exists())
