@@ -339,20 +339,21 @@ class ConfigCorreoDefaultAdmin(admin.ModelAdmin):
 
 @admin.register(BloqueoInvitado)
 class BloqueoInvitadoAdmin(admin.ModelAdmin):
-    list_display = ('valor', 'tipo', 'activo', 'motivo', 'intentos', 'ultimo_intento', 'creado_en')
+    list_display = ('__str__', 'activo', 'motivo', 'intentos', 'ultimo_intento', 'creado_en')
     list_filter = ('tipo', 'activo')
     list_editable = ('activo',)
-    search_fields = ('valor', 'motivo')
+    search_fields = ('valor', 'telefono', 'motivo')
     readonly_fields = ('intentos', 'ultimo_intento', 'creado_en')
     fieldsets = (
         (None, {
             'description': (
-                'Quien reserve con un email o un dominio de esta lista no llega a crear la reserva: '
+                'Quien reserve con un email, un dominio o un teléfono de esta lista no llega a crear la reserva: '
                 'se le manda a la URL de la <a href="../configbloqueos/">configuración de bloqueos</a>. '
                 'Aplica a todas las páginas de reserva y a los funnels. '
+                'Si pones también el teléfono, se le frena aunque reserve con otro email. '
                 'Las reservas que ya tuviera hechas no se tocan.'
             ),
-            'fields': ('tipo', 'valor', 'motivo', 'activo'),
+            'fields': ('tipo', 'valor', 'telefono', 'motivo', 'activo'),
         }),
         ('Actividad', {
             'fields': ('intentos', 'ultimo_intento', 'creado_en'),
