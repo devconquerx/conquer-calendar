@@ -1361,13 +1361,28 @@ setTimeout(function () {
   }
 
   function syncHidden() {
+    /* Con el bundle cargado decide libphonenumber, igual que en el funnel. Antes
+       se quitaba a mano el prefijo del país si el número empezaba por él, y eso
+       mutilaba los números que empiezan por esos mismos dígitos: un móvil
+       cubano "53 59 55 35" con Cuba (+53) se quedaba en +53 595535 y no había
+       manera de reservar. */
+    if (window.CQXPhone && window.CQXPhone.construir) {
+      hiddenEl.value = numberEl.value.trim()
+        ? window.CQXPhone.construir(numberEl.value, selectedCode, selectedDial)
+        : '';
+      return;
+    }
+
     var num = numberEl.value.trim()
       .replace(/[\s\-().]/g, '');  // elimina separadores comunes
 
-    // Si el lead escribió el código de país en el campo (+34... ó 34...)
+    // Sin el bundle solo se quita el prefijo cuando viene con "+" explícito
+    // ("+34679…"): sin el "+", empezar por esos dígitos no prueba nada.
     var dialDigits = selectedDial.replace('+', ''); // "+34" → "34"
-    if (num.startsWith('+')) num = num.slice(1);    // "+34679..." → "34679..."
-    if (num.startsWith(dialDigits)) num = num.slice(dialDigits.length); // "34679..." → "679..."
+    if (num.startsWith('+')) {
+      num = num.slice(1);
+      if (num.startsWith(dialDigits)) num = num.slice(dialDigits.length);
+    }
 
     num = num.replace(/^0+/, ''); // quita el 0 de marcación nacional (0424… → 424…)
 
