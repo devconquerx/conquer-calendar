@@ -37,6 +37,13 @@ describe('lo que la gente escribe de verdad', () => {
     ['IT', '39', '3123456789', '+393123456789'],
     ['PT', '351', '912345678', '+351912345678'],
     ['GB', '44', '7400123456', '+447400123456'],
+    // Números que empiezan por los mismos dígitos que el prefijo de su país. La
+    // página de reserva quitaba ese "prefijo" a mano y los dejaba cortados.
+    ['CU', '53', '53595535', '+5353595535'],
+    ['CU', '53', '+53 53595535', '+5353595535'],
+    ['CU', '53', '5353595535', '+5353595535'],
+    ['KZ', '7', '7012345678', '+77012345678'],
+    ['BR', '55', '55991234567', '+5555991234567'],
   ]
   it.each(CASOS)('%s: "%s" → %s', (iso, code, escrito, esperado) => {
     expect(construir(escrito, iso, code)).toBe(esperado)
