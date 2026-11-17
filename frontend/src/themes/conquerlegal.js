@@ -232,7 +232,7 @@ export default {
     paso3SubtitleBlockMb: 'mb-7 md:mb-12',
     paso3Thumbnail: confThumb,
     paso3PlayIcon: confPlay,
-    paso3Video: 'https://youtu.be/70NzkcJa5oA',
+    paso3Video: 'https://www.youtube.com/watch?v=tPms_r9MV28',
     // Footer: logo CONQUER Legal centrado, móvil 125×39 (h39) / desktop 280×88 (h88),
     // padding 32px arriba/abajo, sobre paperboard tileado. Dos píxeles: cluster a la
     // derecha (px-lg-8, móvil 75px / desktop 100px, opacidad 0.2) y pequeño a la
