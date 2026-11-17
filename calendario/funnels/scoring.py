@@ -170,8 +170,12 @@ def resolver_outcome(funnel, respuestas, utm_campaign=''):
     score_ranges = config.get('score_ranges', []) or []
 
     # Campos promediados: country + primeras 6 preguntas (paridad con el
-    # original: avg sobre country_score + q1..q6).
-    campos = ['country'] + list(q_order[:6])
+    # original: avg sobre country_score + q1..q6). Con `score_sin_pais` el
+    # país no cuenta: el score es la media de las preguntas y nada más (Conquer
+    # Legal, desde el formulario de la VSL de optimización fiscal).
+    campos = list(q_order[:6])
+    if not config.get('score_sin_pais'):
+        campos = ['country'] + campos
     score = calcular_score(respuestas, scoring_config, campos=campos)
     promedio = score['promedio']
 
