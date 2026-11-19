@@ -1,5 +1,5 @@
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -286,6 +286,18 @@ class EventType(models.Model):
                   'en cuanto un día tiene dos reservas desaparecen sus horas.',
     )
 
+    # Días concretos en los que este evento no se ofrece, aunque los
+    # organizadores tengan horas libres (festivos, cierres de una convocatoria…).
+    # Es del evento, no de las personas: no toca los horarios ni el resto de sus
+    # eventos. Fechas ISO (AAAA-MM-DD) en la zona del dueño del evento, la misma
+    # que usa el límite de reservas del evento. Ver `dias_bloqueados`.
+    fechas_bloqueadas = models.JSONField(
+        default=list, blank=True,
+        verbose_name='Días bloqueados',
+        help_text='Fechas AAAA-MM-DD en las que este evento no ofrece horas, aunque los '
+                  'organizadores estén disponibles. Cuentan en la zona del dueño del evento.',
+    )
+
     mostrar_caja_comentarios = models.BooleanField(
         default=True,
         verbose_name='Caja de comentarios',
@@ -433,6 +445,19 @@ class EventType(models.Model):
     @property
     def tiene_limite_evento(self):
         return bool(self.limite_evento and self.limite_evento_dias)
+
+    @property
+    def dias_bloqueados(self):
+        """Los días bloqueados como fechas. Ignora lo que no sea una fecha
+        válida: un valor roto metido a mano en el admin no puede tumbar el
+        cálculo de huecos."""
+        dias = set()
+        for valor in self.fechas_bloqueadas or []:
+            try:
+                dias.add(date.fromisoformat(str(valor)))
+            except ValueError:
+                continue
+        return dias
 
     @property
     def solo_alumnos(self):
