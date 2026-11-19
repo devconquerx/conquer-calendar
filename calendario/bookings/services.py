@@ -448,7 +448,8 @@ def calcular_slots(event_type, fecha_desde, fecha_hasta):
             ]
             for f in futuros:
                 slots_set.update(f.result())
-    return _quitar_dias_llenos(event_type, sorted(slots_set))
+    slots = _quitar_dias_bloqueados(event_type, sorted(slots_set))
+    return _quitar_dias_llenos(event_type, slots)
 
 
 _SLOTS_TTL = 45
@@ -992,6 +993,24 @@ def _quitar_dias_llenos(event_type, slots):
     tz = ZoneInfo(event_type.host.timezone)
     llenos = dias_llenos_evento(event_type, {s.astimezone(tz).date() for s in slots})
     return [s for s in slots if s.astimezone(tz).date() not in llenos]
+
+
+def _dia_del_evento(event_type, inicio_utc):
+    """La fecha de `inicio_utc` en la zona del dueño del evento, que es en la
+    que se leen los días bloqueados y el límite de reservas del evento."""
+    return inicio_utc.astimezone(ZoneInfo(event_type.host.timezone)).date()
+
+
+def _quitar_dias_bloqueados(event_type, slots):
+    """Quita los slots de los días que el evento tiene bloqueados.
+
+    Va sobre la unión de todo el pool, después de los horarios: un día bloqueado
+    no se ofrece aunque algún organizador tenga horas libres.
+    """
+    bloqueados = event_type.dias_bloqueados
+    if not bloqueados or not slots:
+        return slots
+    return [s for s in slots if _dia_del_evento(event_type, s) not in bloqueados]
 
 
 def _comprobar_bloqueo(email_invitado, telefono_invitado=''):
