@@ -15,6 +15,7 @@ from django.utils import timezone
 from calendario.bookings.exceptions import SlotNoDisponibleError
 from calendario.bookings.models import Reserva
 from calendario.bookings.services import calcular_slots, crear_reserva
+from calendario.event_types.forms import EventTypeForm
 from tests.factories import NOMBRE_INVITADO, crear_disponibilidad, crear_event_type, crear_host
 
 
@@ -72,3 +73,58 @@ class DiasBloqueadosTest(TestCase):
         self.et.save()
         self.assertEqual(self._slots(self.dia), [])
         self.assertTrue(self._slots(self.dia + timedelta(days=1)))
+
+
+class FormularioDiasBloqueadosTest(TestCase):
+
+    def _datos(self, **extra):
+        datos = dict(
+            nombre='Defensas', duracion_minutos=30, incremento_inicio_minutos=30,
+            aviso_minimo_minutos=0, aviso_maximo_dias=60, confirmacion_tipo='default',
+            crm_destino='none',
+        )
+        datos.update(extra)
+        return datos
+
+    def _form(self, instance=None, **extra):
+        form = EventTypeForm(data=self._datos(**extra), instance=instance)
+        if instance is None:
+            form.instance.host = crear_host()
+        return form
+
+    def test_guarda_las_fechas_ordenadas_y_sin_repetir(self):
+        form = self._form(fechas_bloqueadas='2026-12-25, 2026-12-24,2026-12-25,')
+        self.assertTrue(form.is_valid(), form.errors)
+        et = form.save()
+        self.assertEqual(et.fechas_bloqueadas, ['2026-12-24', '2026-12-25'])
+
+    def test_vacio_desbloquea_todo(self):
+        form = self._form(fechas_bloqueadas='2026-12-25')
+        self.assertTrue(form.is_valid(), form.errors)
+        et = form.save()
+        form = self._form(instance=et, fechas_bloqueadas='')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().fechas_bloqueadas, [])
+
+    def test_si_el_post_no_trae_el_campo_se_conservan(self):
+        # Hay pantallas que guardan el evento con solo una parte del formulario.
+        form = self._form(fechas_bloqueadas='2026-12-25')
+        self.assertTrue(form.is_valid(), form.errors)
+        et = form.save()
+        form = self._form(instance=et)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().fechas_bloqueadas, ['2026-12-25'])
+
+    def test_una_fecha_mal_escrita_no_se_guarda(self):
+        form = self._form(fechas_bloqueadas='2026-12-25,25/12/2026')
+        self.assertFalse(form.is_valid())
+        self.assertIn('fechas_bloqueadas', form.errors)
+
+    def test_el_formulario_sin_enviar_trae_las_fechas_del_evento(self):
+        form = self._form(fechas_bloqueadas='2026-12-31,2026-12-25')
+        self.assertTrue(form.is_valid(), form.errors)
+        et = form.save()
+        self.assertEqual(
+            EventTypeForm(instance=et)['fechas_bloqueadas'].value(),
+            '2026-12-25,2026-12-31',
+        )

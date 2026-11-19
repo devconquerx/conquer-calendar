@@ -1,3 +1,5 @@
+from datetime import date
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
@@ -76,6 +78,13 @@ class EventTypeForm(forms.ModelForm):
         required=False,
         label='Evento de equipo',
     )
+    # Los días bloqueados del evento, como fechas AAAA-MM-DD separadas por comas.
+    # Lo rellena el calendario de la sección «Días bloqueados».
+    fechas_bloqueadas = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput,
+        label='Días bloqueados',
+    )
     hosts = forms.ModelMultipleChoiceField(
         queryset=_hosts_queryset(),
         required=False,
@@ -138,6 +147,10 @@ class EventTypeForm(forms.ModelForm):
             self.fields['rango_por_fechas'].initial = (
                 self.instance.rango_tipo == EventType.RANGO_FECHAS
             )
+        if not self.is_bound:
+            self.fields['fechas_bloqueadas'].initial = ','.join(
+                sorted(d.isoformat() for d in self.instance.dias_bloqueados)
+            )
         if self.instance.pk and self.instance.slug_equipo:
             self.fields['es_equipo'].initial = True
             if not self.is_bound:
@@ -172,6 +185,31 @@ class EventTypeForm(forms.ModelForm):
         """
         v = self.cleaned_data.get('acceso')
         return v or self.instance.acceso or EventType.ACCESO_PUBLICO
+
+    def clean_fechas_bloqueadas(self):
+        """Valida las fechas y las deja ordenadas y sin repetir.
+
+        Si el POST no trae el campo, se conservan las que tenía el evento:
+        no todas las vistas reenvían el formulario entero, y un guardado desde
+        otra pantalla no puede desbloquear los días de rebote.
+        """
+        if self.add_prefix('fechas_bloqueadas') not in self.data:
+            return list(self.instance.fechas_bloqueadas or [])
+        crudo = self.cleaned_data.get('fechas_bloqueadas') or ''
+        fechas = set()
+        for trozo in crudo.split(','):
+            trozo = trozo.strip()
+            if not trozo:
+                continue
+            try:
+                fechas.add(date.fromisoformat(trozo))
+            except ValueError:
+                raise forms.ValidationError(f'«{trozo}» no es una fecha válida.')
+        return [d.isoformat() for d in sorted(fechas)]
+
+    def save(self, commit=True):
+        self.instance.fechas_bloqueadas = self.cleaned_data['fechas_bloqueadas']
+        return super().save(commit=commit)
 
     def clean(self):
         """Traduce el checkbox del formulario al modo que guarda el modelo.
