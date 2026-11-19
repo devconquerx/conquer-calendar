@@ -94,6 +94,43 @@
   /* Excluido (prioridad 0): sigue en la lista, pero se ve que no está jugando. */
   .hosts-chip.is-excluido { opacity: .55; }
   .prioridad-fila.is-excluido .prioridad-nombre { text-decoration: line-through; }
+
+  /* Días bloqueados: el mismo calendario que el de vacaciones de Disponibilidad */
+  .fb-wrap { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .fb-cal { width: 280px; max-width: 100%; }
+  .fb-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .fb-cal-month { font-size: 14px; font-weight: 600; color: var(--bs-gray-900); text-transform: capitalize; }
+  .fb-cal-nav {
+    background: none; border: none; color: var(--cx-acento); cursor: pointer;
+    padding: 4px 6px; font-size: 15px; border-radius: 6px;
+  }
+  .fb-cal-nav:hover { background: var(--cx-acento-seleccion); }
+  .fb-cal-nav:disabled { color: var(--bs-gray-300); cursor: default; background: none; }
+  .fb-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; user-select: none; }
+  .fb-cal-dow {
+    text-align: center; font-size: 11px; font-weight: 600; color: var(--bs-gray-500);
+    padding: 4px 0; text-transform: uppercase;
+  }
+  .fb-cal-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--bs-gray-800); border-radius: 50%; cursor: pointer;
+    border: none; background: none; transition: background .12s; touch-action: none;
+  }
+  .fb-cal-day:hover:not(:disabled):not(.sel) { background: var(--cx-acento-seleccion); }
+  .fb-cal-day:disabled { color: var(--bs-gray-300); cursor: default; }
+  .fb-cal-day.empty { cursor: default; }
+  .fb-cal-day.sel { background: #f1416c; color: #fff; font-weight: 600; }
+  .fb-lista { flex: 1; min-width: 200px; }
+  .fb-chip {
+    display: inline-flex; align-items: center; gap: .35rem; margin: 0 6px 6px 0;
+    background: var(--bs-gray-100); border-radius: 999px; padding: .3rem .4rem .3rem .75rem;
+    font-size: 12px; color: var(--bs-gray-800);
+  }
+  .fb-chip button {
+    border: none; background: transparent; padding: 0 .25rem; line-height: 1;
+    color: var(--bs-gray-600); cursor: pointer;
+  }
+  .fb-chip button:hover { color: #f1416c; }
 </style>
 {% endblock css %}
 
@@ -593,6 +630,47 @@
                 </div>
             </div>
             <!--end::Al reservar-->
+
+            <!--begin::Días bloqueados-->
+            <div class="u-seccion">
+                <div class="u-seccion-head">
+                    <span class="u-seccion-num">5</span>
+                    <div>
+                        <div class="fw-semibold text-gray-900">Días bloqueados</div>
+                        <div class="text-muted fs-8">Días en los que este evento no se puede reservar.</div>
+                    </div>
+                </div>
+                <div class="u-seccion-body">
+                    <div class="fb-wrap">
+                        <div class="fb-cal">
+                            <div class="fb-cal-head">
+                                <span class="fb-cal-month" id="fb-month"></span>
+                                <span>
+                                    <button type="button" class="fb-cal-nav" id="fb-prev" title="Mes anterior">&lsaquo;</button>
+                                    <button type="button" class="fb-cal-nav" id="fb-next" title="Mes siguiente">&rsaquo;</button>
+                                </span>
+                            </div>
+                            <div class="fb-cal-grid" id="fb-grid"></div>
+                        </div>
+                        <div class="fb-lista">
+                            <div class="fw-semibold fs-7 text-gray-900 mb-2" id="fb-count"></div>
+                            <div id="fb-chips"></div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="fechas_bloqueadas" id="fb-input"
+                           value="{{ form.fechas_bloqueadas.value|default:'' }}" />
+                    <div class="text-muted fs-8 mt-3">
+                        Haz clic en un día para bloquearlo, o arrastra para coger varios seguidos. Esos días no se
+                        ofrecen horas aunque los organizadores estén disponibles, y no cambia nada de sus horarios
+                        ni de sus otros eventos. Las reservas que ya existan en esos días se mantienen. Se cuentan
+                        en la zona horaria de quien creó el evento. Se aplica al pulsar <b>Guardar</b>.
+                    </div>
+                    {% if form.fechas_bloqueadas.errors %}
+                    <div class="text-danger fs-8 mt-1">{{ form.fechas_bloqueadas.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <!--end::Días bloqueados-->
 
 
         </div>
@@ -1446,5 +1524,190 @@ por debajo de la cabecera. Sus inputs no llevan name, así que no se envían.
 })();
 </script>
 
+
+<script>
+// Días bloqueados del evento. El estado vive en el input oculto `fechas_bloqueadas`
+// (AAAA-MM-DD separados por comas), que se envía con el resto del formulario.
+(function () {
+  var input = document.getElementById('fb-input');
+  var grid = document.getElementById('fb-grid');
+  if (!input || !grid) return;
+  var monthLabel = document.getElementById('fb-month');
+  var prevBtn = document.getElementById('fb-prev');
+  var nextBtn = document.getElementById('fb-next');
+  var countEl = document.getElementById('fb-count');
+  var chipsEl = document.getElementById('fb-chips');
+  var soloLectura = {% if readonly %}true{% else %}false{% endif %};
+
+  var DOW = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function iso(y, m, d) { return y + '-' + pad(m + 1) + '-' + pad(d); }
+  function aFecha(k) { var p = k.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  var hoyIso = iso(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+
+  var seleccion = {};
+  input.value.split(',').forEach(function (k) { k = k.trim(); if (k) seleccion[k] = true; });
+
+  // Arranca en el mes del primer día bloqueado pendiente, o en el actual.
+  var futuros = Object.keys(seleccion).filter(function (k) { return k >= hoyIso; }).sort();
+  var inicio = futuros.length ? aFecha(futuros[0]) : hoy;
+  var verAnio = inicio.getFullYear(), verMes = inicio.getMonth();
+
+  var arrastrando = false, ancla = null, valorDrag = true, base = {};
+
+  function guardar() {
+    input.value = Object.keys(seleccion).sort().join(',');
+    pintarLista();
+  }
+
+  function repintar() {
+    var celdas = grid.querySelectorAll('.fb-cal-day[data-iso]');
+    for (var i = 0; i < celdas.length; i++) {
+      celdas[i].classList.toggle('sel', !!seleccion[celdas[i].dataset.iso]);
+    }
+  }
+
+  function aplicarTramo(destino) {
+    var a = ancla < destino ? ancla : destino;
+    var b = ancla < destino ? destino : ancla;
+    seleccion = {};
+    for (var k in base) seleccion[k] = true;
+    var celdas = grid.querySelectorAll('.fb-cal-day[data-iso]');
+    for (var i = 0; i < celdas.length; i++) {
+      var c = celdas[i].dataset.iso;
+      if (c < a || c > b) continue;
+      if (valorDrag) seleccion[c] = true; else delete seleccion[c];
+    }
+    repintar();
+    guardar();
+  }
+
+  function pintarCal() {
+    monthLabel.textContent = new Date(verAnio, verMes, 1)
+      .toLocaleDateString('es', { month: 'long', year: 'numeric' });
+    prevBtn.disabled = verAnio === hoy.getFullYear() && verMes === hoy.getMonth();
+    grid.innerHTML = '';
+    DOW.forEach(function (d) {
+      var h = document.createElement('div');
+      h.className = 'fb-cal-dow';
+      h.textContent = d;
+      grid.appendChild(h);
+    });
+    var offset = (new Date(verAnio, verMes, 1).getDay() + 6) % 7;  // lunes primero
+    var diasMes = new Date(verAnio, verMes + 1, 0).getDate();
+    for (var i = 0; i < offset; i++) {
+      var hueco = document.createElement('div');
+      hueco.className = 'fb-cal-day empty';
+      grid.appendChild(hueco);
+    }
+    for (var d = 1; d <= diasMes; d++) {
+      var k = iso(verAnio, verMes, d);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'fb-cal-day' + (seleccion[k] ? ' sel' : '');
+      btn.textContent = d;
+      if (k < hoyIso || soloLectura) {
+        btn.disabled = true;
+      } else {
+        btn.dataset.iso = k;
+        btn.addEventListener('pointerdown', function (e) {
+          e.preventDefault();
+          arrastrando = true;
+          ancla = this.dataset.iso;
+          valorDrag = !seleccion[ancla];
+          base = {};
+          for (var s in seleccion) base[s] = true;
+          aplicarTramo(ancla);
+        });
+        btn.addEventListener('pointerenter', function (e) {
+          if (arrastrando && e.buttons === 0) arrastrando = false;
+          if (arrastrando) aplicarTramo(this.dataset.iso);
+        });
+      }
+      grid.appendChild(btn);
+    }
+  }
+
+  // En móvil el puntero no "entra" en otras celdas al arrastrar: se busca la
+  // celda que hay debajo del dedo.
+  grid.addEventListener('pointermove', function (e) {
+    if (!arrastrando || e.pointerType === 'mouse') return;
+    var el = document.elementFromPoint(e.clientX, e.clientY);
+    if (el && el.dataset && el.dataset.iso) aplicarTramo(el.dataset.iso);
+  });
+  document.addEventListener('pointerup', function () { arrastrando = false; });
+
+  function formatear(k, conAnio) {
+    return aFecha(k).toLocaleDateString('es', conAnio
+      ? { day: 'numeric', month: 'short', year: 'numeric' }
+      : { day: 'numeric', month: 'short' });
+  }
+
+  // Agrupa los días seguidos en tramos: «24 dic – 1 ene 2027».
+  function tramos() {
+    var dias = Object.keys(seleccion).filter(function (k) { return k >= hoyIso; }).sort();
+    var res = [];
+    dias.forEach(function (k) {
+      var ult = res[res.length - 1];
+      if (ult) {
+        var sig = aFecha(ult.fin); sig.setDate(sig.getDate() + 1);
+        if (iso(sig.getFullYear(), sig.getMonth(), sig.getDate()) === k) { ult.fin = k; ult.dias.push(k); return; }
+      }
+      res.push({ ini: k, fin: k, dias: [k] });
+    });
+    return res;
+  }
+
+  function pintarLista() {
+    var t = tramos();
+    var n = t.reduce(function (acc, x) { return acc + x.dias.length; }, 0);
+    countEl.textContent = n
+      ? n + (n === 1 ? ' día bloqueado' : ' días bloqueados')
+      : 'Ningún día bloqueado.';
+    chipsEl.innerHTML = '';
+    t.forEach(function (x) {
+      var chip = document.createElement('span');
+      chip.className = 'fb-chip';
+      var texto = x.ini === x.fin
+        ? formatear(x.ini, true)
+        : formatear(x.ini, x.ini.slice(0, 4) !== x.fin.slice(0, 4)) + ' – ' + formatear(x.fin, true);
+      chip.appendChild(document.createTextNode(texto));
+      if (!soloLectura) {
+        var quitar = document.createElement('button');
+        quitar.type = 'button';
+        quitar.title = 'Desbloquear';
+        quitar.innerHTML = '<i class="bi bi-x-lg"></i>';
+        quitar.addEventListener('click', function () {
+          x.dias.forEach(function (k) { delete seleccion[k]; });
+          guardar();
+          repintar();
+        });
+        chip.appendChild(quitar);
+      }
+      chip.addEventListener('click', function (e) {
+        if (e.target.closest('button')) return;
+        var f = aFecha(x.ini);
+        verAnio = f.getFullYear(); verMes = f.getMonth();
+        pintarCal();
+      });
+      chip.style.cursor = 'pointer';
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  prevBtn.addEventListener('click', function () {
+    verMes--; if (verMes < 0) { verMes = 11; verAnio--; }
+    pintarCal();
+  });
+  nextBtn.addEventListener('click', function () {
+    verMes++; if (verMes > 11) { verMes = 0; verAnio++; }
+    pintarCal();
+  });
+
+  pintarCal();
+  pintarLista();
+})();
+</script>
 
 {% endblock content %}

@@ -128,3 +128,40 @@ class FormularioDiasBloqueadosTest(TestCase):
             EventTypeForm(instance=et)['fechas_bloqueadas'].value(),
             '2026-12-25,2026-12-31',
         )
+
+
+class PanelDiasBloqueadosTest(TestCase):
+    """La sección «Días bloqueados» de la página de configuración del evento."""
+
+    def setUp(self):
+        from django.urls import reverse
+        from calendario.users.models import User
+        self.admin = User.objects.create_user(
+            email='bloqueados.admin@test.com', username='bloqueados_admin',
+            password='test1234', is_active=True, is_superuser=True,
+        )
+        self.et = crear_event_type(self.admin, nombre='Defensas')
+        self.url = reverse('panel_event_types:event_type_update', args=[self.et.pk])
+        self.client.force_login(self.admin)
+
+    def test_la_pagina_pinta_los_dias_guardados(self):
+        self.et.fechas_bloqueadas = ['2026-12-25']
+        self.et.save()
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Días bloqueados')
+        self.assertContains(resp, 'name="fechas_bloqueadas" id="fb-input"')
+        self.assertContains(resp, 'value="2026-12-25"')
+
+    def test_guardar_desde_el_panel(self):
+        self.client.post(self.url, {
+            'nombre': 'Defensas', 'descripcion': '', 'duracion_minutos': 30,
+            'incremento_inicio_minutos': 30, 'buffer_antes_minutos': 0,
+            'buffer_despues_minutos': 0, 'aviso_minimo_minutos': 0,
+            'aviso_maximo_dias': 60, 'crm_destino': 'none',
+            'confirmacion_tipo': 'default', 'confirmacion_url': '',
+            'gcal_palabras_ignorar': '', 'activo': 'on',
+            'fechas_bloqueadas': '2026-12-24,2026-12-25',
+        })
+        self.et.refresh_from_db()
+        self.assertEqual(self.et.fechas_bloqueadas, ['2026-12-24', '2026-12-25'])
