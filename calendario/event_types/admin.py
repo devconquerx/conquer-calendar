@@ -17,7 +17,7 @@ class EventTypeAdmin(admin.ModelAdmin):
               'aviso_maximo_dias', 'precio', 'activo', 'crm_destino',
               'registrar_en_academia', 'academia_lms_id',
               'unico_por_invitado', 'limite_reservas', 'limite_reservas_dias', 'limite_cancelacion_horas',
-              'limite_evento', 'limite_evento_dias',
+              'limite_evento', 'limite_evento_dias', 'fechas_bloqueadas',
               'sms_activo', 'sms_mensaje', 'sms_usar_horas_correo',
               'sms_recordatorio_1_horas', 'sms_recordatorio_2_horas',
               'confirmacion_tipo', 'confirmacion_url')
