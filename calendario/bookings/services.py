@@ -1094,8 +1094,13 @@ def crear_reserva(event_type, inicio_utc, nombre_invitado, email_invitado,
         # calendario se pintó antes y otra persona pudo llevarse el último hueco
         # entre medias; el lock de arriba serializa esta cuenta con su reserva.
         # Al reagendar la vieja ya está cancelada, así que no ocupa cupo.
-        tz_et = ZoneInfo(et.host.timezone)
-        if dias_llenos_evento(et, [inicio_utc.astimezone(tz_et).date()]):
+        dia = _dia_del_evento(et, inicio_utc)
+        if dias_llenos_evento(et, [dia]):
+            raise SlotNoDisponibleError("Ese slot ya no está disponible.")
+
+        # Un día bloqueado ya no se ofrece, pero la página pudo pintarse antes
+        # de bloquearlo, o el POST llegar a mano con una hora de ese día.
+        if dia in et.dias_bloqueados:
             raise SlotNoDisponibleError("Ese slot ya no está disponible.")
 
         candidatos = _candidatos_para_slot(et, inicio_utc)

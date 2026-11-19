@@ -12,7 +12,9 @@ from zoneinfo import ZoneInfo
 from django.test import TestCase
 from django.utils import timezone
 
-from calendario.bookings.services import calcular_slots
+from calendario.bookings.exceptions import SlotNoDisponibleError
+from calendario.bookings.models import Reserva
+from calendario.bookings.services import calcular_slots, crear_reserva
 from tests.factories import NOMBRE_INVITADO, crear_disponibilidad, crear_event_type, crear_host
 
 
@@ -54,6 +56,16 @@ class DiasBloqueadosTest(TestCase):
         otro = crear_event_type(self.host, nombre='Otro evento')
         self._bloquear(self.dia)
         self.assertTrue(calcular_slots(otro, self.dia, self.dia))
+
+    def test_reservar_en_un_dia_bloqueado_se_rechaza(self, *_):
+        hora = self._slots(self.dia)[0]
+        self._bloquear(self.dia)
+        with self.assertRaises(SlotNoDisponibleError):
+            crear_reserva(
+                event_type=self.et, inicio_utc=hora,
+                nombre_invitado=NOMBRE_INVITADO, email_invitado='invitado@test.com',
+            )
+        self.assertFalse(Reserva.objects.exists())
 
     def test_una_fecha_rota_no_tumba_el_calculo(self, *_):
         self.et.fechas_bloqueadas = ['no-es-fecha', self.dia.isoformat()]
