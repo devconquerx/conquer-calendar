@@ -286,9 +286,13 @@ function StepBadge({ children, icon, big, texture, padClass, sizeClass, weightCl
   // Por defecto el badge no parte línea; con `wrap` (p.ej. badges largos en móvil)
   // se permite que envuelva, centrado, como en producción.
   const wrapCls = wrap ? 'text-center' : 'whitespace-nowrap'
+  // El fondo del badge sale de la textura de papel. La variante de fondo blanco
+  // la anula, y sin fondo propio el badge quedaba transparente: en la sección
+  // negra del Paso 1 el texto negro no se veía. Sin textura, papel blanco liso.
+  const bgCls = texture ? '' : ' bg-white'
   return (
     <div
-      className={`relative inline-flex items-center gap-3 ${pad} border border-[#BBB49B] ${cardShadow} overflow-hidden`}
+      className={`relative inline-flex items-center gap-3 ${pad} border border-[#BBB49B] ${cardShadow} overflow-hidden${bgCls}`}
     >
       <div
         className="absolute inset-0 pointer-events-none"
