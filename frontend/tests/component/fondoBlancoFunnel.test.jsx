@@ -112,6 +112,15 @@ describe('A/B de fondo blanco en todo el funnel', () => {
       expect(container.innerHTML).not.toContain('bg-[#F5EDE3]')
       expect(estilosDe(container)).not.toContain('url(null)')
     })
+
+    // Sin textura el badge quedaba transparente: texto negro sobre la sección
+    // negra del Paso 1 y del Paso 3, ilegible.
+    it('con la variante blanca los badges de los pasos tienen fondo propio', () => {
+      const { getByText } = montarConfirmacion(BLANCO)
+      for (const paso of [/^Paso 1/i, /^Paso 2/i, /^Paso 3/i]) {
+        expect(getByText(paso).parentElement.className).toContain('bg-white')
+      }
+    })
   })
 
   describe('stepform', () => {
