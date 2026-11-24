@@ -123,8 +123,13 @@ class PayloadSesionTest(TestCase):
         self.assertEqual(set(payload), {
             'reservationId', 'status', 'academyId',
             'professorEmail', 'studentLmsId', 'studentEmail',
-            'eventTypeName', 'startsAt', 'endsAt', 'rescheduled',
+            'eventTypeName', 'startsAt', 'endsAt', 'rescheduled', 'manageToken',
         })
+
+    def test_lleva_el_token_de_las_paginas_publicas(self):
+        reserva = self._reserva()
+        payload = academia.construir_payload(reserva)
+        self.assertEqual(payload['manageToken'], str(reserva.confirmacion_token))
 
     def test_envio_va_al_endpoint_con_la_clave(self):
         reserva = self._reserva()

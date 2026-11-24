@@ -158,6 +158,10 @@ def construir_payload(reserva):
         # Si la cancelación fue por reagendar. Va porque la ficha del alumno en la
         # academia separa la clase cancelada de la que solo cambió de hora.
         'rescheduled': _reagendada(reserva),
+        # La llave de las páginas públicas de la reserva (`/r/<token>/cancelar/` y
+        # `/r/<token>/reagendar/`). Va para que el alumno pueda cancelar o
+        # reagendar su próxima clase desde la academia sin buscar el correo.
+        'manageToken': str(reserva.confirmacion_token),
     }
 
 
