@@ -39,7 +39,7 @@ const MARCAS = {
     pesoTexto: 500,
     fondo: { background: '#F3F1EC' },
     regalo: { color: '#FF7A00' },
-    boton: { background: '#FF7A00', borderRadius: 6 },
+    boton: { background: '#FF7A00', borderRadius: 12 },
     cuadros: CB_CUADROS,
   },
   conquerfinance: {
@@ -60,7 +60,7 @@ const MARCAS = {
       backgroundClip: 'text',
       color: 'transparent',
     },
-    boton: { background: 'linear-gradient(90deg,#AED916,#3AC043)', borderRadius: 6 },
+    boton: { background: 'linear-gradient(90deg,#AED916,#3AC043)', borderRadius: 12 },
   },
   conquerlanguages: {
     nombre: 'Conquer Languages',
@@ -74,7 +74,7 @@ const MARCAS = {
         'radial-gradient(circle at 100% 0%, rgba(112,179,196,0.16), transparent 32%), radial-gradient(circle at 0% 100%, rgba(112,179,196,0.20), transparent 30%), radial-gradient(circle at 15% 25%, rgba(112,179,196,0.07), transparent 35%)',
     },
     regalo: { color: '#4A86A0' },
-    boton: { background: '#5A92AC', borderRadius: 24 },
+    boton: { background: '#5A92AC', borderRadius: 999 },
   },
 }
 
@@ -91,7 +91,7 @@ export function isVistaPrevia(search) {
   return new URLSearchParams(search || '').get('vista_previa') === '1'
 }
 
-const TAMANO = 'clamp(19px, 5vw, 32px)'
+const TAMANO = 'clamp(19px, 5.4vw, 58px)'
 
 export default function WhatsappConfirmation({ themeId }) {
   const m = MARCAS[themeId]
@@ -125,17 +125,17 @@ export default function WhatsappConfirmation({ themeId }) {
         style={{
           position: 'relative',
           width: '100%',
-          maxWidth: 640,
+          maxWidth: 1100,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           textAlign: 'center',
         }}
       >
-        <img src={m.logo} alt={m.nombre} style={{ width: 150, height: 'auto' }} />
+        <img src={m.logo} alt={m.nombre} style={{ width: 'clamp(150px, 20vw, 280px)', height: 'auto' }} />
         <h1
           style={{
-            margin: '30px 0 0',
+            margin: 'clamp(28px, 4vw, 52px) 0 0',
             fontWeight: m.pesoTitulo,
             fontSize: TAMANO,
             lineHeight: 1.12,
@@ -165,26 +165,26 @@ export default function WhatsappConfirmation({ themeId }) {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            marginTop: 26,
+            marginTop: 'clamp(26px, 3.5vw, 48px)',
             width: '100%',
-            maxWidth: 282,
-            minHeight: 46,
-            padding: '0 16px',
+            maxWidth: 520,
+            minHeight: 'clamp(52px, 6vw, 84px)',
+            padding: '0 24px',
             boxSizing: 'border-box',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10,
+            gap: 14,
             color: '#FFFFFF',
             textDecoration: 'none',
             fontWeight: 700,
-            fontSize: 14,
+            fontSize: 'clamp(16px, 1.9vw, 24px)',
             ...m.boton,
           }}
         >
           <svg
-            width="18"
-            height="18"
+            width="1.25em"
+            height="1.25em"
             viewBox="0 0 24 24"
             fill="none"
             stroke="#FFFFFF"
