@@ -1,0 +1,203 @@
+import logoBlocks from '../assets/img/cb/logo-horizontal-negro.png'
+import logoFinance from '../assets/img/finance/logo.svg'
+import logoLanguages from '../assets/img/languages/logo.svg'
+
+// Página de confirmación para los leads de un closer sin setter (LATAM): en vez
+// de la confirmación de siempre se les pide confirmar la llamada por WhatsApp.
+// El backend lo decide al reservar (funnels/autosetter.py) y Funnel.jsx lo pasa
+// a esta etapa con `?confirmar=whatsapp`.
+
+// Canal de WhatsApp de Respond.io, el mismo para todas las formaciones.
+export const WHATSAPP_URL = 'https://wa.me/34602407862'
+
+// Cuadrados decorativos de Blocks: [lado, top/bottom, left/right, color].
+const CB_CLARO = '#F8DCC2'
+const CB_FUERTE = '#F7AE6E'
+const CB_CUADROS = [
+  { s: 23, top: 36, left: 26, c: CB_FUERTE },
+  { s: 23, top: 36, left: 90, c: CB_CLARO },
+  { s: 23, top: 72, left: 26, c: CB_CLARO },
+  { s: 23, top: 72, left: 155, c: CB_FUERTE },
+  { s: 23, top: 108, left: 90, c: CB_CLARO },
+  { s: 15, top: 60, right: 76, c: CB_FUERTE },
+  { s: 15, top: 84, right: 128, c: CB_CLARO },
+  { s: 23, bottom: 230, right: 38, c: CB_FUERTE },
+  { s: 23, bottom: 230, right: 102, c: CB_CLARO },
+  { s: 23, bottom: 194, right: 166, c: CB_FUERTE },
+  { s: 23, bottom: 194, right: 38, c: CB_CLARO },
+  { s: 23, bottom: 158, right: 102, c: CB_CLARO },
+  { s: 15, bottom: 100, left: 52, c: CB_FUERTE },
+  { s: 15, bottom: 76, left: 104, c: CB_CLARO },
+]
+
+const MARCAS = {
+  conquerblocks: {
+    nombre: 'Conquer Blocks',
+    logo: logoBlocks,
+    fuente: "'Termina', sans-serif",
+    pesoTitulo: 700,
+    pesoTexto: 500,
+    fondo: { background: '#F3F1EC' },
+    regalo: { color: '#FF7A00' },
+    boton: { background: '#FF7A00', borderRadius: 6 },
+    cuadros: CB_CUADROS,
+  },
+  conquerfinance: {
+    nombre: 'Conquer Finance',
+    logo: logoFinance,
+    fuente: "'Termina', sans-serif",
+    pesoTitulo: 700,
+    pesoTexto: 500,
+    fondo: {
+      backgroundColor: '#F2F1EC',
+      backgroundImage:
+        'linear-gradient(rgba(0,0,0,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.045) 1px, transparent 1px)',
+      backgroundSize: '24px 24px',
+    },
+    regalo: {
+      background: 'linear-gradient(90deg,#AED916,#3AC043)',
+      WebkitBackgroundClip: 'text',
+      backgroundClip: 'text',
+      color: 'transparent',
+    },
+    boton: { background: 'linear-gradient(90deg,#AED916,#3AC043)', borderRadius: 6 },
+  },
+  conquerlanguages: {
+    nombre: 'Conquer Languages',
+    logo: logoLanguages,
+    fuente: 'Inter, sans-serif',
+    pesoTitulo: 800,
+    pesoTexto: 400,
+    fondo: {
+      backgroundColor: '#FFFFFF',
+      backgroundImage:
+        'radial-gradient(circle at 100% 0%, rgba(112,179,196,0.16), transparent 32%), radial-gradient(circle at 0% 100%, rgba(112,179,196,0.20), transparent 30%), radial-gradient(circle at 15% 25%, rgba(112,179,196,0.07), transparent 35%)',
+    },
+    regalo: { color: '#4A86A0' },
+    boton: { background: '#5A92AC', borderRadius: 24 },
+  },
+}
+
+export function whatsappBrand(themeId) {
+  return MARCAS[themeId] || null
+}
+
+export function isWhatsappRequested(search) {
+  return new URLSearchParams(search || '').get('confirmar') === 'whatsapp'
+}
+
+// `?vista_previa=1`: la página se puede ver sin disparar el evento Schedule.
+export function isVistaPrevia(search) {
+  return new URLSearchParams(search || '').get('vista_previa') === '1'
+}
+
+const TAMANO = 'clamp(19px, 5vw, 32px)'
+
+export default function WhatsappConfirmation({ themeId }) {
+  const m = MARCAS[themeId]
+  if (!m) return null
+  return (
+    <main
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        minHeight: '100vh',
+        boxSizing: 'border-box',
+        padding: '40px 16px',
+        fontFamily: m.fuente,
+        color: '#141414',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...m.fondo,
+      }}
+    >
+      {(m.cuadros || []).map(({ s, c, ...pos }, i) => (
+        <div
+          key={i}
+          aria-hidden="true"
+          style={{ position: 'absolute', width: s, height: s, background: c, ...pos }}
+        />
+      ))}
+
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: 640,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+        }}
+      >
+        <img src={m.logo} alt={m.nombre} style={{ width: 150, height: 'auto' }} />
+        <h1
+          style={{
+            margin: '30px 0 0',
+            fontWeight: m.pesoTitulo,
+            fontSize: TAMANO,
+            lineHeight: 1.12,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Tu llamada está agendada.
+        </h1>
+        <p
+          style={{
+            margin: '2px 0 0',
+            fontWeight: m.pesoTexto,
+            fontSize: TAMANO,
+            lineHeight: 1.18,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          <span style={{ whiteSpace: 'nowrap' }}>Confirma por WhatsApp y</span>
+          <br />
+          <span style={{ whiteSpace: 'nowrap' }}>
+            recibe tu <b style={{ fontWeight: m.pesoTitulo, ...m.regalo }}>REGALO</b> 🎁
+          </span>
+        </p>
+
+        <a
+          href={WHATSAPP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            marginTop: 26,
+            width: '100%',
+            maxWidth: 282,
+            minHeight: 46,
+            padding: '0 16px',
+            boxSizing: 'border-box',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            color: '#FFFFFF',
+            textDecoration: 'none',
+            fontWeight: 700,
+            fontSize: 14,
+            ...m.boton,
+          }}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#FFFFFF"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3.5 20.5l1.3-4.2A8.5 8.5 0 1 1 8 19.4z" />
+          </svg>
+          Confirmar por WhatsApp
+        </a>
+      </div>
+    </main>
+  )
+}

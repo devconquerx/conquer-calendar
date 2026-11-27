@@ -9,6 +9,7 @@ import { fireAllSchedule } from '../lib/pixelEvents'
 import { safeHtml } from '../lib/sanitize'
 import LabConfirmation from './lab/LabConfirmation'
 import { isLabRequested } from '../themes/lab'
+import WhatsappConfirmation, { isVistaPrevia, isWhatsappRequested, whatsappBrand } from './WhatsappConfirmation'
 
 // Los assets y textos de la confirmación paperboard viven en el tema
 // (theme.confirmation): cada marca aporta sus iconos, fotos, vídeos y copy.
@@ -49,7 +50,12 @@ export default function Confirmation({ escuela = '', slug = '', search }) {
   const assets = theme.assets
   const { eventId, journeyId } = useTracking()
 
+  // Vista previa de la página (`?vista_previa=1`): se enseña sin disparar el
+  // Schedule, para poder mirarla en producción sin ensuciar las conversiones.
+  const vistaPrevia = isVistaPrevia(search ?? (typeof window !== 'undefined' ? window.location.search : ''))
+
   useEffect(() => {
+    if (vistaPrevia) return
     const calendlyEventUuid =
       leer('cqx_calendly_event_uuid') || ''
     const scheduleEventId =
@@ -62,12 +68,17 @@ export default function Confirmation({ escuela = '', slug = '', search }) {
       calendlyEventUuid,
       scheduleEventId,
     })
-  }, [eventId, journeyId, escuela])
+  }, [eventId, journeyId, escuela, vistaPrevia])
 
   // Rediseño Conquer Lab: solo con `?diseno=lab` (llega en el query desde el
   // StepForm) y si la marca trae su bloque `lab`. El Schedule de arriba se
   // dispara igual: esto solo cambia el render.
   const labSearch = search ?? (typeof window !== 'undefined' ? window.location.search : '')
+  // Closer sin setter (LATAM): en vez de la confirmación de siempre se pide al
+  // lead que confirme por WhatsApp. Solo para las marcas con página propia.
+  if (isWhatsappRequested(labSearch) && whatsappBrand(baseTheme.id)) {
+    return <WhatsappConfirmation themeId={baseTheme.id} />
+  }
   if (baseTheme.lab && isLabRequested(labSearch)) {
     return <LabConfirmation theme={baseTheme} />
   }

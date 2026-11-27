@@ -288,7 +288,7 @@ class ReservarView(View):
     """POST /f/api/<slug>/reservar/ → crea Reserva, vincula Prellamada, envía correos."""
 
     def post(self, request, slug):
-        get_object_or_404(FunnelForm, slug=slug, activo=True)
+        funnel = get_object_or_404(FunnelForm, slug=slug, activo=True)
         body = _json_body(request)
 
         token = body.get('prellamada_token', '')
@@ -424,9 +424,12 @@ class ReservarView(View):
                 'redirect_url': url_limite_reservas(request, e),
             }, status=409)
 
+        from .autosetter import confirmar_por_whatsapp
         return JsonResponse({
             'ok': True,
             'confirmacion_token': str(reserva.confirmacion_token),
+            # Closer sin setter en LATAM: la confirmación pide confirmar por WhatsApp
+            'confirmar_whatsapp': confirmar_por_whatsapp(funnel, reserva),
         })
 
 

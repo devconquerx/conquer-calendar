@@ -186,10 +186,17 @@ export default function Funnel({ slug, escuela: escuelaProp = '', confirmationUr
       : base
   }, [escuela, slug]))
 
-  const goToConfirmation = useCallback(() => {
+  const goToConfirmation = useCallback((result) => {
     const params = new URLSearchParams(window.location.search)
     params.set('event_id', tracking.eventId)
     params.set('journey_id', tracking.journeyId)
+    // Closer sin setter en LATAM: la confirmación pide confirmar por WhatsApp
+    // (lo decide el backend al reservar, ver funnels/autosetter.py).
+    if (result?.confirmar_whatsapp === true) {
+      params.set('confirmar', 'whatsapp')
+    } else {
+      params.delete('confirmar')
+    }
     // Compat con el contenedor GTM heredado de Webflow (Finance): sus variables
     // de Schedule leen el email de localStorage.calendly_email; lo dejamos
     // escrito antes de navegar para que enhanced conversions/CAPI lo lleven.
