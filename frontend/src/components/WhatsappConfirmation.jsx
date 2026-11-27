@@ -74,7 +74,7 @@ export function isVistaPrevia(search) {
 }
 
 // Pulso del botón: un anillo del color de la marca que sale y se desvanece cada
-// 2 s para llevar el ojo al clic. Sin animación si el usuario la tiene reducida.
+// 2 s para llevar el ojo al clic.
 const CSS_PULSO = `
 @keyframes wa-pulso {
   0% { box-shadow: 0 0 0 0 rgba(var(--wa-pulso), 0.55); }
@@ -82,7 +82,6 @@ const CSS_PULSO = `
   100% { box-shadow: 0 0 0 0 rgba(var(--wa-pulso), 0); }
 }
 .wa-confirmar { animation: wa-pulso 2s ease-out infinite; }
-@media (prefers-reduced-motion: reduce) { .wa-confirmar { animation: none; } }
 `
 
 const TAMANO = 'clamp(19px, 5.4vw, 58px)'
