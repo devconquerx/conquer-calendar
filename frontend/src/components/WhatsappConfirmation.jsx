@@ -20,6 +20,7 @@ const MARCAS = {
     fondo: { background: '#F3F1EC' },
     regalo: { color: '#FF7A00' },
     boton: { background: '#FF7A00', borderRadius: 12 },
+    pulso: '255, 122, 0',
   },
   conquerfinance: {
     nombre: 'Conquer Finance',
@@ -40,6 +41,7 @@ const MARCAS = {
       color: 'transparent',
     },
     boton: { background: 'linear-gradient(90deg,#AED916,#3AC043)', borderRadius: 12 },
+    pulso: '58, 192, 67',
   },
   conquerlanguages: {
     nombre: 'Conquer Languages',
@@ -54,6 +56,7 @@ const MARCAS = {
     },
     regalo: { color: '#4A86A0' },
     boton: { background: '#5A92AC', borderRadius: 999 },
+    pulso: '90, 146, 172',
   },
 }
 
@@ -69,6 +72,18 @@ export function isWhatsappRequested(search) {
 export function isVistaPrevia(search) {
   return new URLSearchParams(search || '').get('vista_previa') === '1'
 }
+
+// Pulso del botón: un anillo del color de la marca que sale y se desvanece cada
+// 2 s para llevar el ojo al clic. Sin animación si el usuario la tiene reducida.
+const CSS_PULSO = `
+@keyframes wa-pulso {
+  0% { box-shadow: 0 0 0 0 rgba(var(--wa-pulso), 0.55); }
+  70% { box-shadow: 0 0 0 18px rgba(var(--wa-pulso), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--wa-pulso), 0); }
+}
+.wa-confirmar { animation: wa-pulso 2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .wa-confirmar { animation: none; } }
+`
 
 const TAMANO = 'clamp(19px, 5.4vw, 58px)'
 
@@ -155,7 +170,9 @@ export default function WhatsappConfirmation({ theme }) {
           </span>
         </p>
 
+        <style>{CSS_PULSO}</style>
         <a
+          className="wa-confirmar"
           href={WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
@@ -175,6 +192,7 @@ export default function WhatsappConfirmation({ theme }) {
             fontWeight: 700,
             fontSize: 'clamp(16px, 1.9vw, 24px)',
             ...m.boton,
+            '--wa-pulso': m.pulso,
           }}
         >
           <svg
