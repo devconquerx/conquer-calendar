@@ -107,7 +107,6 @@ export default function WhatsappConfirmation({ theme }) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
         ...m.fondo,
       }}
     >
@@ -130,9 +129,17 @@ export default function WhatsappConfirmation({ theme }) {
         />
       ))}
 
+      {/* Logo arriba, como en las landings; el contenido queda centrado debajo */}
+      <img
+        src={m.logo}
+        alt={m.nombre}
+        style={{ position: 'relative', width: 'clamp(150px, 20vw, 280px)', height: 'auto' }}
+      />
       <div
         style={{
           position: 'relative',
+          flexGrow: 1,
+          justifyContent: 'center',
           width: '100%',
           maxWidth: 1100,
           display: 'flex',
@@ -141,10 +148,9 @@ export default function WhatsappConfirmation({ theme }) {
           textAlign: 'center',
         }}
       >
-        <img src={m.logo} alt={m.nombre} style={{ width: 'clamp(150px, 20vw, 280px)', height: 'auto' }} />
         <h1
           style={{
-            margin: 'clamp(28px, 4vw, 52px) 0 0',
+            margin: 0,
             fontWeight: m.pesoTitulo,
             fontSize: TAMANO,
             lineHeight: 1.12,
@@ -178,8 +184,8 @@ export default function WhatsappConfirmation({ theme }) {
           style={{
             marginTop: 'clamp(26px, 3.5vw, 48px)',
             width: '100%',
-            maxWidth: 520,
-            minHeight: 'clamp(52px, 6vw, 84px)',
+            maxWidth: 680,
+            minHeight: 'clamp(64px, 7.5vw, 104px)',
             padding: '0 24px',
             boxSizing: 'border-box',
             display: 'flex',
@@ -189,7 +195,7 @@ export default function WhatsappConfirmation({ theme }) {
             color: '#FFFFFF',
             textDecoration: 'none',
             fontWeight: 700,
-            fontSize: 'clamp(16px, 1.9vw, 24px)',
+            fontSize: 'clamp(19px, 2.4vw, 30px)',
             ...m.boton,
             '--wa-pulso': m.pulso,
           }}
