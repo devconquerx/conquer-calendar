@@ -77,7 +77,7 @@ export default function Confirmation({ escuela = '', slug = '', search }) {
   // Closer sin setter (LATAM): en vez de la confirmación de siempre se pide al
   // lead que confirme por WhatsApp. Solo para las marcas con página propia.
   if (isWhatsappRequested(labSearch) && whatsappBrand(baseTheme.id)) {
-    return <WhatsappConfirmation themeId={baseTheme.id} />
+    return <WhatsappConfirmation theme={baseTheme} />
   }
   if (baseTheme.lab && isLabRequested(labSearch)) {
     return <LabConfirmation theme={baseTheme} />

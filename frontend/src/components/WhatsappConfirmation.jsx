@@ -10,26 +10,6 @@ import logoLanguages from '../assets/img/languages/logo.svg'
 // Canal de WhatsApp de Respond.io, el mismo para todas las formaciones.
 export const WHATSAPP_URL = 'https://wa.me/34602407862'
 
-// Cuadrados decorativos de Blocks: [lado, top/bottom, left/right, color].
-const CB_CLARO = '#F8DCC2'
-const CB_FUERTE = '#F7AE6E'
-const CB_CUADROS = [
-  { s: 23, top: 36, left: 26, c: CB_FUERTE },
-  { s: 23, top: 36, left: 90, c: CB_CLARO },
-  { s: 23, top: 72, left: 26, c: CB_CLARO },
-  { s: 23, top: 72, left: 155, c: CB_FUERTE },
-  { s: 23, top: 108, left: 90, c: CB_CLARO },
-  { s: 15, top: 60, right: 76, c: CB_FUERTE },
-  { s: 15, top: 84, right: 128, c: CB_CLARO },
-  { s: 23, bottom: 230, right: 38, c: CB_FUERTE },
-  { s: 23, bottom: 230, right: 102, c: CB_CLARO },
-  { s: 23, bottom: 194, right: 166, c: CB_FUERTE },
-  { s: 23, bottom: 194, right: 38, c: CB_CLARO },
-  { s: 23, bottom: 158, right: 102, c: CB_CLARO },
-  { s: 15, bottom: 100, left: 52, c: CB_FUERTE },
-  { s: 15, bottom: 76, left: 104, c: CB_CLARO },
-]
-
 const MARCAS = {
   conquerblocks: {
     nombre: 'Conquer Blocks',
@@ -40,7 +20,6 @@ const MARCAS = {
     fondo: { background: '#F3F1EC' },
     regalo: { color: '#FF7A00' },
     boton: { background: '#FF7A00', borderRadius: 12 },
-    cuadros: CB_CUADROS,
   },
   conquerfinance: {
     nombre: 'Conquer Finance',
@@ -93,9 +72,14 @@ export function isVistaPrevia(search) {
 
 const TAMANO = 'clamp(19px, 5.4vw, 58px)'
 
-export default function WhatsappConfirmation({ themeId }) {
-  const m = MARCAS[themeId]
+export default function WhatsappConfirmation({ theme }) {
+  const m = MARCAS[theme?.id]
   if (!m) return null
+  // Píxeles decorativos: los mismos de la landing de la marca (posiciones y SVG
+  // del tema). Solo Blocks los tiene; Finance y Languages no llevan.
+  const pixels = theme.assets?.pixels
+  const decos = pixels?.deco ? theme.landing?.decoPixels || [] : []
+  const decosMovil = pixels ? theme.landing?.decoPixelsMobile || [] : []
   return (
     <main
       style={{
@@ -113,11 +97,22 @@ export default function WhatsappConfirmation({ themeId }) {
         ...m.fondo,
       }}
     >
-      {(m.cuadros || []).map(({ s, c, ...pos }, i) => (
-        <div
+      {decos.map((pos, i) => (
+        <img
           key={i}
+          src={i % 2 && pixels.deco2 ? pixels.deco2 : pixels.deco}
+          alt=""
           aria-hidden="true"
-          style={{ position: 'absolute', width: s, height: s, background: c, ...pos }}
+          className={`hidden lg:block absolute w-[150px] opacity-20 pointer-events-none select-none ${pos}`}
+        />
+      ))}
+      {decosMovil.map((p, i) => (
+        <img
+          key={`m${i}`}
+          src={pixels[p.img]}
+          alt=""
+          aria-hidden="true"
+          className={`lg:hidden absolute z-0 opacity-20 pointer-events-none select-none ${p.cls}`}
         />
       ))}
 
